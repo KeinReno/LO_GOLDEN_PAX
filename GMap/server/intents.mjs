@@ -8,6 +8,13 @@ import {
   writeJson,
 } from "./tableStore.mjs";
 import { getContent } from "./contentLoader.mjs";
+import {
+  collectSystemPoiEffects,
+  isIntentForbiddenByEffects,
+  checkDepotAttackRange,
+  collectPoiEffects,
+} from "./narrative.mjs";
+import { readLedger, ensureFactionEco } from "./ledger.mjs";
 
 function legacyTypeToDefId(type) {
   const intents = getContent().intents || {};
@@ -81,6 +88,57 @@ export function reservedAp(factionId, turn) {
   );
 }
 
+function validateIntentGates(world, factionId, defId, payload) {
+  const content = getContent();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+
+  const facEffects = [...collectPoiEffects(world, factionId, content)];
+  if (eco.deficit === "empty") {
+    facEffects.push({
+      effect: "forbid_intent",
+      args: { intentId: "intent.build" },
+    });
+  }
+  if (isIntentForbiddenByEffects(facEffects, defId)) {
+    return { ok: false, error: `Запрещено эффектами державы: ${defId}` };
+  }
+
+  const targetId =
+    payload.toSystemId || payload.systemId || payload.fromSystemId;
+  if (targetId) {
+    const sys = (world.systems ?? []).find((s) => s.id === targetId);
+    if (sys) {
+      const sysEffects = collectSystemPoiEffects(sys, content);
+      if (
+        (defId === "intent.move_fleet" ||
+          defId === "intent.move_legion" ||
+          defId === "intent.attack_system") &&
+        isIntentForbiddenByEffects(sysEffects, "intent.move_fleet")
+      ) {
+        return {
+          ok: false,
+          error: "Карантин: вход флотом/легионом запрещён",
+        };
+      }
+      if (isIntentForbiddenByEffects(sysEffects, defId)) {
+        return { ok: false, error: `Запрещено POI системы: ${defId}` };
+      }
+    }
+  }
+
+  if (defId === "intent.attack_system" && payload.toSystemId) {
+    const depot = checkDepotAttackRange(
+      world,
+      factionId,
+      payload.toSystemId,
+    );
+    if (!depot.ok) return depot;
+  }
+
+  return { ok: true };
+}
+
 /**
  * @returns {{ ok: true, intent } | { ok: false, error: string }}
  */
@@ -92,8 +150,10 @@ export function submitIntent({
   source,
   turn,
   apMax,
+  world,
 }) {
-  const def = getContent().intents?.[defId];
+  const content = getContent();
+  const def = content.intents?.[defId];
   if (!def) return { ok: false, error: `Неизвестный intent: ${defId}` };
 
   const apCost = def.ap ?? 0;
@@ -103,6 +163,11 @@ export function submitIntent({
       ok: false,
       error: `Недостаточно AP (занято ${used}/${apMax}, нужно ещё ${apCost})`,
     };
+  }
+
+  if (world) {
+    const gate = validateIntentGates(world, factionId, defId, payload || {});
+    if (!gate.ok) return gate;
   }
 
   const intent = {
@@ -136,7 +201,11 @@ export function cancelIntent(intentId, factionId) {
   if (intent.status !== "pending") {
     return { ok: false, error: "Можно отменить только pending" };
   }
-  list[idx] = { ...intent, status: "cancelled", cancelledAt: new Date().toISOString() };
+  list[idx] = {
+    ...intent,
+    status: "cancelled",
+    cancelledAt: new Date().toISOString(),
+  };
   writeIntents(list);
   return { ok: true, intent: list[idx] };
 }

@@ -231,6 +231,14 @@ export function poiIconId(poi: string): MapIconId | null {
       return "lighthouse";
     case "sanctuary":
       return "sanctuary";
+    case "refugees":
+      return "cargo";
+    case "quarantine":
+      return "radar-sweep";
+    case "depot":
+      return "watchtower";
+    case "propaganda":
+      return "lighthouse";
     default:
       return null;
   }

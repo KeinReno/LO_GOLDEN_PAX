@@ -10,6 +10,12 @@ import {
   explainStack,
 } from "./modifierStack.mjs";
 import {
+  collectPoiEffects,
+  collectSystemPoiEffects,
+  spawnRefugees,
+  ownedDepotSystemIds,
+} from "./narrative.mjs";
+import {
   readLedger,
   writeLedger,
   ensureAllFactions,
@@ -109,6 +115,24 @@ function collectFactionEffects(world, factionId, eco, content) {
         });
       }
     }
+  }
+
+  // Narrative POIs on owned systems
+  effects.push(...collectPoiEffects(world, factionId, content));
+
+  // No front depot → supply upkeep penalty
+  if (
+    ownedDepotSystemIds(world, factionId).length === 0 &&
+    content.rules?.depot?.noDepotUpkeepMult
+  ) {
+    effects.push({
+      effect: "upkeep_mult",
+      args: {
+        resource: "currency.supply",
+        mult: content.rules.depot.noDepotUpkeepMult,
+      },
+      source: { kind: "depot", id: "missing", label: "Нет депо" },
+    });
   }
 
   return effects;
@@ -357,12 +381,13 @@ export function runEconomyTick(world, turn) {
       const cap = planetCap(p, content);
       const overcrowd = pop > cap ? Math.max(0.2, 1 - (pop - cap) / cap) : 1;
 
-      // quarantine POI
-      let growthMult = 1;
-      const objs = sys.spaceObjects || (sys.poiType && sys.poiType !== "none" ? [sys.poiType] : []);
-      if (objs.includes("quarantine")) growthMult *= 0.5;
+      const sysEffects = collectSystemPoiEffects(sys, content);
+      const sysStack = buildModifierStack(sysEffects, {
+        mergeOrder: content.rules?.economyMergeOrder,
+      });
+      let natural = pop * rate * hab * supplyFactor * overcrowd;
+      natural = applyFlatThenMult(natural, sysStack.channels.pop_growth);
 
-      let natural = pop * rate * hab * supplyFactor * overcrowd * growthMult;
       if (eco?.deficit === "empty") natural = Math.min(natural, -pop * 0.02);
 
       let delta = floor(natural);
@@ -384,14 +409,9 @@ export function runEconomyTick(world, turn) {
         });
       }
 
-      // Soft emigration → note only (full refugee POI in P6)
-      if (delta < 0 && Math.abs(delta) >= 2 && owner) {
-        journal.push({
-          type: "emigration_pressure",
-          systemId: sys.id,
-          factionId: owner,
-          amount: Math.abs(delta),
-        });
+      const refugeeMin = content.rules?.population?.emigrationRefugeeMin ?? 2;
+      if (delta < 0 && Math.abs(delta) >= refugeeMin) {
+        spawnRefugees(world, sys.id, Math.abs(delta), journal);
       }
     }
   }

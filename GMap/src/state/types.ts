@@ -57,7 +57,11 @@ export type SystemPoiType =
   | "outpost"
   | "fortress"
   | "beacon"
-  | "sanctuary";
+  | "sanctuary"
+  | "refugees"
+  | "quarantine"
+  | "depot"
+  | "propaganda";
 
 /** All stampable space objects (can stack on one system). */
 export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
@@ -81,6 +85,10 @@ export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
   "fortress",
   "beacon",
   "sanctuary",
+  "refugees",
+  "quarantine",
+  "depot",
+  "propaganda",
 ];
 
 export type QuestStatus = "active" | "done" | "hidden";
@@ -160,10 +168,15 @@ export type EditorTool =
   | "mark_fortress"
   | "mark_beacon"
   | "mark_sanctuary"
+  | "mark_refugees"
+  | "mark_quarantine"
+  | "mark_depot"
+  | "mark_propaganda"
   | "clear_poi"
   | "paint_resource"
   | "fog_paint"
   | "fog_erase"
+  | "consequence_paint"
   | "delete";
 
 /** Tools that stamp a POI / space object onto a system. */
@@ -188,6 +201,10 @@ export const POI_PAINT_TOOLS: Partial<Record<EditorTool, SystemPoiType>> = {
   mark_fortress: "fortress",
   mark_beacon: "beacon",
   mark_sanctuary: "sanctuary",
+  mark_refugees: "refugees",
+  mark_quarantine: "quarantine",
+  mark_depot: "depot",
+  mark_propaganda: "propaganda",
   clear_poi: "none",
 };
 
@@ -375,8 +392,17 @@ export interface StarSystem {
   activity: SystemActivity;
   /** For activity=trade — other system id (optional). */
   tradeWithSystemId: string | null;
-  /** Freeform notes for the master. */
+  /** Freeform notes for the master (hidden from players). */
   notes?: string;
+  /** GM-only sticky notes (hidden from players). */
+  gmNotes?: string;
+  /** Timed narrative actions processed on tick. */
+  timers?: {
+    id: string;
+    expiresTurn: number;
+    action: { kind: string; poi?: string; activity?: string };
+    label?: string | null;
+  }[];
   /** Мёртвая зона сканеров — сильные помехи / «белый шум». */
   scannerDeadZone?: boolean;
   /** Блокада системы (орбита перекрыта). */
@@ -607,6 +633,8 @@ export interface UiState {
   showFogPreview: boolean;
   /** Server fog mask system ids for active faction (P3 brush). */
   fogMaskPreview: string[];
+  /** Active consequence / system preset for consequence_paint tool. */
+  activeConsequencePresetId: string | null;
   showJumpRange: boolean;
   showSupply: boolean;
   showCaravans: boolean;

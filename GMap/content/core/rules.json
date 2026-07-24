@@ -29,10 +29,17 @@
   "population": {
     "unitLabel": "pop",
     "baseGrowth": 0.012,
-    "maxLossPerTurn": 0.15
+    "maxLossPerTurn": 0.15,
+    "emigrationRefugeeMin": 2,
+    "refugeeShare": 0.5
   },
   "combat": {
     "allowEarlyResolve": true
+  },
+  "depot": {
+    "maxAttackHopsWithoutDepot": 2,
+    "maxAttackHopsWithDepot": 5,
+    "noDepotUpkeepMult": 1.2
   },
   "fog": {
     "storage": "per_system",

@@ -1,0 +1,33 @@
+{
+  "frontier_outpost": {
+    "id": "frontier_outpost",
+    "name": "Пограничный форпост",
+    "add": ["outpost", "depot"],
+    "activity": "garrison"
+  },
+  "refugee_haven": {
+    "id": "refugee_haven",
+    "name": "Убежище беженцев",
+    "add": ["refugees", "sanctuary"],
+    "activity": "transit"
+  },
+  "locked_world": {
+    "id": "locked_world",
+    "name": "Закрытый мир",
+    "add": ["quarantine", "fortress"],
+    "timerTurns": 8,
+    "timerAction": { "kind": "remove_poi", "poi": "quarantine" }
+  },
+  "trade_hub": {
+    "id": "trade_hub",
+    "name": "Торговый хаб",
+    "add": ["hub", "relay"],
+    "activity": "trade"
+  },
+  "war_scar": {
+    "id": "war_scar",
+    "name": "Военный шрам",
+    "add": ["debris", "ruin", "minefield"],
+    "activity": "battle"
+  }
+}

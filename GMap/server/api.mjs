@@ -55,6 +55,10 @@ import {
   readEngagements,
   setEngagementStance,
 } from "./engagements.mjs";
+import {
+  applyPresetToSystems,
+  scheduleTimer,
+} from "./narrative.mjs";
 
 export {
   DATA_DIR,
@@ -102,7 +106,10 @@ function filterWorldForFaction(world, factionId) {
     visibleSystemIds: [...visible],
     world: {
       ...world,
-      systems,
+      systems: systems.map((s) => {
+        const { notes, gmNotes, timers, ...rest } = s;
+        return rest;
+      }),
       links,
       fleets,
       legions,
@@ -344,6 +351,94 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/narrative/paint" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const content = getContent();
+        const preset =
+          content.consequences?.[body.presetId] ||
+          content.system_presets?.[body.presetId];
+        if (!preset) {
+          sendJson(res, 400, { error: "unknown preset" });
+          return;
+        }
+        const journal = [];
+        const result = applyPresetToSystems(
+          world,
+          body.systemIds || [],
+          preset,
+          world.meta?.turn ?? 0,
+          journal,
+        );
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const written = writeLiveBoard(world, {
+          backup: false,
+          reason: "narrative_paint",
+        });
+        sendJson(res, 200, { ok: true, ...result, journal, ...written });
+        return;
+      }
+
+      if (url.pathname === "/api/narrative/timer" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const sys = (world.systems ?? []).find((s) => s.id === body.systemId);
+        if (!sys) {
+          sendJson(res, 404, { error: "system missing" });
+          return;
+        }
+        const turns = Math.max(1, Math.floor(body.turns || 2));
+        scheduleTimer(sys, {
+          expiresTurn: (world.meta?.turn ?? 0) + turns,
+          action: body.action || { kind: "clear_activity" },
+          label: body.label || null,
+        });
+        writeLiveBoard(world, { backup: false, reason: "timer" });
+        sendJson(res, 200, { ok: true, timers: sys.timers });
+        return;
+      }
+
+      if (url.pathname === "/api/narrative/gm-note" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const ids = body.systemIds || (body.systemId ? [body.systemId] : []);
+        for (const sys of world.systems ?? []) {
+          if (!ids.includes(sys.id)) continue;
+          sys.gmNotes = body.gmNotes ?? body.notes ?? "";
+          if (body.notes != null) sys.notes = body.notes;
+        }
+        writeLiveBoard(world, { backup: false, reason: "gm_note" });
+        sendJson(res, 200, { ok: true, count: ids.length });
+        return;
+      }
+
       if (url.pathname.startsWith("/api/ledger/") && req.method === "GET") {
         const factionId = url.pathname.split("/")[3];
         if (requireMaster(req)) {
@@ -398,6 +493,7 @@ export function createApiMiddleware() {
           source: "map",
           turn: world.meta?.turn ?? 0,
           apMax,
+          world,
         });
         sendJson(res, result.ok ? 200 : 400, result);
         return;
@@ -482,6 +578,7 @@ export function createApiMiddleware() {
           source: body.source || "map",
           turn: world.meta?.turn ?? 0,
           apMax,
+          world,
         });
         if (!result.ok) {
           sendJson(res, 400, result);
@@ -757,6 +854,7 @@ export function createApiMiddleware() {
           source: "map",
           turn: world.meta?.turn ?? 0,
           apMax,
+          world,
         });
         if (!result.ok) {
           sendJson(res, 400, result);

@@ -51,5 +51,11 @@
     "ap": 1,
     "ops": ["scout_reveal"],
     "params": ["systemId"]
+  },
+  "intent.refugee_convoy": {
+    "id": "intent.refugee_convoy",
+    "ap": 1,
+    "ops": ["refugee_convoy"],
+    "params": ["fromSystemId", "toSystemId", "amount"]
   }
 }

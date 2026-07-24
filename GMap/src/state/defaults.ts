@@ -79,6 +79,10 @@ export const SYSTEM_POI_LABELS: Record<string, string> = {
   fortress: "Крепость",
   beacon: "Маяк / навигатор",
   sanctuary: "Убежище / святилище",
+  refugees: "Лагерь беженцев",
+  quarantine: "Карантин / пси-карантин",
+  depot: "Депо снабжения",
+  propaganda: "Пропаганда-вышка",
 };
 
 export const LINK_TYPE_LABELS: Record<string, string> = {

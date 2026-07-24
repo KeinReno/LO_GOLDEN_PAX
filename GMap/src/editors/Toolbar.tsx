@@ -37,6 +37,7 @@ import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { IntentsInbox } from "./IntentsInbox";
 import { EconomyPanel } from "./EconomyPanel";
 import { CombatPanel } from "./CombatPanel";
+import { GmOpsPanel } from "./GmOpsPanel";
 import { RESOURCE_POOL } from "../state/defaults";
 
 type TabId = "tools" | "layers" | "file" | "session";
@@ -177,9 +178,34 @@ const TOOL_GROUPS: {
         hint: "Святилище / убежище / нейтральная зона",
       },
       {
+        id: "mark_refugees",
+        label: "Беженцы",
+        hint: "Лагерь беженцев (upkeep supply + давление)",
+      },
+      {
+        id: "mark_quarantine",
+        label: "Карантин",
+        hint: "Запрет входа флотом + штраф роста pop",
+      },
+      {
+        id: "mark_depot",
+        label: "Депо",
+        hint: "Снабжение фронта / дальность атак",
+      },
+      {
+        id: "mark_propaganda",
+        label: "Пропаганда",
+        hint: "Вышка: стабильность / давление",
+      },
+      {
         id: "clear_poi",
         label: "Сброс меток",
         hint: "Снять все космические метки с системы",
+      },
+      {
+        id: "consequence_paint",
+        label: "Последствие",
+        hint: "Клик — пресет из панели GM (бой/эвак/карантин…)",
       },
     ],
   },
@@ -854,6 +880,7 @@ export function Toolbar() {
 
             <EconomyPanel />
             <CombatPanel />
+            <GmOpsPanel />
             <IntentsInbox />
 
             {world.orders.length > 0 && (

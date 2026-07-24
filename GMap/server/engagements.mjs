@@ -5,6 +5,7 @@ import path from "node:path";
 import { DATA_DIR, readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
 import { resolveEngagementFight, cleanupEmptyComposition } from "./combatResolve.mjs";
 import { getContent } from "./contentLoader.mjs";
+import { spawnRefugees } from "./narrative.mjs";
 
 export const ENGAGEMENTS_PATH = path.join(DATA_DIR, "engagements.json");
 
@@ -117,23 +118,29 @@ function applyAftermath(world, eng, fight, journal) {
     } else {
       sys.ownerFactionId = a.factionId;
     }
-    // pop hit
+    // pop hit + refugees
+    let popHit = 0;
     for (const p of sys.planets || []) {
       if ((p.population || 0) > 0) {
         const loss = Math.max(1, Math.floor(p.population * 0.08));
         p.population = Math.max(0, p.population - loss);
+        popHit += loss;
       }
     }
+    if (popHit > 0) spawnRefugees(world, eng.systemId, popHit, journal);
   }
 
   if (eng.theater === "space" && (a.stance === "bombard" || eng.source === "bombard")) {
     if (sys) {
+      let popHit = 0;
       for (const p of sys.planets || []) {
         if ((p.population || 0) > 0) {
           const loss = Math.max(1, Math.floor(p.population * 0.05));
           p.population = Math.max(0, p.population - loss);
+          popHit += loss;
         }
       }
+      if (popHit > 0) spawnRefugees(world, eng.systemId, popHit, journal);
     }
   }
 

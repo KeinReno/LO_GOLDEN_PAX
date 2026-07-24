@@ -71,6 +71,8 @@ interface WorldStore extends UiState {
   toggleShowDiplomacy: () => void;
   toggleShowFogPreview: () => void;
   setFogMaskPreview: (systemIds: string[]) => void;
+  activeConsequencePresetId: string | null;
+  setActiveConsequencePresetId: (id: string | null) => void;
   toggleShowJumpRange: () => void;
   toggleShowSupply: () => void;
   toggleShowCaravans: () => void;
@@ -368,6 +370,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showDiplomacy: false,
   showFogPreview: false,
   fogMaskPreview: [],
+  activeConsequencePresetId: "after_battle",
   showJumpRange: true,
   showSupply: true,
   showCaravans: true,
@@ -444,6 +447,8 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   toggleShowFogPreview: () =>
     set((s) => ({ showFogPreview: !s.showFogPreview })),
   setFogMaskPreview: (systemIds) => set({ fogMaskPreview: systemIds }),
+  setActiveConsequencePresetId: (id) =>
+    set({ activeConsequencePresetId: id }),
   toggleShowJumpRange: () =>
     set((s) => ({ showJumpRange: !s.showJumpRange })),
   toggleShowSupply: () => set((s) => ({ showSupply: !s.showSupply })),

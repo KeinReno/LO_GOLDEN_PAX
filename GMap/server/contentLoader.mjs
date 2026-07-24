@@ -23,6 +23,8 @@ const FILE_KEYS = [
   "pois",
   "combat_matchups",
   "combat_stances",
+  "consequences",
+  "system_presets",
 ];
 
 let cache = null;
@@ -71,6 +73,8 @@ export function loadContent(packIds = ["core"]) {
   let pois = {};
   let combat_matchups = {};
   let combat_stances = {};
+  let consequences = {};
+  let system_presets = {};
   let id_aliases = { version: 1, ships: {}, resources: {}, units: {} };
 
   for (const id of packIds) {
@@ -95,6 +99,8 @@ export function loadContent(packIds = ["core"]) {
     pois = mergeDicts(pois, pack.pois);
     combat_matchups = mergeDicts(combat_matchups, pack.combat_matchups);
     combat_stances = mergeDicts(combat_stances, pack.combat_stances);
+    consequences = mergeDicts(consequences, pack.consequences);
+    system_presets = mergeDicts(system_presets, pack.system_presets);
     if (pack.id_aliases) {
       id_aliases = {
         version: pack.id_aliases.version ?? id_aliases.version,
@@ -123,6 +129,8 @@ export function loadContent(packIds = ["core"]) {
     pois,
     combat_matchups,
     combat_stances,
+    consequences,
+    system_presets,
     id_aliases,
     loadedAt: new Date().toISOString(),
   };
@@ -157,6 +165,8 @@ export function getPublicContent() {
     races: c.races,
     taxes: c.taxes,
     pois: c.pois,
+    consequences: c.consequences,
+    system_presets: c.system_presets,
     combat_stances: c.combat_stances,
     effects: Object.keys(c.effects.effects || {}),
     loadedAt: c.loadedAt,

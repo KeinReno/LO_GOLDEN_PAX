@@ -21,6 +21,10 @@ import {
   resolveOpenEngagements,
   setEngagementStance,
 } from "./engagements.mjs";
+import {
+  processSystemTimers,
+  applyRefugeeConvoy,
+} from "./narrative.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
@@ -273,6 +277,10 @@ function applyTransfer(world, intent, journal) {
   return true;
 }
 
+function applyRefugeeConvoyIntent(world, intent, journal) {
+  return applyRefugeeConvoy(world, intent, journal);
+}
+
 const APPLIERS = {
   "intent.move_fleet": applyMoveFleet,
   "intent.move_legion": applyMoveLegion,
@@ -282,6 +290,7 @@ const APPLIERS = {
   "intent.scout_reveal": applyScoutReveal,
   "intent.set_tax": applySetTax,
   "intent.transfer": applyTransfer,
+  "intent.refugee_convoy": applyRefugeeConvoyIntent,
 };
 
 function advanceCaravans(world) {
@@ -315,6 +324,8 @@ export function processTurn(opts = {}) {
   activatePendingPolicies(world);
 
   const journal = [];
+  processSystemTimers(world, turn, journal);
+
   const intents = readIntents()
     .filter((i) => i.status === "pending" && i.turn === turn)
     .sort((a, b) => {

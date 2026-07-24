@@ -1051,6 +1051,52 @@ export function MapCanvas({
             return;
           }
 
+          if (state.tool === "consequence_paint") {
+            if (!hit) return;
+            const presetId =
+              useWorldStore.getState().activeConsequencePresetId;
+            if (!presetId) return;
+            const token =
+              (
+                window as unknown as { __GMAP_MASTER_TOKEN?: string }
+              ).__GMAP_MASTER_TOKEN || "master2142";
+            const ids =
+              state.selectedSystemIds.includes(hit.id) &&
+              state.selectedSystemIds.length > 1
+                ? state.selectedSystemIds
+                : [hit.id];
+            void fetch("/api/narrative/paint", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Master-Token": token,
+              },
+              body: JSON.stringify({ presetId, systemIds: ids }),
+            }).then(async (res) => {
+              if (!res.ok) return;
+              // Also stamp local draft for immediate feedback
+              const st = useWorldStore.getState();
+              for (const id of ids) {
+                if (presetId.includes("refugee") || presetId === "evac_camp") {
+                  st.applySystemPoi(id, "refugees");
+                } else if (presetId === "psi_lock" || presetId === "locked_world") {
+                  st.applySystemPoi(id, "quarantine");
+                } else if (presetId === "front_depot") {
+                  st.applySystemPoi(id, "depot");
+                } else if (presetId === "propaganda_push") {
+                  st.applySystemPoi(id, "propaganda");
+                } else if (
+                  presetId === "after_battle" ||
+                  presetId === "scar_ruin" ||
+                  presetId === "war_scar"
+                ) {
+                  st.applySystemPoi(id, "debris");
+                }
+              }
+            });
+            return;
+          }
+
           if (state.tool === "place_fleet") {
             if (hit) state.placeFleetOnSystem(hit.id);
             return;
