@@ -1,0 +1,48 @@
+{
+  "intent.move_fleet": {
+    "id": "intent.move_fleet",
+    "ap": 1,
+    "legacyOrderType": "move_fleet",
+    "ops": ["move_fleet"],
+    "params": ["fleetId", "toSystemId"]
+  },
+  "intent.move_legion": {
+    "id": "intent.move_legion",
+    "ap": 1,
+    "legacyOrderType": "move_legion",
+    "ops": ["move_legion"],
+    "params": ["legionId", "toSystemId"]
+  },
+  "intent.attack_system": {
+    "id": "intent.attack_system",
+    "ap": 2,
+    "legacyOrderType": "attack_system",
+    "ops": ["attack_system"],
+    "params": ["fleetId", "toSystemId"]
+  },
+  "intent.claim_system": {
+    "id": "intent.claim_system",
+    "ap": 1,
+    "legacyOrderType": "claim_system",
+    "ops": ["claim_system"],
+    "params": ["toSystemId"]
+  },
+  "intent.transfer": {
+    "id": "intent.transfer",
+    "ap": 0,
+    "ops": ["transfer"],
+    "params": ["toFactionId", "currencyId", "amount"]
+  },
+  "intent.set_tax": {
+    "id": "intent.set_tax",
+    "ap": 1,
+    "ops": ["set_tax"],
+    "params": ["taxSlot", "tierId"]
+  },
+  "intent.scout_reveal": {
+    "id": "intent.scout_reveal",
+    "ap": 1,
+    "ops": ["scout_reveal"],
+    "params": ["systemId"]
+  }
+}

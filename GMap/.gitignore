@@ -16,6 +16,11 @@ data/published.json
 data/player-orders.json
 data/campaign-draft.json
 data/cloudpub-token.txt
+data/intents.json
+data/ledger.json
+data/table-meta.json
+data/turns/**
+!data/turns/.gitkeep
 deploy/certs/*.pem
 deploy/certs/*.key
 !deploy/certs/.gitkeep

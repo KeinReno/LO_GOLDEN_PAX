@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   configureCloudPubToken,
   configureNgrokAuthtoken,
@@ -8,35 +5,54 @@ import {
   startPlayerShare,
   stopPlayerShare,
 } from "./playerShare.mjs";
+import {
+  DATA_DIR,
+  PUBLISHED_PATH,
+  ORDERS_PATH,
+  DRAFT_PATH,
+  LORE_PATH,
+  INTENTS_PATH,
+  ensureDataDir,
+  readJson,
+  writeJson,
+  readLiveBoard,
+  writeLiveBoard,
+  getVersionPayload,
+  backupTurnSnapshot,
+  getTableMeta,
+  setTableMeta,
+} from "./tableStore.mjs";
+import { getContent, getPublicContent, loadContent } from "./contentLoader.mjs";
+import {
+  buildModifierStack,
+  explainStack,
+  resolveApMax,
+  collectRaceEffects,
+} from "./modifierStack.mjs";
+import {
+  readIntents,
+  submitIntent,
+  cancelIntent,
+  reservedAp,
+} from "./intents.mjs";
+import { processTurn, getLastJournal } from "./processTurn.mjs";
+import { startTickScheduler } from "./tickScheduler.mjs";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const DATA_DIR = path.resolve(__dirname, "../data");
-export const PUBLISHED_PATH = path.join(DATA_DIR, "published.json");
-export const ORDERS_PATH = path.join(DATA_DIR, "player-orders.json");
-export const DRAFT_PATH = path.join(DATA_DIR, "campaign-draft.json");
-export const LORE_PATH = path.resolve(
-  __dirname,
-  "../public/campaigns/lo_golden_pax.json",
-);
+export {
+  DATA_DIR,
+  PUBLISHED_PATH,
+  ORDERS_PATH,
+  DRAFT_PATH,
+  LORE_PATH,
+  ensureDataDir,
+  readJson,
+  writeJson,
+};
 
 const MASTER_TOKEN = process.env.GMAP_MASTER_TOKEN || "master2142";
 
-export function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-export function readJson(file, fallback) {
-  try {
-    if (!fs.existsSync(file)) return fallback;
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeJson(file, data) {
-  ensureDataDir();
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
+function requireMaster(req) {
+  return req.headers["x-master-token"] === MASTER_TOKEN;
 }
 
 function factionHasFullMapVision(faction) {
@@ -126,6 +142,12 @@ function readBody(req) {
  */
 export function createApiMiddleware() {
   ensureDataDir();
+  loadContent(["core"]);
+  startTickScheduler({
+    getCron: () => getContent().rules?.tickCron || "1 0 * * *",
+    getTimezone: () => getContent().rules?.tickTimezone || "Europe/Moscow",
+    onTick: () => processTurn({ force: false }),
+  });
 
   return async function gmapApi(req, res, next) {
     const url = new URL(req.url || "/", "http://localhost");
@@ -148,7 +170,182 @@ export function createApiMiddleware() {
 
     try {
       if (url.pathname === "/api/health" && req.method === "GET") {
-        sendJson(res, 200, { ok: true });
+        sendJson(res, 200, {
+          ok: true,
+          version: getVersionPayload(),
+          contentLoadedAt: getContent().loadedAt,
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/content" && req.method === "GET") {
+        if (url.searchParams.get("reload") === "1" && requireMaster(req)) {
+          loadContent(["core"]);
+        }
+        sendJson(res, 200, getPublicContent());
+        return;
+      }
+
+      if (url.pathname === "/api/content/stack-preview" && req.method === "POST") {
+        const body = await readBody(req);
+        const effects = Array.isArray(body.effects) ? [...body.effects] : [];
+        if (body.raceComposition) {
+          effects.push(
+            ...collectRaceEffects(getContent().races, body.raceComposition),
+          );
+        }
+        const stack = buildModifierStack(effects, {
+          mergeOrder: getContent().rules?.economyMergeOrder,
+        });
+        sendJson(res, 200, {
+          apMax: resolveApMax(getContent().rules?.apPerTurn ?? 3, stack),
+          explain: explainStack(stack),
+          channels: stack.channels,
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/table" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, {
+            error: "Live board пуст — сохраните/опубликуйте кампанию",
+            mode: "empty",
+          });
+          return;
+        }
+        sendJson(res, 200, {
+          mode: "live",
+          world,
+          version: getVersionPayload(),
+          intents: readIntents().filter((i) => i.status === "pending"),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/table/backup" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const world = readLiveBoard();
+        const dir = backupTurnSnapshot(world?.meta?.turn ?? 0, "manual");
+        sendJson(res, 200, { ok: true, dir });
+        return;
+      }
+
+      if (url.pathname === "/api/turn/tick" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = processTurn({ force: !!body?.force, master: true });
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/turn/journal" && req.method === "GET") {
+        sendJson(res, 200, { journal: getLastJournal(), meta: getTableMeta() });
+        return;
+      }
+
+      if (url.pathname === "/api/turn/freeze" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const meta = setTableMeta({ tickFrozen: !!body?.frozen });
+        sendJson(res, 200, { ok: true, meta });
+        return;
+      }
+
+      if (url.pathname === "/api/intents" && req.method === "GET") {
+        if (requireMaster(req)) {
+          sendJson(res, 200, readIntents());
+          return;
+        }
+        const factionId = req.headers["x-faction-id"];
+        if (!factionId) {
+          sendJson(res, 401, { error: "Нужен master token или X-Faction-Id" });
+          return;
+        }
+        sendJson(
+          res,
+          200,
+          readIntents().filter((i) => i.factionId === factionId),
+        );
+        return;
+      }
+
+      if (url.pathname === "/api/intents" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!faction || faction.password !== body.password) {
+          sendJson(res, 401, { error: "Неверный пароль" });
+          return;
+        }
+        const apMax = resolveApMax(
+          getContent().rules?.apPerTurn ?? 3,
+          buildModifierStack([]),
+        );
+        const defId =
+          body.defId ||
+          (body.type?.startsWith("intent.")
+            ? body.type
+            : `intent.${body.type}`);
+        const result = submitIntent({
+          factionId: faction.id,
+          defId,
+          payload: body.payload || {
+            fleetId: body.fleetId,
+            legionId: body.legionId,
+            fromSystemId: body.fromSystemId,
+            toSystemId: body.toSystemId,
+          },
+          note: body.note,
+          source: body.source || "map",
+          turn: world.meta?.turn ?? 0,
+          apMax,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          intent: result.intent,
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          apMax,
+        });
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/intents/") &&
+        url.pathname.endsWith("/cancel") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const intentId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        const faction = (world?.factions ?? []).find((f) => f.id === body.factionId);
+        if (!faction || faction.password !== body.password) {
+          sendJson(res, 401, { error: "Неверный пароль" });
+          return;
+        }
+        const result = cancelIntent(intentId, faction.id);
+        sendJson(res, result.ok ? 200 : 400, result);
         return;
       }
 
@@ -167,11 +364,9 @@ export function createApiMiddleware() {
         }
         const body = await readBody(req);
         if (body?.world?.meta && Array.isArray(body.world.systems)) {
-          const world = body.world;
-          world.meta.updatedAt = new Date().toISOString();
-          writeJson(PUBLISHED_PATH, world);
+          writeLiveBoard(body.world, { backup: true, reason: "share_publish" });
         } else {
-          const published = readJson(PUBLISHED_PATH, null);
+          const published = readLiveBoard();
           if (!published) {
             sendJson(res, 400, {
               error:
@@ -255,7 +450,7 @@ export function createApiMiddleware() {
       }
 
       if (url.pathname === "/api/factions" && req.method === "GET") {
-        const world = readJson(PUBLISHED_PATH, null);
+        const world = readLiveBoard();
         if (!world) {
           sendJson(res, 404, { error: "Карта ещё не опубликована" });
           return;
@@ -273,44 +468,39 @@ export function createApiMiddleware() {
       }
 
       if (url.pathname === "/api/publish" && req.method === "POST") {
-        const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
         const world = await readBody(req);
-        if (world?.meta) {
-          world.meta.updatedAt = new Date().toISOString();
-        }
-        writeJson(PUBLISHED_PATH, world);
-        // Keep player orders across republish (they are turn proposals)
+        const written = writeLiveBoard(world, {
+          backup: true,
+          reason: "publish",
+        });
         sendJson(res, 200, {
           ok: true,
-          turn: world.meta?.turn ?? 0,
-          updatedAt: world.meta?.updatedAt ?? null,
+          turn: written.turn,
+          updatedAt: written.updatedAt,
+          tableRevision: written.tableRevision,
         });
         return;
       }
 
       /** Lightweight poll for player clients — no secrets. */
       if (url.pathname === "/api/map-version" && req.method === "GET") {
-        const world = readJson(PUBLISHED_PATH, null);
-        if (!world) {
-          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+        const version = getVersionPayload();
+        if (!version.ok) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована", ...version });
           return;
         }
-        sendJson(res, 200, {
-          turn: world.meta?.turn ?? 0,
-          updatedAt: world.meta?.updatedAt ?? null,
-          systems: Array.isArray(world.systems) ? world.systems.length : 0,
-        });
+        sendJson(res, 200, version);
         return;
       }
 
       /** Re-fetch fog-filtered map without full re-login UI. */
       if (url.pathname === "/api/view-refresh" && req.method === "POST") {
         const body = await readBody(req);
-        const world = readJson(PUBLISHED_PATH, null);
+        const world = readLiveBoard();
         if (!world) {
           sendJson(res, 404, { error: "Карта ещё не опубликована" });
           return;
@@ -324,6 +514,7 @@ export function createApiMiddleware() {
         sendJson(res, 200, {
           factionId: faction.id,
           updatedAt: world.meta?.updatedAt ?? null,
+          tableRevision: world.meta?.tableRevision ?? 0,
           ...filtered,
         });
         return;
@@ -331,7 +522,7 @@ export function createApiMiddleware() {
 
       if (url.pathname === "/api/login" && req.method === "POST") {
         const body = await readBody(req);
-        const world = readJson(PUBLISHED_PATH, null);
+        const world = readLiveBoard();
         if (!world) {
           sendJson(res, 404, { error: "Карта ещё не опубликована" });
           return;
@@ -345,6 +536,12 @@ export function createApiMiddleware() {
         sendJson(res, 200, {
           factionId: faction.id,
           updatedAt: world.meta?.updatedAt ?? null,
+          tableRevision: world.meta?.tableRevision ?? 0,
+          apMax: resolveApMax(
+            getContent().rules?.apPerTurn ?? 3,
+            buildModifierStack([]),
+          ),
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
           ...filtered,
         });
         return;
@@ -352,7 +549,7 @@ export function createApiMiddleware() {
 
       if (url.pathname === "/api/orders" && req.method === "POST") {
         const body = await readBody(req);
-        const world = readJson(PUBLISHED_PATH, null);
+        const world = readLiveBoard();
         if (!world) {
           sendJson(res, 404, { error: "Карта ещё не опубликована" });
           return;
@@ -362,28 +559,50 @@ export function createApiMiddleware() {
           sendJson(res, 401, { error: "Неверный пароль" });
           return;
         }
-        const orders = readJson(ORDERS_PATH, []);
-        const order = {
-          id: body.id || `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        const apMax = resolveApMax(
+          getContent().rules?.apPerTurn ?? 3,
+          buildModifierStack([]),
+        );
+        const defId = body.type?.startsWith("intent.")
+          ? body.type
+          : `intent.${body.type}`;
+        const result = submitIntent({
           factionId: faction.id,
-          type: body.type,
+          defId,
+          payload: {
+            fleetId: body.fleetId,
+            legionId: body.legionId,
+            fromSystemId: body.fromSystemId,
+            toSystemId: body.toSystemId,
+          },
+          note: body.note,
+          source: "map",
           turn: world.meta?.turn ?? 0,
-          status: "pending",
+          apMax,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        // Legacy shape for ViewerPage
+        const order = {
+          id: result.intent.id,
+          factionId: result.intent.factionId,
+          type: body.type,
+          turn: result.intent.turn,
+          status: result.intent.status,
           fleetId: body.fleetId,
           fromSystemId: body.fromSystemId,
           toSystemId: body.toSystemId,
           note: body.note || "",
-          createdAt: new Date().toISOString(),
+          createdAt: result.intent.submittedAt,
         };
-        orders.push(order);
-        writeJson(ORDERS_PATH, orders);
-        sendJson(res, 200, { ok: true, order });
+        sendJson(res, 200, { ok: true, order, intent: result.intent, apMax });
         return;
       }
 
       if (url.pathname === "/api/orders" && req.method === "GET") {
-        const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
@@ -392,21 +611,19 @@ export function createApiMiddleware() {
       }
 
       if (url.pathname === "/api/orders/clear" && req.method === "POST") {
-        const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
         writeJson(ORDERS_PATH, []);
+        writeJson(INTENTS_PATH, []);
         sendJson(res, 200, { ok: true });
         return;
       }
 
-      /** Persist master map edits into lore seed + local draft (flat WorldState).
-       *  Also publishes for players so /view picks up changes immediately. */
+      /** Persist master map → live SoT (+ draft + lore seed). */
       if (url.pathname === "/api/save-campaign" && req.method === "POST") {
-        const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
@@ -415,19 +632,21 @@ export function createApiMiddleware() {
           sendJson(res, 400, { error: "Ожидается flat WorldState (meta + systems)" });
           return;
         }
-        world.meta.updatedAt = new Date().toISOString();
-        writeJson(DRAFT_PATH, world);
-        const loreDir = path.dirname(LORE_PATH);
-        if (!fs.existsSync(loreDir)) fs.mkdirSync(loreDir, { recursive: true });
-        writeJson(LORE_PATH, world);
-        writeJson(PUBLISHED_PATH, world);
+        const written = writeLiveBoard(world, {
+          backup: true,
+          reason: "save_campaign",
+          alsoDraft: true,
+          alsoLore: true,
+        });
         sendJson(res, 200, {
           ok: true,
           published: true,
-          systems: world.systems.length,
-          turn: world.meta?.turn ?? 0,
-          savedAt: world.meta.updatedAt,
-          updatedAt: world.meta.updatedAt,
+          mode: "live",
+          systems: written.world.systems.length,
+          turn: written.turn,
+          savedAt: written.updatedAt,
+          updatedAt: written.updatedAt,
+          tableRevision: written.tableRevision,
           paths: [
             "data/campaign-draft.json",
             "public/campaigns/lo_golden_pax.json",

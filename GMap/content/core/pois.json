@@ -1,0 +1,58 @@
+{
+  "anomaly": { "id": "poi.anomaly", "name": "Аномалия", "label": "Аномалия" },
+  "asteroid": { "id": "poi.asteroid", "name": "Астероидное поле", "label": "Астероидное поле" },
+  "nebula": { "id": "poi.nebula", "name": "Туманность", "label": "Туманность" },
+  "debris": { "id": "poi.debris", "name": "Обломки", "label": "Обломки / поле мусора" },
+  "pirate": { "id": "poi.pirate", "name": "Пираты", "label": "Пиратское логово" },
+  "hub": { "id": "poi.hub", "name": "Хаб", "label": "Хаб / вольный порт" },
+  "ruin": { "id": "poi.ruin", "name": "Руины", "label": "Руины / мёртвый мир" },
+  "dead_zone": { "id": "poi.dead_zone", "name": "Мёртвая зона", "label": "Мёртвая зона сканеров" },
+  "quest": { "id": "poi.quest", "name": "Квест", "label": "Квест / задание" },
+  "minefield": { "id": "poi.minefield", "name": "Минное поле", "label": "Минное поле" },
+  "relay": { "id": "poi.relay", "name": "Релей", "label": "Релей / маяк", "reveal": { "radius": 120 } },
+  "storm": { "id": "poi.storm", "name": "Шторм", "label": "Ионный шторм" },
+  "wormhole": { "id": "poi.wormhole", "name": "Червоточина", "label": "Червоточина" },
+  "black_hole": { "id": "poi.black_hole", "name": "Чёрная дыра", "label": "Чёрная дыра" },
+  "comet": { "id": "poi.comet", "name": "Комета", "label": "Комета / рой комет" },
+  "pulsar": { "id": "poi.pulsar", "name": "Пульсар", "label": "Пульсар" },
+  "shipyard": { "id": "poi.shipyard", "name": "Верфь", "label": "Верфь" },
+  "outpost": { "id": "poi.outpost", "name": "Форпост", "label": "Форпост" },
+  "fortress": { "id": "poi.fortress", "name": "Крепость", "label": "Крепость" },
+  "beacon": { "id": "poi.beacon", "name": "Маяк", "label": "Маяк / навигатор", "reveal": { "radius": 100 } },
+  "sanctuary": { "id": "poi.sanctuary", "name": "Святилище", "label": "Убежище / святилище" },
+  "refugees": {
+    "id": "poi.refugees",
+    "name": "Лагерь беженцев",
+    "label": "Лагерь беженцев",
+    "effects": [
+      { "effect": "upkeep_flat", "args": { "resource": "currency.supply", "amount": 2 } },
+      { "effect": "stability_add", "args": { "amount": -1 } }
+    ]
+  },
+  "quarantine": {
+    "id": "poi.quarantine",
+    "name": "Карантин",
+    "label": "Карантин / пси-карантин",
+    "effects": [
+      { "effect": "forbid_intent", "args": { "intentId": "intent.move_fleet" } },
+      { "effect": "pop_growth_mult", "args": { "mult": 0.5 } }
+    ]
+  },
+  "depot": {
+    "id": "poi.depot",
+    "name": "Депо снабжения",
+    "label": "Склад снабжения / депо",
+    "effects": [
+      { "effect": "upkeep_mult", "args": { "resource": "currency.supply", "mult": 0.9 } }
+    ]
+  },
+  "propaganda": {
+    "id": "poi.propaganda",
+    "name": "Пропаганда-вышка",
+    "label": "Пропаганда-вышка",
+    "effects": [
+      { "effect": "stability_add", "args": { "amount": 1 } },
+      { "effect": "tax_pressure", "args": { "amount": -1 } }
+    ]
+  }
+}

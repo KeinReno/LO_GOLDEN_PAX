@@ -1,0 +1,50 @@
+{
+  "ship.corvette": {
+    "id": "ship.corvette",
+    "name": "Корвет",
+    "roles": ["screen"],
+    "stats": { "damage": 8, "armor": 10, "shields": 5, "hp": 40, "accuracy": 60 },
+    "targeting": "screen_first",
+    "theaterMult": { "space": 1, "assault": 0.3, "ground": 0 }
+  },
+  "ship.frigate": {
+    "id": "ship.frigate",
+    "name": "Фрегат",
+    "roles": ["screen", "line"],
+    "stats": { "damage": 14, "armor": 18, "shields": 12, "hp": 70, "accuracy": 55 },
+    "targeting": "screen_first",
+    "theaterMult": { "space": 1, "assault": 0.4, "ground": 0 }
+  },
+  "ship.cruiser": {
+    "id": "ship.cruiser",
+    "name": "Крейсер",
+    "roles": ["line"],
+    "stats": { "damage": 28, "armor": 35, "shields": 30, "hp": 120, "accuracy": 50 },
+    "targeting": "line_first",
+    "theaterMult": { "space": 1, "assault": 0.6, "ground": 0 }
+  },
+  "ship.battleship": {
+    "id": "ship.battleship",
+    "name": "Линкор",
+    "roles": ["capital"],
+    "stats": { "damage": 55, "armor": 60, "shields": 45, "hp": 220, "accuracy": 45 },
+    "targeting": "capital_first",
+    "theaterMult": { "space": 1, "assault": 0.8, "ground": 0 }
+  },
+  "ship.carrier": {
+    "id": "ship.carrier",
+    "name": "Носитель",
+    "roles": ["carrier"],
+    "stats": { "damage": 20, "armor": 25, "shields": 35, "hp": 180, "accuracy": 40 },
+    "targeting": "screen_first",
+    "theaterMult": { "space": 1, "assault": 0.5, "ground": 0 }
+  },
+  "ship.transport": {
+    "id": "ship.transport",
+    "name": "Транспорт",
+    "roles": ["support"],
+    "stats": { "damage": 2, "armor": 8, "shields": 5, "hp": 90, "accuracy": 20 },
+    "targeting": "flee",
+    "theaterMult": { "space": 0.2, "assault": 0.1, "ground": 0 }
+  }
+}

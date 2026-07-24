@@ -1,0 +1,41 @@
+{
+  "apPerTurn": 3,
+  "apBanking": false,
+  "tickTimezone": "Europe/Moscow",
+  "tickCron": "1 0 * * *",
+  "conflictPolicy": "submitted_at_asc",
+  "economyMergeOrder": ["flat", "mult"],
+  "deficit": {
+    "lowRatio": 0.15,
+    "emptyAt": 0,
+    "lowPenalty": "ap_minus_1"
+  },
+  "tax": {
+    "defaultMode": "treasury",
+    "changeTakesEffect": "next_tick",
+    "pressureThresholds": [
+      {
+        "min": 3,
+        "effects": [
+          { "effect": "cost_mult", "args": { "mult": 1.1, "tag": "build" } }
+        ]
+      },
+      {
+        "min": 6,
+        "effects": [{ "effect": "ap_add", "args": { "amount": -1 } }]
+      }
+    ]
+  },
+  "population": {
+    "unitLabel": "pop",
+    "baseGrowth": 0.012,
+    "maxLossPerTurn": 0.15
+  },
+  "combat": {
+    "allowEarlyResolve": true
+  },
+  "fog": {
+    "storage": "per_system",
+    "fleetReveal": "ephemeral"
+  }
+}

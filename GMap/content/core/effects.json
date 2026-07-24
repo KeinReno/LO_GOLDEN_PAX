@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Словарь эффектов ModifierStack"
+  },
+  "effects": {
+    "production_flat": {
+      "id": "production_flat",
+      "format": { "resource": "string", "amount": "number" }
+    },
+    "production_mult": {
+      "id": "production_mult",
+      "format": { "resource": "string", "mult": "number" }
+    },
+    "upkeep_flat": {
+      "id": "upkeep_flat",
+      "format": { "resource": "string", "amount": "number" }
+    },
+    "upkeep_mult": {
+      "id": "upkeep_mult",
+      "format": { "resource": "string", "mult": "number" }
+    },
+    "ap_add": {
+      "id": "ap_add",
+      "format": { "amount": "number" }
+    },
+    "ap_mult": {
+      "id": "ap_mult",
+      "format": { "mult": "number" }
+    },
+    "cost_flat": {
+      "id": "cost_flat",
+      "format": { "resource": "string", "amount": "number", "tag": "string?" }
+    },
+    "cost_mult": {
+      "id": "cost_mult",
+      "format": { "mult": "number", "tag": "string?" }
+    },
+    "move_cost_mult": {
+      "id": "move_cost_mult",
+      "format": { "mult": "number" }
+    },
+    "pop_growth_flat": {
+      "id": "pop_growth_flat",
+      "format": { "amount": "number" }
+    },
+    "pop_growth_mult": {
+      "id": "pop_growth_mult",
+      "format": { "mult": "number" }
+    },
+    "pop_cap_flat": {
+      "id": "pop_cap_flat",
+      "format": { "amount": "number" }
+    },
+    "stability_add": {
+      "id": "stability_add",
+      "format": { "amount": "number" }
+    },
+    "habitability_mult": {
+      "id": "habitability_mult",
+      "format": { "mult": "number" }
+    },
+    "stat_mult": {
+      "id": "stat_mult",
+      "format": { "stat": "string", "mult": "number" }
+    },
+    "forbid_intent": {
+      "id": "forbid_intent",
+      "format": { "intentId": "string" }
+    },
+    "allow_intent": {
+      "id": "allow_intent",
+      "format": { "intentId": "string" }
+    },
+    "tax_pressure": {
+      "id": "tax_pressure",
+      "format": { "amount": "number" }
+    }
+  }
+}

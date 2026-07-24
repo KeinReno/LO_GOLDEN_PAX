@@ -2,12 +2,14 @@ import fs from "node:fs";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createApiMiddleware } from "./api.mjs";
 import {
-  createApiMiddleware,
   ensureDataDir,
   LORE_PATH,
   PUBLISHED_PATH,
-} from "./api.mjs";
+  writeLiveBoard,
+  readJson,
+} from "./tableStore.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.resolve(__dirname, "../dist");
@@ -16,8 +18,11 @@ const host = process.env.HOST || "0.0.0.0";
 
 ensureDataDir();
 if (!fs.existsSync(PUBLISHED_PATH) && fs.existsSync(LORE_PATH)) {
-  fs.copyFileSync(LORE_PATH, PUBLISHED_PATH);
-  console.log("Seeded data/published.json from campaign lore.");
+  const lore = readJson(LORE_PATH, null);
+  if (lore) {
+    writeLiveBoard(lore, { reason: "seed_lore" });
+    console.log("Seeded live board from campaign lore.");
+  }
 }
 
 if (!fs.existsSync(path.join(dist, "index.html"))) {

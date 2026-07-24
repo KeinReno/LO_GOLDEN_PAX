@@ -1,0 +1,10 @@
+{
+  "map.iron": { "id": "map.iron", "name": "железо", "yield": { "currency.metal": 2 } },
+  "map.titan": { "id": "map.titan", "name": "титан", "yield": { "currency.metal": 4 } },
+  "map.crystals": { "id": "map.crystals", "name": "кристаллы", "yield": { "currency.metal": 1 } },
+  "map.gas": { "id": "map.gas", "name": "газ", "yield": { "currency.supply": 1 } },
+  "map.water": { "id": "map.water", "name": "вода", "yield": { "currency.supply": 2 } },
+  "map.rare_earth": { "id": "map.rare_earth", "name": "редкоземы", "yield": { "currency.metal": 3 } },
+  "map.antimatter": { "id": "map.antimatter", "name": "антиматерия", "yield": { "currency.metal": 5 } },
+  "map.relics": { "id": "map.relics", "name": "реликты", "yield": {} }
+}

@@ -74,16 +74,47 @@ export function useCampaignSession() {
   useEffect(() => {
     if (bootDone.current) return;
     bootDone.current = true;
-    const draft = loadDraft();
-    const meta = getDraftMeta();
-    if (!draft || !meta || meta.systems < 1) return;
-    loadWorld(draft);
-    markSaved(meta.savedAt);
-    setDraftMeta(meta);
-    setSyncMsg(
-      `Черновик восстановлен · ${meta.systems} систем · ${fmtTime(meta.savedAt)}`,
-    );
-  }, [loadWorld]);
+    let cancelled = false;
+    void (async () => {
+      // Prefer live server board (P0 SoT); fall back to local draft.
+      try {
+        const res = await fetch("/api/table", {
+          headers: { "X-Master-Token": masterToken },
+        });
+        if (res.ok) {
+          const data = (await res.json()) as {
+            mode?: string;
+            world?: typeof world;
+            version?: { tableRevision?: number };
+          };
+          if (!cancelled && data.world && (data.world.systems?.length ?? 0) > 0) {
+            loadWorld(data.world);
+            markSaved(data.world.meta?.updatedAt ?? new Date().toISOString());
+            setDraftMeta(getDraftMeta());
+            setSyncMsg(
+              `Live-стол · ход ${data.world.meta?.turn ?? "?"} · rev ${data.version?.tableRevision ?? data.world.meta?.tableRevision ?? "?"}`,
+            );
+            return;
+          }
+        }
+      } catch {
+        /* offline / no API */
+      }
+      if (cancelled) return;
+      const draft = loadDraft();
+      const meta = getDraftMeta();
+      if (!draft || !meta || meta.systems < 1) return;
+      loadWorld(draft);
+      markSaved(meta.savedAt);
+      setDraftMeta(meta);
+      setSyncMsg(
+        `Черновик (local) · ${meta.systems} систем · ${fmtTime(meta.savedAt)}`,
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadWorld, masterToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,12 +282,25 @@ export function useCampaignSession() {
         paths?: string[];
         published?: boolean;
         updatedAt?: string;
+        tableRevision?: number;
+        turn?: number;
       };
       if (!res.ok) throw new Error(data.error || res.statusText);
       rememberSave();
+      if (typeof data.tableRevision === "number" && world.meta) {
+        loadWorld({
+          ...world,
+          meta: {
+            ...world.meta,
+            tableRevision: data.tableRevision,
+            updatedAt: data.updatedAt ?? world.meta.updatedAt,
+            turn: data.turn ?? world.meta.turn,
+          },
+        });
+      }
       setSyncMsg(
         data.published
-          ? `Сохранено и опубликовано: ${data.systems} систем`
+          ? `Live · ${data.systems} систем · ход ${data.turn} · rev ${data.tableRevision}`
           : `Сохранено: ${data.systems} систем`,
       );
     } catch (e) {
@@ -265,6 +309,47 @@ export function useCampaignSession() {
           ? `${e.message} (нужен npm run dev; иначе скачай JSON)`
           : String(e),
       );
+    }
+  };
+
+  const onAdvanceTurn = async () => {
+    setSyncMsg("Закрытие хода…");
+    try {
+      const res = await fetch("/api/turn/tick", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": masterToken,
+        },
+        body: JSON.stringify({ force: true }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        turn?: number;
+        tableRevision?: number;
+        world?: typeof world;
+        journal?: { events?: unknown[] };
+      };
+      if (!res.ok || !data.ok) throw new Error(data.error || res.statusText);
+      if (data.world) {
+        loadWorld(data.world);
+        markSaved(data.world.meta?.updatedAt ?? new Date().toISOString());
+      } else {
+        const t = await fetch("/api/table", {
+          headers: { "X-Master-Token": masterToken },
+        });
+        if (t.ok) {
+          const payload = (await t.json()) as { world?: typeof world };
+          if (payload.world) loadWorld(payload.world);
+        }
+      }
+      const n = data.journal?.events?.length ?? 0;
+      setSyncMsg(
+        `Ход → ${data.turn} · rev ${data.tableRevision} · событий ${n}`,
+      );
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -282,6 +367,7 @@ export function useCampaignSession() {
     setMasterToken,
     rememberSave,
     onSaveToServer,
+    onAdvanceTurn,
     onDownloadMap,
     shareBusy,
     shareViewUrl,

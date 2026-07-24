@@ -1,0 +1,64 @@
+{
+  "tax.industry": {
+    "id": "tax.industry",
+    "name": "Промышленный налог",
+    "resource": "currency.metal",
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      {
+        "id": "low",
+        "label": "10%",
+        "rate": 0.1,
+        "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }]
+      },
+      {
+        "id": "mid",
+        "label": "20%",
+        "rate": 0.2,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 3 } },
+          { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 0.95 } }
+        ]
+      },
+      {
+        "id": "high",
+        "label": "35%",
+        "rate": 0.35,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 6 } },
+          { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 0.85 } },
+          { "effect": "ap_add", "args": { "amount": -1 } }
+        ]
+      }
+    ]
+  },
+  "tax.supply": {
+    "id": "tax.supply",
+    "name": "Сбор обеспечения",
+    "resource": "currency.supply",
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      {
+        "id": "low",
+        "label": "10%",
+        "rate": 0.1,
+        "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }]
+      },
+      {
+        "id": "mid",
+        "label": "20%",
+        "rate": 0.2,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 2 } },
+          { "effect": "pop_growth_mult", "args": { "mult": 0.95 } }
+        ]
+      }
+    ]
+  }
+}

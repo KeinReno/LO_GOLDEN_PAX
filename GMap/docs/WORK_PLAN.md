@@ -41,9 +41,9 @@ NOW ──► P0 Фундамент SoT
 
 | Этап | Ориентир | Статус |
 |------|----------|--------|
-| P0 | сразу | todo |
-| P1 | после P0 | todo |
-| P2 | после P1 | todo |
+| P0 | сразу | **in progress / done on v_0_2** |
+| P1 | после P0 | **in progress / done on v_0_2** |
+| P2 | после P1 | **partial (tick + intents + apply move/claim)** |
 | P3 | можно частично || с P2 | todo |
 | P4 | после P2 | todo |
 | P5 | после P1 defs + P2 tick | todo |

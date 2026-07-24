@@ -1,0 +1,45 @@
+{
+  "race_human": {
+    "id": "race_human",
+    "name": "Люди",
+    "tags": ["baseline"],
+    "traits": [],
+    "habitability": { "rocky": 1, "desert": 0.85, "ocean": 0.95, "ice": 0.7, "toxic": 0.25 },
+    "growth": { "baseRate": 0.012, "crowdPenalty": 0.4 },
+    "xenorelations": {}
+  },
+  "race_belator": {
+    "id": "race_belator",
+    "name": "Белаторцы",
+    "tags": ["imperial", "disciplined"],
+    "traits": [
+      {
+        "id": "trait.belator.discipline",
+        "effects": [
+          { "effect": "stat_mult", "args": { "stat": "defense", "mult": 1.1 } },
+          { "effect": "upkeep_flat", "args": { "resource": "currency.supply", "amount": 1 } }
+        ]
+      }
+    ],
+    "habitability": { "rocky": 1, "desert": 0.8, "ocean": 0.9, "ice": 0.6, "toxic": 0.2 },
+    "growth": { "baseRate": 0.011, "crowdPenalty": 0.35 },
+    "xenorelations": { "race_synth": -0.1 }
+  },
+  "race_synth": {
+    "id": "race_synth",
+    "name": "Синты",
+    "tags": ["synthetic"],
+    "traits": [
+      {
+        "id": "trait.synth.efficient",
+        "effects": [
+          { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 1.05 } },
+          { "effect": "pop_growth_mult", "args": { "mult": 0.7 } }
+        ]
+      }
+    ],
+    "habitability": { "rocky": 1, "desert": 1, "ocean": 0.5, "ice": 0.9, "toxic": 0.8 },
+    "growth": { "baseRate": 0.008, "crowdPenalty": 0.2 },
+    "xenorelations": { "race_belator": -0.1 }
+  }
+}

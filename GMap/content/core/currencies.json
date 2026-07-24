@@ -1,0 +1,14 @@
+{
+  "currency.metal": {
+    "id": "currency.metal",
+    "name": "Металл",
+    "short": "Ti",
+    "description": "Стройка, корабли, ремонт"
+  },
+  "currency.supply": {
+    "id": "currency.supply",
+    "name": "Обеспечение",
+    "short": "Sup",
+    "description": "Upkeep армии и населения"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unit.generic_line": {
+    "id": "unit.generic_line",
+    "name": "Линейная пехота",
+    "roles": ["infantry"],
+    "stats": { "damage": 12, "defense": 12, "hp": 100, "speed": 5 },
+    "targeting": "infantry_first",
+    "theaterMult": { "ground": 1, "assault": 1, "space": 0 }
+  },
+  "unit.breach_cadre": {
+    "id": "unit.breach_cadre",
+    "name": "Штурмовой кадр",
+    "roles": ["assault", "infantry"],
+    "stats": { "damage": 22, "defense": 14, "hp": 100, "speed": 6 },
+    "targeting": "garrison_first",
+    "theaterMult": { "ground": 1, "assault": 1.2, "space": 0 }
+  },
+  "unit.garrison": {
+    "id": "unit.garrison",
+    "name": "Гарнизон",
+    "roles": ["garrison", "infantry"],
+    "stats": { "damage": 10, "defense": 20, "hp": 120, "speed": 3 },
+    "targeting": "assault_first",
+    "theaterMult": { "ground": 1.1, "assault": 0.9, "space": 0 }
+  }
+}

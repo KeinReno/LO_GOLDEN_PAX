@@ -12,6 +12,7 @@ import { QuestPanel } from "./editors/QuestPanel";
 import { MapContextMenu } from "./editors/MapContextMenu";
 import { ViewerPage } from "./viewer/ViewerPage";
 import { useWorldStore } from "./state/worldStore";
+import { fetchContent } from "./state/contentCatalog";
 
 function OrderTargetHint() {
   const pending = useWorldStore((s) => s.pendingUnitOrder);
@@ -116,6 +117,10 @@ function EditorHotkeys({
 function EditorPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+
+  useEffect(() => {
+    void fetchContent();
+  }, []);
 
   return (
     <CampaignSessionProvider>

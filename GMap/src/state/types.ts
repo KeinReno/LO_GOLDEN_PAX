@@ -546,6 +546,9 @@ export interface CampaignMeta {
   updatedAt: string;
   width: number;
   height: number;
+  /** Monotonic live-table revision (server SoT). */
+  tableRevision?: number;
+  contentPacks?: string[];
 }
 
 export interface WorldState {

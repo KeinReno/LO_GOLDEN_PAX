@@ -14,6 +14,7 @@ export function TopBar() {
     lastSaved,
     syncMsg,
     onSaveToServer,
+    onAdvanceTurn,
     onDownloadMap,
     shareBusy,
     shareViewUrl,
@@ -53,6 +54,16 @@ export function TopBar() {
         <span className="top-bar-campaign" title={world.meta.name}>
           {world.meta.name}
         </span>
+        <span
+          className="hint"
+          title="Ход / tableRevision"
+          style={{ opacity: 0.75, fontSize: 12 }}
+        >
+          ход {world.meta.turn}
+          {world.meta.tableRevision != null
+            ? ` · rev ${world.meta.tableRevision}`
+            : ""}
+        </span>
         {dirty ? (
           <span className="save-pill dirty" title="Черновик пишется…">
             ●
@@ -91,6 +102,22 @@ export function TopBar() {
           onClick={() => void onSaveToServer()}
         >
           Сохранить
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
+          title="Закрыть ход на сервере (processTurn)"
+          onClick={() => {
+            if (
+              window.confirm(
+                `Закрыть ход ${world.meta.turn} и применить pending intents?`,
+              )
+            ) {
+              void onAdvanceTurn();
+            }
+          }}
+        >
+          Тик хода
         </button>
         <button type="button" className="btn ghost" onClick={onDownloadMap}>
           JSON

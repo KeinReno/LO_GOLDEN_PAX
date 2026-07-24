@@ -234,8 +234,9 @@ export function ViewerPage() {
         const ver = (await res.json()) as {
           updatedAt?: string | null;
           turn?: number;
+          tableRevision?: number;
         };
-        const stamp = `${ver.updatedAt ?? ""}|${ver.turn ?? ""}`;
+        const stamp = `${ver.tableRevision ?? ""}|${ver.updatedAt ?? ""}|${ver.turn ?? ""}`;
         if (!mapStampRef.current) {
           mapStampRef.current = stamp;
           return;

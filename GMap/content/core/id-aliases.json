@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "ships": {
+    "корвет": "ship.corvette",
+    "фрегат": "ship.frigate",
+    "крейсер": "ship.cruiser",
+    "линкор": "ship.battleship",
+    "носитель": "ship.carrier",
+    "транспорт": "ship.transport"
+  },
+  "resources": {
+    "железо": "map.iron",
+    "титан": "map.titan",
+    "кристаллы": "map.crystals",
+    "газ": "map.gas",
+    "вода": "map.water",
+    "редкоземы": "map.rare_earth",
+    "антиматерия": "map.antimatter",
+    "реликты": "map.relics"
+  },
+  "units": {
+    "unit.generic_line": "unit.generic_line"
+  }
+}
