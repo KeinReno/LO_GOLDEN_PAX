@@ -866,6 +866,15 @@ export function ViewerPage() {
             <br />
             AP: {reservedAp}/{apMax} (занято / лимит)
           </p>
+          {payload.economy && (
+            <p className="hint">
+              Металл: {payload.economy.stocks?.["currency.metal"] ?? "—"} ·
+              Обеспечение: {payload.economy.stocks?.["currency.supply"] ?? "—"}
+              <br />
+              Дефицит: {payload.economy.deficit ?? "ok"} · давление:{" "}
+              {payload.economy.pressure ?? 0}
+            </p>
+          )}
           <button
             type="button"
             className="btn ghost block"
@@ -877,6 +886,75 @@ export function ViewerPage() {
           >
             Выйти
           </button>
+        </section>
+
+        <section>
+          <h3>Держава</h3>
+          <p className="hint">
+            Казна и налоги. Смена ставки тратит 1 AP и действует со следующего
+            тика.
+          </p>
+          {payload.economy ? (
+            <>
+              <p className="hint">
+                metal {payload.economy.stocks?.["currency.metal"]} · supply{" "}
+                {payload.economy.stocks?.["currency.supply"]} ·{" "}
+                {payload.economy.deficit}
+              </p>
+              <label className="field">
+                <span>Промышленный налог</span>
+                <select
+                  value={payload.economy.taxes?.["tax.industry"] ?? "none"}
+                  onChange={(e) => {
+                    void (async () => {
+                      try {
+                        const res = await fetch("/api/intents", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            factionId: payload.factionId,
+                            password,
+                            defId: "intent.set_tax",
+                            payload: {
+                              taxSlot: "tax.industry",
+                              tierId: e.target.value,
+                            },
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || res.statusText);
+                        setOrderMsg(`Налог в очереди: ${e.target.value}`);
+                        setReservedAp((r) => r + (data.intent?.apCost ?? 1));
+                        setPayload({
+                          ...payload,
+                          economy: {
+                            ...payload.economy!,
+                            pendingPolicy: {
+                              taxes: {
+                                ...(payload.economy?.pendingPolicy?.taxes || {}),
+                                "tax.industry": e.target.value,
+                              },
+                            },
+                          },
+                        });
+                      } catch (err) {
+                        setOrderMsg(
+                          err instanceof Error ? err.message : String(err),
+                        );
+                      }
+                    })();
+                  }}
+                >
+                  <option value="none">0%</option>
+                  <option value="low">10%</option>
+                  <option value="mid">20%</option>
+                  <option value="high">35%</option>
+                </select>
+              </label>
+            </>
+          ) : (
+            <p className="hint">Нет данных казны — перелогиньтесь после тика.</p>
+          )}
         </section>
 
         <section>

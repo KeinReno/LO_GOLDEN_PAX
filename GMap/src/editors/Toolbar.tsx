@@ -35,6 +35,7 @@ import {
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { IntentsInbox } from "./IntentsInbox";
+import { EconomyPanel } from "./EconomyPanel";
 import { RESOURCE_POOL } from "../state/defaults";
 
 type TabId = "tools" | "layers" | "file" | "session";
@@ -850,6 +851,7 @@ export function Toolbar() {
               {publishStatus && <p className="hint">{publishStatus}</p>}
             </section>
 
+            <EconomyPanel />
             <IntentsInbox />
 
             {world.orders.length > 0 && (

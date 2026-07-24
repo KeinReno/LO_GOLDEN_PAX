@@ -656,4 +656,11 @@ export interface ViewerPayload {
   tableRevision?: number;
   apMax?: number;
   reservedAp?: number;
+  economy?: {
+    stocks: Record<string, number>;
+    taxes: Record<string, string>;
+    pendingPolicy?: { taxes?: Record<string, string> };
+    pressure?: number;
+    deficit?: string;
+  };
 }

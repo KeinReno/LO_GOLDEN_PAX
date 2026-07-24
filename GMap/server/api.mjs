@@ -44,6 +44,13 @@ import {
   addPermanentReveal,
   resolveVisibleWithFog,
 } from "./fogStore.mjs";
+import {
+  getFactionPublicEco,
+  readLedger,
+  ensureAllFactions,
+  writeLedger,
+} from "./ledger.mjs";
+import { queueTaxChange } from "./economyTick.mjs";
 
 export {
   DATA_DIR,
@@ -266,6 +273,79 @@ export function createApiMiddleware() {
         const fog = addPermanentReveal(body.factionId, body.systemId);
         bumpTableRevision();
         sendJson(res, 200, { ok: true, fog });
+        return;
+      }
+
+      if (url.pathname === "/api/ledger" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const world = readLiveBoard();
+        const ledger = world
+          ? ensureAllFactions(readLedger(), world)
+          : readLedger();
+        if (world) writeLedger(ledger);
+        sendJson(res, 200, ledger);
+        return;
+      }
+
+      if (url.pathname.startsWith("/api/ledger/") && req.method === "GET") {
+        const factionId = url.pathname.split("/")[3];
+        if (requireMaster(req)) {
+          sendJson(res, 200, getFactionPublicEco(factionId));
+          return;
+        }
+        const world = readLiveBoard();
+        const pw = req.headers["x-faction-password"];
+        const fac = (world?.factions ?? []).find((f) => f.id === factionId);
+        if (!fac || fac.password !== pw) {
+          sendJson(res, 401, { error: "Неверный пароль" });
+          return;
+        }
+        sendJson(res, 200, getFactionPublicEco(factionId));
+        return;
+      }
+
+      if (url.pathname === "/api/economy/set-tax" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        // Queue via intent for AP, or master direct queue
+        if (isMaster && body.direct) {
+          const result = queueTaxChange(
+            body.factionId,
+            body.taxSlot,
+            body.tierId,
+          );
+          sendJson(res, result.ok ? 200 : 400, result);
+          return;
+        }
+        const apMax = resolveApMax(
+          getContent().rules?.apPerTurn ?? 3,
+          buildModifierStack([]),
+        );
+        const result = submitIntent({
+          factionId: body.factionId,
+          defId: "intent.set_tax",
+          payload: { taxSlot: body.taxSlot, tierId: body.tierId },
+          note: body.note,
+          source: "map",
+          turn: world.meta?.turn ?? 0,
+          apMax,
+        });
+        sendJson(res, result.ok ? 200 : 400, result);
         return;
       }
 
@@ -564,15 +644,28 @@ export function createApiMiddleware() {
           return;
         }
         const filtered = filterWorldForFaction(world, faction.id);
+        const eco = getFactionPublicEco(faction.id);
         sendJson(res, 200, {
           factionId: faction.id,
           updatedAt: world.meta?.updatedAt ?? null,
           tableRevision: world.meta?.tableRevision ?? 0,
-          apMax: resolveApMax(
-            getContent().rules?.apPerTurn ?? 3,
-            buildModifierStack([]),
-          ),
+          apMax: eco.rules?.apPerTurn
+            ? resolveApMax(
+                eco.rules.apPerTurn,
+                buildModifierStack([]),
+              )
+            : resolveApMax(
+                getContent().rules?.apPerTurn ?? 3,
+                buildModifierStack([]),
+              ),
           reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          economy: {
+            stocks: eco.stocks,
+            taxes: eco.taxes,
+            pendingPolicy: eco.pendingPolicy,
+            pressure: eco.pressure,
+            deficit: eco.deficit,
+          },
           ...filtered,
         });
         return;

@@ -8,14 +8,14 @@ import {
   setTableMeta,
   getTableMeta,
 } from "./tableStore.mjs";
-import { getContent } from "./contentLoader.mjs";
 import { readIntents, writeIntents } from "./intents.mjs";
-import {
-  buildModifierStack,
-  resolveApMax,
-  explainStack,
-} from "./modifierStack.mjs";
 import { addPermanentReveal } from "./fogStore.mjs";
+import {
+  runEconomyTick,
+  activatePendingPolicies,
+  queueTaxChange,
+  transferResources,
+} from "./economyTick.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
@@ -183,12 +183,65 @@ function applyScoutReveal(world, intent, journal) {
   return true;
 }
 
+function applySetTax(world, intent, journal) {
+  const slot = intent.payload?.taxSlot;
+  const tierId = intent.payload?.tierId;
+  const result = queueTaxChange(intent.factionId, slot, tierId);
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "set_tax_queued",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    taxSlot: slot,
+    tierId,
+    note: "применится со следующего тика",
+  });
+  return true;
+}
+
+function applyTransfer(world, intent, journal) {
+  const result = transferResources(
+    intent.factionId,
+    intent.payload?.toFactionId,
+    intent.payload?.currencyId || "currency.metal",
+    intent.payload?.amount,
+    world.meta?.turn,
+    intent.id,
+  );
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "transfer",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    toFactionId: intent.payload?.toFactionId,
+    currencyId: intent.payload?.currencyId,
+    amount: intent.payload?.amount,
+  });
+  return true;
+}
+
 const APPLIERS = {
   "intent.move_fleet": applyMoveFleet,
   "intent.move_legion": applyMoveLegion,
   "intent.claim_system": applyClaim,
   "intent.attack_system": applyAttackMarker,
   "intent.scout_reveal": applyScoutReveal,
+  "intent.set_tax": applySetTax,
+  "intent.transfer": applyTransfer,
 };
 
 function advanceCaravans(world) {
@@ -215,14 +268,23 @@ export function processTurn(opts = {}) {
   const world = readLiveBoard();
   if (!world) return { ok: false, error: "Нет published board" };
 
-  const content = getContent();
   const turn = world.meta?.turn ?? 0;
   backupTurnSnapshot(turn, "pre_tick");
+
+  // Tax/law pending from previous day
+  activatePendingPolicies(world);
 
   const journal = [];
   const intents = readIntents()
     .filter((i) => i.status === "pending" && i.turn === turn)
-    .sort((a, b) => String(a.submittedAt).localeCompare(String(b.submittedAt)));
+    .sort((a, b) => {
+      // transfers first, then rest by time
+      const rank = (d) =>
+        d === "intent.transfer" ? 0 : d === "intent.set_tax" ? 1 : 2;
+      const r = rank(a.defId) - rank(b.defId);
+      if (r !== 0) return r;
+      return String(a.submittedAt).localeCompare(String(b.submittedAt));
+    });
 
   setTableMeta({ tickFrozen: true });
 
@@ -253,9 +315,8 @@ export function processTurn(opts = {}) {
 
   advanceCaravans(world);
 
-  const apPerTurn = content.rules?.apPerTurn ?? 3;
-  const emptyStack = buildModifierStack([]);
-  const apMax = resolveApMax(apPerTurn, emptyStack);
+  const econ = runEconomyTick(world, turn);
+  for (const e of econ.journal) journalPush(journal, e);
 
   world.meta.turn = turn + 1;
   world.meta.updatedAt = new Date().toISOString();
@@ -268,9 +329,8 @@ export function processTurn(opts = {}) {
   const briefing = {
     turnFrom: turn,
     turnTo: turn + 1,
-    apMax,
+    economy: econ.breakdowns,
     events: journal,
-    modifierExplain: explainStack(emptyStack),
   };
 
   setTableMeta({
