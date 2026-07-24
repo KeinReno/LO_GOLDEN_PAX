@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import {
+  BookOpen,
   FolderOpen,
   Layers,
   Radio,
@@ -38,9 +39,10 @@ import { IntentsInbox } from "./IntentsInbox";
 import { EconomyPanel } from "./EconomyPanel";
 import { CombatPanel } from "./CombatPanel";
 import { GmOpsPanel } from "./GmOpsPanel";
+import { CampaignPanel } from "./CampaignPanel";
 import { RESOURCE_POOL } from "../state/defaults";
 
-type TabId = "tools" | "layers" | "file" | "session";
+type TabId = "tools" | "layers" | "file" | "session" | "campaign";
 
 const TOOL_GROUPS: {
   title: string;
@@ -281,6 +283,7 @@ const TABS: { id: TabId; label: string; Icon: typeof Wrench }[] = [
   { id: "layers", label: "Слои", Icon: Layers },
   { id: "file", label: "Файл", Icon: FolderOpen },
   { id: "session", label: "Сессия", Icon: Radio },
+  { id: "campaign", label: "Кампания", Icon: BookOpen },
 ];
 
 export function Toolbar() {
@@ -921,6 +924,14 @@ export function Toolbar() {
               </section>
             )}
           </>
+        )}
+
+        {tab === "campaign" && (
+          <CampaignPanel
+            mode="master"
+            masterToken={masterToken}
+            onMsg={setSyncMsg}
+          />
         )}
       </div>
 

@@ -48,7 +48,7 @@ NOW ──► P0 Фундамент SoT
 | P4 | после P2 | **done on v_0_2 (ledger/tax/pop)** |
 | P5 | после P1 defs + P2 tick | **done on v_0_2 (Engagement resolve)** |
 | P6 | после P4 pop + P3 fog | **done on v_0_2 (POI/refugees/GM)** |
-| P7 | после стабильного tick | todo |
+| P7 | после стабильного tick | **done on v_0_2 (RP episodes)** |
 | P8 | ~29.07+ белый IP | todo |
 
 ---
@@ -298,7 +298,7 @@ flowchart TD
 - [ ] + ground/assault  
 - [x] + refugees/quarantine/depot + GM narrative tools  
 - [ ] + GM notes/timeline/consequences  
-- [ ] + RP episodes  
+- [x] + RP episodes  
 
 ---
 

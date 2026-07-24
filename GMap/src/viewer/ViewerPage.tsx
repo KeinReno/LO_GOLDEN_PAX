@@ -44,6 +44,7 @@ import {
   type ViewerGraphicsPrefs,
 } from "../ui/viewerGraphics";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
+import { CampaignPanel } from "../editors/CampaignPanel";
 
 /** Modes shown to players (no vague «auto»). */
 type PerfMode = ViewerPerfChoice;
@@ -1047,6 +1048,17 @@ export function ViewerPage() {
               );
             })}
         </section>
+
+        <CampaignPanel
+          mode="player"
+          factionId={payload.factionId}
+          password={password}
+          systems={payload.world.systems.map((s) => ({
+            id: s.id,
+            name: s.name,
+          }))}
+          onMsg={(m) => setOrderMsg(m)}
+        />
 
         <section>
           <h3>Директива на следующий ход</h3>

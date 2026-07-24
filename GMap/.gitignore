@@ -21,6 +21,8 @@ data/ledger.json
 data/table-meta.json
 data/fog-masks.json
 data/engagements.json
+data/rp/**
+!data/rp/.gitkeep
 data/turns/**
 !data/turns/.gitkeep
 deploy/certs/*.pem

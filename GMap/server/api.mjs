@@ -59,6 +59,18 @@ import {
   applyPresetToSystems,
   scheduleTimer,
 } from "./narrative.mjs";
+import {
+  readRpIndex,
+  ensureRp,
+  createChapter,
+  createEpisode,
+  closeEpisode,
+  reopenEpisode,
+  readMessages,
+  appendMessage,
+  patchMessageIntentId,
+  DEFAULT_CAMPAIGN,
+} from "./rpStore.mjs";
 
 export {
   DATA_DIR,
@@ -436,6 +448,181 @@ export function createApiMiddleware() {
         }
         writeLiveBoard(world, { backup: false, reason: "gm_note" });
         sendJson(res, 200, { ok: true, count: ids.length });
+        return;
+      }
+
+      // ── RP / Campaign (P7) ─────────────────────────────────
+      if (url.pathname === "/api/rp" && req.method === "GET") {
+        const campaignId =
+          url.searchParams.get("campaignId") || DEFAULT_CAMPAIGN;
+        const index = ensureRp(campaignId);
+        sendJson(res, 200, index);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/chapter" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = createChapter(
+          body.title,
+          body.campaignId || DEFAULT_CAMPAIGN,
+        );
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/episode" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = createEpisode(
+          body.chapterId,
+          {
+            title: body.title,
+            visibility: body.visibility,
+            ref: body.ref,
+          },
+          body.campaignId || DEFAULT_CAMPAIGN,
+        );
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/episode/close" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = body.reopen
+          ? reopenEpisode(
+              body.chapterId,
+              body.episodeId,
+              body.campaignId || DEFAULT_CAMPAIGN,
+            )
+          : closeEpisode(
+              body.chapterId,
+              body.episodeId,
+              body.campaignId || DEFAULT_CAMPAIGN,
+            );
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/messages" && req.method === "GET") {
+        const chapterId = url.searchParams.get("chapterId");
+        const episodeId = url.searchParams.get("episodeId");
+        const campaignId =
+          url.searchParams.get("campaignId") || DEFAULT_CAMPAIGN;
+        if (!chapterId || !episodeId) {
+          sendJson(res, 400, { error: "chapterId + episodeId" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const factionId = req.headers["x-faction-id"] || null;
+        if (!isMaster && !factionId) {
+          sendJson(res, 401, { error: "master или X-Faction-Id" });
+          return;
+        }
+        const messages = readMessages(
+          chapterId,
+          episodeId,
+          { isMaster, factionId },
+          campaignId,
+        );
+        sendJson(res, 200, { messages });
+        return;
+      }
+
+      if (url.pathname === "/api/rp/messages" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        const isMaster = requireMaster(req);
+        let authorFactionId = body.authorFactionId || null;
+        let authorName = body.authorName || null;
+
+        if (!isMaster) {
+          if (!world) {
+            sendJson(res, 404, { error: "Нет board" });
+            return;
+          }
+          const faction = (world.factions ?? []).find(
+            (f) => f.id === body.factionId,
+          );
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+          authorFactionId = faction.id;
+          authorName = body.authorName || faction.name;
+        } else {
+          authorName = body.authorName || "GM";
+        }
+
+        const campaignId = body.campaignId || DEFAULT_CAMPAIGN;
+        const result = appendMessage(
+          body.chapterId,
+          body.episodeId,
+          {
+            type: body.type,
+            body: body.body,
+            authorFactionId,
+            authorName,
+            visibility: body.visibility,
+            intentPayload: body.intent || null,
+            isMaster,
+          },
+          campaignId,
+        );
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+
+        // Action → same intent inbox (does not touch ledger directly)
+        let intentResult = null;
+        if (
+          body.type === "action" &&
+          body.intent?.defId &&
+          authorFactionId &&
+          world
+        ) {
+          const apMax = resolveApMax(
+            getContent().rules?.apPerTurn ?? 3,
+            buildModifierStack([]),
+          );
+          intentResult = submitIntent({
+            factionId: authorFactionId,
+            defId: body.intent.defId,
+            payload: body.intent.payload || {},
+            note: body.intent.note || body.body?.slice(0, 120) || "RP action",
+            source: "rp",
+            turn: world.meta?.turn ?? 0,
+            apMax,
+            world,
+          });
+          if (intentResult.ok) {
+            patchMessageIntentId(
+              body.chapterId,
+              body.episodeId,
+              result.message.id,
+              intentResult.intent.id,
+              campaignId,
+            );
+            result.message.intentId = intentResult.intent.id;
+          }
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          message: result.message,
+          intent: intentResult,
+        });
         return;
       }
 
