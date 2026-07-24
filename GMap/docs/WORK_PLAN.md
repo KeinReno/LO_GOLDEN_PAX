@@ -46,7 +46,7 @@ NOW ──► P0 Фундамент SoT
 | P2 | после P1 | **done (UI AP/inbox + tick)** |
 | P3 | можно частично || с P2 | **partial (fog brush + reveal server)** |
 | P4 | после P2 | **done on v_0_2 (ledger/tax/pop)** |
-| P5 | после P1 defs + P2 tick | todo |
+| P5 | после P1 defs + P2 tick | **done on v_0_2 (Engagement resolve)** |
 | P6 | после P4 pop + P3 fog | todo |
 | P7 | после стабильного tick | todo |
 | P8 | ~29.07+ белый IP | todo |
@@ -289,7 +289,7 @@ flowchart TD
 - [ ] P0 + P2 зелёные (тик, AP, move)  
 - [ ] P3 базовый fog brush  
 - [ ] P4 stocks + простой income + pop tick без миграции  
-- [ ] P5.1–P5.6 space combat  
+- [x] P5.1–P5.10 Engagement combat (space/ground/assault + UI)
 - [ ] P8.1 доступ игрокам стабилен  
 
 Полноценный сезон:

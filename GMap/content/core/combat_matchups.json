@@ -1,0 +1,13 @@
+{
+  "screen": { "screen": 1, "line": 0.9, "capital": 0.7, "carrier": 1.35, "support": 1.2, "bombard": 0.8, "infantry": 0.5, "assault": 0.5, "garrison": 0.4, "armor": 0.4, "psi": 0.6 },
+  "line": { "screen": 1.1, "line": 1, "capital": 0.85, "carrier": 1.1, "support": 1.3, "bombard": 1, "infantry": 0.5, "assault": 0.5, "garrison": 0.5, "armor": 0.45, "psi": 0.6 },
+  "capital": { "screen": 0.75, "line": 1.15, "capital": 1, "carrier": 1.05, "support": 1.4, "bombard": 1.1, "infantry": 0.3, "assault": 0.3, "garrison": 0.3, "armor": 0.3, "psi": 0.4 },
+  "carrier": { "screen": 0.85, "line": 1, "capital": 0.9, "carrier": 1, "support": 1.2, "bombard": 0.9, "infantry": 0.4, "assault": 0.4, "garrison": 0.4, "armor": 0.35, "psi": 0.5 },
+  "support": { "screen": 0.4, "line": 0.4, "capital": 0.3, "carrier": 0.4, "support": 0.5, "bombard": 0.3, "infantry": 0.2, "assault": 0.2, "garrison": 0.2, "armor": 0.2, "psi": 0.2 },
+  "bombard": { "screen": 0.6, "line": 0.8, "capital": 0.9, "carrier": 0.7, "support": 1, "bombard": 1, "infantry": 0.8, "assault": 0.7, "garrison": 1.4, "armor": 1.1, "psi": 0.9 },
+  "infantry": { "screen": 0.2, "line": 0.2, "capital": 0.1, "carrier": 0.1, "support": 0.2, "bombard": 0.3, "infantry": 1, "assault": 0.9, "garrison": 1.05, "armor": 0.75, "psi": 0.85 },
+  "assault": { "screen": 0.2, "line": 0.2, "capital": 0.1, "carrier": 0.1, "support": 0.2, "bombard": 0.4, "infantry": 1.15, "assault": 1, "garrison": 1.25, "armor": 0.9, "psi": 1 },
+  "garrison": { "screen": 0.15, "line": 0.15, "capital": 0.1, "carrier": 0.1, "support": 0.15, "bombard": 0.5, "infantry": 1.1, "assault": 0.85, "garrison": 1, "armor": 0.8, "psi": 0.9 },
+  "armor": { "screen": 0.2, "line": 0.2, "capital": 0.1, "carrier": 0.1, "support": 0.2, "bombard": 0.5, "infantry": 1.3, "assault": 1.1, "garrison": 1.2, "armor": 1, "psi": 0.95 },
+  "psi": { "screen": 0.3, "line": 0.3, "capital": 0.25, "carrier": 0.3, "support": 0.4, "bombard": 0.5, "infantry": 1.2, "assault": 1.15, "garrison": 1.1, "armor": 1.05, "psi": 1 }
+}

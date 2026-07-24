@@ -36,6 +36,7 @@ import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { IntentsInbox } from "./IntentsInbox";
 import { EconomyPanel } from "./EconomyPanel";
+import { CombatPanel } from "./CombatPanel";
 import { RESOURCE_POOL } from "../state/defaults";
 
 type TabId = "tools" | "layers" | "file" | "session";
@@ -852,6 +853,7 @@ export function Toolbar() {
             </section>
 
             <EconomyPanel />
+            <CombatPanel />
             <IntentsInbox />
 
             {world.orders.length > 0 && (

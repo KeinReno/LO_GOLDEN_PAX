@@ -1,0 +1,7 @@
+{
+  "hold": { "id": "hold", "powerMult": 1, "casualtyTakenMult": 0.9, "ap": 0 },
+  "assault": { "id": "assault", "powerMult": 1.15, "casualtyTakenMult": 1.15, "ap": 0 },
+  "skirmish": { "id": "skirmish", "powerMult": 0.85, "casualtyTakenMult": 0.75, "ap": 0 },
+  "retreat": { "id": "retreat", "powerMult": 0.35, "casualtyTakenMult": 0.5, "ap": 0 },
+  "bombard": { "id": "bombard", "powerMult": 1.05, "casualtyTakenMult": 0.85, "ap": 0 }
+}

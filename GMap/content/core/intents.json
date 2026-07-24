@@ -18,8 +18,15 @@
     "ap": 2,
     "legacyOrderType": "attack_system",
     "ops": ["attack_system"],
-    "params": ["fleetId", "toSystemId"]
+    "params": ["fleetId", "legionId", "toSystemId", "theater", "stance", "planetId"]
   },
+  "intent.combat_stance": {
+    "id": "intent.combat_stance",
+    "ap": 0,
+    "ops": ["combat_stance"],
+    "params": ["engagementId", "stance"]
+  },
+
   "intent.claim_system": {
     "id": "intent.claim_system",
     "ap": 1,

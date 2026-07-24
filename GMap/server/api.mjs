@@ -51,6 +51,10 @@ import {
   writeLedger,
 } from "./ledger.mjs";
 import { queueTaxChange } from "./economyTick.mjs";
+import {
+  readEngagements,
+  setEngagementStance,
+} from "./engagements.mjs";
 
 export {
   DATA_DIR,
@@ -287,6 +291,56 @@ export function createApiMiddleware() {
           : readLedger();
         if (world) writeLedger(ledger);
         sendJson(res, 200, ledger);
+        return;
+      }
+
+      if (url.pathname === "/api/engagements" && req.method === "GET") {
+        const list = readEngagements();
+        if (requireMaster(req)) {
+          sendJson(res, 200, { engagements: list });
+          return;
+        }
+        const factionId = req.headers["x-faction-id"];
+        if (!factionId) {
+          sendJson(res, 401, { error: "Нужен master token или X-Faction-Id" });
+          return;
+        }
+        sendJson(res, 200, {
+          engagements: list.filter((e) =>
+            (e.sides || []).some((s) => s.factionId === factionId),
+          ),
+        });
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/stance") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = setEngagementStance(
+          engagementId,
+          body.factionId,
+          body.stance,
+        );
+        sendJson(res, result.ok ? 200 : 400, result);
         return;
       }
 

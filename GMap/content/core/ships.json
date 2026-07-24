@@ -46,5 +46,13 @@
     "stats": { "damage": 2, "armor": 8, "shields": 5, "hp": 90, "accuracy": 20 },
     "targeting": "flee",
     "theaterMult": { "space": 0.2, "assault": 0.1, "ground": 0 }
+  },
+  "ship.bombard": {
+    "id": "ship.bombard",
+    "name": "Орбитальная платформа",
+    "roles": ["bombard", "capital"],
+    "stats": { "damage": 40, "armor": 40, "shields": 25, "hp": 160, "accuracy": 40 },
+    "targeting": "garrison_first",
+    "theaterMult": { "space": 0.7, "assault": 1.2, "ground": 0 }
   }
 }

@@ -16,6 +16,11 @@ import {
   queueTaxChange,
   transferResources,
 } from "./economyTick.mjs";
+import {
+  collectContactsAndAttacks,
+  resolveOpenEngagements,
+  setEngagementStance,
+} from "./engagements.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
@@ -148,17 +153,51 @@ function applyAttackMarker(world, intent, journal) {
     });
     return false;
   }
-  // P5 will create Engagement; for now mark battle + move fleet if given
-  sys.activity = "battle";
+  // Move into theater; Engagement created after all intents, then resolved
   if (intent.payload?.fleetId) {
-    applyMoveFleet(world, intent, journal);
+    if (!applyMoveFleet(world, intent, journal)) return false;
   }
+  if (intent.payload?.legionId) {
+    if (!applyMoveLegion(world, intent, journal)) return false;
+  }
+  sys.activity = "battle";
   journalPush(journal, {
-    type: "attack_marked",
+    type: "attack_committed",
     intentId: intent.id,
     systemId: toId,
     factionId: intent.factionId,
-    note: "Engagement full resolve — P5",
+    theater: intent.payload?.theater || "space",
+    stance: intent.payload?.stance || "assault",
+  });
+  return true;
+}
+
+function applyCombatStance(world, intent, journal) {
+  const engagementId = intent.payload?.engagementId;
+  const stance = intent.payload?.stance;
+  if (!engagementId || !stance) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "missing_engagement_or_stance",
+    });
+    return false;
+  }
+  const result = setEngagementStance(engagementId, intent.factionId, stance);
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "combat_stance",
+    intentId: intent.id,
+    engagementId,
+    factionId: intent.factionId,
+    stance,
   });
   return true;
 }
@@ -239,6 +278,7 @@ const APPLIERS = {
   "intent.move_legion": applyMoveLegion,
   "intent.claim_system": applyClaim,
   "intent.attack_system": applyAttackMarker,
+  "intent.combat_stance": applyCombatStance,
   "intent.scout_reveal": applyScoutReveal,
   "intent.set_tax": applySetTax,
   "intent.transfer": applyTransfer,
@@ -289,7 +329,12 @@ export function processTurn(opts = {}) {
   setTableMeta({ tickFrozen: true });
 
   const nextIntents = readIntents();
+  const deferredStance = [];
   for (const intent of intents) {
+    if (intent.defId === "intent.combat_stance") {
+      deferredStance.push(intent);
+      continue;
+    }
     const apply = APPLIERS[intent.defId];
     let ok = false;
     if (apply) {
@@ -311,6 +356,33 @@ export function processTurn(opts = {}) {
       };
     }
   }
+
+  // P5: engagements from attacks + auto war contacts
+  const attackApplied = nextIntents.filter(
+    (i) =>
+      i.defId === "intent.attack_system" &&
+      i.status === "applied" &&
+      i.turn === turn,
+  );
+  const combatJournal = [];
+  collectContactsAndAttacks(world, turn, attackApplied, combatJournal);
+
+  // Stance after contact (same-tick or leftover open engagements)
+  for (const intent of deferredStance) {
+    const ok = applyCombatStance(world, intent, journal);
+    const idx = nextIntents.findIndex((i) => i.id === intent.id);
+    if (idx >= 0) {
+      nextIntents[idx] = {
+        ...nextIntents[idx],
+        status: ok ? "applied" : "rejected",
+        resolvedAt: new Date().toISOString(),
+      };
+    }
+  }
+
+  resolveOpenEngagements(world, combatJournal);
+  for (const e of combatJournal) journalPush(journal, e);
+
   writeIntents(nextIntents);
 
   advanceCaravans(world);

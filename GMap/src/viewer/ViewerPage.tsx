@@ -164,6 +164,20 @@ export function ViewerPage() {
     return readStoredViewerLayers();
   });
   const [syncHint, setSyncHint] = useState<string | null>(null);
+  const [engagements, setEngagements] = useState<
+    {
+      id: string;
+      theater: string;
+      systemId: string;
+      status: string;
+      sides: { factionId: string; stance?: string }[];
+      result?: {
+        outcome?: string;
+        lossesA?: { defId: string; lost: number }[];
+        lossesB?: { defId: string; lost: number }[];
+      } | null;
+    }[]
+  >([]);
   const modelRef = useRef<MapViewModel | null>(null);
   const mapApiRef = useRef<MapCanvasApi | null>(null);
   const listeners = useRef(new Set<() => void>());
@@ -278,6 +292,29 @@ export function ViewerPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload?.factionId]);
+
+  useEffect(() => {
+    if (!payload?.factionId) {
+      setEngagements([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/engagements", {
+          headers: { "X-Faction-Id": payload.factionId },
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) setEngagements(data.engagements || []);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt]);
 
   const loadFactions = async () => {
     setError(null);
@@ -955,6 +992,60 @@ export function ViewerPage() {
           ) : (
             <p className="hint">Нет данных казны — перелогиньтесь после тика.</p>
           )}
+        </section>
+
+        <section>
+          <h3>Сражения</h3>
+          <p className="hint">
+            Ваши Engagement после тика: исход и потери по типам.
+          </p>
+          {engagements.length === 0 && (
+            <p className="hint">Пока нет записей боя.</p>
+          )}
+          {engagements
+            .slice()
+            .reverse()
+            .slice(0, 6)
+            .map((eng) => {
+              const sys =
+                payload.world.systems.find((s) => s.id === eng.systemId)?.name ??
+                eng.systemId;
+              const losses = (side: "A" | "B") => {
+                const arr =
+                  side === "A" ? eng.result?.lossesA : eng.result?.lossesB;
+                if (!arr?.length) return "—";
+                return (
+                  arr
+                    .filter((l) => l.lost > 0)
+                    .map(
+                      (l) =>
+                        `${l.defId.replace(/^(ship|unit)\./, "")}−${l.lost}`,
+                    )
+                    .join(", ") || "без потерь"
+                );
+              };
+              return (
+                <div key={eng.id} className="order-card">
+                  <div>
+                    <strong>
+                      {eng.theater} · {sys} · {eng.status}
+                    </strong>
+                    {eng.result?.outcome && (
+                      <>
+                        <br />
+                        <span className="hint">
+                          исход: {eng.result.outcome}
+                        </span>
+                        <br />
+                        <span className="hint">
+                          потери A: {losses("A")} · B: {losses("B")}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
         </section>
 
         <section>
