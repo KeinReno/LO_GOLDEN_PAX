@@ -59,7 +59,25 @@ function mergeDicts(target, src) {
 /**
  * @param {string[]} packIds
  */
-export function loadContent(packIds = ["core"]) {
+export function loadContent(packIds) {
+  const fromEnv = (process.env.GMAP_CONTENT_PACKS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const ids =
+    packIds && packIds.length
+      ? packIds
+      : fromEnv.length
+        ? fromEnv
+        : ["core", "golden_pax"];
+  // ensure core first
+  const ordered = [
+    ...new Set(["core", ...ids.filter((id) => id !== "core")]),
+  ];
+  return loadContentPacks(ordered);
+}
+
+function loadContentPacks(packIds = ["core"]) {
   const packs = [];
   let rules = {};
   let effects = { meta: {}, effects: {} };
@@ -138,7 +156,7 @@ export function loadContent(packIds = ["core"]) {
 }
 
 export function getContent(forceReload = false) {
-  if (!cache || forceReload) return loadContent(["core"]);
+  if (!cache || forceReload) return loadContent();
   return cache;
 }
 

@@ -3,7 +3,7 @@
 export interface ViewerGraphicsPrefs {
   /** Pulse / battle motion clock */
   animations: boolean;
-  /** Drop shadows on system name Text */
+  /** Drop shadows on system name labels */
   labelShadows: boolean;
   /** Table floor + starfield background */
   tableFx: boolean;
@@ -13,6 +13,12 @@ export interface ViewerGraphicsPrefs {
   territoryGlow: boolean;
   /** Rebuild geometry every zoom frame (off = rebuild after gesture — recommended) */
   liveZoomRebuild: boolean;
+  /** On-map turn stamp HUD */
+  turnStamp: boolean;
+  /** Soft ember FX on debris / scar systems */
+  scarFx: boolean;
+  /** Extra cinematic polish (desktop only; never default on mobile) */
+  cinematic: boolean;
 }
 
 export const DEFAULT_GRAPHICS: ViewerGraphicsPrefs = {
@@ -22,45 +28,76 @@ export const DEFAULT_GRAPHICS: ViewerGraphicsPrefs = {
   battleFx: true,
   territoryGlow: true,
   liveZoomRebuild: false,
+  turnStamp: true,
+  scarFx: true,
+  cinematic: false,
 };
 
-export const GRAPHICS_FOR_PERF: Record<
-  "ultralight" | "mobile" | "quality_mobile" | "quality",
-  ViewerGraphicsPrefs
-> = {
-  ultralight: {
-    animations: false,
-    labelShadows: false,
-    tableFx: false,
-    battleFx: false,
-    territoryGlow: false,
-    liveZoomRebuild: false,
-  },
-  mobile: {
-    animations: false,
-    labelShadows: false,
-    tableFx: true,
-    battleFx: false,
-    territoryGlow: false,
-    liveZoomRebuild: false,
-  },
-  quality_mobile: {
-    animations: true,
-    labelShadows: false,
-    tableFx: true,
-    battleFx: true,
-    territoryGlow: true,
-    liveZoomRebuild: false,
-  },
-  quality: {
-    animations: true,
-    labelShadows: true,
-    tableFx: true,
-    battleFx: true,
-    territoryGlow: true,
-    liveZoomRebuild: false,
-  },
-};
+export type GraphicsPerfMode =
+  | "ultralight"
+  | "mobile"
+  | "quality_mobile"
+  | "quality"
+  | "cinematic";
+
+export const GRAPHICS_FOR_PERF: Record<GraphicsPerfMode, ViewerGraphicsPrefs> =
+  {
+    ultralight: {
+      animations: false,
+      labelShadows: false,
+      tableFx: false,
+      battleFx: false,
+      territoryGlow: false,
+      liveZoomRebuild: false,
+      turnStamp: false,
+      scarFx: false,
+      cinematic: false,
+    },
+    mobile: {
+      animations: false,
+      labelShadows: false,
+      tableFx: true,
+      battleFx: false,
+      territoryGlow: false,
+      liveZoomRebuild: false,
+      turnStamp: true,
+      scarFx: false,
+      cinematic: false,
+    },
+    quality_mobile: {
+      animations: true,
+      labelShadows: false,
+      tableFx: true,
+      battleFx: true,
+      territoryGlow: true,
+      liveZoomRebuild: false,
+      turnStamp: true,
+      scarFx: true,
+      cinematic: false,
+    },
+    quality: {
+      animations: true,
+      labelShadows: true,
+      tableFx: true,
+      battleFx: true,
+      territoryGlow: true,
+      liveZoomRebuild: false,
+      turnStamp: true,
+      scarFx: true,
+      cinematic: false,
+    },
+    cinematic: {
+      animations: true,
+      labelShadows: true,
+      tableFx: true,
+      battleFx: true,
+      territoryGlow: true,
+      liveZoomRebuild: false,
+      turnStamp: true,
+      scarFx: true,
+      cinematic: true,
+    },
+  };
 
 const STORAGE_KEY = "gmap-viewer-graphics";
 
@@ -83,9 +120,7 @@ export function writeStoredGraphics(prefs: ViewerGraphicsPrefs): void {
   }
 }
 
-export function graphicsForPerf(
-  mode: keyof typeof GRAPHICS_FOR_PERF,
-): ViewerGraphicsPrefs {
+export function graphicsForPerf(mode: GraphicsPerfMode): ViewerGraphicsPrefs {
   return { ...GRAPHICS_FOR_PERF[mode] };
 }
 
@@ -98,32 +133,47 @@ export const GRAPHICS_TOGGLES: {
 }[] = [
   {
     key: "animations",
-    label: "Анимации",
-    hint: "Пульс, мерцание, движение маркеров",
+    label: "Анимация",
+    hint: "Пульс и движение на карте",
   },
   {
     key: "labelShadows",
-    label: "Тени у названий",
-    hint: "Красивее, но тяжелее на GPU",
+    label: "Тени подписей",
+    hint: "Мягкая тень у имён систем",
   },
   {
     key: "tableFx",
-    label: "Фон стола",
-    hint: "Металлический стол и звёзды",
+    label: "Стол / фон",
+    hint: "Пол стола и звёзды",
   },
   {
     key: "battleFx",
-    label: "Эффекты боя",
-    hint: "Кольца и вспышки на спорных системах",
+    label: "Бой FX",
+    hint: "Искры / кольца в системах сражения",
+  },
+  {
+    key: "scarFx",
+    label: "Шрамы",
+    hint: "Тлеющие обломки после боя",
   },
   {
     key: "territoryGlow",
-    label: "Свечение территорий",
-    hint: "Мягкая заливка с blur — дорого",
+    label: "Свечение терр.",
+    hint: "Blur под территориями (дорого)",
+  },
+  {
+    key: "turnStamp",
+    label: "Штамп хода",
+    hint: "Надпись «ход N» на карте",
+  },
+  {
+    key: "cinematic",
+    label: "Cinematic",
+    hint: "Макс. эффекты (не для телефона)",
   },
   {
     key: "liveZoomRebuild",
-    label: "Перерисовка при зуме",
-    hint: "Выкл = плавный зум, подписи после жеста (рекомендуется)",
+    label: "Live zoom",
+    hint: "Пересборка на каждом кадре зума",
   },
 ];

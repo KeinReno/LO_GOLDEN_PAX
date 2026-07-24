@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { MapCanvas } from "./renderers/MapCanvas";
+import { TurnStampHud } from "./ui/TurnStampHud";
 import { Toolbar } from "./editors/Toolbar";
 import { Inspector } from "./editors/Inspector";
 import { TopBar } from "./editors/TopBar";
@@ -149,6 +150,7 @@ function EditorPage() {
         <main className="viewport">
           <div className="viewport-glow" />
           <MapCanvas mode="editor" />
+          <TurnStampHud />
           <OrderTargetHint />
           <div className="viewport-hint">
             Ctrl+клик / рамка — мультивыбор · перенос флотов · ПКМ — меню · Del —

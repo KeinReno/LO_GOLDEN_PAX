@@ -22,6 +22,7 @@ import {
   downloadText,
   exportCampaignMarkdown,
   exportMapPng,
+  exportMapPosterPng,
 } from "../io/exportExtras";
 import {
   clearDraft,
@@ -31,7 +32,7 @@ import {
 } from "../io/draftPersist";
 import {
   EDITOR_LAYER_GROUPS,
-  LAYER_PRESETS,
+  LAYER_PRESET_BUTTONS,
 } from "../ui/mapLayers";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
@@ -659,7 +660,7 @@ export function Toolbar() {
             <h3>Режимы обзора</h3>
             <p className="hint">Быстрые пресеты слоёв — как в 4X-картах.</p>
             <div className="layer-preset-row">
-              {LAYER_PRESETS.map((p) => (
+              {LAYER_PRESET_BUTTONS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
@@ -785,6 +786,24 @@ export function Toolbar() {
                   }}
                 >
                   Экспорт PNG
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => {
+                    void (async () => {
+                      const ok = await exportMapPosterPng(world, {
+                        filename: `${slug(world.meta.name)}_ход${world.meta.turn}.png`,
+                      });
+                      if (!ok) {
+                        alert(
+                          "Карта ещё не готова — подождите кадр и повторите",
+                        );
+                      }
+                    })();
+                  }}
+                >
+                  Плакат PNG (ход)
                 </button>
                 <button
                   type="button"

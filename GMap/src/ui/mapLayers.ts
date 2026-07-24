@@ -110,7 +110,8 @@ export type ViewerPerfChoice =
   | "ultralight"
   | "mobile"
   | "quality_mobile"
-  | "quality";
+  | "quality"
+  | "cinematic";
 
 /** Layer preset applied when player picks a performance mode at login. */
 export function layersForPerfChoice(mode: ViewerPerfChoice): MapLayerFlags {
@@ -126,6 +127,16 @@ export function layersForPerfChoice(mode: ViewerPerfChoice): MapLayerFlags {
       showDeadZones: false,
       showLegions: true,
       showFactionLabels: true,
+    };
+  }
+  if (mode === "cinematic") {
+    return {
+      ...DEFAULT_MAP_LAYERS,
+      showOwnership: true,
+      showDiplomacy: true,
+      showQuests: true,
+      showTraffic: true,
+      showCaravans: true,
     };
   }
   return { ...DEFAULT_MAP_LAYERS };
@@ -187,7 +198,15 @@ export const EDITOR_LAYER_GROUPS: {
 ];
 
 
-export type LayerPresetId = "overview" | "politics" | "military" | "minimal";
+export type LayerPresetId =
+  | "overview"
+  | "politics"
+  | "military"
+  | "war"
+  | "econ"
+  | "quest"
+  | "gm"
+  | "minimal";
 
 export const LAYER_PRESETS: {
   id: LayerPresetId;
@@ -213,6 +232,7 @@ export const LAYER_PRESETS: {
       showSupply: true,
       showTraffic: true,
       showQuests: true,
+      showFogPreview: false,
     },
   },
   {
@@ -232,11 +252,14 @@ export const LAYER_PRESETS: {
       showDiplomacy: true,
       showSupply: true,
       showJumpRange: false,
+      showQuests: false,
+      showCaravans: false,
+      showFogPreview: false,
     },
   },
   {
     id: "military",
-    label: "Военная",
+    label: "Война",
     hint: "Флоты, легионы, приказы, блокады, прыжок",
     flags: {
       showTerritory: true,
@@ -252,6 +275,107 @@ export const LAYER_PRESETS: {
       showJumpRange: true,
       showBlockades: true,
       showSupply: true,
+      showQuests: false,
+      showCaravans: false,
+      showTraffic: false,
+      showFogPreview: false,
+    },
+  },
+  {
+    id: "war",
+    label: "Война (алиас)",
+    hint: "То же, что «Война»",
+    flags: {
+      showTerritory: true,
+      showOwnership: false,
+      showSectors: false,
+      showFleets: true,
+      showLegions: true,
+      showOrders: true,
+      showLinks: true,
+      showLabels: true,
+      showFactionLabels: false,
+      showDiplomacy: false,
+      showJumpRange: true,
+      showBlockades: true,
+      showSupply: true,
+      showQuests: false,
+      showCaravans: false,
+      showTraffic: false,
+      showFogPreview: false,
+    },
+  },
+  {
+    id: "econ",
+    label: "Экономика",
+    hint: "Снабжение, караваны, хабы, владение",
+    flags: {
+      showTerritory: true,
+      showOwnership: true,
+      showSectors: false,
+      showFactionLabels: true,
+      showLabels: true,
+      showLinks: true,
+      showFleets: false,
+      showLegions: false,
+      showOrders: false,
+      showDiplomacy: false,
+      showSupply: true,
+      showCaravans: true,
+      showTraffic: true,
+      showJumpRange: false,
+      showBlockades: false,
+      showQuests: false,
+      showFogPreview: false,
+    },
+  },
+  {
+    id: "quest",
+    label: "Квест",
+    hint: "Квесты и подписи, минимум войны",
+    flags: {
+      showTerritory: false,
+      showOwnership: false,
+      showSectors: false,
+      showFactionLabels: false,
+      showLabels: true,
+      showLinks: true,
+      showFleets: false,
+      showLegions: false,
+      showOrders: false,
+      showDiplomacy: false,
+      showSupply: false,
+      showCaravans: false,
+      showTraffic: false,
+      showQuests: true,
+      showJumpRange: false,
+      showBlockades: false,
+      showFogPreview: false,
+    },
+  },
+  {
+    id: "gm",
+    label: "GM",
+    hint: "Туман-превью, дипломатия, владение, всё видно",
+    flags: {
+      showTerritory: true,
+      showOwnership: true,
+      showSectors: true,
+      showFactionLabels: true,
+      showLabels: true,
+      showLinks: true,
+      showFleets: true,
+      showLegions: true,
+      showOrders: true,
+      showDiplomacy: true,
+      showSupply: true,
+      showCaravans: true,
+      showTraffic: true,
+      showQuests: true,
+      showJumpRange: true,
+      showBlockades: true,
+      showDeadZones: true,
+      showFogPreview: true,
     },
   },
   {
@@ -276,9 +400,13 @@ export const LAYER_PRESETS: {
       showDeadZones: false,
       showTraffic: false,
       showQuests: false,
+      showFogPreview: false,
     },
   },
 ];
+
+/** Presets shown in UI (hide duplicate war alias). */
+export const LAYER_PRESET_BUTTONS = LAYER_PRESETS.filter((p) => p.id !== "war");
 
 const STORAGE_KEY = "gmap-viewer-layers";
 
@@ -305,7 +433,8 @@ export function applyLayerPreset(
   current: MapLayerFlags,
   id: LayerPresetId,
 ): MapLayerFlags {
-  const preset = LAYER_PRESETS.find((p) => p.id === id);
+  const resolved = id === "war" ? "military" : id;
+  const preset = LAYER_PRESETS.find((p) => p.id === resolved);
   if (!preset) return current;
   return { ...current, ...preset.flags };
 }

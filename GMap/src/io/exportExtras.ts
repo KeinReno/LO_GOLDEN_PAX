@@ -117,3 +117,72 @@ export async function exportMapPng(filename: string): Promise<boolean> {
   a.click();
   return true;
 }
+
+/**
+ * Poster: map PNG + title / turn stamp chrome (P8.4).
+ */
+export async function exportMapPosterPng(
+  world: WorldState,
+  opts?: { filename?: string; subtitle?: string },
+): Promise<boolean> {
+  const mapUrl = await captureMapPngDataUrl();
+  if (!mapUrl) return false;
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("map image load failed"));
+    el.src = mapUrl;
+  });
+
+  const pad = 48;
+  const headerH = 88;
+  const footerH = 40;
+  const w = Math.max(960, img.width + pad * 2);
+  const h = img.height + headerH + footerH + pad;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
+
+  // Atmosphere — warm dark board, not flat white
+  const grad = ctx.createLinearGradient(0, 0, w, h);
+  grad.addColorStop(0, "#1a1510");
+  grad.addColorStop(0.5, "#241c14");
+  grad.addColorStop(1, "#120e0a");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = "#c9a227";
+  ctx.font = "600 28px Georgia, 'Times New Roman', serif";
+  ctx.fillText(world.meta.name || "Campaign", pad, 42);
+
+  ctx.fillStyle = "#e8dcc8";
+  ctx.font = "16px Georgia, 'Times New Roman', serif";
+  const turnLine = `Ход ${world.meta.turn}${opts?.subtitle ? ` · ${opts.subtitle}` : ""}`;
+  ctx.fillText(turnLine, pad, 68);
+
+  const mapX = Math.floor((w - img.width) / 2);
+  const mapY = headerH;
+  ctx.strokeStyle = "rgba(201,162,39,0.35)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(mapX - 1, mapY - 1, img.width + 2, img.height + 2);
+  ctx.drawImage(img, mapX, mapY);
+
+  ctx.fillStyle = "rgba(232,220,200,0.55)";
+  ctx.font = "12px Georgia, 'Times New Roman', serif";
+  const when = world.meta.updatedAt
+    ? new Date(world.meta.updatedAt).toLocaleString("ru-RU")
+    : new Date().toLocaleString("ru-RU");
+  ctx.fillText(`LO Golden Pax · ${when}`, pad, h - 16);
+
+  const out = canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = out;
+  a.download =
+    opts?.filename ||
+    `${(world.meta.name || "campaign").replace(/\s+/g, "_")}_turn${world.meta.turn}.png`;
+  a.click();
+  return true;
+}

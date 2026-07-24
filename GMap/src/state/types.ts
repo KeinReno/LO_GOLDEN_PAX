@@ -61,7 +61,9 @@ export type SystemPoiType =
   | "refugees"
   | "quarantine"
   | "depot"
-  | "propaganda";
+  | "propaganda"
+  | "frontline"
+  | "forge";
 
 /** All stampable space objects (can stack on one system). */
 export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
@@ -89,6 +91,8 @@ export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
   "quarantine",
   "depot",
   "propaganda",
+  "frontline",
+  "forge",
 ];
 
 export type QuestStatus = "active" | "done" | "hidden";

@@ -83,6 +83,8 @@ export const SYSTEM_POI_LABELS: Record<string, string> = {
   quarantine: "Карантин / пси-карантин",
   depot: "Депо снабжения",
   propaganda: "Пропаганда-вышка",
+  frontline: "Линия фронта",
+  forge: "Кузница",
 };
 
 export const LINK_TYPE_LABELS: Record<string, string> = {

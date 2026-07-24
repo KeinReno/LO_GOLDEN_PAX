@@ -239,6 +239,10 @@ export function poiIconId(poi: string): MapIconId | null {
       return "watchtower";
     case "propaganda":
       return "lighthouse";
+    case "frontline":
+      return "crossed-swords";
+    case "forge":
+      return "wrench";
     default:
       return null;
   }

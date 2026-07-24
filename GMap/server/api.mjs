@@ -71,6 +71,7 @@ import {
   patchMessageIntentId,
   DEFAULT_CAMPAIGN,
 } from "./rpStore.mjs";
+import { storePing } from "./db/storeAdapter.mjs";
 
 export {
   DATA_DIR,
@@ -158,7 +159,7 @@ function readBody(req) {
  */
 export function createApiMiddleware() {
   ensureDataDir();
-  loadContent(["core"]);
+  loadContent();
   startTickScheduler({
     getCron: () => getContent().rules?.tickCron || "1 0 * * *",
     getTimezone: () => getContent().rules?.tickTimezone || "Europe/Moscow",
@@ -196,9 +197,14 @@ export function createApiMiddleware() {
 
       if (url.pathname === "/api/content" && req.method === "GET") {
         if (url.searchParams.get("reload") === "1" && requireMaster(req)) {
-          loadContent(["core"]);
+          loadContent();
         }
         sendJson(res, 200, getPublicContent());
+        return;
+      }
+
+      if (url.pathname === "/api/store/ping" && req.method === "GET") {
+        sendJson(res, 200, storePing());
         return;
       }
 

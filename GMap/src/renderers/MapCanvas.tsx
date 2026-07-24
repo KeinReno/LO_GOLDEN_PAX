@@ -118,13 +118,14 @@ export interface MapViewModel {
   showTraffic?: boolean;
   showQuests?: boolean;
   activeFactionId?: string | null;
-  /** ultralight(bare) | mobile(lite) | quality_mobile(soft) | quality(full) | auto */
+  /** ultralight(bare) | mobile(lite) | quality_mobile(soft) | quality(full) | cinematic(full+) | auto */
   perfMode?:
     | "auto"
     | "quality"
     | "quality_mobile"
     | "mobile"
-    | "ultralight";
+    | "ultralight"
+    | "cinematic";
   graphics?: {
     animations?: boolean;
     labelShadows?: boolean;
@@ -132,6 +133,9 @@ export interface MapViewModel {
     battleFx?: boolean;
     territoryGlow?: boolean;
     liveZoomRebuild?: boolean;
+    turnStamp?: boolean;
+    scarFx?: boolean;
+    cinematic?: boolean;
   };
 }
 
@@ -152,7 +156,7 @@ function resolvePerfTier(
   mode: "editor" | "viewer",
   pref: MapViewModel["perfMode"],
 ): PerfTier {
-  if (pref === "quality") return "full";
+  if (pref === "quality" || pref === "cinematic") return "full";
   if (pref === "quality_mobile") return "soft";
   if (pref === "ultralight") return "bare";
   if (pref === "mobile") return "lite";
@@ -171,6 +175,9 @@ function resolveGraphics(
   battleFx: boolean;
   territoryGlow: boolean;
   liveZoomRebuild: boolean;
+  turnStamp: boolean;
+  scarFx: boolean;
+  cinematic: boolean;
 } {
   const g = model.graphics ?? {};
   const defaults =
@@ -182,6 +189,9 @@ function resolveGraphics(
           battleFx: false,
           territoryGlow: false,
           liveZoomRebuild: false,
+          turnStamp: false,
+          scarFx: false,
+          cinematic: false,
         }
       : tier === "lite"
         ? {
@@ -191,6 +201,9 @@ function resolveGraphics(
             battleFx: false,
             territoryGlow: false,
             liveZoomRebuild: false,
+            turnStamp: true,
+            scarFx: false,
+            cinematic: false,
           }
         : tier === "soft"
           ? {
@@ -200,6 +213,9 @@ function resolveGraphics(
               battleFx: true,
               territoryGlow: true,
               liveZoomRebuild: false,
+              turnStamp: true,
+              scarFx: true,
+              cinematic: false,
             }
           : {
               animations: true,
@@ -208,6 +224,9 @@ function resolveGraphics(
               battleFx: true,
               territoryGlow: true,
               liveZoomRebuild: false,
+              turnStamp: true,
+              scarFx: true,
+              cinematic: model.perfMode === "cinematic",
             };
   return {
     animations: g.animations ?? defaults.animations,
@@ -216,6 +235,9 @@ function resolveGraphics(
     battleFx: g.battleFx ?? defaults.battleFx,
     territoryGlow: g.territoryGlow ?? defaults.territoryGlow,
     liveZoomRebuild: g.liveZoomRebuild ?? defaults.liveZoomRebuild,
+    turnStamp: g.turnStamp ?? defaults.turnStamp,
+    scarFx: g.scarFx ?? defaults.scarFx,
+    cinematic: g.cinematic ?? defaults.cinematic,
   };
 }
 
@@ -2019,6 +2041,15 @@ export function MapCanvas({
         } else if (inBattle && gfx.battleFx && (tier === "soft" || tier === "lite")) {
           battleSites.push({ id: s.id, x: s.x, y: s.y });
         }
+        const objs = s.spaceObjects || (s.poiType && s.poiType !== "none" ? [s.poiType] : []);
+        if (
+          gfx.scarFx &&
+          !inBattle &&
+          (objs.includes("debris") || objs.includes("ruin")) &&
+          (tier === "full" || tier === "soft")
+        ) {
+          battleSites.push({ id: `scar:${s.id}`, x: s.x, y: s.y });
+        }
         if ((contested && showFleets) || s.activity === "battle") {
           battleMarkerIds.add(s.id);
         }
@@ -2152,7 +2183,7 @@ export function MapCanvas({
       // System markers synced after unit slots are collected below
       if (!bare) {
         const enableBattle =
-          gfx.battleFx && (tier === "full" || tier === "soft");
+          (gfx.battleFx || gfx.scarFx) && (tier === "full" || tier === "soft");
         battleFxRef.current?.setEnabled(enableBattle);
         battleFxRef.current?.sync(
           enableBattle ? battleSites : [],

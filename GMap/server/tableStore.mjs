@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeWorld } from "./normalizeWorld.mjs";
+import { getStoreBackend } from "./db/storeAdapter.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = path.resolve(__dirname, "../data");
@@ -27,19 +28,12 @@ export function ensureDataDir() {
 }
 
 export function readJson(file, fallback) {
-  try {
-    if (!fs.existsSync(file)) return fallback;
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return fallback;
-  }
+  return getStoreBackend().readJson(file, fallback);
 }
 
 export function writeJson(file, data) {
   ensureDataDir();
-  const dir = path.dirname(file);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
+  getStoreBackend().writeJson(file, data);
 }
 
 export function getTableMeta() {

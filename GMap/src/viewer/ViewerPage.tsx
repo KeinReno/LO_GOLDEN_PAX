@@ -25,7 +25,7 @@ import type {
 } from "../state/types";
 import {
   VIEWER_LAYER_CHIPS,
-  LAYER_PRESETS,
+  LAYER_PRESET_BUTTONS,
   applyLayerPreset,
   readStoredViewerLayers,
   writeStoredViewerLayers,
@@ -45,6 +45,7 @@ import {
 } from "../ui/viewerGraphics";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { CampaignPanel } from "../editors/CampaignPanel";
+import { TurnStampHud } from "../ui/TurnStampHud";
 
 /** Modes shown to players (no vague «auto»). */
 type PerfMode = ViewerPerfChoice;
@@ -74,7 +75,8 @@ function readStoredPerf(): PerfMode | null {
       v === "quality" ||
       v === "quality_mobile" ||
       v === "mobile" ||
-      v === "ultralight"
+      v === "ultralight" ||
+      v === "cinematic"
     )
       return v;
   } catch {
@@ -113,6 +115,11 @@ const PERF_OPTIONS: {
     id: "quality",
     label: "Максимум",
     hint: "Полный FX и анимации. Лучше на ПК.",
+  },
+  {
+    id: "cinematic",
+    label: "Cinematic",
+    hint: "Макс. эффекты + штамп хода. Только ПК / мощный планшет.",
   },
 ];
 
@@ -657,6 +664,11 @@ export function ViewerPage() {
             bump();
           }}
         />
+        <TurnStampHud
+          turn={payload.world.meta.turn}
+          name={payload.world.meta.name}
+          enabled={graphics.turnStamp !== false}
+        />
         <div className="viewer-zoom" aria-label="Масштаб">
           <button
             type="button"
@@ -765,7 +777,7 @@ export function ViewerPage() {
           <h3>Что показывать</h3>
           <p className="hint">Пресеты или точечно — под свой комфорт.</p>
           <div className="layer-preset-row">
-            {LAYER_PRESETS.map((p) => (
+            {LAYER_PRESET_BUTTONS.map((p) => (
               <button
                 key={p.id}
                 type="button"
