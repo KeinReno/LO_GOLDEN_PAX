@@ -1,0 +1,19 @@
+[Unit]
+Description=GMap campaign map (Node)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gmap
+Environment=NODE_ENV=production
+Environment=PORT=4173
+Environment=HOST=0.0.0.0
+EnvironmentFile=-/opt/gmap/.env
+ExecStart=/usr/bin/node server/serve.mjs
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,53 @@
+{
+  "name": "gmap",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start": "node server/serve.mjs",
+    "serve": "node server/serve.mjs",
+    "deploy:up": "docker compose up -d --build",
+    "lore": "node scripts/buildLoreCampaign.mjs",
+    "players": "node scripts/startPlayerSession.mjs cloudpub",
+    "players:cloudpub": "node scripts/startPlayerSession.mjs cloudpub",
+    "players:ngrok": "node scripts/startPlayerSession.mjs ngrok",
+    "players:pinggy": "node scripts/startPlayerSession.mjs pinggy",
+    "players:playit": "node scripts/startPlayerSession.mjs playit",
+    "players:radmin": "node scripts/startPlayerSession.mjs radmin",
+    "players:tunnel": "node scripts/startPlayerSession.mjs tunnel",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@spd789562/particle-emitter": "^1.0.2",
+    "@tauri-apps/api": "^2.11.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jszip": "^3.10.1",
+    "localtunnel": "^2.0.2",
+    "lucide-react": "^1.25.0",
+    "pixi.js": "^8.19.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.6.2",
+    "uuid": "^14.0.1",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/express": "^5.0.3",
+    "@types/jszip": "^3.4.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.2.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}

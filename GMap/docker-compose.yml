@@ -1,0 +1,53 @@
+# GMap on VPS: Nginx (80/443) → Node app (publish API + static /view)
+#
+# 1. cp .env.example .env   # set GMAP_MASTER_TOKEN + DOMAIN
+# 2. docker compose up -d --build
+# 3. Open http://YOUR_IP/view  (then add HTTPS — see DEPLOY.md)
+
+services:
+  gmap:
+    build: .
+    container_name: gmap-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "4173"
+      HOST: "0.0.0.0"
+      NODE_ENV: production
+    volumes:
+      # Survives rebuilds: published map, player orders, draft
+      - gmap-data:/app/data
+    expose:
+      - "4173"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4173/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: gmap-nginx
+    restart: unless-stopped
+    depends_on:
+      gmap:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+      - certbot-www:/var/www/certbot:ro
+
+volumes:
+  gmap-data:
+  certbot-www:
