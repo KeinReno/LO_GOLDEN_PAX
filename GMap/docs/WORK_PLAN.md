@@ -49,7 +49,7 @@ NOW ──► P0 Фундамент SoT
 | P5 | после P1 defs + P2 tick | **done on v_0_2 (Engagement resolve)** |
 | P6 | после P4 pop + P3 fog | **done on v_0_2 (POI/refugees/GM)** |
 | P7 | после стабильного tick | **done on v_0_2 (RP episodes)** |
-| P8 | ~29.07+ белый IP | **partial** (8.3–8.5 + 8.7 stub; 8.1 IP later) |
+| P8 | ~29.07+ белый IP | **partial** (8.2–8.5 + 8.7 stub; 8.1 IP later) |
 
 ---
 

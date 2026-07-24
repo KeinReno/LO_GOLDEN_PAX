@@ -16,6 +16,7 @@ data/published.json
 data/player-orders.json
 data/campaign-draft.json
 data/cloudpub-token.txt
+data/master-token.txt
 data/intents.json
 data/ledger.json
 data/table-meta.json

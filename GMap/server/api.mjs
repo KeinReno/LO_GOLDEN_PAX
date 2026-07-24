@@ -37,7 +37,20 @@ import {
   reservedAp,
 } from "./intents.mjs";
 import { processTurn, getLastJournal } from "./processTurn.mjs";
-import { startTickScheduler } from "./tickScheduler.mjs";
+import { startTickScheduler, getSchedulerStatus } from "./tickScheduler.mjs";
+import {
+  requireMasterHeader,
+  masterTokenInfo,
+  checkMasterToken,
+  writeMasterTokenFile,
+  resolveMasterToken,
+} from "./auth.mjs";
+import {
+  getTurnHealth,
+  runOpsBackup,
+  clearTickAlerts,
+  startBackupScheduler,
+} from "./opsHealth.mjs";
 import {
   readFog,
   paintFog,
@@ -84,10 +97,10 @@ export {
   writeJson,
 };
 
-const MASTER_TOKEN = process.env.GMAP_MASTER_TOKEN || "master2142";
+const MASTER_TOKEN_BOOT = resolveMasterToken();
 
 function requireMaster(req) {
-  return req.headers["x-master-token"] === MASTER_TOKEN;
+  return requireMasterHeader(req);
 }
 
 function getVisibleSystemIds(world, factionId) {
@@ -160,11 +173,13 @@ function readBody(req) {
 export function createApiMiddleware() {
   ensureDataDir();
   loadContent();
+  resolveMasterToken();
   startTickScheduler({
     getCron: () => getContent().rules?.tickCron || "1 0 * * *",
     getTimezone: () => getContent().rules?.tickTimezone || "Europe/Moscow",
     onTick: () => processTurn({ force: false }),
   });
+  startBackupScheduler();
 
   return async function gmapApi(req, res, next) {
     const url = new URL(req.url || "/", "http://localhost");
@@ -719,6 +734,63 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/turn/health" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const health = getTurnHealth({
+          cron: getContent().rules?.tickCron || "1 0 * * *",
+          timezone: getContent().rules?.tickTimezone || "Europe/Moscow",
+        });
+        sendJson(res, 200, {
+          ...health,
+          scheduler: getSchedulerStatus(),
+          auth: masterTokenInfo(),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/turn/alerts/clear" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        sendJson(res, 200, clearTickAlerts());
+        return;
+      }
+
+      if (url.pathname === "/api/backup/run" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = runOpsBackup(body?.reason || "manual");
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (url.pathname === "/api/auth/info" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        sendJson(res, 200, masterTokenInfo());
+        return;
+      }
+
+      if (url.pathname === "/api/auth/token" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = writeMasterTokenFile(body?.token);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
       if (url.pathname === "/api/intents" && req.method === "GET") {
         if (requireMaster(req)) {
           sendJson(res, 200, readIntents());
@@ -813,7 +885,7 @@ export function createApiMiddleware() {
       /** Publish + open tunnel; returns copyable /view URL. */
       if (url.pathname === "/api/players/share" && req.method === "POST") {
         const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!checkMasterToken(token)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
@@ -862,7 +934,7 @@ export function createApiMiddleware() {
 
       if (url.pathname === "/api/players/ngrok-token" && req.method === "POST") {
         const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!checkMasterToken(token)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
@@ -879,7 +951,7 @@ export function createApiMiddleware() {
 
       if (url.pathname === "/api/players/cloudpub-token" && req.method === "POST") {
         const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!checkMasterToken(token)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
@@ -896,7 +968,7 @@ export function createApiMiddleware() {
 
       if (url.pathname === "/api/players/share/stop" && req.method === "POST") {
         const token = req.headers["x-master-token"];
-        if (token !== MASTER_TOKEN) {
+        if (!checkMasterToken(token)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }

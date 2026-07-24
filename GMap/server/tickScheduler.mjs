@@ -1,10 +1,13 @@
 /**
  * Daily tick scheduler (P2.3) — cron 00:01 MSK + boot catch-up.
+ * P8.2: records miss alerts for master health UI.
  */
-import { getTableMeta, setTableMeta } from "./tableStore.mjs";
+import { getTableMeta } from "./tableStore.mjs";
+import { pushTickAlert } from "./opsHealth.mjs";
 
 let started = false;
 let timer = null;
+let lastScheduledWait = null;
 
 function msUntilNextCron(cronExpr, timeZone) {
   // Support "1 0 * * *" = minute hour — 00:01
@@ -23,13 +26,6 @@ function msUntilNextCron(cronExpr, timeZone) {
     second: "2-digit",
     hourCycle: "h23",
   });
-  const partsNow = Object.fromEntries(
-    fmt.formatToParts(now).filter((p) => p.type !== "literal").map((p) => [p.type, p.value]),
-  );
-  // Build a Date in local machine approximating next MSK wall-clock fire:
-  // use offset trick via formatting.
-  const target = new Date(now.getTime());
-  // Iterate hours ahead until wall clock matches
   for (let i = 0; i < 48 * 60; i++) {
     const cand = new Date(now.getTime() + i * 60_000);
     const p = Object.fromEntries(
@@ -38,15 +34,17 @@ function msUntilNextCron(cronExpr, timeZone) {
         .filter((x) => x.type !== "literal")
         .map((x) => [x.type, x.value]),
     );
-    if (Number(p.hour) === hour && Number(p.minute) === minute && Number(p.second) === 0) {
+    if (
+      Number(p.hour) === hour &&
+      Number(p.minute) === minute &&
+      Number(p.second) === 0
+    ) {
       return Math.max(1000, cand.getTime() - now.getTime());
     }
-    // allow second 0..5 window when stepping by minute
     if (Number(p.hour) === hour && Number(p.minute) === minute) {
       return Math.max(1000, cand.getTime() - now.getTime());
     }
   }
-  void partsNow;
   return 60_000;
 }
 
@@ -71,28 +69,45 @@ export function startTickScheduler(opts) {
   const runCatchUp = () => {
     const meta = getTableMeta();
     const now = new Date().toISOString();
-    // Never auto-tick on first ever boot — only if a previous daily tick was missed.
+    // Never auto-tick on first ever boot — only if a prior daily tick was missed.
     if (!meta.lastTickAt) return;
     if (sameMoscowDay(meta.lastTickAt, now)) return;
-    console.log("[tick] boot catch-up (missed daily tick since", meta.lastTickAt, ")");
+    console.log(
+      "[tick] boot catch-up (missed daily tick since",
+      meta.lastTickAt,
+      ")",
+    );
+    pushTickAlert(
+      `Пропущен суточный тик (lastTickAt=${meta.lastTickAt}) — catch-up на boot`,
+      "miss",
+    );
     try {
       const result = opts.onTick();
       if (result && result.ok === false) {
         console.warn("[tick] catch-up failed:", result.error);
+        pushTickAlert(`Catch-up failed: ${result.error}`, "catchup_fail");
+      } else {
+        pushTickAlert("Catch-up выполнен успешно", "catchup_ok");
       }
     } catch (e) {
       console.warn("[tick] catch-up error", e);
+      pushTickAlert(String(e?.message || e), "catchup_fail");
     }
   };
 
   const scheduleNext = () => {
     const wait = msUntilNextCron(opts.getCron(), opts.getTimezone());
+    lastScheduledWait = wait;
     timer = setTimeout(() => {
       console.log("[tick] cron fire");
       try {
-        opts.onTick();
+        const result = opts.onTick();
+        if (result && result.ok === false) {
+          pushTickAlert(`Cron tick failed: ${result.error}`, "cron_fail");
+        }
       } catch (e) {
         console.warn("[tick] error", e);
+        pushTickAlert(String(e?.message || e), "cron_fail");
       }
       scheduleNext();
     }, wait);
@@ -102,8 +117,15 @@ export function startTickScheduler(opts) {
   setTimeout(runCatchUp, 2500);
   scheduleNext();
   console.log(
-    `[tick] scheduler on (${opts.getCron()} ${opts.getTimezone()})`,
+    `[tick] scheduler on (${opts.getCron()} ${opts.getTimezone()}) next~${Math.round((lastScheduledWait || 0) / 60000)}m`,
   );
+}
+
+export function getSchedulerStatus() {
+  return {
+    started,
+    msUntilNext: lastScheduledWait,
+  };
 }
 
 export function stopTickScheduler() {

@@ -41,6 +41,7 @@ import { EconomyPanel } from "./EconomyPanel";
 import { CombatPanel } from "./CombatPanel";
 import { GmOpsPanel } from "./GmOpsPanel";
 import { CampaignPanel } from "./CampaignPanel";
+import { OpsHealthPanel } from "./OpsHealthPanel";
 import { RESOURCE_POOL } from "../state/defaults";
 
 type TabId = "tools" | "layers" | "file" | "session" | "campaign";
@@ -903,6 +904,7 @@ export function Toolbar() {
             <EconomyPanel />
             <CombatPanel />
             <GmOpsPanel />
+            <OpsHealthPanel />
             <IntentsInbox />
 
             {world.orders.length > 0 && (

@@ -10,6 +10,7 @@ import {
   writeLiveBoard,
   readJson,
 } from "./tableStore.mjs";
+import { resolveMasterToken } from "./auth.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.resolve(__dirname, "../dist");
@@ -44,11 +45,11 @@ app.get(/.*/, (_req, res) => {
 });
 
 app.listen(port, host, () => {
-  const token = process.env.GMAP_MASTER_TOKEN || "master2142";
+  const auth = resolveMasterToken();
   console.log(`GMap server: http://${host}:${port}`);
   console.log(`Players:     http://${host}:${port}/view`);
   console.log(`Master:      http://${host}:${port}/`);
   console.log(
-    `Master token: ${token === "master2142" ? "master2142 (CHANGE ME)" : "(custom)"}`,
+    `Master token: ${auth.isDefault ? "DEFAULT master2142 (CHANGE ME)" : `ok (${auth.source})`}`,
   );
 });
