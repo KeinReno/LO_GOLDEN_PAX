@@ -1,0 +1,10 @@
+[[permission]]
+identifier = "allow-host-ops"
+description = "Start/stop local Node host and open data folder"
+commands.allow = [
+  "is_desktop",
+  "host_status",
+  "start_host",
+  "stop_host",
+  "open_data_folder"
+]

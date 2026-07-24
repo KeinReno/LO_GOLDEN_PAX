@@ -5,6 +5,7 @@ import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { fmtTime } from "./useCampaignSession";
 
 import { MapSearch } from "./MapSearch";
+import { DesktopHostBadge } from "./DesktopHostBadge";
 
 export function TopBar() {
   const {
@@ -64,6 +65,7 @@ export function TopBar() {
             ? ` · rev ${world.meta.tableRevision}`
             : ""}
         </span>
+        <DesktopHostBadge />
         {dirty ? (
           <span className="save-pill dirty" title="Черновик пишется…">
             ●

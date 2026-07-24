@@ -20,7 +20,8 @@
     "players:tunnel": "node scripts/startPlayerSession.mjs tunnel",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:host": "npm run build && tauri build"
   },
   "dependencies": {
     "@spd789562/particle-emitter": "^1.0.2",

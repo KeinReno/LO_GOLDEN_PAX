@@ -49,7 +49,7 @@ NOW ──► P0 Фундамент SoT
 | P5 | после P1 defs + P2 tick | **done on v_0_2 (Engagement resolve)** |
 | P6 | после P4 pop + P3 fog | **done on v_0_2 (POI/refugees/GM)** |
 | P7 | после стабильного tick | **done on v_0_2 (RP episodes)** |
-| P8 | ~29.07+ белый IP | **partial** (8.2–8.5 + 8.7 stub; 8.1 IP later) |
+| P8 | ~29.07+ белый IP | **partial** (8.2–8.6 + 8.7 stub; 8.1 IP later) |
 
 ---
 
@@ -228,7 +228,7 @@ NOW ──► P0 Фундамент SoT
 | P8.3 | Map modes (политика/война/econ/квест/GM) | M | |
 | P8.4 | Stamp хода + scar FX + export плаката | M | |
 | P8.5 | Optional `cinematic` preset (выключаемый) | M | |
-| P8.6 | Tauri launcher (опционально) | L | старт хоста одной кнопкой |
+| P8.6 | Tauri launcher (опционально) | L | ✅ старт хоста + tray + TopBar badge |
 | P8.7 | Оценка SQLite (только если JSON болит) | M | решение go/no-go |
 
 **DoD:** игроки заходят по IP/DNS; тик живёт при перезапуске ПК (catch-up); mobile на quality/ultralight без cinematic.
@@ -290,6 +290,7 @@ flowchart TD
 - [ ] P3 базовый fog brush  
 - [ ] P4 stocks + простой income + pop tick без миграции  
 - [x] P5.1–P5.10 Engagement combat (space/ground/assault + UI)
+- [x] P8.6 Tauri launcher (host + tray + badge; не заменяет P8.1)
 - [ ] P8.1 доступ игрокам стабилен  
 
 Полноценный сезон:

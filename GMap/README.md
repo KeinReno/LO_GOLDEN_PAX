@@ -125,23 +125,26 @@ npm run serve
 
 Включено: ~120+ систем, связи, секторы, державы, дипломатия, флоты/легионы (Сессия 2 / начало III).
 
-## Desktop (Tauri)
+## Desktop (Tauri) — P8.6
 
-Нужны: [Rust](https://www.rust-lang.org/tools/install) + WebView2 (обычно уже есть на Windows).
+Лаунчер для **мастера** (не для игроков): поднимает `node server/serve.mjs` на `:4173`, tray (показать / `/view` / data / выход), закрытие окна → в трей.
+
+Нужны: [Rust](https://www.rust-lang.org/tools/install) + WebView2 (обычно уже есть на Windows) + Node в PATH.
 
 ```bash
 cd GMap
 npm install
-npm run tauri:dev
+npm run tauri:dev          # Vite :5173 + окно Tauri
 ```
 
-Сборка `.exe`:
+Сборка NSIS-инсталлятора / `.exe`:
 
 ```bash
 npm run tauri:build
+# или: npm run tauri:host
 ```
 
-Иконки-заглушки лежат в `src-tauri/icons/` — замените своими и при желании прогоните `npx tauri icon path/to/icon.png`.
+В TopBar появляется бейдж «Хост :4173» только внутри desktop-приложения. Иконки-заглушки в `src-tauri/icons/` — замените: `npx tauri icon path/to/icon.png`.
 
 Веб-режим по-прежнему: `npm run dev` → http://localhost:5173/
 
@@ -150,3 +153,4 @@ npm run tauri:build
 - Живой sync / websocket между мастером и игроками
 - Нативный open/save папки кампании через Tauri dialog
 - Кастомные иконки приложения
+- P8.1 белый IP (когда будет готов)
