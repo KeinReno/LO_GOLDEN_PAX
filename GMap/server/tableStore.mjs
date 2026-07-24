@@ -76,6 +76,7 @@ export function backupTurnSnapshot(turn, reason = "manual") {
   copyIf(INTENTS_PATH, "intents.json");
   copyIf(LEDGER_PATH, "ledger.json");
   copyIf(TABLE_META_PATH, "table-meta.json");
+  copyIf(path.join(DATA_DIR, "fog-masks.json"), "fog-masks.json");
   writeJson(path.join(dir, "backup-meta.json"), {
     turn: turn ?? null,
     reason,

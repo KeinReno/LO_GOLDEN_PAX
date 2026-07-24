@@ -130,6 +130,8 @@ export function ViewerPage() {
   const [orderType, setOrderType] = useState<OrderType>("move_fleet");
   const [orderNote, setOrderNote] = useState("");
   const [orderMsg, setOrderMsg] = useState<string | null>(null);
+  const [apMax, setApMax] = useState(3);
+  const [reservedAp, setReservedAp] = useState(0);
   const [targetSystemId, setTargetSystemId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -345,6 +347,8 @@ export function ViewerPage() {
         ...data,
         updatedAt: data.updatedAt ?? data.world.meta.updatedAt,
       });
+      setApMax(data.apMax ?? 3);
+      setReservedAp(data.reservedAp ?? 0);
       setSelectedSystemId(null);
       setSelectedFleetId(null);
       setSyncHint(null);
@@ -438,7 +442,13 @@ export function ViewerPage() {
           orders: [...payload.world.orders, data.order],
         },
       });
-      setOrderMsg("Приказ отправлен мастеру (на следующий ход)");
+      if (typeof data.apMax === "number") setApMax(data.apMax);
+      if (typeof data.intent?.apCost === "number") {
+        setReservedAp((r) => r + data.intent.apCost);
+      }
+      setOrderMsg(
+        `Приказ принят · AP ${reservedAp + (data.intent?.apCost ?? 0)}/${data.apMax ?? apMax}`,
+      );
       bump();
     } catch (e) {
       setOrderMsg(e instanceof Error ? e.message : String(e));
@@ -853,6 +863,8 @@ export function ViewerPage() {
             <br />
             Ход {payload.world.meta.turn} · видно систем:{" "}
             {payload.visibleSystemIds.length}
+            <br />
+            AP: {reservedAp}/{apMax} (занято / лимит)
           </p>
           <button
             type="button"
@@ -912,18 +924,61 @@ export function ViewerPage() {
         </section>
 
         <section>
-          <h3>Ваши приказы</h3>
-          {payload.world.orders.length === 0 && (
-            <p className="hint">Пока нет</p>
-          )}
-          {payload.world.orders.map((o) => (
-            <div key={o.id} className="order-card">
-              {o.type} →{" "}
-              {payload.world.systems.find((s) => s.id === o.toSystemId)?.name ??
-                o.toSystemId}{" "}
-              ({o.status})
-            </div>
-          ))}
+          <h3>Ваши приказы (pending)</h3>
+          <p className="hint">
+            Committed = карта после последнего тика. Pending ниже — до 00:01 /
+            тика мастера.
+          </p>
+          {payload.world.orders.filter((o) => o.status === "pending").length ===
+            0 && <p className="hint">Пока нет</p>}
+          {payload.world.orders
+            .filter((o) => o.status === "pending")
+            .map((o) => (
+              <div key={o.id} className="order-card">
+                <div>
+                  {o.type} →{" "}
+                  {payload.world.systems.find((s) => s.id === o.toSystemId)
+                    ?.name ?? o.toSystemId}
+                </div>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => {
+                    void (async () => {
+                      try {
+                        const res = await fetch(`/api/intents/${o.id}/cancel`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            factionId: payload.factionId,
+                            password,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || res.statusText);
+                        setPayload({
+                          ...payload,
+                          world: {
+                            ...payload.world,
+                            orders: payload.world.orders.filter(
+                              (x) => x.id !== o.id,
+                            ),
+                          },
+                        });
+                        setReservedAp((r) => Math.max(0, r - 1));
+                        setOrderMsg("Приказ отменён");
+                      } catch (e) {
+                        setOrderMsg(
+                          e instanceof Error ? e.message : String(e),
+                        );
+                      }
+                    })();
+                  }}
+                >
+                  Отменить
+                </button>
+              </div>
+            ))}
         </section>
       </aside>
 

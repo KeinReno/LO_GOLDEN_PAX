@@ -21,6 +21,7 @@ import {
   backupTurnSnapshot,
   getTableMeta,
   setTableMeta,
+  bumpTableRevision,
 } from "./tableStore.mjs";
 import { getContent, getPublicContent, loadContent } from "./contentLoader.mjs";
 import {
@@ -37,6 +38,12 @@ import {
 } from "./intents.mjs";
 import { processTurn, getLastJournal } from "./processTurn.mjs";
 import { startTickScheduler } from "./tickScheduler.mjs";
+import {
+  readFog,
+  paintFog,
+  addPermanentReveal,
+  resolveVisibleWithFog,
+} from "./fogStore.mjs";
 
 export {
   DATA_DIR,
@@ -55,29 +62,8 @@ function requireMaster(req) {
   return req.headers["x-master-token"] === MASTER_TOKEN;
 }
 
-function factionHasFullMapVision(faction) {
-  if (!faction) return false;
-  if (faction.fullMapVision === true) return true;
-  return faction.id === "faction_belator";
-}
-
 function getVisibleSystemIds(world, factionId) {
-  const faction = (world.factions ?? []).find((f) => f.id === factionId);
-  if (factionHasFullMapVision(faction)) {
-    return new Set((world.systems ?? []).map((s) => s.id));
-  }
-  const visible = new Set();
-  for (const s of world.systems ?? []) {
-    if (s.ownerFactionId === factionId) visible.add(s.id);
-    if ((s.visibleToFactionIds ?? []).includes(factionId)) visible.add(s.id);
-  }
-  for (const f of world.fleets ?? []) {
-    if (f.factionId === factionId) visible.add(f.systemId);
-  }
-  for (const l of world.legions ?? []) {
-    if (l.factionId === factionId) visible.add(l.systemId);
-  }
-  return visible;
+  return resolveVisibleWithFog(world, factionId, readFog());
 }
 
 function filterWorldForFaction(world, factionId) {
@@ -235,6 +221,51 @@ export function createApiMiddleware() {
         const world = readLiveBoard();
         const dir = backupTurnSnapshot(world?.meta?.turn ?? 0, "manual");
         sendJson(res, 200, { ok: true, dir });
+        return;
+      }
+
+      if (url.pathname === "/api/fog" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        sendJson(res, 200, readFog());
+        return;
+      }
+
+      if (url.pathname === "/api/fog/paint" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        if (!body?.factionId || !Array.isArray(body.systemIds)) {
+          sendJson(res, 400, { error: "factionId + systemIds[]" });
+          return;
+        }
+        const fog = paintFog(
+          body.factionId,
+          body.systemIds,
+          body.mode === "erase" ? "erase" : "paint",
+        );
+        bumpTableRevision();
+        sendJson(res, 200, { ok: true, fog, version: getVersionPayload() });
+        return;
+      }
+
+      if (url.pathname === "/api/fog/reveal" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        if (!body?.factionId || !body?.systemId) {
+          sendJson(res, 400, { error: "factionId + systemId" });
+          return;
+        }
+        const fog = addPermanentReveal(body.factionId, body.systemId);
+        bumpTableRevision();
+        sendJson(res, 200, { ok: true, fog });
         return;
       }
 

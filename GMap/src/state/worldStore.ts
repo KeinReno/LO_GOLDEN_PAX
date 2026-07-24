@@ -70,6 +70,7 @@ interface WorldStore extends UiState {
   toggleShowOrders: () => void;
   toggleShowDiplomacy: () => void;
   toggleShowFogPreview: () => void;
+  setFogMaskPreview: (systemIds: string[]) => void;
   toggleShowJumpRange: () => void;
   toggleShowSupply: () => void;
   toggleShowCaravans: () => void;
@@ -366,6 +367,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showOrders: true,
   showDiplomacy: false,
   showFogPreview: false,
+  fogMaskPreview: [],
   showJumpRange: true,
   showSupply: true,
   showCaravans: true,
@@ -441,6 +443,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   toggleShowDiplomacy: () => set((s) => ({ showDiplomacy: !s.showDiplomacy })),
   toggleShowFogPreview: () =>
     set((s) => ({ showFogPreview: !s.showFogPreview })),
+  setFogMaskPreview: (systemIds) => set({ fogMaskPreview: systemIds }),
   toggleShowJumpRange: () =>
     set((s) => ({ showJumpRange: !s.showJumpRange })),
   toggleShowSupply: () => set((s) => ({ showSupply: !s.showSupply })),

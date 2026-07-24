@@ -34,6 +34,7 @@ import {
 } from "../ui/mapLayers";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
+import { IntentsInbox } from "./IntentsInbox";
 import { RESOURCE_POOL } from "../state/defaults";
 
 type TabId = "tools" | "layers" | "file" | "session";
@@ -211,7 +212,17 @@ const TOOL_GROUPS: {
       {
         id: "reveal",
         label: "Разведка",
-        hint: "Клик — видимость для активной фракции",
+        hint: "Клик — visibleTo для активной фракции (legacy)",
+      },
+      {
+        id: "fog_paint",
+        label: "Туман+",
+        hint: "Кисть тумана: скрыть систему для активной фракции (сервер)",
+      },
+      {
+        id: "fog_erase",
+        label: "Туман−",
+        hint: "Стереть туман с системы для активной фракции",
       },
     ],
   },
@@ -231,6 +242,8 @@ const FACTION_TOOLS: EditorTool[] = [
   "paint_coowner",
   "mark_contested",
   "reveal",
+  "fog_paint",
+  "fog_erase",
   "place_fleet",
   "place_legion",
 ];
@@ -531,7 +544,7 @@ export function Toolbar() {
 
             {tool === "reveal" && (
               <section>
-                <h3>Туман войны</h3>
+                <h3>Туман войны (legacy reveal)</h3>
                 <div className="btn-col">
                   <button type="button" className="btn ghost" onClick={revealAllVisible}>
                     Открыть всё активной фракции
@@ -544,6 +557,17 @@ export function Toolbar() {
                     Сбросить разведку фракции
                   </button>
                 </div>
+              </section>
+            )}
+
+            {(tool === "fog_paint" || tool === "fog_erase") && (
+              <section>
+                <h3>Туман (серверная кисть)</h3>
+                <p className="hint">
+                  Красит mask для <strong>активной фракции</strong>. Игрок не
+                  видит системы в mask, пока нет флота/владения/permanent reveal.
+                  Включите «Туман (превью)» в слоях, чтобы видеть veil.
+                </p>
               </section>
             )}
 
@@ -825,6 +849,8 @@ export function Toolbar() {
               </div>
               {publishStatus && <p className="hint">{publishStatus}</p>}
             </section>
+
+            <IntentsInbox />
 
             {world.orders.length > 0 && (
               <section>

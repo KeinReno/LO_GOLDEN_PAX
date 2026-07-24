@@ -109,6 +109,7 @@ export interface MapViewModel {
   showOrders: boolean;
   showDiplomacy: boolean;
   showFogPreview: boolean;
+  fogMaskPreview?: string[];
   showJumpRange?: boolean;
   showSupply?: boolean;
   showCaravans?: boolean;
@@ -434,6 +435,7 @@ export function MapCanvas({
       showOrders: s.showOrders,
       showDiplomacy: s.showDiplomacy,
       showFogPreview: s.showFogPreview,
+      fogMaskPreview: s.fogMaskPreview,
       showJumpRange: s.showJumpRange,
       showSupply: s.showSupply,
       showCaravans: s.showCaravans,
@@ -1018,6 +1020,37 @@ export function MapCanvas({
             return;
           }
 
+          if (state.tool === "fog_paint" || state.tool === "fog_erase") {
+            if (!hit) return;
+            const fac = state.activeFactionId;
+            if (!fac) return;
+            const token =
+              (
+                window as unknown as { __GMAP_MASTER_TOKEN?: string }
+              ).__GMAP_MASTER_TOKEN || "master2142";
+            void fetch("/api/fog/paint", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Master-Token": token,
+              },
+              body: JSON.stringify({
+                factionId: fac,
+                systemIds: [hit.id],
+                mode: state.tool === "fog_erase" ? "erase" : "paint",
+              }),
+            }).then(async (res) => {
+              if (!res.ok) return;
+              const data = (await res.json()) as {
+                fog?: { masks?: Record<string, string[]> };
+              };
+              useWorldStore.getState().setFogMaskPreview(
+                data.fog?.masks?.[fac] ?? [],
+              );
+            });
+            return;
+          }
+
           if (state.tool === "place_fleet") {
             if (hit) state.placeFleetOnSystem(hit.id);
             return;
@@ -1584,6 +1617,7 @@ export function MapCanvas({
         showOrders,
         showDiplomacy,
         showFogPreview,
+        fogMaskPreview,
         showJumpRange,
         showSupply,
         showCaravans,
@@ -1649,6 +1683,10 @@ export function MapCanvas({
       const fogVisible =
         showFogPreview && activeFactionId
           ? getVisibleSystemIds(world, activeFactionId)
+          : null;
+      const maskSet =
+        fogMaskPreview && fogMaskPreview.length > 0
+          ? new Set(fogMaskPreview)
           : null;
 
       const worldScale = worldLayerRef.current?.scale.x ?? 1;
@@ -1888,7 +1926,10 @@ export function MapCanvas({
         const here = fleetsBySystem.get(s.id) ?? [];
         const contested = new Set(here.map((f) => f.factionId)).size > 1;
         const ip = toIso(s.x, s.y);
-        const fogged = !!(fogVisible && !fogVisible.has(s.id));
+        const fogged = !!(
+          (fogVisible && !fogVisible.has(s.id)) ||
+          (maskSet && maskSet.has(s.id))
+        );
 
         if (showOwnership && s.ownerFactionId) {
           const owner = world.factions.find((f) => f.id === s.ownerFactionId);

@@ -43,8 +43,8 @@ NOW ──► P0 Фундамент SoT
 |------|----------|--------|
 | P0 | сразу | **in progress / done on v_0_2** |
 | P1 | после P0 | **in progress / done on v_0_2** |
-| P2 | после P1 | **partial (tick + intents + apply move/claim)** |
-| P3 | можно частично || с P2 | todo |
+| P2 | после P1 | **done (UI AP/inbox + tick)** |
+| P3 | можно частично || с P2 | **partial (fog brush + reveal server)** |
 | P4 | после P2 | todo |
 | P5 | после P1 defs + P2 tick | todo |
 | P6 | после P4 pop + P3 fog | todo |

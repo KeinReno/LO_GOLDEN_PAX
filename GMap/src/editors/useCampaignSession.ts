@@ -117,6 +117,45 @@ export function useCampaignSession() {
   }, [loadWorld, masterToken]);
 
   useEffect(() => {
+    (
+      window as unknown as { __GMAP_MASTER_TOKEN?: string }
+    ).__GMAP_MASTER_TOKEN = masterToken;
+  }, [masterToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadFog = (fac: string | null) => {
+      if (!fac) return;
+      void (async () => {
+        try {
+          const res = await fetch("/api/fog", {
+            headers: { "X-Master-Token": masterToken },
+          });
+          if (!res.ok || cancelled) return;
+          const fog = (await res.json()) as { masks?: Record<string, string[]> };
+          useWorldStore
+            .getState()
+            .setFogMaskPreview(fog.masks?.[fac] ?? []);
+        } catch {
+          /* ignore */
+        }
+      })();
+    };
+    loadFog(useWorldStore.getState().activeFactionId);
+    let prevFac = useWorldStore.getState().activeFactionId;
+    const unsub = useWorldStore.subscribe((s) => {
+      if (s.activeFactionId !== prevFac) {
+        prevFac = s.activeFactionId;
+        loadFog(s.activeFactionId);
+      }
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [masterToken, world.meta.tableRevision]);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {

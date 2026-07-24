@@ -15,6 +15,7 @@ import {
   resolveApMax,
   explainStack,
 } from "./modifierStack.mjs";
+import { addPermanentReveal } from "./fogStore.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
@@ -162,11 +163,32 @@ function applyAttackMarker(world, intent, journal) {
   return true;
 }
 
+function applyScoutReveal(world, intent, journal) {
+  const systemId = intent.payload?.systemId || intent.payload?.toSystemId;
+  if (!systemId || !(world.systems ?? []).some((s) => s.id === systemId)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "system_missing",
+    });
+    return false;
+  }
+  addPermanentReveal(intent.factionId, systemId);
+  journalPush(journal, {
+    type: "scout_reveal",
+    intentId: intent.id,
+    systemId,
+    factionId: intent.factionId,
+  });
+  return true;
+}
+
 const APPLIERS = {
   "intent.move_fleet": applyMoveFleet,
   "intent.move_legion": applyMoveLegion,
   "intent.claim_system": applyClaim,
   "intent.attack_system": applyAttackMarker,
+  "intent.scout_reveal": applyScoutReveal,
 };
 
 function advanceCaravans(world) {

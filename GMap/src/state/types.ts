@@ -162,6 +162,8 @@ export type EditorTool =
   | "mark_sanctuary"
   | "clear_poi"
   | "paint_resource"
+  | "fog_paint"
+  | "fog_erase"
   | "delete";
 
 /** Tools that stamp a POI / space object onto a system. */
@@ -603,6 +605,8 @@ export interface UiState {
   showDiplomacy: boolean;
   /** Dim systems the active faction cannot see (fog preview). */
   showFogPreview: boolean;
+  /** Server fog mask system ids for active faction (P3 brush). */
+  fogMaskPreview: string[];
   showJumpRange: boolean;
   showSupply: boolean;
   showCaravans: boolean;
@@ -649,4 +653,7 @@ export interface ViewerPayload {
   visibleSystemIds: string[];
   /** From published map — used for live refresh polling. */
   updatedAt?: string | null;
+  tableRevision?: number;
+  apMax?: number;
+  reservedAp?: number;
 }

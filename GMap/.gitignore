@@ -19,6 +19,7 @@ data/cloudpub-token.txt
 data/intents.json
 data/ledger.json
 data/table-meta.json
+data/fog-masks.json
 data/turns/**
 !data/turns/.gitkeep
 deploy/certs/*.pem
