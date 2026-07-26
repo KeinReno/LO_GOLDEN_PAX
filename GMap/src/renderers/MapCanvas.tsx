@@ -52,7 +52,10 @@ import {
 } from "./drawTableFx";
 import { fromIso, toIso } from "./iso";
 import { isCorridorSystem, censusPlanets } from "../state/planets";
-import { getVisibleSystemIds } from "../state/fog";
+import {
+  getVisibleSystemIds,
+  resolveEditorViewWorld,
+} from "../state/fog";
 import {
   isStatePolity,
   resolveFactionBorder,
@@ -109,6 +112,7 @@ export interface MapViewModel {
   showOrders: boolean;
   showDiplomacy: boolean;
   showFogPreview: boolean;
+  gmOmniscientView?: boolean;
   fogMaskPreview?: string[];
   showJumpRange?: boolean;
   showSupply?: boolean;
@@ -436,8 +440,16 @@ export function MapCanvas({
 
   const defaultRead = (): MapViewModel => {
     const s = useWorldStore.getState();
+    // Editor FoW: slice systems like a player when GM omniscient is off.
+    const world =
+      mode === "editor"
+        ? resolveEditorViewWorld(s.world, {
+            activeFactionId: s.activeFactionId,
+            gmOmniscientView: s.gmOmniscientView,
+          })
+        : s.world;
     return {
-      world: s.world,
+      world,
       selectedSystemId: s.selectedSystemId,
       selectedSystemIds: s.selectedSystemIds,
       selectedFleetId: s.selectedFleetId,
@@ -457,6 +469,7 @@ export function MapCanvas({
       showOrders: s.showOrders,
       showDiplomacy: s.showDiplomacy,
       showFogPreview: s.showFogPreview,
+      gmOmniscientView: s.gmOmniscientView,
       fogMaskPreview: s.fogMaskPreview,
       showJumpRange: s.showJumpRange,
       showSupply: s.showSupply,
@@ -566,6 +579,7 @@ export function MapCanvas({
     };
 
     (async () => {
+      try {
       const bootModel = getModel();
       const tier = resolvePerfTier(mode, bootModel.perfMode);
       perfTierRef.current = tier;
@@ -868,9 +882,12 @@ export function MapCanvas({
 
           const state = useWorldStore.getState();
           state.setContextMenu(null);
+          // Hit-test against the same sliced view the canvas draws (FoW).
+          const viewSystems = getModel().world.systems;
+          const viewLinks = getModel().world.links;
 
           if (state.pendingUnitOrder) {
-            const target = findSystemAt(worldPos, state.world.systems);
+            const target = findSystemAt(worldPos, viewSystems);
             if (target) {
               state.applyPendingUnitOrder(target.id);
               return;
@@ -881,7 +898,7 @@ export function MapCanvas({
           }
 
           if (state.pendingFleetCloneId) {
-            const target = findSystemAt(worldPos, state.world.systems);
+            const target = findSystemAt(worldPos, viewSystems);
             if (target) {
               state.cloneFleetToSystem(target.id);
               return;
@@ -891,7 +908,7 @@ export function MapCanvas({
           }
 
           if (state.showQuests) {
-            for (const s of state.world.systems) {
+            for (const s of viewSystems) {
               const qs = questsAtSystem(state.world, s.id);
               if (
                 (qs.length > 0 || s.questId || s.poiType === "quest") &&
@@ -907,7 +924,7 @@ export function MapCanvas({
           }
 
           if (state.pendingCapitalFactionId) {
-            const capitalHit = findSystemAt(worldPos, state.world.systems);
+            const capitalHit = findSystemAt(worldPos, viewSystems);
             if (capitalHit) {
               state.setFactionCapital(
                 state.pendingCapitalFactionId,
@@ -939,14 +956,10 @@ export function MapCanvas({
             return;
           }
 
-          const hit = findSystemAt(worldPos, state.world.systems);
+          const hit = findSystemAt(worldPos, viewSystems);
           const fleetHit = findFleetAt(worldPos, getModel());
           const legionHit = findLegionAt(worldPos, getModel());
-          const linkHit = findLinkAt(
-            worldPos,
-            state.world.links,
-            state.world.systems,
-          );
+          const linkHit = findLinkAt(worldPos, viewLinks, viewSystems);
 
           if (state.tool === "add_link") {
             if (hit) {
@@ -1319,7 +1332,7 @@ export function MapCanvas({
             if (drag.moved) {
               const target = findSystemAt(
                 lastPointerWorldRef.current,
-                useWorldStore.getState().world.systems,
+                getModel().world.systems,
                 SYSTEM_DROP_R,
               );
               if (target) {
@@ -1346,8 +1359,8 @@ export function MapCanvas({
             const area = (maxX - minX) * (maxY - minY);
             const st = useWorldStore.getState();
             if (area > 36) {
-              const picked = st.world.systems
-                .filter((s) => {
+              const picked = getModel()
+                .world.systems.filter((s) => {
                   const ip = toIso(s.x, s.y);
                   return (
                     ip.x >= minX &&
@@ -1398,11 +1411,11 @@ export function MapCanvas({
           const model = getModel();
           const fleetHit = findFleetAt(worldPos, model);
           const legionHit = findLegionAt(worldPos, model);
-          const hit = findSystemAt(worldPos, state.world.systems);
+          const hit = findSystemAt(worldPos, model.world.systems);
           const linkHit = findLinkAt(
             worldPos,
-            state.world.links,
-            state.world.systems,
+            model.world.links,
+            model.world.systems,
           );
           state.setContextMenu({
             screenX: ev.clientX,
@@ -1586,6 +1599,9 @@ export function MapCanvas({
           ).__gmapCtxCleanup?.();
           if (apiRefInternal.current) apiRefInternal.current.current = null;
         };
+      } catch (err) {
+        console.error("[GMap] MapCanvas init failed", err);
+      }
     })();
 
     const unsub =
@@ -1685,6 +1701,7 @@ export function MapCanvas({
         showOrders,
         showDiplomacy,
         showFogPreview,
+        gmOmniscientView = true,
         fogMaskPreview,
         showJumpRange,
         showSupply,
@@ -1748,9 +1765,14 @@ export function MapCanvas({
         ]),
       );
       const byId = new Map(world.systems.map((s) => [s.id, s]));
+      // When omniscient is off, `world` is already faction-sliced (no veil needed).
+      // With omniscient + fog preview, dim systems the active faction cannot see.
       const fogVisible =
-        showFogPreview && activeFactionId
-          ? getVisibleSystemIds(world, activeFactionId)
+        mode === "editor" &&
+        gmOmniscientView &&
+        showFogPreview &&
+        activeFactionId
+          ? getVisibleSystemIds(useWorldStore.getState().world, activeFactionId)
           : null;
       const maskSet =
         fogMaskPreview && fogMaskPreview.length > 0
@@ -1842,14 +1864,14 @@ export function MapCanvas({
         if (showTraffic) {
           drawTrafficDensity(linksG, world, anim);
         }
-        if (showSupply) {
+        if (showSupply && mode !== "viewer") {
           drawSupplyChains(linksG, world, activeFactionId ?? null, anim);
         }
         if (showCaravans) {
           drawCaravans(linksG, world, world.caravans ?? [], anim);
         }
         drawTradeLanes(linksG, world, anim);
-      } else if (!bare && showSupply && tier === "soft") {
+      } else if (!bare && showSupply && mode !== "viewer" && tier === "soft") {
         drawSupplyChains(linksG, world, activeFactionId ?? null, anim);
       }
 

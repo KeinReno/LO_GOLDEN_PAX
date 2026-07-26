@@ -63,7 +63,15 @@ export type SystemPoiType =
   | "depot"
   | "propaganda"
   | "frontline"
-  | "forge";
+  | "forge"
+  | "mining_platform"
+  | "abandoned_station"
+  | "science_arch"
+  | "agronomy"
+  | "biocupola"
+  | "hydro_lab"
+  | "security_post"
+  | "grav_field";
 
 /** All stampable space objects (can stack on one system). */
 export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
@@ -93,6 +101,14 @@ export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
   "propaganda",
   "frontline",
   "forge",
+  "mining_platform",
+  "abandoned_station",
+  "science_arch",
+  "agronomy",
+  "biocupola",
+  "hydro_lab",
+  "security_post",
+  "grav_field",
 ];
 
 export type QuestStatus = "active" | "done" | "hidden";
@@ -176,6 +192,16 @@ export type EditorTool =
   | "mark_quarantine"
   | "mark_depot"
   | "mark_propaganda"
+  | "mark_forge"
+  | "mark_frontline"
+  | "mark_mining_platform"
+  | "mark_abandoned_station"
+  | "mark_science_arch"
+  | "mark_agronomy"
+  | "mark_biocupola"
+  | "mark_hydro_lab"
+  | "mark_security_post"
+  | "mark_grav_field"
   | "clear_poi"
   | "paint_resource"
   | "fog_paint"
@@ -209,6 +235,16 @@ export const POI_PAINT_TOOLS: Partial<Record<EditorTool, SystemPoiType>> = {
   mark_quarantine: "quarantine",
   mark_depot: "depot",
   mark_propaganda: "propaganda",
+  mark_forge: "forge",
+  mark_frontline: "frontline",
+  mark_mining_platform: "mining_platform",
+  mark_abandoned_station: "abandoned_station",
+  mark_science_arch: "science_arch",
+  mark_agronomy: "agronomy",
+  mark_biocupola: "biocupola",
+  mark_hydro_lab: "hydro_lab",
+  mark_security_post: "security_post",
+  mark_grav_field: "grav_field",
   clear_poi: "none",
 };
 
@@ -484,6 +520,11 @@ export interface Faction {
   /** Optional data-URL or relative asset path for heraldry. */
   emblemPath?: string;
   /**
+   * Portrait for RP chat (URL or data-URL). Upload UI comes later;
+   * field is already read when posting messages.
+   */
+  avatarUrl?: string | null;
+  /**
    * Sees the entire map (no fog). Belator by default.
    * New systems are auto-revealed to such factions.
    */
@@ -609,8 +650,13 @@ export interface BrushSettings {
 
 export type SystemSelectMode = "replace" | "add" | "toggle";
 
+/** GM chrome: worldbuild vs live table. */
+export type GmShellMode = "prep" | "live";
+
 export interface UiState {
   tool: EditorTool;
+  /** Prep = cartography tools; Live = inbox / tick / share-first chrome. */
+  gmShellMode: GmShellMode;
   selectedSystemId: string | null;
   /** Multi-select set (includes selectedSystemId when set). */
   selectedSystemIds: string[];
@@ -635,6 +681,11 @@ export interface UiState {
   showDiplomacy: boolean;
   /** Dim systems the active faction cannot see (fog preview). */
   showFogPreview: boolean;
+  /**
+   * GM omniscient view: when true, ignore faction fog and show the full map.
+   * When false, map follows activeFactionId vision (same rules as the player).
+   */
+  gmOmniscientView: boolean;
   /** Server fog mask system ids for active faction (P3 brush). */
   fogMaskPreview: string[];
   /** Active consequence / system preset for consequence_paint tool. */
@@ -649,6 +700,8 @@ export interface UiState {
   /** Open quest dossier id. */
   openQuestId: string | null;
   diplomacyPanelOpen: boolean;
+  /** Floating RP chat window (GM editor). */
+  rpFloatOpen: boolean;
   /** Right-click radial / context menu target. */
   contextMenu: ContextMenuState | null;
   /** After RMB order pick — next system click applies route + stance. */

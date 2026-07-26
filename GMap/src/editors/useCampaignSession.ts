@@ -46,16 +46,99 @@ export function useCampaignSession() {
   const bootDone = useRef(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareViewUrl, setShareViewUrl] = useState<string | null>(null);
+  const [shareLastViewUrl, setShareLastViewUrl] = useState<string | null>(null);
   const [shareProvider, setShareProvider] = useState<string | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [shareEndpointIp, setShareEndpointIp] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState<
+    "idle" | "starting" | "online" | "degraded" | "down"
+  >("idle");
+  const [shareHealthOk, setShareHealthOk] = useState<boolean | null>(null);
+  const [shareLastHealthAt, setShareLastHealthAt] = useState<string | null>(
+    null,
+  );
+  const [shareLastHealthError, setShareLastHealthError] = useState<
+    string | null
+  >(null);
+  const [shareDownSince, setShareDownSince] = useState<string | null>(null);
+  const [shareLinkChanged, setShareLinkChanged] = useState(false);
+  const [shareWanIp, setShareWanIp] = useState<string | null>(null);
+  const [shareDirectViewUrl, setShareDirectViewUrl] = useState<string | null>(
+    null,
+  );
+  const [shareDirectHint, setShareDirectHint] = useState<string | null>(null);
+  const [shareDirectCopied, setShareDirectCopied] = useState(false);
   const [hasCloudPubToken, setHasCloudPubToken] = useState(true);
   const [hasCloudPubCli, setHasCloudPubCli] = useState(true);
   const [cloudpubTokenInput, setCloudpubTokenInput] = useState("");
   const shareAbortRef = useRef<AbortController | null>(null);
+  const prevShareStatusRef = useRef<string>("idle");
+  const shareViewUrlRef = useRef<string | null>(null);
+
+  type ShareApi = {
+    active?: boolean;
+    status?: "idle" | "starting" | "online" | "degraded" | "down";
+    healthOk?: boolean | null;
+    viewUrl?: string | null;
+    lastViewUrl?: string | null;
+    provider?: string | null;
+    playerHint?: string | null;
+    endpointIp?: string | null;
+    hasCloudPubToken?: boolean;
+    hasCloudPubCli?: boolean;
+    error?: string | null;
+    lastHealthAt?: string | null;
+    lastHealthError?: string | null;
+    downSince?: string | null;
+    wanIp?: string | null;
+    directViewUrl?: string | null;
+    directHint?: string | null;
+  };
+
+  const applyShareStatus = useCallback((data: ShareApi) => {
+    if (typeof data.hasCloudPubToken === "boolean") {
+      setHasCloudPubToken(data.hasCloudPubToken);
+    }
+    if (typeof data.hasCloudPubCli === "boolean") {
+      setHasCloudPubCli(data.hasCloudPubCli);
+    }
+    const status = data.status ?? (data.active ? "online" : "idle");
+    setShareStatus(status);
+    setShareHealthOk(
+      typeof data.healthOk === "boolean" ? data.healthOk : null,
+    );
+    setShareLastHealthAt(data.lastHealthAt ?? null);
+    setShareLastHealthError(data.lastHealthError ?? null);
+    setShareDownSince(data.downSince ?? null);
+    setShareProvider(data.provider ?? null);
+    setShareHint(data.playerHint ?? null);
+    setShareEndpointIp(data.endpointIp ?? null);
+    setShareWanIp(data.wanIp ?? null);
+    setShareDirectViewUrl(data.directViewUrl ?? null);
+    setShareDirectHint(data.directHint ?? null);
+    if (data.error) setShareError(data.error);
+    else if (status === "online") setShareError(null);
+
+    const nextUrl =
+      status === "idle" && !data.active
+        ? null
+        : (data.viewUrl ?? data.lastViewUrl ?? null);
+    setShareLastViewUrl(data.lastViewUrl ?? data.viewUrl ?? null);
+    if (
+      nextUrl &&
+      shareViewUrlRef.current &&
+      nextUrl !== shareViewUrlRef.current &&
+      status === "online"
+    ) {
+      setShareLinkChanged(true);
+      setShareCopied(false);
+    }
+    shareViewUrlRef.current = nextUrl;
+    setShareViewUrl(nextUrl);
+  }, []);
 
   const dirty = isDirty(world);
   void dirtyTick;
@@ -161,27 +244,8 @@ export function useCampaignSession() {
       try {
         const res = await fetch("/api/players/share");
         if (!res.ok || cancelled) return;
-        const data = (await res.json()) as {
-          active?: boolean;
-          viewUrl?: string | null;
-          provider?: string | null;
-          playerHint?: string | null;
-          endpointIp?: string | null;
-          hasCloudPubToken?: boolean;
-          hasCloudPubCli?: boolean;
-        };
-        if (typeof data.hasCloudPubToken === "boolean") {
-          setHasCloudPubToken(data.hasCloudPubToken);
-        }
-        if (typeof data.hasCloudPubCli === "boolean") {
-          setHasCloudPubCli(data.hasCloudPubCli);
-        }
-        if (data.active && data.viewUrl) {
-          setShareViewUrl(data.viewUrl);
-          setShareProvider(data.provider ?? null);
-          setShareHint(data.playerHint ?? null);
-          setShareEndpointIp(data.endpointIp ?? null);
-        }
+        const data = (await res.json()) as ShareApi;
+        if (!cancelled) applyShareStatus(data);
       } catch {
         /* ignore */
       }
@@ -189,7 +253,60 @@ export function useCampaignSession() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyShareStatus]);
+
+  // Poll tunnel health while share session is known (online / reconnecting / down).
+  useEffect(() => {
+    const watching =
+      shareBusy ||
+      shareStatus === "online" ||
+      shareStatus === "degraded" ||
+      shareStatus === "down" ||
+      shareStatus === "starting" ||
+      !!shareViewUrl ||
+      !!shareLastViewUrl;
+    if (!watching) return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await fetch("/api/players/share");
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as ShareApi;
+        if (!cancelled) applyShareStatus(data);
+      } catch {
+        /* ignore */
+      }
+    };
+    const id = window.setInterval(() => void tick(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [
+    applyShareStatus,
+    shareBusy,
+    shareStatus,
+    shareViewUrl,
+    shareLastViewUrl,
+  ]);
+
+  // Auto-open popover when tunnel drops.
+  useEffect(() => {
+    const prev = prevShareStatusRef.current;
+    prevShareStatusRef.current = shareStatus;
+    if (
+      (shareStatus === "down" || shareStatus === "degraded") &&
+      prev !== shareStatus &&
+      prev !== "idle"
+    ) {
+      setShareOpen(true);
+      setSyncMsg(
+        shareStatus === "degraded"
+          ? "Туннель переподключается…"
+          : "Туннель упал — перезапусти и выдай новую ссылку",
+      );
+    }
+  }, [shareStatus]);
 
   const rememberSave = useCallback(() => {
     markSaved(world.meta.updatedAt);
@@ -205,7 +322,9 @@ export function useCampaignSession() {
     setShareBusy(true);
     setShareError(null);
     setShareCopied(false);
+    setShareLinkChanged(false);
     setShareOpen(true);
+    setShareStatus("starting");
     const killTimer = window.setTimeout(() => ac.abort(), 100_000);
     try {
       const tokenToSend = cloudpubTokenInput.trim();
@@ -223,43 +342,31 @@ export function useCampaignSession() {
           ...(tokenToSend ? { cloudpubToken: tokenToSend } : {}),
         }),
       });
-      const data = (await res.json()) as {
+      const data = (await res.json()) as ShareApi & {
         ok?: boolean;
-        viewUrl?: string | null;
-        provider?: string | null;
-        playerHint?: string | null;
-        endpointIp?: string | null;
-        hasCloudPubToken?: boolean;
-        hasCloudPubCli?: boolean;
         error?: string;
       };
-      if (typeof data.hasCloudPubToken === "boolean") {
-        setHasCloudPubToken(data.hasCloudPubToken);
-      }
-      if (typeof data.hasCloudPubCli === "boolean") {
-        setHasCloudPubCli(data.hasCloudPubCli);
-      }
-      if (!res.ok || !data.viewUrl) {
+      applyShareStatus(data);
+      if (!res.ok || !(data.viewUrl || data.lastViewUrl)) {
         throw new Error(data.error || "Не удалось открыть доступ");
       }
-      setShareViewUrl(data.viewUrl);
-      setShareProvider(data.provider ?? null);
-      setShareHint(data.playerHint ?? null);
-      setShareEndpointIp(data.endpointIp ?? null);
       if (tokenToSend) {
         setCloudpubTokenInput("");
         setHasCloudPubToken(true);
       }
+      setShareLinkChanged(true);
       setSyncMsg(
         `Открыто (${data.provider ?? "туннель"}). Скопируй ссылку игрокам.`,
       );
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
         setShareError("Прервано или слишком долго — нажми ещё раз");
+        setShareStatus("down");
       } else {
         const msg = e instanceof Error ? e.message : String(e);
         setShareError(msg);
         setSyncMsg(msg);
+        setShareStatus("down");
       }
     } finally {
       window.clearTimeout(killTimer);
@@ -268,17 +375,42 @@ export function useCampaignSession() {
     }
   };
 
+  const restartShare = async () => {
+    setShareLinkChanged(false);
+    await openForPlayers();
+  };
+
   const copyShareLink = async () => {
-    if (!shareViewUrl) return;
-    const text = shareEndpointIp
-      ? `${shareViewUrl}\n\nНа жёлтой странице loca.lt в поле IP введи: ${shareEndpointIp}\nПотом Continue — откроется карта.`
-      : shareViewUrl;
+    const url = shareViewUrl || shareLastViewUrl;
+    if (!url) return;
+    const parts = [url];
+    if (shareDirectViewUrl && shareDirectViewUrl !== url) {
+      parts.push(`Запасной прямой доступ:\n${shareDirectViewUrl}`);
+    }
+    if (shareEndpointIp) {
+      parts.push(
+        `На жёлтой странице loca.lt в поле IP введи: ${shareEndpointIp}\nПотом Continue — откроется карта.`,
+      );
+    }
+    const text = parts.join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
       setShareCopied(true);
+      setShareLinkChanged(false);
       window.setTimeout(() => setShareCopied(false), 2000);
     } catch {
       setShareError("Не удалось скопировать — выдели ссылку вручную");
+    }
+  };
+
+  const copyDirectLink = async () => {
+    if (!shareDirectViewUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareDirectViewUrl);
+      setShareDirectCopied(true);
+      window.setTimeout(() => setShareDirectCopied(false), 2000);
+    } catch {
+      setShareError("Не удалось скопировать прямой IP");
     }
   };
 
@@ -292,9 +424,20 @@ export function useCampaignSession() {
       /* ignore */
     }
     setShareViewUrl(null);
+    setShareLastViewUrl(null);
     setShareProvider(null);
     setShareHint(null);
     setShareEndpointIp(null);
+    setShareWanIp(null);
+    setShareDirectViewUrl(null);
+    setShareDirectHint(null);
+    setShareStatus("idle");
+    setShareHealthOk(null);
+    setShareLastHealthAt(null);
+    setShareLastHealthError(null);
+    setShareDownSince(null);
+    setShareLinkChanged(false);
+    setShareError(null);
     setSyncMsg("Доступ для игроков закрыт");
   };
 
@@ -410,6 +553,7 @@ export function useCampaignSession() {
     onDownloadMap,
     shareBusy,
     shareViewUrl,
+    shareLastViewUrl,
     shareProvider,
     shareHint,
     shareEndpointIp,
@@ -417,9 +561,21 @@ export function useCampaignSession() {
     shareCopied,
     shareOpen,
     setShareOpen,
+    shareStatus,
+    shareHealthOk,
+    shareLastHealthAt,
+    shareLastHealthError,
+    shareDownSince,
+    shareLinkChanged,
+    shareWanIp,
+    shareDirectViewUrl,
+    shareDirectHint,
+    shareDirectCopied,
     shareAbortRef,
     openForPlayers,
+    restartShare,
     copyShareLink,
+    copyDirectLink,
     stopShare,
     setShareBusy,
     hasCloudPubToken,

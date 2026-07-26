@@ -85,6 +85,14 @@ export const SYSTEM_POI_LABELS: Record<string, string> = {
   propaganda: "Пропаганда-вышка",
   frontline: "Линия фронта",
   forge: "Кузница",
+  mining_platform: "Добычная платформа",
+  abandoned_station: "Покинутая станция",
+  science_arch: "Научная арка",
+  agronomy: "Агродроны",
+  biocupola: "Биокупол",
+  hydro_lab: "Гидролаборатория",
+  security_post: "Охранная станция",
+  grav_field: "Гравиполе / магнитные пояса",
 };
 
 export const LINK_TYPE_LABELS: Record<string, string> = {
@@ -225,16 +233,7 @@ export const PLANET_BUILDING_KIND_LABELS: Record<string, string> = {
   custom: "Особое",
 };
 
-export const RESOURCE_POOL = [
-  "железо",
-  "титан",
-  "кристаллы",
-  "газ",
-  "вода",
-  "редкоземы",
-  "антиматерия",
-  "реликты",
-];
+export { RESOURCE_POOL } from "./resourcePool.generated";
 
 export const STATION_KIND_LABELS: Record<string, string> = {
   science: "Научная станция",

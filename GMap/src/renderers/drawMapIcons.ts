@@ -643,7 +643,8 @@ export interface FleetSlot {
 }
 
 /**
- * One glyph per faction at a system. Crowded docks → stack ×N on the east arc.
+ * One glyph per fleet on an east arc (so multiple fleets of one faction stay visible).
+ * Selected fleet is drawn slightly closer to the star.
  */
 export function layoutFleetsAroundSystem(
   system: StarSystem,
@@ -654,33 +655,32 @@ export function layoutFleetsAroundSystem(
   const p = toIso(system.x, system.y);
   if (fleets.length === 0) return [];
 
-  const groups = new Map<string, Fleet[]>();
-  for (const f of fleets) {
-    const list = groups.get(f.factionId) ?? [];
-    list.push(f);
-    groups.set(f.factionId, list);
+  const ordered = [...fleets];
+  if (selectedFleetId) {
+    const idx = ordered.findIndex((f) => f.id === selectedFleetId);
+    if (idx > 0) {
+      const [sel] = ordered.splice(idx, 1);
+      ordered.unshift(sel!);
+    }
   }
-  const entries = [...groups.entries()];
-  const n = entries.length;
-  const rx = 36 + Math.min(n, 6) * 3;
-  const ry = rx * 0.48;
-  const a0 = -0.5;
-  const a1 = 1.1;
 
-  return entries.map(([, group], i) => {
+  const n = ordered.length;
+  const rx = 36 + Math.min(n, 8) * 4;
+  const ry = rx * 0.48;
+  const a0 = -0.85;
+  const a1 = 1.15;
+
+  return ordered.map((fleet, i) => {
     const t = n === 1 ? 0.35 : i / Math.max(n - 1, 1);
     const a = a0 + (a1 - a0) * t;
     const bob = anim ? Math.sin(anim.t * 2.2 + i) * 0.5 : 0;
-    const preferred =
-      (selectedFleetId
-        ? group.find((f) => f.id === selectedFleetId)
-        : undefined) ?? group[0]!;
+    const pull = fleet.id === selectedFleetId ? 0.88 : 1;
     return {
-      fleet: preferred,
-      x: p.x + Math.cos(a) * rx,
-      y: p.y + Math.sin(a) * ry + bob,
-      stackCount: group.length,
-      fleetIds: group.map((f) => f.id),
+      fleet,
+      x: p.x + Math.cos(a) * rx * pull,
+      y: p.y + Math.sin(a) * ry * pull + bob,
+      stackCount: 1,
+      fleetIds: [fleet.id],
     };
   });
 }

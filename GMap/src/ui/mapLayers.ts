@@ -12,6 +12,7 @@ export interface MapLayerFlags {
   showOrders: boolean;
   showDiplomacy: boolean;
   showFogPreview: boolean;
+  gmOmniscientView: boolean;
   showJumpRange: boolean;
   showSupply: boolean;
   showCaravans: boolean;
@@ -35,6 +36,7 @@ export type LayerLucideIcon =
   | "circle-dot"
   | "handshake"
   | "eye-off"
+  | "eye"
   | "flag"
   | "radar"
   | "truck"
@@ -54,8 +56,9 @@ export const DEFAULT_MAP_LAYERS: MapLayerFlags = {
   showOrders: true,
   showDiplomacy: false,
   showFogPreview: false,
+  gmOmniscientView: true,
   showJumpRange: true,
-  showSupply: true,
+  showSupply: false,
   showCaravans: true,
   showBlockades: true,
   showDeadZones: true,
@@ -76,6 +79,7 @@ export const MOBILE_LIGHT_LAYERS: MapLayerFlags = {
   showOrders: true,
   showDiplomacy: false,
   showFogPreview: false,
+  gmOmniscientView: true,
   showJumpRange: false,
   showSupply: false,
   showCaravans: false,
@@ -97,6 +101,7 @@ export const ULTRALIGHT_LAYERS: MapLayerFlags = {
   showOrders: false,
   showDiplomacy: false,
   showFogPreview: false,
+  gmOmniscientView: true,
   showJumpRange: false,
   showSupply: false,
   showCaravans: false,
@@ -189,6 +194,7 @@ export const EDITOR_LAYER_GROUPS: {
       { key: "showLinks", label: "Связи / врата", icon: "route" },
       { key: "showLabels", label: "Подписи систем", icon: "type" },
       { key: "showFogPreview", label: "Туман (превью)", icon: "eye-off" },
+      { key: "gmOmniscientView", label: "Видимость ГМа", icon: "eye" },
       { key: "showDeadZones", label: "Мёртвые зоны", icon: "eye-off" },
       { key: "showTraffic", label: "Трафик хабов", icon: "activity" },
       { key: "showCaravans", label: "Караваны", icon: "truck" },
@@ -229,7 +235,7 @@ export const LAYER_PRESETS: {
       showLabels: true,
       showFactionLabels: true,
       showDiplomacy: false,
-      showSupply: true,
+      showSupply: false,
       showTraffic: true,
       showQuests: true,
       showFogPreview: false,
@@ -250,7 +256,7 @@ export const LAYER_PRESETS: {
       showLegions: false,
       showOrders: false,
       showDiplomacy: true,
-      showSupply: true,
+      showSupply: false,
       showJumpRange: false,
       showQuests: false,
       showCaravans: false,
@@ -274,7 +280,7 @@ export const LAYER_PRESETS: {
       showDiplomacy: false,
       showJumpRange: true,
       showBlockades: true,
-      showSupply: true,
+      showSupply: false,
       showQuests: false,
       showCaravans: false,
       showTraffic: false,
@@ -298,7 +304,7 @@ export const LAYER_PRESETS: {
       showDiplomacy: false,
       showJumpRange: true,
       showBlockades: true,
-      showSupply: true,
+      showSupply: false,
       showQuests: false,
       showCaravans: false,
       showTraffic: false,
@@ -368,7 +374,7 @@ export const LAYER_PRESETS: {
       showLegions: true,
       showOrders: true,
       showDiplomacy: true,
-      showSupply: true,
+      showSupply: false,
       showCaravans: true,
       showTraffic: true,
       showQuests: true,
@@ -409,13 +415,21 @@ export const LAYER_PRESETS: {
 export const LAYER_PRESET_BUTTONS = LAYER_PRESETS.filter((p) => p.id !== "war");
 
 const STORAGE_KEY = "gmap-viewer-layers";
+/** One-shot: turn off capital→systems spokes that used to default on. */
+const SUPPLY_OFF_MIGRATION = "gmap-viewer-layers-supply-off-v1";
 
 export function readStoredViewerLayers(): MapLayerFlags {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_MAP_LAYERS };
     const parsed = JSON.parse(raw) as Partial<MapLayerFlags>;
-    return { ...DEFAULT_MAP_LAYERS, ...parsed };
+    let flags: MapLayerFlags = { ...DEFAULT_MAP_LAYERS, ...parsed };
+    if (!localStorage.getItem(SUPPLY_OFF_MIGRATION)) {
+      flags = { ...flags, showSupply: false };
+      localStorage.setItem(SUPPLY_OFF_MIGRATION, "1");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(flags));
+    }
+    return flags;
   } catch {
     return { ...DEFAULT_MAP_LAYERS };
   }

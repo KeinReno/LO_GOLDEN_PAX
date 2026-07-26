@@ -822,12 +822,7 @@ for (const s of systems) {
   if (!s.sectorId) s.sectorId = centerSector.id;
 }
 
-// Empire intel: Belator has the whole central sector charted
-for (const s of systems) {
-  const vis = new Set(s.visibleToFactionIds ?? []);
-  vis.add("faction_belator");
-  s.visibleToFactionIds = [...vis];
-}
+// FoW: owners see their systems at runtime — do not blanket-stamp Belator.
 
 const diplomacy = [
   dip("faction_belator", "faction_heshah", "alliance"),

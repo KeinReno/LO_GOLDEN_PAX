@@ -3,25 +3,28 @@ import { v4 as uuid } from "uuid";
 import { generateAlongBrush, type Point } from "../generators/brushGenerator";
 import { createRandomSystem, createRng } from "../generators/systemFactory";
 import { createEmptyWorld } from "./defaults";
-import type {
-  DiplomacyRelation,
-  EditorTool,
-  Faction,
-  Fleet,
-  FleetStance,
-  Legion,
-  Planet,
-  PlayerOrder,
-  Sector,
-  StarSystem,
-  SystemPoiType,
-  SystemSelectMode,
-  TurnSnapshot,
-  UiState,
-  UnitOrderIntent,
-  WorldState,
+import {
+  POI_PAINT_TOOLS,
+  type Caravan,
+  type DiplomacyRelation,
+  type EditorTool,
+  type Faction,
+  type Fleet,
+  type FleetStance,
+  type GmShellMode,
+  type Legion,
+  type Planet,
+  type PlayerOrder,
+  type Quest,
+  type Sector,
+  type StarSystem,
+  type SystemPoiType,
+  type SystemSelectMode,
+  type TurnSnapshot,
+  type UiState,
+  type UnitOrderIntent,
+  type WorldState,
 } from "./types";
-import { POI_PAINT_TOOLS } from "./types";
 import { assignSystemsToSector } from "./sectors";
 import { resolvePolityKind } from "./territory";
 import { withFullMapVision } from "./fog";
@@ -32,9 +35,20 @@ import {
   type HistoryPatch,
 } from "./history";
 import { advanceCaravans, clampRep, driftAnomalies } from "./mapFeatures";
-import type { Caravan, Quest } from "./types";
 import { toggleSpaceObject, withSpaceObjects } from "./spaceObjects";
 import { RESOURCE_POOL } from "./defaults";
+
+const GM_SHELL_KEY = "gmap-gm-shell-mode";
+
+function readGmShellMode(): GmShellMode {
+  try {
+    const v = localStorage.getItem(GM_SHELL_KEY);
+    if (v === "prep" || v === "live") return v;
+  } catch {
+    /* ignore */
+  }
+  return "prep";
+}
 
 interface WorldStore extends UiState {
   world: WorldState;
@@ -70,6 +84,8 @@ interface WorldStore extends UiState {
   toggleShowOrders: () => void;
   toggleShowDiplomacy: () => void;
   toggleShowFogPreview: () => void;
+  toggleGmOmniscientView: () => void;
+  setGmOmniscientView: (on: boolean) => void;
   setFogMaskPreview: (systemIds: string[]) => void;
   activeConsequencePresetId: string | null;
   setActiveConsequencePresetId: (id: string | null) => void;
@@ -92,6 +108,7 @@ interface WorldStore extends UiState {
     showOrders: boolean;
     showDiplomacy: boolean;
     showFogPreview: boolean;
+    gmOmniscientView: boolean;
     showJumpRange: boolean;
     showSupply: boolean;
     showCaravans: boolean;
@@ -101,6 +118,8 @@ interface WorldStore extends UiState {
     showQuests: boolean;
   }>) => void;
   setDiplomacyPanelOpen: (open: boolean) => void;
+  setRpFloatOpen: (open: boolean) => void;
+  setGmShellMode: (mode: GmShellMode) => void;
   setOpenQuestId: (id: string | null) => void;
   upsertQuest: (quest: Quest) => void;
   removeQuest: (id: string) => void;
@@ -276,13 +295,7 @@ function normalizeWorld(raw: WorldState): WorldState {
     factions: (raw.factions ?? []).map((f) => ({
       ...f,
       kind: resolvePolityKind(f),
-      // Canon: Belator always has full map vision
-      fullMapVision:
-        f.fullMapVision === true || f.id === "faction_belator"
-          ? true
-          : f.fullMapVision === false
-            ? false
-            : undefined,
+      fullMapVision: f.fullMapVision === true ? true : false,
       neutralReputation: clampRep(f.neutralReputation ?? 0),
     })),
     races: raw.races ?? [],
@@ -369,10 +382,11 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showOrders: true,
   showDiplomacy: false,
   showFogPreview: false,
+  gmOmniscientView: true,
   fogMaskPreview: [],
   activeConsequencePresetId: "after_battle",
   showJumpRange: true,
-  showSupply: true,
+  showSupply: false,
   showCaravans: true,
   showBlockades: true,
   showDeadZones: true,
@@ -380,6 +394,8 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showQuests: true,
   openQuestId: null,
   diplomacyPanelOpen: false,
+  rpFloatOpen: false,
+  gmShellMode: readGmShellMode(),
   contextMenu: null,
 
   setTool: (tool) =>
@@ -446,6 +462,9 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   toggleShowDiplomacy: () => set((s) => ({ showDiplomacy: !s.showDiplomacy })),
   toggleShowFogPreview: () =>
     set((s) => ({ showFogPreview: !s.showFogPreview })),
+  toggleGmOmniscientView: () =>
+    set((s) => ({ gmOmniscientView: !s.gmOmniscientView })),
+  setGmOmniscientView: (on: boolean) => set({ gmOmniscientView: on }),
   setFogMaskPreview: (systemIds) => set({ fogMaskPreview: systemIds }),
   setActiveConsequencePresetId: (id) =>
     set({ activeConsequencePresetId: id }),
@@ -461,6 +480,15 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   toggleShowQuests: () => set((s) => ({ showQuests: !s.showQuests })),
   applyMapLayerFlags: (flags) => set((s) => ({ ...s, ...flags })),
   setDiplomacyPanelOpen: (open) => set({ diplomacyPanelOpen: open }),
+  setRpFloatOpen: (open) => set({ rpFloatOpen: open }),
+  setGmShellMode: (mode) => {
+    try {
+      localStorage.setItem(GM_SHELL_KEY, mode);
+    } catch {
+      /* ignore */
+    }
+    set({ gmShellMode: mode });
+  },
   setOpenQuestId: (id) => set({ openQuestId: id }),
 
   upsertQuest: (quest) => {
@@ -1112,7 +1140,8 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   paintResourceOnSystem: (systemId) => {
     const { world, activeResource, mapFocus } = get();
     const res =
-      activeResource && RESOURCE_POOL.includes(activeResource)
+      activeResource &&
+      (RESOURCE_POOL as readonly string[]).includes(activeResource)
         ? activeResource
         : RESOURCE_POOL[Math.floor(Math.random() * RESOURCE_POOL.length)]!;
     set({
@@ -1166,7 +1195,8 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   paintResourceOnPlanet: (systemId, planetId) => {
     const { world, activeResource } = get();
     const res =
-      activeResource && RESOURCE_POOL.includes(activeResource)
+      activeResource &&
+      (RESOURCE_POOL as readonly string[]).includes(activeResource)
         ? activeResource
         : RESOURCE_POOL[Math.floor(Math.random() * RESOURCE_POOL.length)]!;
     set({

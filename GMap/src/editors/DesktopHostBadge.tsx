@@ -65,7 +65,12 @@ export function DesktopHostBadge() {
                 setStatus(s);
                 setMsg(s?.running ? "Хост запущен" : "Не удалось");
               } catch (e) {
-                setMsg(e instanceof Error ? e.message : String(e));
+                const raw = e instanceof Error ? e.message : String(e);
+                setMsg(
+                  raw.includes("dynamically imported")
+                    ? "IPC ошибка — перезапустите tauri:dev"
+                    : raw.slice(0, 80),
+                );
               }
             })();
           }}
@@ -89,12 +94,18 @@ export function DesktopHostBadge() {
         className="btn ghost"
         style={{ padding: "2px 8px", fontSize: 11 }}
         onClick={() => {
-          void openDataFolder().then((p) => setMsg(p ? `data: ${p}` : null));
+          void openDataFolder()
+            .then((p) => setMsg(p ? "data открыта" : null))
+            .catch(() => setMsg("data: ошибка"));
         }}
       >
         data
       </button>
-      {msg && <span className="hint">{msg}</span>}
+      {msg && (
+        <span className="hint" title={msg} style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {msg}
+        </span>
+      )}
     </div>
   );
 }

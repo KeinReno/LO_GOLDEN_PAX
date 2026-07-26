@@ -7,6 +7,9 @@ type Session = ReturnType<typeof useCampaignSession>;
 
 const Ctx = createContext<Session | null>(null);
 
+/** Raw context for optional consumers (e.g. viewer without provider). */
+export const CampaignSessionCtx = Ctx;
+
 export function CampaignSessionProvider({ children }: { children: ReactNode }) {
   const session = useCampaignSession();
   return <Ctx.Provider value={session}>{children}</Ctx.Provider>;

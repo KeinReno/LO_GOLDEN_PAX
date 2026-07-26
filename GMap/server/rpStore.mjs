@@ -1,6 +1,11 @@
 /**
- * RP episodes — chapters / messages.jsonl (P7).
+ * RP channels / episodes — chapters / messages.jsonl (P7).
  * Append-only messages; index holds chapter/episode metadata.
+ *
+ * Channel kinds:
+ *   hq   — faction HQ (default home for that player), visibility gm_player:{id}
+ *   ooc  — optional table-wide OOC
+ *   scene / (unset) — narrative episodes (GM opens)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +13,8 @@ import { DATA_DIR, ensureDataDir, readJson, writeJson } from "./tableStore.mjs";
 
 export const RP_ROOT = path.join(DATA_DIR, "rp");
 const DEFAULT_CAMPAIGN = "golden_pax";
+const CHANNELS_CHAPTER_ID = "ch_channels";
+const OOC_EPISODE_ID = "ep_ooc_table";
 
 const MSG_TYPES = new Set(["ooc", "ic", "action", "context", "system"]);
 
@@ -36,24 +43,25 @@ function messagesPath(campaignId, chapterId, episodeId) {
   );
 }
 
+function ensureEpisodeFiles(campaignId, chapterId, episodeId) {
+  const dir = episodeDir(campaignId, chapterId, episodeId);
+  fs.mkdirSync(dir, { recursive: true });
+  const file = messagesPath(campaignId, chapterId, episodeId);
+  if (!fs.existsSync(file)) {
+    fs.writeFileSync(file, "", "utf8");
+  }
+}
+
 function emptyIndex(campaignId) {
   return {
     campaignId: campaignId || DEFAULT_CAMPAIGN,
     title: "LO Golden Pax",
     chapters: [
       {
-        id: "ch1",
-        title: "Глава I",
-        episodes: [
-          {
-            id: "ep1",
-            title: "Открытие стола",
-            status: "open",
-            visibility: "all",
-            ref: null,
-            createdAt: new Date().toISOString(),
-          },
-        ],
+        id: CHANNELS_CHAPTER_ID,
+        title: "Связь",
+        kind: "channels",
+        episodes: [],
       },
     ],
   };
@@ -88,6 +96,201 @@ function findEpisode(index, chapterId, episodeId) {
   return { chapter: ch, episode: ep };
 }
 
+/**
+ * Whether a player/master may open this channel/episode.
+ */
+export function episodeVisibleTo(ep, viewer) {
+  if (!ep) return false;
+  if (viewer?.isMaster) return true;
+  const vis = ep.visibility || "all";
+  if (vis === "all") return true;
+  if (vis === "gm_only") return false;
+  if (vis.startsWith("faction:")) {
+    return vis.slice("faction:".length) === viewer?.factionId;
+  }
+  if (vis.startsWith("gm_player:")) {
+    return vis.slice("gm_player:".length) === viewer?.factionId;
+  }
+  return false;
+}
+
+/** Strip chapters/episodes the viewer cannot see. */
+export function filterIndexForViewer(index, viewer) {
+  if (viewer?.isMaster) return index;
+  return {
+    ...index,
+    chapters: (index.chapters || [])
+      .map((ch) => ({
+        ...ch,
+        episodes: (ch.episodes || []).filter((ep) =>
+          episodeVisibleTo(ep, viewer),
+        ),
+      }))
+      .filter((ch) => (ch.episodes || []).length > 0),
+  };
+}
+
+/**
+ * Prefer faction HQ channel as home; fall back to first visible open episode.
+ */
+export function pickHomeEpisode(index, factionId) {
+  const flat =
+    index?.chapters?.flatMap((c) =>
+      (c.episodes || []).map((e) => ({
+        chapterId: c.id,
+        episode: e,
+      })),
+    ) ?? [];
+  const hq = flat.find(
+    (x) =>
+      x.episode.kind === "hq" &&
+      (x.episode.ref === `faction:${factionId}` ||
+        x.episode.id === `hq_${factionId}` ||
+        x.episode.visibility === `gm_player:${factionId}`),
+  );
+  if (hq) {
+    return { chapterId: hq.chapterId, episodeId: hq.episode.id };
+  }
+  const open = flat.find((x) => x.episode.status !== "closed") ?? flat[0];
+  if (!open) return { chapterId: "", episodeId: "" };
+  return { chapterId: open.chapterId, episodeId: open.episode.id };
+}
+
+/**
+ * Ensure per-faction HQ channels + optional table OOC.
+ * Soft-migrates legacy «Открытие стола» (keeps archive, not player home).
+ */
+export function ensurePlayerChannels(
+  factions = [],
+  campaignId = DEFAULT_CAMPAIGN,
+) {
+  const index = readRpIndex(campaignId);
+  let dirty = false;
+
+  let ch = (index.chapters || []).find((c) => c.id === CHANNELS_CHAPTER_ID);
+  if (!ch) {
+    ch = {
+      id: CHANNELS_CHAPTER_ID,
+      title: "Связь",
+      kind: "channels",
+      episodes: [],
+    };
+    index.chapters = index.chapters || [];
+    index.chapters.unshift(ch);
+    dirty = true;
+  } else {
+    if (ch.title === "Глава I" || !ch.title) {
+      ch.title = "Связь";
+      dirty = true;
+    }
+    if (!ch.kind) {
+      ch.kind = "channels";
+      dirty = true;
+    }
+  }
+  ch.episodes = ch.episodes || [];
+
+  for (const fac of factions) {
+    if (!fac?.id) continue;
+    const hqId = `hq_${fac.id}`;
+    let ep = ch.episodes.find(
+      (e) =>
+        e.id === hqId ||
+        e.ref === `faction:${fac.id}` ||
+        (e.kind === "hq" && e.visibility === `gm_player:${fac.id}`),
+    );
+    if (!ep) {
+      // Also search other chapters (legacy)
+      for (const other of index.chapters || []) {
+        ep = (other.episodes || []).find(
+          (e) =>
+            e.id === hqId ||
+            e.ref === `faction:${fac.id}` ||
+            (e.kind === "hq" && e.visibility === `gm_player:${fac.id}`),
+        );
+        if (ep) break;
+      }
+    }
+    if (!ep) {
+      ep = {
+        id: hqId,
+        title: `Штаб · ${fac.name || fac.id}`,
+        status: "open",
+        visibility: `gm_player:${fac.id}`,
+        kind: "hq",
+        ref: `faction:${fac.id}`,
+        createdAt: new Date().toISOString(),
+      };
+      ch.episodes.push(ep);
+      ensureEpisodeFiles(campaignId, ch.id, ep.id);
+      dirty = true;
+    } else {
+      const wantTitle = `Штаб · ${fac.name || fac.id}`;
+      if (ep.kind !== "hq") {
+        ep.kind = "hq";
+        dirty = true;
+      }
+      if (ep.visibility !== `gm_player:${fac.id}`) {
+        ep.visibility = `gm_player:${fac.id}`;
+        dirty = true;
+      }
+      if (ep.ref !== `faction:${fac.id}`) {
+        ep.ref = `faction:${fac.id}`;
+        dirty = true;
+      }
+      if (ep.title !== wantTitle && String(ep.title || "").startsWith("Штаб")) {
+        ep.title = wantTitle;
+        dirty = true;
+      }
+      ensureEpisodeFiles(
+        campaignId,
+        (index.chapters || []).find((c) =>
+          (c.episodes || []).some((e) => e.id === ep.id),
+        )?.id || ch.id,
+        ep.id,
+      );
+    }
+  }
+
+  let ooc = ch.episodes.find((e) => e.id === OOC_EPISODE_ID || e.kind === "ooc");
+  if (!ooc) {
+    ooc = {
+      id: OOC_EPISODE_ID,
+      title: "Общий стол",
+      status: "open",
+      visibility: "all",
+      kind: "ooc",
+      ref: null,
+      createdAt: new Date().toISOString(),
+    };
+    ch.episodes.push(ooc);
+    ensureEpisodeFiles(campaignId, ch.id, ooc.id);
+    dirty = true;
+  } else if (ooc.title === "Открытие стола") {
+    ooc.title = "Общий стол";
+    ooc.kind = ooc.kind || "ooc";
+    dirty = true;
+  }
+
+  // Soft-migrate legacy default episode name / visibility
+  for (const chapter of index.chapters || []) {
+    for (const ep of chapter.episodes || []) {
+      if (ep.id === "ep1" && ep.title === "Открытие стола") {
+        ep.title = "Архив · открытие стола";
+        ep.kind = ep.kind || "scene";
+        if (ep.status === "open") {
+          ep.status = "closed";
+          ep.closedAt = ep.closedAt || new Date().toISOString();
+        }
+        dirty = true;
+      }
+    }
+  }
+
+  if (dirty) writeRpIndex(index, campaignId);
+  return readRpIndex(campaignId);
+}
+
 export function createChapter(title, campaignId = DEFAULT_CAMPAIGN) {
   const index = readRpIndex(campaignId);
   const id = `ch_${Date.now().toString(36)}`;
@@ -102,7 +305,7 @@ export function createChapter(title, campaignId = DEFAULT_CAMPAIGN) {
 
 export function createEpisode(
   chapterId,
-  { title, visibility, ref } = {},
+  { title, visibility, ref, kind } = {},
   campaignId = DEFAULT_CAMPAIGN,
 ) {
   const index = readRpIndex(campaignId);
@@ -111,19 +314,16 @@ export function createEpisode(
   const id = `ep_${Date.now().toString(36)}`;
   const ep = {
     id,
-    title: title || `Эпизод ${(ch.episodes || []).length + 1}`,
+    title: title || `Сцена ${(ch.episodes || []).length + 1}`,
     status: "open",
     visibility: visibility || "all",
+    kind: kind || "scene",
     ref: ref || null,
     createdAt: new Date().toISOString(),
   };
   ch.episodes = ch.episodes || [];
   ch.episodes.push(ep);
-  const dir = episodeDir(campaignId, chapterId, id);
-  fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(messagesPath(campaignId, chapterId, id))) {
-    fs.writeFileSync(messagesPath(campaignId, chapterId, id), "", "utf8");
-  }
+  ensureEpisodeFiles(campaignId, chapterId, id);
   writeRpIndex(index, campaignId);
   return { ok: true, episode: ep, index };
 }
@@ -160,7 +360,6 @@ export function messageVisibleTo(msg, viewer) {
     return vis.slice("faction:".length) === viewer?.factionId;
   }
   if (vis.startsWith("gm_player:")) {
-    // Player of that faction + GM (GM already returned)
     return vis.slice("gm_player:".length) === viewer?.factionId;
   }
   return false;
@@ -173,6 +372,9 @@ export function readMessages(
   campaignId = DEFAULT_CAMPAIGN,
 ) {
   ensureRp(campaignId);
+  const index = readRpIndex(campaignId);
+  const { episode } = findEpisode(index, chapterId, episodeId);
+  if (!episodeVisibleTo(episode, viewer)) return [];
   const file = messagesPath(campaignId, chapterId, episodeId);
   if (!fs.existsSync(file)) return [];
   const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
@@ -200,6 +402,7 @@ export function appendMessage(
     body,
     authorFactionId,
     authorName,
+    authorAvatarUrl,
     visibility,
     intentPayload,
     isMaster,
@@ -209,21 +412,27 @@ export function appendMessage(
   const index = readRpIndex(campaignId);
   const { episode } = findEpisode(index, chapterId, episodeId);
   if (!episode) return { ok: false, error: "episode missing" };
-  if (episode.status === "closed" && !isMaster) {
-    return { ok: false, error: "эпизод закрыт (read-only)" };
+  if (!episodeVisibleTo(episode, { isMaster, factionId: authorFactionId })) {
+    return { ok: false, error: "нет доступа к каналу" };
   }
-  // Even master posting to closed is allowed only as system/context archive note
+  if (episode.status === "closed" && !isMaster) {
+    return { ok: false, error: "канал закрыт (только чтение)" };
+  }
   if (episode.status === "closed" && type !== "system" && type !== "context") {
-    return { ok: false, error: "эпизод закрыт — только context/system" };
+    return { ok: false, error: "канал закрыт — только контекст / система" };
   }
 
-  const t = type || "ooc";
+  const t = type || "ic";
   if (!MSG_TYPES.has(t)) return { ok: false, error: "unknown message type" };
 
   let vis = visibility || episode.visibility || "all";
   if (t === "context" && isMaster && !visibility) vis = "all";
   if (!isMaster && (vis === "gm_only" || t === "system")) {
     return { ok: false, error: "нет прав на этот тип/видимость" };
+  }
+  // Players always inherit channel visibility (no broadcast from private HQ)
+  if (!isMaster) {
+    vis = episode.visibility || "all";
   }
 
   const msg = {
@@ -232,14 +441,14 @@ export function appendMessage(
     type: t,
     body: String(body || "").slice(0, 4000),
     authorFactionId: authorFactionId || null,
-    authorName: authorName || (isMaster ? "GM" : null),
+    authorName: authorName || (isMaster ? "Мастер" : null),
+    authorAvatarUrl: authorAvatarUrl || null,
     visibility: vis,
     intentId: null,
     intentDefId: intentPayload?.defId || null,
   };
 
-  const dir = episodeDir(campaignId, chapterId, episodeId);
-  fs.mkdirSync(dir, { recursive: true });
+  ensureEpisodeFiles(campaignId, chapterId, episodeId);
   fs.appendFileSync(
     messagesPath(campaignId, chapterId, episodeId),
     JSON.stringify(msg) + "\n",
@@ -259,18 +468,20 @@ export function patchMessageIntentId(
   if (!fs.existsSync(file)) return { ok: false, error: "no messages" };
   const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
   let found = false;
-  const msgs = lines.map((line) => {
-    try {
-      const m = JSON.parse(line);
-      if (m.id === messageId) {
-        found = true;
-        return { ...m, intentId };
+  const msgs = lines
+    .map((line) => {
+      try {
+        const m = JSON.parse(line);
+        if (m.id === messageId) {
+          found = true;
+          return { ...m, intentId };
+        }
+        return m;
+      } catch {
+        return null;
       }
-      return m;
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
+    })
+    .filter(Boolean);
   if (!found) return { ok: false, error: "message missing" };
   fs.writeFileSync(
     file,
@@ -280,4 +491,9 @@ export function patchMessageIntentId(
   return { ok: true };
 }
 
-export { DEFAULT_CAMPAIGN, MSG_TYPES };
+export {
+  DEFAULT_CAMPAIGN,
+  MSG_TYPES,
+  CHANNELS_CHAPTER_ID,
+  OOC_EPISODE_ID,
+};

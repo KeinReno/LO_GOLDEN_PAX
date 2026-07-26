@@ -1,4 +1,5 @@
 import { Assets, Texture } from "pixi.js";
+import { RESOURCE_ICON_SLUGS } from "../state/resourcePool.generated";
 
 /** Game-icons.net (CC-BY) — local copies under public/icons/game. */
 export type MapIconId =
@@ -53,9 +54,10 @@ export type MapIconId =
   | "castle"
   | "watchtower"
   | "lighthouse"
-  | "sanctuary";
+  | "sanctuary"
+  | (string & {});
 
-const ICON_PATHS: Record<MapIconId, string> = {
+const ICON_PATHS: Record<string, string> = {
   "crossed-swords": "/icons/game/crossed-swords.svg",
   rocket: "/icons/game/rocket.svg",
   spaceship: "/icons/game/spaceship.svg",
@@ -110,28 +112,26 @@ const ICON_PATHS: Record<MapIconId, string> = {
   sanctuary: "/icons/game/sanctuary.svg",
 };
 
-/** Resource name (RU, as in RESOURCE_POOL) → map glyph. */
-export const RESOURCE_ICON: Record<string, MapIconId> = {
-  железо: "ore",
-  титан: "metal-bar",
-  кристаллы: "crystal-growth",
-  газ: "fog",
-  вода: "water-drop",
-  редкоземы: "minerals",
-  антиматерия: "atom",
-  реликты: "alien-egg",
-};
+/** Unique per-resource glyphs (generated). Registered into ICON_PATHS below. */
+const RESOURCE_ICON_PATHS: Record<string, string> = {};
+for (const slug of Object.values(RESOURCE_ICON_SLUGS)) {
+  const id = `res-${slug}`;
+  RESOURCE_ICON_PATHS[id] = `/icons/game/resources/${slug}.svg`;
+  ICON_PATHS[id] = RESOURCE_ICON_PATHS[id];
+}
 
-export const RESOURCE_TINT: Record<string, number> = {
-  железо: 0xb0b8c4,
-  титан: 0x9ad0e8,
-  кристаллы: 0xc9a0ff,
-  газ: 0x7fd4b0,
-  вода: 0x5eb0e8,
-  редкоземы: 0xe8c547,
-  антиматерия: 0xff6b9d,
-  реликты: 0xd4a574,
-};
+/** Resource name (RU) → dedicated icon id. */
+export const RESOURCE_ICON: Record<string, MapIconId> = Object.fromEntries(
+  Object.entries(RESOURCE_ICON_SLUGS).map(([name, slug]) => [
+    name,
+    `res-${slug}` as MapIconId,
+  ]),
+);
+
+/** Soft white tint — color is baked into each resource SVG. */
+export const RESOURCE_TINT: Record<string, number> = Object.fromEntries(
+  Object.keys(RESOURCE_ICON_SLUGS).map((name) => [name, 0xffffff]),
+);
 
 let loadPromise: Promise<void> | null = null;
 let ready = false;
@@ -153,7 +153,13 @@ export async function ensureMapIconsLoaded(): Promise<void> {
       console.warn("[GMap] map icons failed to load", err);
     });
   }
-  await loadPromise;
+  // WebView2/Tauri can hang on Assets.load — don't block the map forever.
+  await Promise.race([
+    loadPromise,
+    new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 6000);
+    }),
+  ]);
 }
 
 export function getMapIconTexture(id: MapIconId): Texture | null {
@@ -184,7 +190,12 @@ export function activityIconId(activity: string): MapIconId | null {
 }
 
 export function resourceIconId(resource: string): MapIconId {
-  return RESOURCE_ICON[resource] ?? "ore";
+  const mapped = RESOURCE_ICON[resource];
+  if (mapped) return mapped;
+  // Fallback for legacy / uncatalogued names: still try slug path if registered
+  const slug = RESOURCE_ICON_SLUGS[resource];
+  if (slug) return `res-${slug}` as MapIconId;
+  return "ore";
 }
 
 export function poiIconId(poi: string): MapIconId | null {
@@ -243,6 +254,22 @@ export function poiIconId(poi: string): MapIconId | null {
       return "crossed-swords";
     case "forge":
       return "wrench";
+    case "mining_platform":
+      return "ore";
+    case "abandoned_station":
+      return "ruin";
+    case "science_arch":
+      return "crystal-ball";
+    case "agronomy":
+      return "sprout";
+    case "biocupola":
+      return "sanctuary";
+    case "hydro_lab":
+      return "water-drop";
+    case "security_post":
+      return "sentry-gun";
+    case "grav_field":
+      return "vortex";
     default:
       return null;
   }

@@ -68,10 +68,7 @@ export function addPermanentReveal(factionId, systemId) {
  */
 export function resolveVisibleWithFog(world, factionId, fogState) {
   const faction = (world.factions ?? []).find((f) => f.id === factionId);
-  if (
-    faction?.fullMapVision === true ||
-    factionId === "faction_belator"
-  ) {
+  if (faction?.fullMapVision === true) {
     return new Set((world.systems ?? []).map((s) => s.id));
   }
 

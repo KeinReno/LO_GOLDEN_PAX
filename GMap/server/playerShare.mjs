@@ -21,6 +21,7 @@ if (!g.__gmapPlayerShare) {
   g.__gmapPlayerShare = {
     provider: null,
     publicUrl: null,
+    lastViewUrl: null,
     child: null,
     prodChild: null,
     startedAt: null,
@@ -31,9 +32,25 @@ if (!g.__gmapPlayerShare) {
     targetPort: null,
     cloudpubGuid: null,
     logTail: [],
+    healthOk: null,
+    lastHealthAt: null,
+    lastHealthError: null,
+    downSince: null,
+    reconnectAttempts: 0,
+    reconnectInFlight: false,
+    watchdogTimer: null,
+    wanIp: null,
+    wanIpAt: null,
+    directViewUrl: null,
+    directHint: null,
   };
 }
 const state = g.__gmapPlayerShare;
+
+const WATCHDOG_MS = 15_000;
+const MAX_SOFT_RECONNECT = 2;
+const WAN_REFRESH_EVERY_TICKS = 4; // ~60s with 15s watchdog
+let watchdogTicks = 0;
 
 function pushLog(line) {
   state.logTail.push(String(line).slice(0, 400));
@@ -475,6 +492,207 @@ async function verifyTunnel(publicUrl) {
   return { alive: false, ip: null, isLocaGate: false, status: 0 };
 }
 
+function looksLikeIpv4(s) {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(String(s || "").trim());
+}
+
+/** Public WAN IP (white IP). Refreshed on share start / reconnect / watchdog. */
+async function fetchPublicWanIp() {
+  const urls = [
+    "https://api.ipify.org",
+    "https://ifconfig.me/ip",
+    "https://icanhazip.com",
+  ];
+  for (const url of urls) {
+    const { status, body } = await fetchText(url);
+    const ip = String(body || "")
+      .trim()
+      .split(/\s+/)[0];
+    if (status > 0 && status < 500 && looksLikeIpv4(ip)) return ip;
+  }
+  return null;
+}
+
+function buildDirectViewUrl(wanIp, port) {
+  const host = String(process.env.GMAP_DIRECT_HOST || "").trim();
+  const p = Number(port) || PROD_PORT;
+  if (host) {
+    // Stable DDNS / domain — players keep one bookmark across IP changes.
+    return `http://${host.replace(/^https?:\/\//i, "").replace(/\/$/, "")}:${p}/view`;
+  }
+  if (wanIp && looksLikeIpv4(wanIp)) {
+    return `http://${wanIp}:${p}/view`;
+  }
+  return null;
+}
+
+async function refreshDirectAccess(port = state.targetPort || PROD_PORT) {
+  try {
+    const wanIp = await fetchPublicWanIp();
+    if (wanIp) {
+      state.wanIp = wanIp;
+      state.wanIpAt = new Date().toISOString();
+    }
+    state.directViewUrl = buildDirectViewUrl(state.wanIp, port);
+    const hasDdns = !!String(process.env.GMAP_DIRECT_HOST || "").trim();
+    state.directHint = state.directViewUrl
+      ? hasDdns
+        ? `Прямой доступ (DDNS): пробрось TCP ${port} на этот ПК. При смене IP обнови запись у провайдера DDNS.`
+        : `Прямой IP: пробрось TCP ${port} → этот ПК на роутере. Проверка: LTE (не Wi‑Fi дома) → открыть ссылку. IP обновляется при старте/рестарте шары.`
+      : "Белый IP не определился — прямая ссылка недоступна, используй CloudPub.";
+    if (state.wanIp) pushLog(`wan ip ${state.wanIp} direct=${state.directViewUrl || "-"}`);
+  } catch (e) {
+    pushLog(`wan ip fail: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+function stopShareWatchdog() {
+  if (state.watchdogTimer) {
+    clearInterval(state.watchdogTimer);
+    state.watchdogTimer = null;
+  }
+}
+
+function markShareHealthy() {
+  state.healthOk = true;
+  state.lastHealthAt = new Date().toISOString();
+  state.lastHealthError = null;
+  state.downSince = null;
+  state.reconnectAttempts = 0;
+  if (state.error && /туннель упал|не отвечает|процесс туннеля/i.test(state.error)) {
+    state.error = null;
+  }
+}
+
+function markShareDown(reason) {
+  state.healthOk = false;
+  state.lastHealthAt = new Date().toISOString();
+  state.lastHealthError = reason || "туннель недоступен";
+  if (!state.downSince) state.downSince = new Date().toISOString();
+}
+
+function wireChildExit(child) {
+  child.on("exit", () => {
+    if (state.child !== child) return;
+    state.child = null;
+    markShareDown("процесс туннеля завершился");
+    pushLog("tunnel child exit — soft reconnect");
+    void softReconnectShare().then((ok) => {
+      if (!ok) {
+        state.error =
+          "Туннель упал — нажми «Перезапустить» и выдай игрокам новую ссылку";
+      }
+    });
+  });
+}
+
+/**
+ * Soft reconnect: re-spawn publish WITHOUT clo ls / unpublish
+ * so CloudPub usually keeps the same hostname.
+ */
+async function softReconnectShare() {
+  if (state.starting || state.reconnectInFlight) return false;
+  if (state.reconnectAttempts >= MAX_SOFT_RECONNECT) return false;
+  if (!state.provider || !state.targetPort) return false;
+
+  state.reconnectInFlight = true;
+  state.reconnectAttempts += 1;
+  const attempt = state.reconnectAttempts;
+  pushLog(`soft reconnect #${attempt} (${state.provider})`);
+
+  try {
+    if (state.child) {
+      killChild(state.child);
+      state.child = null;
+    }
+
+    let started;
+    if (state.provider === "cloudpub") {
+      started = await reconnectCloudPub(state.targetPort);
+    } else {
+      markShareDown("туннель упал — нажми Перезапустить");
+      state.error =
+        "Туннель упал — нажми «Перезапустить» и выдай игрокам новую ссылку";
+      return false;
+    }
+
+    if (started.guid) state.cloudpubGuid = started.guid;
+    const meta = await verifyTunnel(started.url);
+    if (!meta.alive) {
+      killChild(started.child);
+      throw new Error(`${started.provider}: туннель не отвечает после reconnect`);
+    }
+
+    state.child = started.child;
+    state.publicUrl = started.url;
+    state.lastViewUrl = `${started.url}/view`;
+    state.provider = started.provider;
+    state.endpointIp = meta.ip || state.endpointIp;
+    state.playerHint = hintFor(started.provider, state.endpointIp);
+    markShareHealthy();
+    wireChildExit(started.child);
+    pushLog(`soft reconnect ok ${started.url}`);
+    void refreshDirectAccess(state.targetPort || PROD_PORT);
+    return true;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    pushLog(`soft reconnect fail: ${msg}`);
+    markShareDown(msg);
+    if (state.reconnectAttempts >= MAX_SOFT_RECONNECT) {
+      state.error =
+        "Туннель упал — нажми «Перезапустить» и выдай игрокам новую ссылку";
+    }
+    return false;
+  } finally {
+    state.reconnectInFlight = false;
+  }
+}
+
+async function tickShareWatchdog() {
+  if (state.starting || state.reconnectInFlight) return;
+  if (!state.publicUrl) return;
+
+  watchdogTicks += 1;
+  if (watchdogTicks === 1 || watchdogTicks % WAN_REFRESH_EVERY_TICKS === 0) {
+    void refreshDirectAccess(state.targetPort || PROD_PORT);
+  }
+
+  if (!childAlive(state.child)) {
+    markShareDown("процесс туннеля не запущен");
+    await softReconnectShare();
+    return;
+  }
+
+  const meta = await inspectPublicUrl(state.publicUrl);
+  if (meta.alive) {
+    markShareHealthy();
+    if (meta.ip) {
+      state.endpointIp = meta.ip;
+      state.playerHint = hintFor(state.provider, meta.ip);
+    }
+    return;
+  }
+
+  markShareDown(
+    meta.status === 503
+      ? "CloudPub 503 — агент offline"
+      : `health HTTP ${meta.status || 0}`,
+  );
+  await softReconnectShare();
+}
+
+function startShareWatchdog() {
+  stopShareWatchdog();
+  watchdogTicks = 0;
+  state.watchdogTimer = setInterval(() => {
+    void tickShareWatchdog();
+  }, WATCHDOG_MS);
+  // First check shortly after publish (edge may lag a second).
+  setTimeout(() => {
+    void tickShareWatchdog();
+  }, 2500);
+}
+
 async function pollNgrokApi(timeoutMs = 40000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
@@ -703,8 +921,47 @@ async function startCloudflare(localPort) {
   return { child, url, provider: "cloudflare" };
 }
 
-async function startCloudPub(localPort) {
+async function spawnCloudPubPublish(localPort) {
   const { bin } = ensureCloudPubTokenConfigured();
+
+  const child = spawn(
+    bin,
+    ["-v", "publish", "http", String(localPort), "-n", "GMap"],
+    {
+      cwd: ROOT,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      env: { ...process.env },
+    },
+  );
+
+  let guid = null;
+  const grabGuid = (buf) => {
+    const text = buf.toString("utf8");
+    const explicit = text.match(/guid:\s*"([0-9a-f-]{36})"/i);
+    if (explicit) {
+      guid = explicit[1];
+      return;
+    }
+    const m = text.match(
+      /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i,
+    );
+    if (!guid && m && /EndpointAck|ServerEndpoint|опубликован/i.test(text)) {
+      guid = m[1];
+    }
+  };
+  child.stdout?.on("data", grabGuid);
+  child.stderr?.on("data", grabGuid);
+
+  const url = await waitUrlFromChild(child, 50000);
+  if (!childAlive(child)) {
+    throw new Error("cloudpub: процесс publish завершился сразу после URL");
+  }
+  return { child, url, provider: "cloudpub", guid };
+}
+
+async function startCloudPub(localPort) {
+  ensureCloudPubTokenConfigured();
 
   // Drop stale GMap publications so we don't pile up endpoints.
   // IMPORTANT: do NOT run `clo ls` again while publish is running —
@@ -721,40 +978,19 @@ async function startCloudPub(localPort) {
   }
   await sleep(600);
 
-  const child = spawn(
-    bin,
-    ["-v", "publish", "http", String(localPort), "-n", "GMap"],
-    {
-      cwd: ROOT,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-      env: { ...process.env },
-    },
-  );
+  const started = await spawnCloudPubPublish(localPort);
+  state.cloudpubGuid = started.guid;
+  pushLog(`cloudpub up ${started.url} guid=${started.guid || "?"}`);
+  return started;
+}
 
-  let guid = null;
-  const grabGuid = (buf) => {
-    const text = buf.toString("utf8");
-    const m =
-      text.match(/guid:\s*"([0-9a-f-]{36})"/i) ||
-      text.match(/\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
-    // Prefer explicit guid: "..." from EndpointAck; avoid matching unrelated UUIDs in paths
-    const explicit = text.match(/guid:\s*"([0-9a-f-]{36})"/i);
-    if (explicit) guid = explicit[1];
-    else if (!guid && m && /EndpointAck|ServerEndpoint|опубликован/i.test(text)) {
-      guid = m[1];
-    }
-  };
-  child.stdout?.on("data", grabGuid);
-  child.stderr?.on("data", grabGuid);
-
-  const url = await waitUrlFromChild(child, 50000);
-  if (!childAlive(child)) {
-    throw new Error("cloudpub: процесс publish завершился сразу после URL");
-  }
-  state.cloudpubGuid = guid;
-  pushLog(`cloudpub up ${url} guid=${guid || "?"}`);
-  return { child, url, provider: "cloudpub", guid };
+/** Re-publish without clo ls / unpublish — keeps the same CloudPub hostname when possible. */
+async function reconnectCloudPub(localPort) {
+  ensureCloudPubTokenConfigured();
+  const started = await spawnCloudPubPublish(localPort);
+  if (started.guid) state.cloudpubGuid = started.guid;
+  pushLog(`cloudpub reconnect ${started.url} guid=${started.guid || "?"}`);
+  return started;
 }
 
 function childAlive(child) {
@@ -763,7 +999,7 @@ function childAlive(child) {
 
 function hintFor(provider, ip) {
   if (provider === "cloudpub") {
-    return "CloudPub (РФ) — открой ссылку как есть, без жёлтых страниц.";
+    return "CloudPub (РФ) — открой ссылку как есть. Не запускай clo ls / второй clo — это гасит туннель.";
   }
   if (provider === "localtunnel") {
     if (ip) {
@@ -780,14 +1016,32 @@ function hintFor(provider, ip) {
   return null;
 }
 
+function deriveShareStatus() {
+  if (state.starting) return "starting";
+  if (state.reconnectInFlight) return "degraded";
+  const alive = childAlive(state.child);
+  if (state.publicUrl && alive && state.healthOk !== false) return "online";
+  if (state.publicUrl || state.lastViewUrl) {
+    if (!alive || state.healthOk === false) return "down";
+    return "online";
+  }
+  return "idle";
+}
+
 export function getPlayerShareStatus() {
   const alive = childAlive(state.child);
+  const status = deriveShareStatus();
+  const viewUrl = state.publicUrl ? `${state.publicUrl}/view` : null;
+  const lastViewUrl = state.lastViewUrl || viewUrl;
   return {
-    active: !!(state.publicUrl && alive),
+    active: !!(state.publicUrl && alive && state.healthOk !== false),
     starting: state.starting,
+    status,
+    healthOk: state.healthOk,
     provider: state.provider,
     publicUrl: state.publicUrl,
-    viewUrl: state.publicUrl ? `${state.publicUrl}/view` : null,
+    viewUrl: viewUrl || (status === "down" || status === "degraded" ? lastViewUrl : null),
+    lastViewUrl,
     startedAt: state.startedAt,
     error: state.error,
     playerHint: state.playerHint,
@@ -796,10 +1050,19 @@ export function getPlayerShareStatus() {
     hasCloudPubToken: hasCloudPubToken(),
     hasCloudPubCli: !!findCloBin(),
     targetPort: state.targetPort,
+    lastHealthAt: state.lastHealthAt,
+    lastHealthError: state.lastHealthError,
+    downSince: state.downSince,
+    reconnectAttempts: state.reconnectAttempts,
+    wanIp: state.wanIp,
+    wanIpAt: state.wanIpAt,
+    directViewUrl: state.directViewUrl,
+    directHint: state.directHint,
   };
 }
 
 export function stopPlayerShare() {
+  stopShareWatchdog();
   const guid = state.cloudpubGuid;
   const wasCloudPub = state.provider === "cloudpub";
   if (state.child) {
@@ -814,12 +1077,24 @@ export function stopPlayerShare() {
   // keep prod server — useful for republish; kill only tunnels
   state.provider = null;
   state.publicUrl = null;
+  state.lastViewUrl = null;
   state.startedAt = null;
   state.error = null;
   state.starting = false;
   state.playerHint = null;
   state.endpointIp = null;
   state.cloudpubGuid = null;
+  state.healthOk = null;
+  state.lastHealthAt = null;
+  state.lastHealthError = null;
+  state.downSince = null;
+  state.reconnectAttempts = 0;
+  state.reconnectInFlight = false;
+  state.targetPort = null;
+  state.wanIp = null;
+  state.wanIpAt = null;
+  state.directViewUrl = null;
+  state.directHint = null;
   return { ok: true };
 }
 
@@ -843,6 +1118,7 @@ export async function startPlayerShare(opts = {}) {
           state.endpointIp = meta.ip;
           state.playerHint = hintFor(status.provider, meta.ip);
         }
+        await refreshDirectAccess(state.targetPort || PROD_PORT);
         return getPlayerShareStatus();
       }
       stopPlayerShare();
@@ -864,6 +1140,12 @@ export async function startPlayerShare(opts = {}) {
   state.playerHint = null;
   state.endpointIp = null;
   state.cloudpubGuid = null;
+  state.healthOk = null;
+  state.lastHealthError = null;
+  state.downSince = null;
+  state.reconnectAttempts = 0;
+  state.reconnectInFlight = false;
+  stopShareWatchdog();
 
   const devPort = opts.localPort || DEV_PORT;
   const prefer = (
@@ -929,20 +1211,18 @@ export async function startPlayerShare(opts = {}) {
 
         state.child = child;
         state.publicUrl = url;
+        state.lastViewUrl = `${url}/view`;
         state.provider = provider;
         state.startedAt = new Date().toISOString();
         state.error = null;
         state.endpointIp = endpointIp;
         state.playerHint = hintFor(provider, endpointIp);
+        state.targetPort = targetPort;
         state.starting = false;
-        child.on("exit", () => {
-          if (state.child === child) {
-            state.child = null;
-            state.publicUrl = null;
-            state.provider = null;
-            state.cloudpubGuid = null;
-          }
-        });
+        markShareHealthy();
+        wireChildExit(child);
+        startShareWatchdog();
+        await refreshDirectAccess(targetPort);
         return getPlayerShareStatus();
       } catch (e) {
         if (child) killChild(child);

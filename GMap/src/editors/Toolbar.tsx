@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  BookOpen,
+  ChevronDown,
+  ChevronRight,
   FolderOpen,
   Layers,
   Radio,
@@ -40,9 +41,9 @@ import { IntentsInbox } from "./IntentsInbox";
 import { EconomyPanel } from "./EconomyPanel";
 import { CombatPanel } from "./CombatPanel";
 import { GmOpsPanel } from "./GmOpsPanel";
-import { CampaignPanel } from "./CampaignPanel";
 import { OpsHealthPanel } from "./OpsHealthPanel";
 import { RESOURCE_POOL } from "../state/defaults";
+import { RESOURCE_ICON_SLUGS } from "../state/resourcePool.generated";
 
 type TabId = "tools" | "layers" | "file" | "session" | "campaign";
 
@@ -202,6 +203,56 @@ const TOOL_GROUPS: {
         hint: "Вышка: стабильность / давление",
       },
       {
+        id: "mark_forge",
+        label: "Кузница",
+        hint: "Орбитальная / системная кузница",
+      },
+      {
+        id: "mark_frontline",
+        label: "Фронт",
+        hint: "Линия фронта",
+      },
+      {
+        id: "mark_mining_platform",
+        label: "Добыча",
+        hint: "Автоматическая добычная платформа / шахты",
+      },
+      {
+        id: "mark_abandoned_station",
+        label: "Брош. станция",
+        hint: "Покинутая торговая / орбитальная станция",
+      },
+      {
+        id: "mark_science_arch",
+        label: "Науч. арка",
+        hint: "Научная арка / разрушенная исследбаза",
+      },
+      {
+        id: "mark_agronomy",
+        label: "Агродроны",
+        hint: "Дроны-агрономы / орбитальное земледелие",
+      },
+      {
+        id: "mark_biocupola",
+        label: "Биокупол",
+        hint: "Орбитальные биокупола",
+      },
+      {
+        id: "mark_hydro_lab",
+        label: "Гидролаб",
+        hint: "Гидролаборатории / абиссальные станции",
+      },
+      {
+        id: "mark_security_post",
+        label: "Охрана",
+        hint: "Охранная станция",
+      },
+      {
+        id: "mark_grav_field",
+        label: "Гравиполе",
+        hint: "Гравитационные / магнитные пояса и аномалии",
+      },
+      {
         id: "clear_poi",
         label: "Сброс меток",
         hint: "Снять все космические метки с системы",
@@ -215,13 +266,7 @@ const TOOL_GROUPS: {
   },
   {
     title: "Ресурсы",
-    tools: [
-      {
-        id: "paint_resource",
-        label: "Сыпать…",
-        hint: "Выберите ресурс ниже и кликайте системы. Часть попадёт на планеты, часть — в систему",
-      },
-    ],
+    tools: [],
   },
   {
     title: "Владение",
@@ -280,12 +325,17 @@ const FACTION_TOOLS: EditorTool[] = [
   "place_legion",
 ];
 
-const TABS: { id: TabId; label: string; Icon: typeof Wrench }[] = [
+const TABS_PREP: { id: TabId; label: string; Icon: typeof Wrench }[] = [
   { id: "tools", label: "Инструменты", Icon: Wrench },
   { id: "layers", label: "Слои", Icon: Layers },
   { id: "file", label: "Файл", Icon: FolderOpen },
   { id: "session", label: "Сессия", Icon: Radio },
-  { id: "campaign", label: "Кампания", Icon: BookOpen },
+];
+
+const TABS_LIVE: { id: TabId; label: string; Icon: typeof Wrench }[] = [
+  { id: "tools", label: "Инструменты", Icon: Wrench },
+  { id: "layers", label: "Слои", Icon: Layers },
+  { id: "session", label: "Ход", Icon: Radio },
 ];
 
 export function Toolbar() {
@@ -299,6 +349,8 @@ export function Toolbar() {
     masterToken,
     setMasterToken,
   } = useCampaignSessionCtx();
+  const gmShellMode = useWorldStore((s) => s.gmShellMode);
+  const tabs = gmShellMode === "live" ? TABS_LIVE : TABS_PREP;
 
   const tool = useWorldStore((s) => s.tool);
   const setTool = useWorldStore((s) => s.setTool);
@@ -322,6 +374,7 @@ export function Toolbar() {
         showOrders: s.showOrders,
         showDiplomacy: s.showDiplomacy,
         showFogPreview: s.showFogPreview,
+        gmOmniscientView: s.gmOmniscientView,
         showJumpRange: s.showJumpRange,
         showSupply: s.showSupply,
         showCaravans: s.showCaravans,
@@ -355,6 +408,29 @@ export function Toolbar() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<TabId>("tools");
+  /** GM tool sections — collapsed by default; Ресурсы open in live for quick paint. */
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    () => (gmShellMode === "live" ? { Ресурсы: true } : ({} as Record<string, boolean>)),
+  );
+  const resourceNames = RESOURCE_POOL as readonly string[];
+
+  useEffect(() => {
+    const allowed =
+      gmShellMode === "live"
+        ? new Set<TabId>(["tools", "layers", "session"])
+        : new Set<TabId>(["tools", "layers", "file", "session"]);
+    if (!allowed.has(tab)) setTab("tools");
+  }, [gmShellMode, tab]);
+
+  useEffect(() => {
+    if (gmShellMode === "live") {
+      setOpenSections((prev) => ({ ...prev, Ресурсы: true }));
+    }
+  }, [gmShellMode]);
+
+  const toggleSection = (title: string) => {
+    setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
+  };
 
   const activeFaction = world.factions.find((f) => f.id === activeFactionId);
 
@@ -430,12 +506,17 @@ export function Toolbar() {
   return (
     <aside className="panel panel-left">
       <nav className="tab-bar" aria-label="Разделы панели">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             className={tab === t.id ? "tab active" : "tab"}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id);
+              if (t.id === "campaign") {
+                useWorldStore.getState().setRpFloatOpen(true);
+              }
+            }}
           >
             <t.Icon size={14} strokeWidth={2.25} aria-hidden />
             <span>{t.label}</span>
@@ -481,55 +562,95 @@ export function Toolbar() {
               </p>
             )}
 
-            {TOOL_GROUPS.map((group) => (
-              <section key={group.title}>
-                <h3>{group.title}</h3>
-                <div className="tool-grid">
-                  {group.tools.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={tool === t.id ? "tool active" : "tool"}
-                      title={t.hint}
-                      onClick={() => setTool(t.id)}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
+            {TOOL_GROUPS.map((group) => {
+              const open = !!openSections[group.title];
+              const isResources = group.title === "Ресурсы";
+              return (
+                <section key={group.title} className="tool-section">
+                  <button
+                    type="button"
+                    className="tool-section-toggle"
+                    onClick={() => toggleSection(group.title)}
+                    aria-expanded={open}
+                  >
+                    {open ? (
+                      <ChevronDown size={14} aria-hidden />
+                    ) : (
+                      <ChevronRight size={14} aria-hidden />
+                    )}
+                    <h3>{group.title}</h3>
+                    {isResources && (
+                      <span className="tool-section-count">
+                        {resourceNames.length}
+                      </span>
+                    )}
+                  </button>
+                  {open && (
+                    <div className="tool-section-body">
+                      {!isResources && (
+                        <div className="tool-grid">
+                          {group.tools.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              className={tool === t.id ? "tool active" : "tool"}
+                              title={t.hint}
+                              onClick={() => setTool(t.id)}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {isResources && (
+                        <>
+                          <p className="hint">
+                            Клик по ресурсу — режим «сыпать». Затем клик по
+                            системе: ~55% на планету, иначе в системные запасы.
+                          </p>
+                          <div className="tool-grid resource-tool-grid">
+                            {resourceNames.map((r) => {
+                              const slug = RESOURCE_ICON_SLUGS[r];
+                              const active =
+                                tool === "paint_resource" &&
+                                activeResource === r;
+                              return (
+                                <button
+                                  key={r}
+                                  type="button"
+                                  className={
+                                    active
+                                      ? "tool resource-tool active"
+                                      : "tool resource-tool"
+                                  }
+                                  title={`Сыпать «${r}»`}
+                                  onClick={() => {
+                                    setActiveResource(r);
+                                    setTool("paint_resource");
+                                  }}
+                                >
+                                  {slug ? (
+                                    <img
+                                      className="resource-tool-icon"
+                                      src={`/icons/game/resources/${slug}.svg`}
+                                      alt=""
+                                      width={16}
+                                      height={16}
+                                    />
+                                  ) : null}
+                                  <span>{r}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
             <p className="hint">{ALL_TOOLS.find((t) => t.id === tool)?.hint}</p>
-
-            {(tool === "paint_resource" ||
-              TOOL_GROUPS.find((g) => g.title === "Ресурсы")?.tools.some(
-                (t) => t.id === tool,
-              )) && (
-              <section>
-                <h3>Какой ресурс</h3>
-                <div className="tool-grid">
-                  {RESOURCE_POOL.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      className={
-                        tool === "paint_resource" && activeResource === r
-                          ? "tool active"
-                          : "tool"
-                      }
-                      title={`Сыпать «${r}» в системы (рандом: система / планета)`}
-                      onClick={() => setActiveResource(r)}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-                <p className="hint">
-                  Клик по системе: ~55% на случайную планету, иначе в системные
-                  запасы. В карточке планеты — только на неё.
-                </p>
-              </section>
-            )}
 
             {tool.startsWith("mark_") && (
               <p className="hint">
@@ -870,53 +991,72 @@ export function Toolbar() {
         {tab === "session" && (
           <>
             <section>
-              <h3>Сессия мастера</h3>
+              <h3>{gmShellMode === "live" ? "Ход и ops" : "Сессия мастера"}</h3>
               <p className="hint">
-                Ссылка для игроков — кнопка «Открыть для игроков» сверху.
-                Здесь токен, публикация и приказы.
+                {gmShellMode === "live"
+                  ? "Inbox справа на карте. Здесь — экономика, бой и служебное."
+                  : "Ссылка для игроков — сверху. Здесь токен, публикация и ops."}
               </p>
-              <label className="field">
-                <span>Мастер-токен</span>
-                <input
-                  value={masterToken}
-                  onChange={(e) => setMasterToken(e.target.value)}
-                />
-              </label>
-              <div className="btn-col">
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => void publishCampaign(masterToken)}
-                >
-                  Опубликовать карту (без новой ссылки)
-                </button>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => void syncOrders()}
-                >
-                  Загрузить приказы игроков
-                </button>
-              </div>
-              {publishStatus && <p className="hint">{publishStatus}</p>}
+              {gmShellMode !== "live" && (
+                <>
+                  <label className="field">
+                    <span>Мастер-токен</span>
+                    <input
+                      value={masterToken}
+                      onChange={(e) => setMasterToken(e.target.value)}
+                    />
+                  </label>
+                  <div className="btn-col">
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => void publishCampaign(masterToken)}
+                    >
+                      Опубликовать карту (без новой ссылки)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => void syncOrders()}
+                    >
+                      Загрузить приказы игроков
+                    </button>
+                  </div>
+                  {publishStatus && <p className="hint">{publishStatus}</p>}
+                </>
+              )}
+              {gmShellMode === "live" && (
+                <div className="btn-col">
+                  <button
+                    type="button"
+                    className="btn primary block"
+                    onClick={() => useWorldStore.getState().setRpFloatOpen(true)}
+                  >
+                    Открыть связь
+                  </button>
+                </div>
+              )}
             </section>
 
+            {gmShellMode !== "live" && <IntentsInbox variant="panel" />}
             <EconomyPanel />
             <CombatPanel />
             <GmOpsPanel />
             <OpsHealthPanel />
-            <IntentsInbox />
 
-            {world.orders.length > 0 && (
+            {world.orders.length > 0 && gmShellMode !== "live" && (
               <section>
-                <h3>Приказы ({world.orders.length})</h3>
+                <h3>Приказы (legacy · {world.orders.length})</h3>
                 <div className="order-list">
                   {world.orders.map((o) => {
-                    const faction = world.factions.find((f) => f.id === o.factionId);
+                    const faction = world.factions.find(
+                      (f) => f.id === o.factionId,
+                    );
                     return (
                       <div key={o.id} className="order-card">
                         <div>
-                          <strong>{faction?.name ?? o.factionId}</strong> · {o.type}
+                          <strong>{faction?.name ?? o.factionId}</strong> ·{" "}
+                          {o.type}
                           <br />
                           <span className="hint">{o.status}</span>
                         </div>
@@ -945,14 +1085,6 @@ export function Toolbar() {
               </section>
             )}
           </>
-        )}
-
-        {tab === "campaign" && (
-          <CampaignPanel
-            mode="master"
-            masterToken={masterToken}
-            onMsg={setSyncMsg}
-          />
         )}
       </div>
 

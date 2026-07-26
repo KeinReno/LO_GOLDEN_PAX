@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { resolveEditorViewWorld } from "../state/fog";
 import { useWorldStore } from "../state/worldStore";
 
 type Hit =
@@ -14,17 +15,26 @@ type Hit =
 
 export function MapSearch() {
   const world = useWorldStore((s) => s.world);
+  const activeFactionId = useWorldStore((s) => s.activeFactionId);
+  const gmOmniscientView = useWorldStore((s) => s.gmOmniscientView);
   const selectSystem = useWorldStore((s) => s.selectSystem);
   const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
   const openPlanetView = useWorldStore((s) => s.openPlanetView);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
+  const viewSystems = useMemo(
+    () =>
+      resolveEditorViewWorld(world, { activeFactionId, gmOmniscientView })
+        .systems,
+    [world, activeFactionId, gmOmniscientView],
+  );
+
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (needle.length < 1) return [] as Hit[];
     const out: Hit[] = [];
-    for (const s of world.systems) {
+    for (const s of viewSystems) {
       if (s.name.toLowerCase().includes(needle)) {
         out.push({
           kind: "system",
@@ -47,7 +57,7 @@ export function MapSearch() {
       if (out.length >= 24) break;
     }
     return out.slice(0, 24);
-  }, [q, world.systems]);
+  }, [q, viewSystems]);
 
   const go = (hit: Hit) => {
     selectSystem(hit.systemId);

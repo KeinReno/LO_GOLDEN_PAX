@@ -1,10 +1,562 @@
 {
-  "map.iron": { "id": "map.iron", "name": "железо", "yield": { "currency.metal": 2 } },
-  "map.titan": { "id": "map.titan", "name": "титан", "yield": { "currency.metal": 4 } },
-  "map.crystals": { "id": "map.crystals", "name": "кристаллы", "yield": { "currency.metal": 1 } },
-  "map.gas": { "id": "map.gas", "name": "газ", "yield": { "currency.supply": 1 } },
-  "map.water": { "id": "map.water", "name": "вода", "yield": { "currency.supply": 2 } },
-  "map.rare_earth": { "id": "map.rare_earth", "name": "редкоземы", "yield": { "currency.metal": 3 } },
-  "map.antimatter": { "id": "map.antimatter", "name": "антиматерия", "yield": { "currency.metal": 5 } },
-  "map.relics": { "id": "map.relics", "name": "реликты", "yield": {} }
+  "map.iron": {
+    "id": "map.iron",
+    "name": "железо",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.titan": {
+    "id": "map.titan",
+    "name": "титан",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.crystals": {
+    "id": "map.crystals",
+    "name": "кристаллы",
+    "yield": {
+      "currency.metal": 1
+    }
+  },
+  "map.gas": {
+    "id": "map.gas",
+    "name": "газ",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.water": {
+    "id": "map.water",
+    "name": "вода",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.rare_earth": {
+    "id": "map.rare_earth",
+    "name": "редкоземы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.antimatter": {
+    "id": "map.antimatter",
+    "name": "антиматерия",
+    "yield": {
+      "currency.metal": 5
+    }
+  },
+  "map.relics": {
+    "id": "map.relics",
+    "name": "реликты",
+    "yield": {}
+  },
+  "map.silver": {
+    "id": "map.silver",
+    "name": "серебро",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.gold": {
+    "id": "map.gold",
+    "name": "золото",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.glasssteel": {
+    "id": "map.glasssteel",
+    "name": "стеклосталь",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.alloys": {
+    "id": "map.alloys",
+    "name": "сплавы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.cinnabar": {
+    "id": "map.cinnabar",
+    "name": "хиноварь",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.biofuel": {
+    "id": "map.biofuel",
+    "name": "биотопливо",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.blumatid": {
+    "id": "map.blumatid",
+    "name": "блюматид",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.solari": {
+    "id": "map.solari",
+    "name": "соларид",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.krin": {
+    "id": "map.krin",
+    "name": "крин",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.buildplex": {
+    "id": "map.buildplex",
+    "name": "стройплексы",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.biomass": {
+    "id": "map.biomass",
+    "name": "органическая биомасса",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.food": {
+    "id": "map.food",
+    "name": "пища",
+    "yield": {
+      "currency.supply": 3
+    }
+  },
+  "map.minerals": {
+    "id": "map.minerals",
+    "name": "минералы",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.energy": {
+    "id": "map.energy",
+    "name": "энергия",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.trade_value": {
+    "id": "map.trade_value",
+    "name": "торговое значение",
+    "yield": {}
+  },
+  "map.lazualin": {
+    "id": "map.lazualin",
+    "name": "лазуалин",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.hyperium": {
+    "id": "map.hyperium",
+    "name": "гипериум",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.eradian": {
+    "id": "map.eradian",
+    "name": "эрадион",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.talitin": {
+    "id": "map.talitin",
+    "name": "талитин",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.exotic_gases": {
+    "id": "map.exotic_gases",
+    "name": "экзотические газы",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.focusing_crystals": {
+    "id": "map.focusing_crystals",
+    "name": "фокусирующие кристаллы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.volatile_motes": {
+    "id": "map.volatile_motes",
+    "name": "летучие частицы",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.elyrium": {
+    "id": "map.elyrium",
+    "name": "элирий",
+    "yield": {
+      "currency.metal": 5
+    }
+  },
+  "map.titanium": {
+    "id": "map.titanium",
+    "name": "титаний",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.adamantian": {
+    "id": "map.adamantian",
+    "name": "адамантий",
+    "yield": {
+      "currency.metal": 5
+    }
+  },
+  "map.skaashiz": {
+    "id": "map.skaashiz",
+    "name": "скаашиз",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.klax": {
+    "id": "map.klax",
+    "name": "клакс",
+    "yield": {}
+  },
+  "map.hydromel": {
+    "id": "map.hydromel",
+    "name": "гидромель",
+    "yield": {}
+  },
+  "map.orchid": {
+    "id": "map.orchid",
+    "name": "орхидия",
+    "yield": {}
+  },
+  "map.dark_horn": {
+    "id": "map.dark_horn",
+    "name": "тёмный рог",
+    "yield": {}
+  },
+  "map.red_sang": {
+    "id": "map.red_sang",
+    "name": "красный санг",
+    "yield": {}
+  },
+  "map.song_silk": {
+    "id": "map.song_silk",
+    "name": "песенный шёлк",
+    "yield": {}
+  },
+  "map.dragon_root": {
+    "id": "map.dragon_root",
+    "name": "корень дракона",
+    "yield": {}
+  },
+  "map.crystal_cap": {
+    "id": "map.crystal_cap",
+    "name": "кристальная шляпка",
+    "yield": {}
+  },
+  "map.leviathan_ichor": {
+    "id": "map.leviathan_ichor",
+    "name": "ихор левиафана",
+    "yield": {}
+  },
+  "map.golden_coral": {
+    "id": "map.golden_coral",
+    "name": "золотой коралл",
+    "yield": {}
+  },
+  "map.solar_water": {
+    "id": "map.solar_water",
+    "name": "солариевая вода",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.issridil": {
+    "id": "map.issridil",
+    "name": "иссридил",
+    "yield": {}
+  },
+  "map.dream_mist": {
+    "id": "map.dream_mist",
+    "name": "грёзный туман",
+    "yield": {}
+  },
+  "map.archite": {
+    "id": "map.archite",
+    "name": "архит",
+    "yield": {}
+  },
+  "map.vicious_bark": {
+    "id": "map.vicious_bark",
+    "name": "злобная кора",
+    "yield": {}
+  },
+  "map.lunar_veins": {
+    "id": "map.lunar_veins",
+    "name": "лунные жилы",
+    "yield": {}
+  },
+  "map.minor_artifacts": {
+    "id": "map.minor_artifacts",
+    "name": "малые артефакты",
+    "yield": {}
+  },
+  "map.astral_threads": {
+    "id": "map.astral_threads",
+    "name": "астральные нити",
+    "yield": {}
+  },
+  "map.grinid": {
+    "id": "map.grinid",
+    "name": "гринид",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.radid": {
+    "id": "map.radid",
+    "name": "рэдид",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.blakula": {
+    "id": "map.blakula",
+    "name": "блакула",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.vaitid": {
+    "id": "map.vaitid",
+    "name": "вайтид",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.violid": {
+    "id": "map.violid",
+    "name": "виолид",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.zro": {
+    "id": "map.zro",
+    "name": "зро",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.dark_matter": {
+    "id": "map.dark_matter",
+    "name": "тёмная материя",
+    "yield": {
+      "currency.metal": 5
+    }
+  },
+  "map.living_metal": {
+    "id": "map.living_metal",
+    "name": "живой металл",
+    "yield": {
+      "currency.metal": 5
+    }
+  },
+  "map.nanites": {
+    "id": "map.nanites",
+    "name": "наниты",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.refractory": {
+    "id": "map.refractory",
+    "name": "тугоплавкие минералы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.rare_crystals": {
+    "id": "map.rare_crystals",
+    "name": "редкие кристаллы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.hydrogen": {
+    "id": "map.hydrogen",
+    "name": "водород",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.ice": {
+    "id": "map.ice",
+    "name": "лёд",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.ammonia": {
+    "id": "map.ammonia",
+    "name": "аммиак",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.isotopes": {
+    "id": "map.isotopes",
+    "name": "изотопы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.nickel": {
+    "id": "map.nickel",
+    "name": "никель",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.cobalt": {
+    "id": "map.cobalt",
+    "name": "кобальт",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.methane": {
+    "id": "map.methane",
+    "name": "метан",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.helium3": {
+    "id": "map.helium3",
+    "name": "гелий-3",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.toxic_gases": {
+    "id": "map.toxic_gases",
+    "name": "токсичные газы",
+    "yield": {}
+  },
+  "map.catalysts": {
+    "id": "map.catalysts",
+    "name": "катализаторы",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.plasma_crystals": {
+    "id": "map.plasma_crystals",
+    "name": "плазмо-кристаллы",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.volcanic_minerals": {
+    "id": "map.volcanic_minerals",
+    "name": "вулканические минералы",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.medicinals": {
+    "id": "map.medicinals",
+    "name": "лекарственные соединения",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.anomaly_crystals": {
+    "id": "map.anomaly_crystals",
+    "name": "аномальные кристаллы",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.biocatalysts": {
+    "id": "map.biocatalysts",
+    "name": "биокатализаторы",
+    "yield": {
+      "currency.supply": 2
+    }
+  },
+  "map.extremophile_enzymes": {
+    "id": "map.extremophile_enzymes",
+    "name": "экстремофильные ферменты",
+    "yield": {}
+  },
+  "map.frozen_fuels": {
+    "id": "map.frozen_fuels",
+    "name": "замёрзшие топлива",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.energy_minerals": {
+    "id": "map.energy_minerals",
+    "name": "энергетические минералы",
+    "yield": {
+      "currency.metal": 3
+    }
+  },
+  "map.magnetite": {
+    "id": "map.magnetite",
+    "name": "магнетиты",
+    "yield": {
+      "currency.metal": 2
+    }
+  },
+  "map.platinum": {
+    "id": "map.platinum",
+    "name": "платина",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.cyber_minerals": {
+    "id": "map.cyber_minerals",
+    "name": "кибер-минералы",
+    "yield": {
+      "currency.metal": 4
+    }
+  },
+  "map.frozen_gases": {
+    "id": "map.frozen_gases",
+    "name": "замёрзшие газы",
+    "yield": {
+      "currency.supply": 1
+    }
+  },
+  "map.plasmoids": {
+    "id": "map.plasmoids",
+    "name": "плазмоиды",
+    "yield": {
+      "currency.metal": 2
+    }
+  }
 }

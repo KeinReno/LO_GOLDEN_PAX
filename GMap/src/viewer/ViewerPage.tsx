@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Coins,
   Flag,
@@ -6,18 +13,17 @@ import {
   Info,
   Landmark,
   Layers,
+  Map as MapIcon,
   Menu,
+  MessageSquare,
+  ScrollText,
   Settings,
   Swords,
   X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import {
-  MapCanvas,
-  type MapCanvasApi,
-  type MapViewModel,
-} from "../renderers/MapCanvas";
+import type { MapCanvasApi, MapViewModel } from "../renderers/MapCanvas";
 import type {
   OrderType,
   ViewerPayload,
@@ -44,8 +50,68 @@ import {
   type ViewerGraphicsPrefs,
 } from "../ui/viewerGraphics";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
-import { CampaignPanel } from "../editors/CampaignPanel";
+import { FloatingRpWindow } from "../editors/FloatingRpWindow";
 import { TurnStampHud } from "../ui/TurnStampHud";
+import { useWorldStore } from "../state/worldStore";
+import {
+  PlayerForcesPanel,
+  PlayerHqHome,
+  PlayerOrdersPanel,
+  ORDER_TYPE_LABELS,
+} from "./PlayerHqPanels";
+import { RpChat } from "../editors/RpChat";
+
+const MapCanvas = lazy(() =>
+  import("../renderers/MapCanvas").then((m) => ({ default: m.MapCanvas })),
+);
+
+/** HQ tabs vs opt-in map (Pixi mounts only in "map"). */
+type PlayerView = "hq" | "forces" | "orders" | "map";
+
+const PLAYER_START_KEY = "gmap-player-start";
+
+function readStoredStart(): "hq" | "map" | null {
+  try {
+    const v = localStorage.getItem(PLAYER_START_KEY);
+    if (v === "hq" || v === "map") return v;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function writeStoredStart(mode: "hq" | "map"): void {
+  try {
+    localStorage.setItem(PLAYER_START_KEY, mode);
+  } catch {
+    /* ignore */
+  }
+}
+
+function defaultStartForDevice(): "hq" | "map" {
+  /* HQ-first for everyone until map is chosen once (stored in localStorage). */
+  return "hq";
+}
+
+function rpSeenStorageKey(factionId: string): string {
+  return `gmap-rp-seen:${factionId}`;
+}
+
+function readRpSeenAt(factionId: string): string {
+  try {
+    return localStorage.getItem(rpSeenStorageKey(factionId)) || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeRpSeenAt(factionId: string, at: string): void {
+  try {
+    localStorage.setItem(rpSeenStorageKey(factionId), at);
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Modes shown to players (no vague «auto»). */
 type PerfMode = ViewerPerfChoice;
@@ -144,6 +210,10 @@ export function ViewerPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<PlayerView>("hq");
+  const [rpFloatOpen, setRpFloatOpen] = useState(false);
+  const [rpUnread, setRpUnread] = useState(0);
+  const loadWorld = useWorldStore((s) => s.loadWorld);
   const [perfMode, setPerfMode] = useState<PerfMode>(
     () => readStoredPerf() ?? defaultPerfForDevice(),
   );
@@ -284,6 +354,7 @@ export function ViewerPage() {
           visibleSystemIds: data.visibleSystemIds,
           updatedAt: data.updatedAt ?? ver.updatedAt,
         });
+        loadWorld(data.world);
         setSyncHint(
           `Карта обновлена · ход ${data.world.meta.turn} · ${data.visibleSystemIds.length} систем`,
         );
@@ -300,6 +371,85 @@ export function ViewerPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload?.factionId]);
+
+  // RP unread while campaign sheet is closed
+  useEffect(() => {
+    if (!payload?.factionId) {
+      setRpUnread(0);
+      return;
+    }
+    if (rpFloatOpen) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const headers: Record<string, string> = {
+          "X-Faction-Id": payload.factionId,
+        };
+        const idxRes = await fetch("/api/rp", { headers });
+        if (!idxRes.ok || cancelled) return;
+        const idx = (await idxRes.json()) as {
+          home?: { chapterId?: string; episodeId?: string };
+          chapters?: {
+            id: string;
+            episodes?: { id: string; status?: string; kind?: string }[];
+          }[];
+        };
+        let chapterId = idx.home?.chapterId;
+        let episodeId = idx.home?.episodeId;
+        if (!chapterId || !episodeId) {
+          const flat =
+            idx.chapters?.flatMap((c) =>
+              (c.episodes || []).map((e) => ({
+                chapterId: c.id,
+                episodeId: e.id,
+                status: e.status,
+                kind: e.kind,
+              })),
+            ) ?? [];
+          const hq = flat.find((e) => e.kind === "hq");
+          const openEp =
+            hq ?? flat.find((e) => e.status !== "closed") ?? flat[0] ?? null;
+          chapterId = openEp?.chapterId;
+          episodeId = openEp?.episodeId;
+        }
+        if (!chapterId || !episodeId || cancelled) return;
+        const q = new URLSearchParams({
+          chapterId,
+          episodeId,
+        });
+        const msgRes = await fetch(`/api/rp/messages?${q}`, { headers });
+        if (!msgRes.ok || cancelled) return;
+        const data = (await msgRes.json()) as {
+          messages?: { id: string; at: string; authorFactionId?: string }[];
+        };
+        const msgs = data.messages || [];
+        const seen = readRpSeenAt(payload.factionId);
+        const unread = seen
+          ? msgs.filter((m) => m.at > seen).length
+          : msgs.length > 0
+            ? Math.min(msgs.length, 9)
+            : 0;
+        if (!cancelled) {
+          setRpUnread(unread);
+          if (unread > 0) {
+            const { notifyNewRpMessage } = await import("../ui/rpNotify");
+            notifyNewRpMessage(msgs, {
+              selfFactionId: payload.factionId,
+              quietDesktop: false,
+            });
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    void poll();
+    const id = window.setInterval(() => void poll(), 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [payload?.factionId, rpFloatOpen]);
 
   useEffect(() => {
     if (!payload?.factionId) {
@@ -392,6 +542,7 @@ export function ViewerPage() {
         ...data,
         updatedAt: data.updatedAt ?? data.world.meta.updatedAt,
       });
+      loadWorld(data.world);
       setApMax(data.apMax ?? 3);
       setReservedAp(data.reservedAp ?? 0);
       setSelectedSystemId(null);
@@ -399,10 +550,87 @@ export function ViewerPage() {
       setSyncHint(null);
       setSettingsOpen(false);
       setMenuOpen(false);
+      setSheetOpen(false);
+      setRpFloatOpen(false);
+      {
+        const start = readStoredStart() ?? defaultStartForDevice();
+        setViewMode(start);
+        writeStoredStart(start);
+      }
       modelRef.current = toModel(data.world, null, null, nextLayers);
       bump();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const goView = (v: PlayerView) => {
+    setViewMode(v);
+    setMenuOpen(false);
+    setSettingsOpen(false);
+    setRpFloatOpen(false);
+    if (v !== "map") setSheetOpen(false);
+    writeStoredStart(v === "map" ? "map" : "hq");
+  };
+
+  const setIndustryTax = async (tierId: string) => {
+    if (!payload) return;
+    try {
+      const res = await fetch("/api/intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          defId: "intent.set_tax",
+          payload: { taxSlot: "tax.industry", tierId },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      setOrderMsg(`Налог в очереди: ${tierId}`);
+      setReservedAp((r) => r + (data.intent?.apCost ?? 1));
+      setPayload({
+        ...payload,
+        economy: {
+          ...payload.economy!,
+          pendingPolicy: {
+            taxes: {
+              ...(payload.economy?.pendingPolicy?.taxes || {}),
+              "tax.industry": tierId,
+            },
+          },
+        },
+      });
+    } catch (err) {
+      setOrderMsg(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    if (!payload) return;
+    try {
+      const res = await fetch(`/api/intents/${orderId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      setPayload({
+        ...payload,
+        world: {
+          ...payload.world,
+          orders: payload.world.orders.filter((x) => x.id !== orderId),
+        },
+      });
+      setReservedAp((r) => Math.max(0, r - 1));
+      setOrderMsg("Приказ отменён");
+    } catch (e) {
+      setOrderMsg(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -432,6 +660,8 @@ export function ViewerPage() {
       linkDraftFromId: null,
       sectorDraftPoints: [],
       ...layers,
+      /* Capital→systems spokes clutter player map; never for viewer. */
+      showSupply: false,
       activeFactionId: payload.factionId,
       perfMode,
       graphics,
@@ -504,10 +734,10 @@ export function ViewerPage() {
     return (
       <div className="viewer-login">
         <div className="login-card">
-          <p className="login-eyebrow">Доступ к карте кампании</p>
+          <p className="login-eyebrow">Доступ к кампании</p>
           <h1>LO GOLDEN PAX</h1>
           <p className="hint" style={{ textAlign: "center" }}>
-            Держава, пароль и режим карты — потом можно сменить в настройках.
+            На телефоне откроется штаб без карты. Карту можно включить отдельно.
           </p>
           {factions.length === 0 && !error && (
             <p className="hint">Синхронизация списка держав…</p>
@@ -536,7 +766,8 @@ export function ViewerPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="например solis"
+                  placeholder="Код доступа"
+                  autoComplete="current-password"
                 />
               </label>
 
@@ -577,10 +808,6 @@ export function ViewerPage() {
               >
                 Войти к столу
               </button>
-              <p className="hint" style={{ textAlign: "center" }}>
-                Белатор — <code>solis</code> · Турон — <code>turon</code> · пираты —{" "}
-                <code>pirate</code>
-              </p>
             </>
           )}
           {error && <p className="error">{error}</p>}
@@ -614,6 +841,12 @@ export function ViewerPage() {
             </span>
           </div>
         </div>
+        <span
+          className="viewer-ap-pill"
+          title="Занято AP / лимит на ход"
+        >
+          AP {reservedAp}/{apMax}
+        </span>
         <div className="viewer-turn-seal" title="Текущий ход кампании">
           <span>ход</span>
           <strong>{payload.world.meta.turn}</strong>
@@ -630,75 +863,187 @@ export function ViewerPage() {
         >
           <Settings size={18} strokeWidth={2} aria-hidden />
         </button>
-        <button
-          type="button"
-          className="viewer-icon-btn"
-          aria-label="Инфо"
-          disabled={!selectedSystem && !selectedFleet}
-          onClick={() => setSheetOpen(true)}
-        >
-          <Info size={18} strokeWidth={2} aria-hidden />
-        </button>
+        {viewMode === "map" && (
+          <button
+            type="button"
+            className="viewer-icon-btn"
+            aria-label="Инфо"
+            disabled={!selectedSystem && !selectedFleet}
+            onClick={() => setSheetOpen(true)}
+          >
+            <Info size={18} strokeWidth={2} aria-hidden />
+          </button>
+        )}
       </header>
 
-      <main className="viewer-map">
-        <MapCanvas
-          key={`viewer-map-${perfMode}`}
-          mode="viewer"
-          apiRef={mapApiRef}
-          readModel={readModel}
-          onModelSubscribe={subscribe}
-          onSystemClick={(id) => {
-            setSelectedSystemId(id);
-            if (id) {
-              setTargetSystemId(id);
-              setSheetOpen(true);
+      <main className={viewMode === "map" ? "viewer-map" : "viewer-hq"}>
+        {viewMode === "map" ? (
+          <Suspense
+            fallback={
+              <div className="viewer-map-loading">
+                <p>Загрузка карты…</p>
+                <p className="hint">WebGL · можно остаться в штабе</p>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => goView("hq")}
+                >
+                  В штаб
+                </button>
+              </div>
             }
-            bump();
-          }}
-          onFleetClick={(id) => {
-            setSelectedFleetId(id);
-            const fleet = payload.world.fleets.find((f) => f.id === id);
-            if (fleet) setSelectedSystemId(fleet.systemId);
-            setSheetOpen(true);
-            bump();
-          }}
-        />
-        <TurnStampHud
-          turn={payload.world.meta.turn}
-          name={payload.world.meta.name}
-          enabled={graphics.turnStamp !== false}
-        />
-        <div className="viewer-zoom" aria-label="Масштаб">
-          <button
-            type="button"
-            className="viewer-zoom-btn"
-            aria-label="Приблизить"
-            onClick={() => mapApiRef.current?.zoomBy(1.25)}
           >
-            <ZoomIn size={20} strokeWidth={2} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="viewer-zoom-btn"
-            aria-label="Отдалить"
-            onClick={() => mapApiRef.current?.zoomBy(0.8)}
-          >
-            <ZoomOut size={20} strokeWidth={2} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="viewer-zoom-btn"
-            aria-label="Сбросить вид"
-            onClick={() => mapApiRef.current?.resetView()}
-          >
-            <Home size={18} strokeWidth={2} aria-hidden />
-          </button>
-        </div>
-        <div className="viewer-map-hint">
-          <Settings size={12} strokeWidth={2} aria-hidden /> настройки сверху ·
-          щипок / зум · тап — досье
-        </div>
+            <MapCanvas
+              key={`viewer-map-${perfMode}`}
+              mode="viewer"
+              apiRef={mapApiRef}
+              readModel={readModel}
+              onModelSubscribe={subscribe}
+              onSystemClick={(id) => {
+                setSelectedSystemId(id);
+                if (id) {
+                  setTargetSystemId(id);
+                  setSheetOpen(true);
+                }
+                bump();
+              }}
+              onFleetClick={(id) => {
+                setSelectedFleetId(id);
+                const fleet = payload.world.fleets.find((f) => f.id === id);
+                if (fleet) setSelectedSystemId(fleet.systemId);
+                setSheetOpen(true);
+                bump();
+              }}
+            />
+            <TurnStampHud
+              turn={payload.world.meta.turn}
+              name={payload.world.meta.name}
+              enabled={graphics.turnStamp !== false}
+            />
+            <div className="viewer-zoom" aria-label="Масштаб">
+              <button
+                type="button"
+                className="viewer-zoom-btn"
+                aria-label="Приблизить"
+                onClick={() => mapApiRef.current?.zoomBy(1.25)}
+              >
+                <ZoomIn size={20} strokeWidth={2} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="viewer-zoom-btn"
+                aria-label="Отдалить"
+                onClick={() => mapApiRef.current?.zoomBy(0.8)}
+              >
+                <ZoomOut size={20} strokeWidth={2} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="viewer-zoom-btn"
+                aria-label="Сбросить вид"
+                onClick={() => mapApiRef.current?.resetView()}
+              >
+                <Home size={18} strokeWidth={2} aria-hidden />
+              </button>
+            </div>
+            <div className="viewer-map-hint">
+              <Settings size={12} strokeWidth={2} aria-hidden /> настройки сверху
+              · щипок / зум · тап — досье
+            </div>
+            {(selectedFleetId || targetSystemId) && (
+              <div className="viewer-order-draft">
+                <div className="viewer-order-draft-main">
+                  <strong>
+                    {ORDER_TYPE_LABELS[orderType] || "Приказ"}
+                  </strong>
+                  <span className="hint">
+                    {selectedFleet?.name ?? "флот?"} →{" "}
+                    {payload.world.systems.find((s) => s.id === targetSystemId)
+                      ?.name ?? "цель?"}
+                    {" · "}1 AP
+                  </span>
+                </div>
+                <div className="viewer-order-draft-actions">
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => goView("orders")}
+                  >
+                    Править
+                  </button>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={!selectedFleetId || !targetSystemId}
+                    onClick={() => void submitOrder()}
+                  >
+                    Заверить
+                  </button>
+                </div>
+              </div>
+            )}
+          </Suspense>
+        ) : viewMode === "forces" ? (
+          <PlayerForcesPanel
+            payload={payload}
+            selectedFleetId={selectedFleetId}
+            onSelectFleet={(id) => {
+              setSelectedFleetId(id);
+              const fleet = payload.world.fleets.find((f) => f.id === id);
+              if (fleet) setSelectedSystemId(fleet.systemId);
+              setOrderMsg(`Флот выбран: ${fleet?.name ?? id}`);
+            }}
+            onSelectSystem={(id) => {
+              setSelectedSystemId(id);
+              setTargetSystemId(id);
+            }}
+            onOrderWithFleet={(id) => {
+              setSelectedFleetId(id);
+              const fleet = payload.world.fleets.find((f) => f.id === id);
+              if (fleet) setSelectedSystemId(fleet.systemId);
+              goView("orders");
+            }}
+          />
+        ) : viewMode === "orders" ? (
+          <PlayerOrdersPanel
+            payload={payload}
+            orderType={orderType}
+            setOrderType={(t) => setOrderType(t as OrderType)}
+            orderNote={orderNote}
+            setOrderNote={setOrderNote}
+            orderMsg={orderMsg}
+            selectedFleetId={selectedFleetId}
+            setSelectedFleetId={setSelectedFleetId}
+            selectedFleetName={selectedFleet?.name ?? null}
+            targetSystemId={targetSystemId}
+            setTargetSystemId={setTargetSystemId}
+            onSubmit={() => void submitOrder()}
+            onCancelOrder={(id) => void cancelOrder(id)}
+            onPickTargetOnMap={() => {
+              setOrderMsg("Выберите систему на карте — она станет целью приказа");
+              goView("map");
+            }}
+          />
+        ) : (
+          <PlayerHqHome
+            payload={payload}
+            reservedAp={reservedAp}
+            apMax={apMax}
+            rpUnread={rpUnread}
+            pendingOrders={
+              payload.world.orders.filter((o) => o.status === "pending").length
+            }
+            orderMsg={orderMsg}
+            onSetIndustryTax={(tier) => void setIndustryTax(tier)}
+            onOpenForces={() => goView("forces")}
+            onOpenOrders={() => goView("orders")}
+            onOpenRp={() => {
+              setRpFloatOpen(true);
+              setRpUnread(0);
+            }}
+            onOpenMap={() => goView("map")}
+          />
+        )}
       </main>
 
       {(menuOpen || settingsOpen) && (
@@ -825,15 +1170,6 @@ export function ViewerPage() {
             </button>
             <button
               type="button"
-              className={`layer-chip ${layers.showSupply ? "on" : ""}`}
-              aria-pressed={layers.showSupply}
-              onClick={() => toggleLayer("showSupply")}
-            >
-              <Layers size={13} strokeWidth={2.25} aria-hidden />
-              <span>Снабжение</span>
-            </button>
-            <button
-              type="button"
               className={`layer-chip ${layers.showTraffic ? "on" : ""}`}
               aria-pressed={layers.showTraffic}
               onClick={() => toggleLayer("showTraffic")}
@@ -939,72 +1275,30 @@ export function ViewerPage() {
         </section>
 
         <section>
-          <h3>Держава</h3>
+          <h3>Комнаты</h3>
           <p className="hint">
-            Казна и налоги. Смена ставки тратит 1 AP и действует со следующего
-            тика.
+            Штаб · Силы · Приказы · Связь · Карта — нижняя панель.
           </p>
-          {payload.economy ? (
-            <>
-              <p className="hint">
-                metal {payload.economy.stocks?.["currency.metal"]} · supply{" "}
-                {payload.economy.stocks?.["currency.supply"]} ·{" "}
-                {payload.economy.deficit}
-              </p>
-              <label className="field">
-                <span>Промышленный налог</span>
-                <select
-                  value={payload.economy.taxes?.["tax.industry"] ?? "none"}
-                  onChange={(e) => {
-                    void (async () => {
-                      try {
-                        const res = await fetch("/api/intents", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            factionId: payload.factionId,
-                            password,
-                            defId: "intent.set_tax",
-                            payload: {
-                              taxSlot: "tax.industry",
-                              tierId: e.target.value,
-                            },
-                          }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.error || res.statusText);
-                        setOrderMsg(`Налог в очереди: ${e.target.value}`);
-                        setReservedAp((r) => r + (data.intent?.apCost ?? 1));
-                        setPayload({
-                          ...payload,
-                          economy: {
-                            ...payload.economy!,
-                            pendingPolicy: {
-                              taxes: {
-                                ...(payload.economy?.pendingPolicy?.taxes || {}),
-                                "tax.industry": e.target.value,
-                              },
-                            },
-                          },
-                        });
-                      } catch (err) {
-                        setOrderMsg(
-                          err instanceof Error ? err.message : String(err),
-                        );
-                      }
-                    })();
-                  }}
-                >
-                  <option value="none">0%</option>
-                  <option value="low">10%</option>
-                  <option value="mid">20%</option>
-                  <option value="high">35%</option>
-                </select>
-              </label>
-            </>
-          ) : (
-            <p className="hint">Нет данных казны — перелогиньтесь после тика.</p>
-          )}
+          <button
+            type="button"
+            className="btn ghost block"
+            onClick={() => {
+              setMenuOpen(false);
+              goView("hq");
+            }}
+          >
+            Открыть штаб
+          </button>
+          <button
+            type="button"
+            className="btn ghost block"
+            onClick={() => {
+              setMenuOpen(false);
+              setRpFloatOpen(true);
+            }}
+          >
+            Открыть связь
+          </button>
         </section>
 
         <section>
@@ -1059,119 +1353,6 @@ export function ViewerPage() {
                 </div>
               );
             })}
-        </section>
-
-        <CampaignPanel
-          mode="player"
-          factionId={payload.factionId}
-          password={password}
-          systems={payload.world.systems.map((s) => ({
-            id: s.id,
-            name: s.name,
-          }))}
-          onMsg={(m) => setOrderMsg(m)}
-        />
-
-        <section>
-          <h3>Директива на следующий ход</h3>
-          <p className="hint">
-            1) Флот или система. 2) Цель на карте. 3) Заверить приказ.
-          </p>
-          <label className="field">
-            <span>Тип</span>
-            <select
-              value={orderType}
-              onChange={(e) => setOrderType(e.target.value as OrderType)}
-            >
-              <option value="move_fleet">Переместить флот</option>
-              <option value="claim_system">Захватить / экспансия</option>
-              <option value="attack_system">Атака</option>
-            </select>
-          </label>
-          <p className="hint">
-            Флот: {selectedFleet?.name ?? "—"}
-            <br />
-            Цель:{" "}
-            {payload.world.systems.find((s) => s.id === targetSystemId)?.name ??
-              "—"}
-          </p>
-          <label className="field">
-            <span>Заметка</span>
-            <input
-              value={orderNote}
-              onChange={(e) => setOrderNote(e.target.value)}
-              placeholder="опционально"
-            />
-          </label>
-          <button
-            type="button"
-            className="btn primary block"
-            onClick={() => {
-              void submitOrder();
-              setMenuOpen(false);
-            }}
-          >
-            Заверить приказ
-          </button>
-          {orderMsg && <p className="hint">{orderMsg}</p>}
-        </section>
-
-        <section>
-          <h3>Ваши приказы (pending)</h3>
-          <p className="hint">
-            Committed = карта после последнего тика. Pending ниже — до 00:01 /
-            тика мастера.
-          </p>
-          {payload.world.orders.filter((o) => o.status === "pending").length ===
-            0 && <p className="hint">Пока нет</p>}
-          {payload.world.orders
-            .filter((o) => o.status === "pending")
-            .map((o) => (
-              <div key={o.id} className="order-card">
-                <div>
-                  {o.type} →{" "}
-                  {payload.world.systems.find((s) => s.id === o.toSystemId)
-                    ?.name ?? o.toSystemId}
-                </div>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => {
-                    void (async () => {
-                      try {
-                        const res = await fetch(`/api/intents/${o.id}/cancel`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            factionId: payload.factionId,
-                            password,
-                          }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.error || res.statusText);
-                        setPayload({
-                          ...payload,
-                          world: {
-                            ...payload.world,
-                            orders: payload.world.orders.filter(
-                              (x) => x.id !== o.id,
-                            ),
-                          },
-                        });
-                        setReservedAp((r) => Math.max(0, r - 1));
-                        setOrderMsg("Приказ отменён");
-                      } catch (e) {
-                        setOrderMsg(
-                          e instanceof Error ? e.message : String(e),
-                        );
-                      }
-                    })();
-                  }}
-                >
-                  Отменить
-                </button>
-              </div>
-            ))}
         </section>
       </aside>
 
@@ -1289,18 +1470,184 @@ export function ViewerPage() {
               <div className="hint">Стойка: {selectedFleet.stance}</div>
             </div>
           )}
-          <button
-            type="button"
-            className="btn block"
-            onClick={() => {
-              setSheetOpen(false);
-              setMenuOpen(true);
-            }}
-          >
-            Сделать приказ…
-          </button>
+          <div className="viewer-sheet-orders">
+            <p className="hint">Приказ с этой точки (тот же черновик, что в штабе)</p>
+            <div className="viewer-sheet-order-types">
+              {(
+                [
+                  ["move_fleet", "Идти сюда"],
+                  ["attack_system", "Атаковать"],
+                  ["claim_system", "Захватить"],
+                ] as const
+              ).map(([t, label]) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`btn ghost ${orderType === t ? "active" : ""}`}
+                  disabled={!selectedFleetId || !targetSystemId}
+                  onClick={() => {
+                    setOrderType(t);
+                    void submitOrder();
+                    setSheetOpen(false);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn block"
+              onClick={() => {
+                setSheetOpen(false);
+                goView("orders");
+              }}
+            >
+              Открыть приказы…
+            </button>
+          </div>
         </div>
       </aside>
+
+      {mobile ? (
+        <>
+          {rpFloatOpen && (
+            <button
+              type="button"
+              className="viewer-backdrop sheet"
+              aria-label="Закрыть связь"
+              onClick={() => setRpFloatOpen(false)}
+            />
+          )}
+          <aside
+            className={`viewer-sheet tall ${rpFloatOpen ? "open" : ""}`}
+            aria-hidden={!rpFloatOpen}
+          >
+            <div className="viewer-sheet-grab">
+              <p className="viewer-sheet-kicker">Связь</p>
+              <button
+                type="button"
+                className="viewer-sheet-close"
+                onClick={() => setRpFloatOpen(false)}
+              >
+                Закрыть
+              </button>
+            </div>
+            <div className="viewer-sheet-body">
+              {rpFloatOpen && (
+                <RpChat
+                  mode="player"
+                  layout="fill"
+                  factionId={payload.factionId}
+                  password={password}
+                  factionColor={faction?.color}
+                  avatarUrl={faction?.avatarUrl}
+                  systems={payload.world.systems.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                  }))}
+                  onMsg={(m) => setOrderMsg(m)}
+                  onMessagesLoaded={(msgs) => {
+                    const latest = msgs[msgs.length - 1];
+                    if (latest?.at) {
+                      writeRpSeenAt(payload.factionId, latest.at);
+                    }
+                    setRpUnread(0);
+                  }}
+                />
+              )}
+            </div>
+          </aside>
+        </>
+      ) : (
+        <FloatingRpWindow
+          open={rpFloatOpen}
+          onOpenChange={(o) => {
+            setRpFloatOpen(o);
+            if (o) setRpUnread(0);
+          }}
+          mode="player"
+          factionId={payload.factionId}
+          password={password}
+          factionColor={faction?.color}
+          avatarUrl={faction?.avatarUrl}
+          systems={payload.world.systems.map((s) => ({
+            id: s.id,
+            name: s.name,
+          }))}
+          onMsg={(m) => setOrderMsg(m)}
+          unread={rpUnread}
+          storageKey={`gmap-rp-float-geom-player-${payload.factionId}`}
+          title="Связь"
+          onMessagesLoaded={(msgs) => {
+            const latest = msgs[msgs.length - 1];
+            if (latest?.at) {
+              writeRpSeenAt(payload.factionId, latest.at);
+            }
+            setRpUnread(0);
+          }}
+        />
+      )}
+
+      <nav className="viewer-dock" aria-label="Комнаты игрока">
+        <button
+          type="button"
+          className={`viewer-dock-btn ${viewMode === "hq" && !rpFloatOpen ? "active" : ""}`}
+          onClick={() => goView("hq")}
+        >
+          <Landmark size={18} strokeWidth={2} aria-hidden />
+          Штаб
+        </button>
+        <button
+          type="button"
+          className={`viewer-dock-btn ${viewMode === "forces" ? "active" : ""}`}
+          onClick={() => goView("forces")}
+        >
+          <Swords size={18} strokeWidth={2} aria-hidden />
+          Силы
+        </button>
+        <button
+          type="button"
+          className={`viewer-dock-btn ${viewMode === "orders" ? "active" : ""}`}
+          onClick={() => goView("orders")}
+        >
+          <ScrollText size={18} strokeWidth={2} aria-hidden />
+          Приказы
+          {payload.world.orders.filter((o) => o.status === "pending").length >
+            0 && (
+            <span className="dock-badge">
+              {
+                payload.world.orders.filter((o) => o.status === "pending")
+                  .length
+              }
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          className={`viewer-dock-btn ${rpFloatOpen ? "active" : ""}`}
+          onClick={() => {
+            setMenuOpen(false);
+            setSettingsOpen(false);
+            setSheetOpen(false);
+            setRpFloatOpen((o) => !o);
+          }}
+        >
+          <MessageSquare size={18} strokeWidth={2} aria-hidden />
+          Связь
+          {rpUnread > 0 && !rpFloatOpen && (
+            <span className="dock-badge">{rpUnread > 9 ? "9+" : rpUnread}</span>
+          )}
+        </button>
+        <button
+          type="button"
+          className={`viewer-dock-btn ${viewMode === "map" && !rpFloatOpen ? "active" : ""}`}
+          onClick={() => goView("map")}
+        >
+          <MapIcon size={18} strokeWidth={2} aria-hidden />
+          Карта
+        </button>
+      </nav>
     </div>
   );
 }
@@ -1321,6 +1668,7 @@ function toModel(
     linkDraftFromId: null,
     sectorDraftPoints: [],
     ...layers,
+    showSupply: false,
   };
 }
 

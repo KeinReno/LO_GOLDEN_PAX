@@ -15,6 +15,10 @@ export default defineConfig({
       },
     },
   ],
+  // Avoid prebundling Tauri IPC into .vite/deps — WebView loads globals instead.
+  optimizeDeps: {
+    exclude: ["@tauri-apps/api", "@tauri-apps/api/core"],
+  },
   server: {
     port: 5173,
     host: true,

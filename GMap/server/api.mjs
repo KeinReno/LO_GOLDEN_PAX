@@ -75,6 +75,10 @@ import {
 import {
   readRpIndex,
   ensureRp,
+  ensurePlayerChannels,
+  filterIndexForViewer,
+  episodeVisibleTo,
+  pickHomeEpisode,
   createChapter,
   createEpisode,
   closeEpisode,
@@ -476,8 +480,21 @@ export function createApiMiddleware() {
       if (url.pathname === "/api/rp" && req.method === "GET") {
         const campaignId =
           url.searchParams.get("campaignId") || DEFAULT_CAMPAIGN;
-        const index = ensureRp(campaignId);
-        sendJson(res, 200, index);
+        const isMaster = requireMaster(req);
+        const factionId = req.headers["x-faction-id"] || null;
+        if (!isMaster && !factionId) {
+          sendJson(res, 401, { error: "master или X-Faction-Id" });
+          return;
+        }
+        const world = readLiveBoard();
+        const factions = world?.factions ?? [];
+        let index = ensurePlayerChannels(factions, campaignId);
+        index = filterIndexForViewer(index, { isMaster, factionId });
+        const home =
+          !isMaster && factionId
+            ? pickHomeEpisode(index, factionId)
+            : { chapterId: "", episodeId: "" };
+        sendJson(res, 200, { ...index, home });
         return;
       }
 
@@ -550,6 +567,15 @@ export function createApiMiddleware() {
           sendJson(res, 401, { error: "master или X-Faction-Id" });
           return;
         }
+        const index = ensureRp(campaignId);
+        const ch = (index.chapters || []).find((c) => c.id === chapterId);
+        const ep = (ch?.episodes || []).find((e) => e.id === episodeId);
+        if (
+          !episodeVisibleTo(ep, { isMaster, factionId })
+        ) {
+          sendJson(res, 403, { error: "нет доступа к каналу" });
+          return;
+        }
         const messages = readMessages(
           chapterId,
           episodeId,
@@ -566,6 +592,7 @@ export function createApiMiddleware() {
         const isMaster = requireMaster(req);
         let authorFactionId = body.authorFactionId || null;
         let authorName = body.authorName || null;
+        let authorAvatarUrl = body.authorAvatarUrl || null;
 
         if (!isMaster) {
           if (!world) {
@@ -581,8 +608,10 @@ export function createApiMiddleware() {
           }
           authorFactionId = faction.id;
           authorName = body.authorName || faction.name;
+          authorAvatarUrl =
+            body.authorAvatarUrl || faction.avatarUrl || null;
         } else {
-          authorName = body.authorName || "GM";
+          authorName = body.authorName || "Мастер";
         }
 
         const campaignId = body.campaignId || DEFAULT_CAMPAIGN;
@@ -594,6 +623,7 @@ export function createApiMiddleware() {
             body: body.body,
             authorFactionId,
             authorName,
+            authorAvatarUrl,
             visibility: body.visibility,
             intentPayload: body.intent || null,
             isMaster,

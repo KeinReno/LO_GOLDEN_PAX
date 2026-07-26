@@ -11,6 +11,8 @@ import { SystemDossier } from "./editors/SystemDossier";
 import { PolityDossier } from "./editors/PolityDossier";
 import { QuestPanel } from "./editors/QuestPanel";
 import { MapContextMenu } from "./editors/MapContextMenu";
+import { GmLiveDock } from "./editors/GmLiveDock";
+import { GmTickDialog } from "./editors/GmTickDialog";
 import { ViewerPage } from "./viewer/ViewerPage";
 import { useWorldStore } from "./state/worldStore";
 import { fetchContent } from "./state/contentCatalog";
@@ -118,23 +120,35 @@ function EditorHotkeys({
 function EditorPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+  const [tickOpen, setTickOpen] = useState(false);
+  const gmShellMode = useWorldStore((s) => s.gmShellMode);
+  const live = gmShellMode === "live";
 
   useEffect(() => {
     void fetchContent();
   }, []);
 
+  useEffect(() => {
+    if (live) {
+      setRightOpen(true);
+      setLeftOpen(false);
+    } else {
+      setLeftOpen(true);
+    }
+  }, [live]);
+
   return (
     <CampaignSessionProvider>
       <div
-        className={`app-shell${leftOpen ? "" : " left-collapsed"}${
-          rightOpen ? "" : " right-collapsed"
-        }`}
+        className={`app-shell app-shell--${gmShellMode}${
+          leftOpen ? "" : " left-collapsed"
+        }${rightOpen ? "" : " right-collapsed"}`}
       >
         <EditorHotkeys
           onToggleLeft={() => setLeftOpen((v) => !v)}
           onToggleRight={() => setRightOpen((v) => !v)}
         />
-        <TopBar />
+        <TopBar onRequestTick={() => setTickOpen(true)} />
         {leftOpen ? (
           <Toolbar />
         ) : (
@@ -152,10 +166,12 @@ function EditorPage() {
           <MapCanvas mode="editor" />
           <TurnStampHud />
           <OrderTargetHint />
-          <div className="viewport-hint">
-            Ctrl+клик / рамка — мультивыбор · перенос флотов · ПКМ — меню · Del —
-            удалить · СКМ — пан
-          </div>
+          {!live && (
+            <div className="viewport-hint">
+              Ctrl+клик / рамка — мультивыбор · перенос флотов · ПКМ — меню ·
+              Del — удалить · СКМ — пан
+            </div>
+          )}
           <div className="viewport-panel-toggles">
             <button
               type="button"
@@ -169,19 +185,29 @@ function EditorPage() {
               type="button"
               className="btn ghost"
               onClick={() => setRightOpen((v) => !v)}
-              title="Правая панель (])"
+              title={live ? "Док стола (])" : "Инспектор (])"}
             >
-              {rightOpen ? "Инсп. ⟩" : "⟨ Инсп."}
+              {rightOpen
+                ? live
+                  ? "Стол ⟩"
+                  : "Инсп. ⟩"
+                : live
+                  ? "⟨ Стол"
+                  : "⟨ Инсп."}
             </button>
           </div>
         </main>
         {rightOpen ? (
-          <Inspector />
+          live ? (
+            <GmLiveDock onRequestTick={() => setTickOpen(true)} />
+          ) : (
+            <Inspector />
+          )
         ) : (
           <button
             type="button"
             className="panel-rail panel-rail-right"
-            title="Показать инспектор (])"
+            title={live ? "Показать док стола (])" : "Показать инспектор (])"}
             onClick={() => setRightOpen(true)}
           >
             ▣
@@ -192,6 +218,7 @@ function EditorPage() {
         <PolityDossier />
         <QuestPanel />
         <MapContextMenu />
+        <GmTickDialog open={tickOpen} onClose={() => setTickOpen(false)} />
       </div>
     </CampaignSessionProvider>
   );

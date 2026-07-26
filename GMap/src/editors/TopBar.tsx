@@ -1,13 +1,18 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useWorldStore } from "../state/worldStore";
 import { resolvePolityKind } from "../state/territory";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { fmtTime } from "./useCampaignSession";
-
 import { MapSearch } from "./MapSearch";
 import { DesktopHostBadge } from "./DesktopHostBadge";
+import {
+  FloatingRpWindow,
+  RpFloatLauncher,
+} from "./FloatingRpWindow";
+import { usePendingIntents } from "./IntentsInbox";
 
-export function TopBar() {
+export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const {
     world,
     dirty,
@@ -15,10 +20,10 @@ export function TopBar() {
     lastSaved,
     syncMsg,
     onSaveToServer,
-    onAdvanceTurn,
     onDownloadMap,
     shareBusy,
     shareViewUrl,
+    shareLastViewUrl,
     shareProvider,
     shareEndpointIp,
     shareHint,
@@ -26,15 +31,29 @@ export function TopBar() {
     shareCopied,
     shareOpen,
     setShareOpen,
+    shareStatus,
+    shareLastHealthAt,
+    shareLastHealthError,
+    shareDownSince,
+    shareLinkChanged,
+    shareWanIp,
+    shareDirectViewUrl,
+    shareDirectHint,
+    shareDirectCopied,
     shareAbortRef,
     openForPlayers,
+    restartShare,
     copyShareLink,
+    copyDirectLink,
     stopShare,
     setShareBusy,
     hasCloudPubToken,
     hasCloudPubCli,
     cloudpubTokenInput,
     setCloudpubTokenInput,
+    masterToken,
+    setMasterToken,
+    setSyncMsg,
   } = useCampaignSessionCtx();
 
   const undo = useWorldStore((s) => s.undo);
@@ -43,13 +62,404 @@ export function TopBar() {
   const undoFutureLen = useWorldStore((s) => s.undoFuture.length);
   const activeFactionId = useWorldStore((s) => s.activeFactionId);
   const setActiveFaction = useWorldStore((s) => s.setActiveFaction);
+  const gmOmniscientView = useWorldStore((s) => s.gmOmniscientView);
+  const setGmOmniscientView = useWorldStore((s) => s.setGmOmniscientView);
   const openPolityEditor = useWorldStore((s) => s.openPolityEditor);
   const setDiplomacyPanelOpen = useWorldStore((s) => s.setDiplomacyPanelOpen);
+  const rpFloatOpen = useWorldStore((s) => s.rpFloatOpen);
+  const setRpFloatOpen = useWorldStore((s) => s.setRpFloatOpen);
+  const gmShellMode = useWorldStore((s) => s.gmShellMode);
+  const setGmShellMode = useWorldStore((s) => s.setGmShellMode);
+  const [menuOpen, setMenuOpen] = useState(false);
   const activeFaction =
     world.factions.find((f) => f.id === activeFactionId) ?? null;
 
+  const displayShareUrl = shareViewUrl || shareLastViewUrl;
+  const shareSession =
+    shareStatus === "online" ||
+    shareStatus === "degraded" ||
+    shareStatus === "down" ||
+    shareStatus === "starting" ||
+    !!displayShareUrl;
+
+  const shareBtnLabel = shareBusy
+    ? "Открываю…"
+    : shareStatus === "online"
+      ? "Игроки ● online"
+      : shareStatus === "degraded" || shareStatus === "starting"
+        ? "Игроки ● reconnect…"
+        : shareStatus === "down"
+          ? "Игроки ● DOWN"
+          : "Для игроков";
+
+  const shareBtnClass =
+    shareStatus === "online"
+      ? "btn primary share-status-btn share-status-online"
+      : shareStatus === "degraded" || shareStatus === "starting"
+        ? "btn share-status-btn share-status-degraded"
+        : shareStatus === "down"
+          ? "btn share-status-btn share-status-down"
+          : shareViewUrl
+            ? "btn primary"
+            : "btn ghost";
+
+  const live = gmShellMode === "live";
+  const { pending } = usePendingIntents();
+
+  const modeSwitch = (
+    <div className="gm-mode-switch" role="group" aria-label="Режим ГМа">
+      <button
+        type="button"
+        className={`gm-mode-btn ${!live ? "on" : ""}`}
+        onClick={() => setGmShellMode("prep")}
+        title="Картостроение, кисти, ресурсы"
+      >
+        Подготовка
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${live ? "on" : ""}`}
+        onClick={() => setGmShellMode("live")}
+        title="Стол: приказы, тик, игроки"
+      >
+        Стол
+      </button>
+    </div>
+  );
+
+  const sharePopover = shareOpen ? (
+    <div className="share-popover">
+      <div className="share-popover-head">
+        <strong>Доступ для игроков</strong>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setShareOpen(false)}
+        >
+          ✕
+        </button>
+      </div>
+
+      {shareSession && (
+        <p className={`share-status-line share-status-line--${shareStatus}`}>
+          {shareStatus === "online" && "Соединение: online"}
+          {shareStatus === "degraded" && "Соединение: переподключение…"}
+          {shareStatus === "starting" && "Соединение: запуск…"}
+          {shareStatus === "down" && "Соединение: DOWN"}
+          {shareStatus === "idle" && "Соединение: выкл"}
+          {shareLastHealthAt
+            ? ` · проверка ${fmtTime(shareLastHealthAt)}`
+            : ""}
+        </p>
+      )}
+      {shareLastHealthError && shareStatus !== "online" && (
+        <p className="hint share-error">{shareLastHealthError}</p>
+      )}
+      {shareDownSince && shareStatus === "down" && (
+        <p className="hint">Упал с {fmtTime(shareDownSince)}</p>
+      )}
+
+      {!displayShareUrl && (
+        <>
+          {(!hasCloudPubToken || !hasCloudPubCli) && (
+            <div className="share-cloudpub-setup">
+              {!hasCloudPubCli && (
+                <p className="share-hint">
+                  Нужен CloudPub CLI:{" "}
+                  <code>GMap/tools/cloudpub/clo.exe</code>
+                </p>
+              )}
+              {!hasCloudPubToken && (
+                <>
+                  <p className="share-hint">API-ключ CloudPub — один раз:</p>
+                  <input
+                    className="share-url"
+                    type="password"
+                    autoComplete="off"
+                    placeholder="CloudPub API key"
+                    value={cloudpubTokenInput}
+                    onChange={(e) => setCloudpubTokenInput(e.target.value)}
+                  />
+                </>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn primary block"
+            disabled={shareBusy}
+            onClick={() => void openForPlayers()}
+          >
+            {shareBusy ? "Открываю CloudPub…" : "Открыть доступ"}
+          </button>
+        </>
+      )}
+      {shareBusy && (
+        <button
+          type="button"
+          className="btn ghost block"
+          onClick={() => {
+            shareAbortRef.current?.abort();
+            setShareBusy(false);
+          }}
+        >
+          Отмена
+        </button>
+      )}
+      {displayShareUrl && (
+        <>
+          <p className="hint">
+            Ссылка{shareProvider ? ` · ${shareProvider}` : ""}
+            {shareLinkChanged ? " · новая ссылка" : ""}
+          </p>
+          <textarea
+            className={`share-url share-url-area${shareLinkChanged ? " share-url-new" : ""}`}
+            readOnly
+            rows={2}
+            value={displayShareUrl}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          {shareEndpointIp ? (
+            <p className="share-ip">
+              IP для loca.lt: <code>{shareEndpointIp}</code>
+            </p>
+          ) : (
+            shareHint && <p className="share-hint">{shareHint}</p>
+          )}
+          {shareDirectViewUrl && (
+            <>
+              <p className="hint">
+                Прямой доступ
+                {shareWanIp ? ` · WAN ${shareWanIp}` : ""}
+              </p>
+              <textarea
+                className="share-url share-url-area"
+                readOnly
+                rows={2}
+                value={shareDirectViewUrl}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              {shareDirectHint && (
+                <p className="share-hint">{shareDirectHint}</p>
+              )}
+              <div className="share-actions">
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => void copyDirectLink()}
+                >
+                  {shareDirectCopied ? "IP скопирован" : "Копировать IP"}
+                </button>
+              </div>
+            </>
+          )}
+          <div className="share-actions">
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => void copyShareLink()}
+            >
+              {shareCopied ? "Скопировано" : "Копировать"}
+            </button>
+            <a
+              className="btn ghost"
+              href={displayShareUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Открыть
+            </a>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={shareBusy}
+              onClick={() => void restartShare()}
+            >
+              Перезапустить
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => void stopShare()}
+            >
+              Стоп
+            </button>
+          </div>
+        </>
+      )}
+      {shareError && <p className="hint share-error">{shareError}</p>}
+    </div>
+  ) : null;
+
+  const rpWindow = (
+    <FloatingRpWindow
+      open={rpFloatOpen}
+      onOpenChange={setRpFloatOpen}
+      mode="master"
+      masterToken={masterToken}
+      onMsg={setSyncMsg}
+      storageKey="gmap-rp-float-geom-gm"
+      title="Связь"
+    />
+  );
+
+  if (live) {
+    return (
+      <header className="top-bar top-bar--live">
+        <div className="top-bar-live-left">
+          <span className="brand-mark">LO PAX</span>
+          <span className="top-bar-turn">ход {world.meta.turn}</span>
+          {modeSwitch}
+        </div>
+        <div className="top-bar-live-right">
+          <button
+            type="button"
+            className={`live-status-pill live-status-pill--${shareStatus}`}
+            title={shareLastHealthError || "Доступ для игроков"}
+            onClick={() => {
+              if (shareSession) setShareOpen((o) => !o);
+              else void openForPlayers();
+            }}
+          >
+            <span
+              className={`share-status-dot share-status-dot--${shareStatus}`}
+              aria-hidden
+            />
+            {shareStatus === "online"
+              ? "online"
+              : shareStatus === "idle"
+                ? "туннель выкл"
+                : shareStatus}
+          </button>
+          {pending.length > 0 && (
+            <span className="live-inbox-badge" title="Pending приказы">
+              Inbox {pending.length}
+            </span>
+          )}
+          <button
+            type="button"
+            className={`btn ghost ${rpFloatOpen ? "active" : ""}`}
+            onClick={() => setRpFloatOpen(!rpFloatOpen)}
+          >
+            Связь
+          </button>
+          <button
+            type="button"
+            className="btn primary live-tick-top"
+            onClick={onRequestTick}
+          >
+            Тик хода
+          </button>
+          <button
+            type="button"
+            className="btn ghost"
+            title="Сохранить, державы, токен…"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            ···
+          </button>
+        </div>
+
+        {menuOpen && (
+          <div className="gm-table-menu">
+            <div className="share-popover-head">
+              <strong>Стол…</strong>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setMenuOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <DesktopHostBadge />
+            <button
+              type="button"
+              className="btn primary block"
+              onClick={() => {
+                void onSaveToServer();
+                setMenuOpen(false);
+              }}
+            >
+              Сохранить / опубликовать
+            </button>
+            <label className="field">
+              <span>Мастер-токен</span>
+              <input
+                value={masterToken}
+                onChange={(e) => setMasterToken(e.target.value)}
+              />
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={gmOmniscientView}
+                onChange={(e) => setGmOmniscientView(e.target.checked)}
+              />
+              Видимость ГМа (вся карта)
+            </label>
+            <div className="btn-col">
+              <button
+                type="button"
+                className="btn ghost block"
+                onClick={() => {
+                  openPolityEditor(activeFactionId);
+                  setMenuOpen(false);
+                }}
+              >
+                Державы…
+              </button>
+              <button
+                type="button"
+                className="btn ghost block"
+                onClick={() => {
+                  setDiplomacyPanelOpen(true);
+                  setMenuOpen(false);
+                }}
+              >
+                Дипломатия…
+              </button>
+              <button
+                type="button"
+                className="btn ghost block"
+                onClick={() => {
+                  onDownloadMap();
+                  setMenuOpen(false);
+                }}
+              >
+                Скачать JSON
+              </button>
+              <Link
+                className="btn ghost block"
+                to="/view"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setMenuOpen(false)}
+              >
+                Превью /view
+              </Link>
+            </div>
+            <p className="hint">
+              Ресурсы: слева «Инструменты» (кнопка ⟨ Инстр.).
+            </p>
+          </div>
+        )}
+
+        {sharePopover}
+
+        {syncMsg && (
+          <p className="top-bar-status top-bar-status--live" title={syncMsg}>
+            {syncMsg}
+          </p>
+        )}
+
+        {rpWindow}
+      </header>
+    );
+  }
+
   return (
-    <header className="top-bar">
+    <header className={`top-bar top-bar--${gmShellMode}`}>
       <div className="top-bar-brand">
         <span className="brand-mark">LO PAX</span>
         <span className="top-bar-campaign" title={world.meta.name}>
@@ -65,6 +475,7 @@ export function TopBar() {
             ? ` · rev ${world.meta.tableRevision}`
             : ""}
         </span>
+        {modeSwitch}
         <DesktopHostBadge />
         {dirty ? (
           <span className="save-pill dirty" title="Черновик пишется…">
@@ -108,21 +519,10 @@ export function TopBar() {
         <button
           type="button"
           className="btn ghost"
-          title="Закрыть ход на сервере (processTurn)"
-          onClick={() => {
-            if (
-              window.confirm(
-                `Закрыть ход ${world.meta.turn} и применить pending intents?`,
-              )
-            ) {
-              void onAdvanceTurn();
-            }
-          }}
+          title="Закрыть ход на сервере"
+          onClick={onRequestTick}
         >
-          Тик хода
-        </button>
-        <button type="button" className="btn ghost" onClick={onDownloadMap}>
-          JSON
+          Тик
         </button>
       </div>
 
@@ -142,7 +542,7 @@ export function TopBar() {
         <select
           value={activeFactionId ?? ""}
           onChange={(e) => setActiveFaction(e.target.value || null)}
-          title="Активная держава для кистей"
+          title="Активная держава для кистей / превью тумана"
         >
           {world.factions.map((f) => (
             <option key={f.id} value={f.id}>
@@ -151,6 +551,17 @@ export function TopBar() {
             </option>
           ))}
         </select>
+        <label
+          className="check top-bar-gm-vision"
+          title="Вкл — вся карта. Выкл — как у выбранной державы"
+        >
+          <input
+            type="checkbox"
+            checked={gmOmniscientView}
+            onChange={(e) => setGmOmniscientView(e.target.checked)}
+          />
+          Видимость ГМа
+        </label>
         <button
           type="button"
           className="btn ghost"
@@ -165,23 +576,42 @@ export function TopBar() {
         >
           Дипломатия
         </button>
+        <RpFloatLauncher
+          open={rpFloatOpen}
+          onToggle={() => setRpFloatOpen(!rpFloatOpen)}
+          label="Связь"
+        />
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          Стол…
+        </button>
       </div>
 
       <div className="top-bar-share">
         <button
           type="button"
-          className={`btn ${shareViewUrl ? "primary" : "ghost"}`}
+          className={shareBtnClass}
           disabled={shareBusy}
+          title={
+            shareStatus === "down"
+              ? shareLastHealthError || "Туннель недоступен"
+              : shareStatus === "online"
+                ? "Туннель онлайн"
+                : undefined
+          }
           onClick={() => {
-            if (shareViewUrl) setShareOpen((o) => !o);
+            if (shareSession) setShareOpen((o) => !o);
             else void openForPlayers();
           }}
         >
-          {shareBusy
-            ? "Открываю…"
-            : shareViewUrl
-              ? "Игроки ●"
-              : "Для игроков"}
+          <span
+            className={`share-status-dot share-status-dot--${shareStatus}`}
+            aria-hidden
+          />
+          {shareBtnLabel}
         </button>
         <Link
           className="view-link-inline"
@@ -193,133 +623,82 @@ export function TopBar() {
         </Link>
       </div>
 
-      {shareOpen && (
-        <div className="share-popover">
+      {menuOpen && (
+        <div className="gm-table-menu">
           <div className="share-popover-head">
-            <strong>Доступ для игроков</strong>
+            <strong>Стол…</strong>
             <button
               type="button"
               className="btn ghost"
-              onClick={() => setShareOpen(false)}
+              onClick={() => setMenuOpen(false)}
             >
               ✕
             </button>
           </div>
-          {!shareViewUrl && (
-            <>
-              {(!hasCloudPubToken || !hasCloudPubCli) && (
-                <div className="share-cloudpub-setup">
-                  {!hasCloudPubCli && (
-                    <p className="share-hint">
-                      Нужен CloudPub CLI:{" "}
-                      <code>GMap/tools/cloudpub/clo.exe</code> (скачай с
-                      cloudpub.ru).
-                    </p>
-                  )}
-                  {!hasCloudPubToken && (
-                    <>
-                      <p className="share-hint">
-                        API-ключ CloudPub (кабинет cloudpub.ru) — один раз:
-                      </p>
-                      <input
-                        className="share-url"
-                        type="password"
-                        autoComplete="off"
-                        placeholder="CloudPub API key"
-                        value={cloudpubTokenInput}
-                        onChange={(e) => setCloudpubTokenInput(e.target.value)}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-              <button
-                type="button"
-                className="btn primary block"
-                disabled={shareBusy}
-                onClick={() => void openForPlayers()}
-              >
-                {shareBusy ? "Открываю CloudPub…" : "Открыть доступ"}
-              </button>
-            </>
-          )}
-          {shareBusy && (
+          <DesktopHostBadge />
+          <label className="field">
+            <span>Мастер-токен</span>
+            <input
+              value={masterToken}
+              onChange={(e) => setMasterToken(e.target.value)}
+            />
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={gmOmniscientView}
+              onChange={(e) => setGmOmniscientView(e.target.checked)}
+            />
+            Видимость ГМа (вся карта)
+          </label>
+          <div className="btn-col">
             <button
               type="button"
               className="btn ghost block"
               onClick={() => {
-                shareAbortRef.current?.abort();
-                setShareBusy(false);
+                openPolityEditor(activeFactionId);
+                setMenuOpen(false);
               }}
             >
-              Отмена
+              Державы…
             </button>
-          )}
-          {shareViewUrl && (
-            <>
-              <p className="hint">
-                Ссылка{shareProvider ? ` · ${shareProvider}` : ""}
-              </p>
-              <textarea
-                className="share-url share-url-area"
-                readOnly
-                rows={2}
-                value={shareViewUrl}
-                onFocus={(e) => e.currentTarget.select()}
-              />
-              {shareEndpointIp ? (
-                <p className="share-ip">
-                  IP для loca.lt: <code>{shareEndpointIp}</code>
-                </p>
-              ) : (
-                shareHint && <p className="share-hint">{shareHint}</p>
-              )}
-              {shareProvider === "cloudpub" && (
-                <p className="hint">
-                  CloudPub (РФ) — дай игрокам ссылку как есть.
-                </p>
-              )}
-              {shareProvider === "cloudflare" && (
-                <p className="hint">
-                  Cloudflare: на МТС может не открыться. Стоп → снова «Открыть
-                  доступ».
-                </p>
-              )}
-              {shareProvider === "localtunnel" && !shareEndpointIp && (
-                <p className="share-hint">
-                  loca.lt часто ломается. Стоп и снова «Открыть доступ» —
-                  предпочтителен CloudPub.
-                </p>
-              )}
-              <div className="share-actions">
-                <button
-                  type="button"
-                  className="btn primary"
-                  onClick={() => void copyShareLink()}
-                >
-                  {shareCopied ? "Скопировано" : "Копировать"}
-                </button>
-                <a
-                  className="btn ghost"
-                  href={shareViewUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Открыть
-                </a>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => void stopShare()}
-                >
-                  Стоп
-                </button>
-              </div>
-            </>
-          )}
-          {shareError && <p className="hint share-error">{shareError}</p>}
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
+                setDiplomacyPanelOpen(true);
+                setMenuOpen(false);
+              }}
+            >
+              Дипломатия…
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
+                onDownloadMap();
+                setMenuOpen(false);
+              }}
+            >
+              Скачать JSON
+            </button>
+            <Link
+              className="btn ghost block"
+              to="/view"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setMenuOpen(false)}
+            >
+              Превью /view
+            </Link>
+          </div>
+          <p className="hint">
+            Ресурсы и кисти — вкладка «Инструменты» слева (оба режима).
+          </p>
         </div>
       )}
+
+      {sharePopover}
 
       {(syncMsg || draftMeta || lastSaved) && (
         <p className="top-bar-status" title={syncMsg ?? undefined}>
@@ -329,6 +708,8 @@ export function TopBar() {
             }`}
         </p>
       )}
+
+      {rpWindow}
     </header>
   );
 }

@@ -344,7 +344,7 @@ function ProfileTab({ faction }: { faction: Faction }) {
       <label className="check">
         <input
           type="checkbox"
-          checked={!!faction.fullMapVision || faction.id === "faction_belator"}
+          checked={!!faction.fullMapVision}
           onChange={(e) =>
             updateFaction(faction.id, { fullMapVision: e.target.checked })
           }

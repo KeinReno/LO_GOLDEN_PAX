@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   CircleDot,
+  Eye,
   EyeOff,
   Flag,
   Handshake,
@@ -30,6 +31,7 @@ export const LAYER_LUCIDE: Record<LayerLucideIcon, LucideIcon> = {
   "circle-dot": CircleDot,
   handshake: Handshake,
   "eye-off": EyeOff,
+  eye: Eye,
   flag: Flag,
   radar: Radar,
   truck: Truck,

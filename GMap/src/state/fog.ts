@@ -1,11 +1,9 @@
 import type { Faction, WorldState } from "./types";
 
-/** Belator (and any flagged faction) sees the whole star map. */
+/** Faction flagged with fullMapVision sees the whole star map. */
 export function factionHasFullMapVision(faction: Faction | undefined): boolean {
   if (!faction) return false;
-  if (faction.fullMapVision === true) return true;
-  // Legacy canon: Belator always has full vision even on old saves
-  return faction.id === "faction_belator";
+  return faction.fullMapVision === true;
 }
 
 export function fullMapVisionFactionIds(world: WorldState): string[] {
@@ -44,6 +42,18 @@ export function getVisibleSystemIds(
     if (l.factionId === factionId) visible.add(l.systemId);
   }
   return visible;
+}
+
+/**
+ * GM map view: when omniscient is off, return the same subset a player would get.
+ * Full campaign stays in the store for editing; only the canvas view is sliced.
+ */
+export function resolveEditorViewWorld(
+  world: WorldState,
+  opts: { activeFactionId: string | null; gmOmniscientView: boolean },
+): WorldState {
+  if (opts.gmOmniscientView || !opts.activeFactionId) return world;
+  return filterWorldForFaction(world, opts.activeFactionId).world;
 }
 
 export function filterWorldForFaction(

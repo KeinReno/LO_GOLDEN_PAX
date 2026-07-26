@@ -54,5 +54,53 @@
       { "effect": "stability_add", "args": { "amount": 1 } },
       { "effect": "tax_pressure", "args": { "amount": -1 } }
     ]
+  },
+  "frontline": { "id": "poi.frontline", "name": "Линия фронта", "label": "Линия фронта" },
+  "forge": { "id": "poi.forge", "name": "Кузница", "label": "Кузница" },
+  "mining_platform": {
+    "id": "poi.mining_platform",
+    "name": "Добычная платформа",
+    "label": "Автоматическая добычная платформа / шахты",
+    "effects": [
+      { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 1.1 } }
+    ]
+  },
+  "abandoned_station": {
+    "id": "poi.abandoned_station",
+    "name": "Покинутая станция",
+    "label": "Покинутая торговая / орбитальная станция"
+  },
+  "science_arch": {
+    "id": "poi.science_arch",
+    "name": "Научная арка",
+    "label": "Научная арка / разрушенная исследбаза"
+  },
+  "agronomy": {
+    "id": "poi.agronomy",
+    "name": "Агродроны",
+    "label": "Дроны-агрономы / орбитальное земледелие",
+    "effects": [
+      { "effect": "production_mult", "args": { "resource": "currency.supply", "mult": 1.1 } }
+    ]
+  },
+  "biocupola": {
+    "id": "poi.biocupola",
+    "name": "Биокупол",
+    "label": "Орбитальные биокупола"
+  },
+  "hydro_lab": {
+    "id": "poi.hydro_lab",
+    "name": "Гидролаборатория",
+    "label": "Гидролаборатории / абиссальные станции"
+  },
+  "security_post": {
+    "id": "poi.security_post",
+    "name": "Охранная станция",
+    "label": "Охранная станция"
+  },
+  "grav_field": {
+    "id": "poi.grav_field",
+    "name": "Гравиполе",
+    "label": "Гравитационные / магнитные пояса"
   }
 }
