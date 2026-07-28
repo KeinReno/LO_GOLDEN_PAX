@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ViewerPayload, WorldState } from "../state/types";
+import { formatHopTurns, hopDistance } from "../state/pathfinding";
 
-const ORDER_TYPE_LABELS: Record<string, string> = {
+export const ORDER_TYPE_LABELS: Record<string, string> = {
   move_fleet: "Переместить флот",
   claim_system: "Захватить / экспансия",
   attack_system: "Атака",
@@ -46,7 +47,8 @@ export function PlayerHqHome({
       <header className="hq-panel-head">
         <h2>Штаб</h2>
         <p className="hint">
-          Управление державой. Карту откройте, когда нужна обстановка на театре.
+          Казна и сводка. Флоты и легионы двигайте перетаскиванием по карте;
+          остальные действия — ПКМ на объекте.
         </p>
       </header>
 
@@ -116,7 +118,7 @@ export function PlayerHqHome({
           Приказы{pendingOrders > 0 ? ` · ${pendingOrders} в очереди` : ""}
         </button>
         <button type="button" className="btn block" onClick={onOpenRp}>
-          Связь{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
+          Сцена{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
         </button>
         <button type="button" className="btn primary block" onClick={onOpenMap}>
           Открыть карту
@@ -129,16 +131,24 @@ export function PlayerHqHome({
 export function PlayerForcesPanel({
   payload,
   selectedFleetId,
+  selectedLegionId,
   onSelectFleet,
+  onSelectLegion,
   onSelectSystem,
   onOrderWithFleet,
+  onOrderWithLegion,
+  onOpenMap,
 }: {
   payload: ViewerPayload;
   selectedFleetId?: string | null;
+  selectedLegionId?: string | null;
   onSelectFleet?: (fleetId: string) => void;
+  onSelectLegion?: (legionId: string) => void;
   onSelectSystem?: (systemId: string) => void;
   /** Jump to orders with this fleet already selected. */
   onOrderWithFleet?: (fleetId: string) => void;
+  onOrderWithLegion?: (legionId: string) => void;
+  onOpenMap?: () => void;
 }) {
   const fid = payload.factionId;
   const fleets = (payload.world.fleets ?? []).filter((f) => f.factionId === fid);
@@ -151,15 +161,27 @@ export function PlayerForcesPanel({
       <header className="hq-panel-head">
         <h2>Силы</h2>
         <p className="hint">
-          Флоты: {fleets.length} · Легионы: {legions.length}. Выбор
-          синхронизирован с картой и приказами.
+          Флоты: {fleets.length} · Легионы: {legions.length}. На карте —
+          перетащите иконку на систему (покажет ходы).
         </p>
+        {onOpenMap && (
+          <button type="button" className="btn ghost" onClick={onOpenMap}>
+            На карту
+          </button>
+        )}
       </header>
 
       <section className="hq-card">
         <h3>Флоты</h3>
         {fleets.length === 0 && (
-          <p className="hint">Нет своих флотов в зоне видимости.</p>
+          <div className="hq-empty">
+            <p className="hint">Нет своих флотов в зоне видимости.</p>
+            {onOpenMap && (
+              <button type="button" className="btn ghost" onClick={onOpenMap}>
+                На карту
+              </button>
+            )}
+          </div>
         )}
         <ul className="hq-list">
           {fleets.map((f) => (
@@ -200,15 +222,25 @@ export function PlayerForcesPanel({
       <section className="hq-card">
         <h3>Легионы</h3>
         {legions.length === 0 && (
-          <p className="hint">Нет своих легионов в зоне видимости.</p>
+          <div className="hq-empty">
+            <p className="hint">Нет своих легионов в зоне видимости.</p>
+            {onOpenMap && (
+              <button type="button" className="btn ghost" onClick={onOpenMap}>
+                На карту
+              </button>
+            )}
+          </div>
         )}
         <ul className="hq-list">
           {legions.map((l) => (
             <li key={l.id}>
               <button
                 type="button"
-                className="hq-list-item"
-                onClick={() => onSelectSystem?.(l.systemId)}
+                className={`hq-list-item ${selectedLegionId === l.id ? "on" : ""}`}
+                onClick={() => {
+                  onSelectLegion?.(l.id);
+                  onSelectSystem?.(l.systemId);
+                }}
               >
                 <strong>{l.name}</strong>
                 <span className="hint">
@@ -216,6 +248,16 @@ export function PlayerForcesPanel({
                 </span>
                 <span className="hint">сила {l.strength ?? "—"}</span>
               </button>
+              {onOrderWithLegion && (
+                <button
+                  type="button"
+                  className="btn ghost block"
+                  style={{ marginTop: 4 }}
+                  onClick={() => onOrderWithLegion(l.id)}
+                >
+                  Приказ для этого легиона…
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -235,6 +277,9 @@ export function PlayerOrdersPanel({
   selectedFleetId,
   setSelectedFleetId,
   selectedFleetName,
+  selectedLegionId,
+  setSelectedLegionId,
+  selectedLegionName,
   targetSystemId,
   setTargetSystemId,
   onSubmit,
@@ -250,6 +295,9 @@ export function PlayerOrdersPanel({
   selectedFleetId: string | null;
   setSelectedFleetId: (id: string | null) => void;
   selectedFleetName: string | null;
+  selectedLegionId: string | null;
+  setSelectedLegionId: (id: string | null) => void;
+  selectedLegionName: string | null;
   targetSystemId: string | null;
   setTargetSystemId: (id: string | null) => void;
   onSubmit: () => void;
@@ -261,6 +309,9 @@ export function PlayerOrdersPanel({
   const fleets = (payload.world.fleets ?? []).filter(
     (f) => f.factionId === payload.factionId,
   );
+  const legions = (payload.world.legions ?? []).filter(
+    (l) => l.factionId === payload.factionId,
+  );
   const q = query.trim().toLowerCase();
   const matches = q
     ? systems
@@ -270,81 +321,189 @@ export function PlayerOrdersPanel({
 
   const targetName =
     systems.find((s) => s.id === targetSystemId)?.name ?? null;
+
+  const fromSystemId =
+    orderType === "move_legion"
+      ? (legions.find((l) => l.id === selectedLegionId)?.systemId ?? null)
+      : (fleets.find((f) => f.id === selectedFleetId)?.systemId ?? null);
+
+  const hops = useMemo(
+    () => hopDistance(payload.world, fromSystemId, targetSystemId),
+    [payload.world, fromSystemId, targetSystemId],
+  );
+
+  const needsFleet =
+    orderType === "move_fleet" || orderType === "attack_system";
+  const needsLegion = orderType === "move_legion";
   const canSubmit =
-    !!selectedFleetId &&
     !!targetSystemId &&
-    (orderType !== "move_fleet" || selectedFleetId);
+    (orderType === "claim_system"
+      ? true
+      : needsLegion
+        ? !!selectedLegionId && Number.isFinite(hops) && hops > 0
+        : !!selectedFleetId &&
+          (orderType !== "move_fleet" ||
+            (Number.isFinite(hops) && hops > 0)));
+
+  const unitLabel =
+    orderType === "move_legion"
+      ? (selectedLegionName ?? "не выбран")
+      : (selectedFleetName ?? "не выбран");
+
+  const pending = payload.world.orders.filter((o) => o.status === "pending");
+
+  const orderTypes: { id: string; label: string }[] = [
+    { id: "move_fleet", label: "Флот" },
+    { id: "move_legion", label: "Легион" },
+    { id: "claim_system", label: "Захват" },
+    { id: "attack_system", label: "Атака" },
+  ];
 
   return (
     <div className="hq-panel">
       <header className="hq-panel-head">
         <h2>Приказы</h2>
         <p className="hint">
-          Тот же флот и цель, что на карте. Можно выбрать здесь или указать на
-          театре.
+          Ход — перетаскиванием на карте. Ниже очередь и запасной черновик.
         </p>
       </header>
+
+      <section className="hq-card hq-outliner">
+        <h3>Очередь · {pending.length}</h3>
+        {pending.length === 0 && (
+          <p className="hint">Пусто — перетащите флот/легион на карте.</p>
+        )}
+        <ul className="hq-list">
+          {pending.map((o) => {
+            const fleetName =
+              payload.world.fleets.find((f) => f.id === o.fleetId)?.name ??
+              null;
+            const legionName =
+              payload.world.legions.find((l) => l.id === o.legionId)?.name ??
+              null;
+            return (
+              <li key={o.id} className="hq-order-row">
+                <span>
+                  <strong>{ORDER_TYPE_LABELS[o.type] || o.type}</strong>
+                  <br />
+                  <span className="hint">
+                    {fleetName || legionName
+                      ? `${fleetName ?? legionName} · `
+                      : ""}
+                    {systemName(payload.world, o.toSystemId)}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => onCancelOrder(o.id)}
+                >
+                  Отменить
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <section className="hq-card order-draft-card">
         <div className="order-draft-summary">
           <div>
-            <span className="hq-stat-label">Флот</span>
-            <strong>{selectedFleetName ?? "не выбран"}</strong>
+            <span className="hq-stat-label">
+              {orderType === "move_legion" ? "Легион" : "Флот"}
+            </span>
+            <strong>{unitLabel}</strong>
           </div>
           <div>
             <span className="hq-stat-label">Цель</span>
-            <strong>{targetName ?? "не выбрана"}</strong>
+            <strong>{targetName ?? "—"}</strong>
           </div>
           <div>
-            <span className="hq-stat-label">Стоимость</span>
-            <strong>1 AP</strong>
+            <span className="hq-stat-label">Путь</span>
+            <strong>
+              {targetSystemId && fromSystemId
+                ? formatHopTurns(hops)
+                : "—"}
+            </strong>
+          </div>
+          <div>
+            <span className="hq-stat-label">AP</span>
+            <strong>1</strong>
           </div>
         </div>
-      </section>
 
-      <section className="hq-card">
-        <label className="field">
-          <span>Флот</span>
-          <select
-            value={selectedFleetId ?? ""}
-            onChange={(e) => {
-              const id = e.target.value || null;
-              setSelectedFleetId(id);
-              const fleet = fleets.find((f) => f.id === id);
-              if (fleet) {
-                /* keep target; fromSystem follows fleet */
-              }
-            }}
-          >
-            <option value="">— выберите флот —</option>
-            {fleets.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} · {systemName(payload.world, f.systemId)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="order-type-chips" role="group" aria-label="Тип приказа">
+          {orderTypes.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`order-type-chip ${orderType === t.id ? "on" : ""}`}
+              onClick={() => setOrderType(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-        <label className="field">
-          <span>Тип приказа</span>
-          <select
-            value={orderType}
-            onChange={(e) => setOrderType(e.target.value)}
-          >
-            <option value="move_fleet">Переместить флот</option>
-            <option value="claim_system">Захватить / экспансия</option>
-            <option value="attack_system">Атака</option>
-          </select>
-        </label>
+        {needsLegion ? (
+          <label className="field">
+            <span>Легион</span>
+            <select
+              value={selectedLegionId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setSelectedLegionId(id);
+                if (id) setSelectedFleetId(null);
+              }}
+            >
+              <option value="">— выберите легион —</option>
+              {legions.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name} · {systemName(payload.world, l.systemId)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : orderType !== "claim_system" ? (
+          <label className="field">
+            <span>Флот</span>
+            <select
+              value={selectedFleetId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setSelectedFleetId(id);
+                if (id) setSelectedLegionId(null);
+              }}
+            >
+              <option value="">— выберите флот —</option>
+              {fleets.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} · {systemName(payload.world, f.systemId)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
-        <label className="field">
-          <span>Цель — поиск системы</span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Начните вводить имя…"
-          />
-        </label>
+        <div className="order-target-row">
+          <label className="field" style={{ flex: 1, margin: 0 }}>
+            <span>Цель</span>
+            <input
+              value={query || targetName || ""}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Имя системы…"
+            />
+          </label>
+          {onPickTargetOnMap && (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={onPickTargetOnMap}
+            >
+              На карте
+            </button>
+          )}
+        </div>
         {matches.length > 0 && (
           <ul className="hq-list hq-list-compact">
             {matches.map((s) => (
@@ -363,15 +522,6 @@ export function PlayerOrdersPanel({
             ))}
           </ul>
         )}
-        {onPickTargetOnMap && (
-          <button
-            type="button"
-            className="btn ghost block"
-            onClick={onPickTargetOnMap}
-          >
-            Указать цель на карте
-          </button>
-        )}
 
         <label className="field">
           <span>Заметка</span>
@@ -387,51 +537,20 @@ export function PlayerOrdersPanel({
           disabled={!canSubmit}
           onClick={onSubmit}
         >
-          Заверить приказ · 1 AP
+          Заверить · 1 AP
+          {needsFleet || needsLegion ? ` · ${formatHopTurns(hops)}` : ""}
         </button>
         {!canSubmit && (
-          <p className="hint">Нужны флот и система-цель.</p>
+          <p className="hint">
+            {needsLegion
+              ? "Нужны легион и достижимая система-цель."
+              : orderType === "claim_system"
+                ? "Нужна система-цель."
+                : "Нужны флот и достижимая система-цель."}
+          </p>
         )}
         {orderMsg && <p className="hint">{orderMsg}</p>}
-      </section>
-
-      <section className="hq-card">
-        <h3>В очереди хода</h3>
-        {payload.world.orders.filter((o) => o.status === "pending").length ===
-          0 && <p className="hint">Пока пусто</p>}
-        <ul className="hq-list">
-          {payload.world.orders
-            .filter((o) => o.status === "pending")
-            .map((o) => {
-              const fleetName =
-                payload.world.fleets.find((f) => f.id === o.fleetId)?.name ??
-                null;
-              return (
-                <li key={o.id} className="hq-order-row">
-                  <span>
-                    <strong>
-                      {ORDER_TYPE_LABELS[o.type] || o.type}
-                    </strong>
-                    <br />
-                    <span className="hint">
-                      {fleetName ? `${fleetName} · ` : ""}
-                      {systemName(payload.world, o.toSystemId)}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => onCancelOrder(o.id)}
-                  >
-                    Отменить
-                  </button>
-                </li>
-              );
-            })}
-        </ul>
       </section>
     </div>
   );
 }
-
-export { ORDER_TYPE_LABELS };

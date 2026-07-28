@@ -27,9 +27,43 @@ import {
 import { SystemSchematic } from "./SystemSchematic";
 import { SystemEditor } from "./SystemEditor";
 import { v4 as uuid } from "uuid";
+import {
+  PlayerPlanetManage,
+  type BuildingDef,
+  type ColonyDef,
+  type PlanetActionRequest,
+} from "../viewer/PlayerPlanetManage";
+
+export type PlayerPlanetManageProps = {
+  factionId: string;
+  stocks: Record<string, number>;
+  reservedAp: number;
+  apMax: number;
+  buildings: Record<string, BuildingDef>;
+  colonies: Record<string, ColonyDef>;
+  busy?: boolean;
+  message?: string | null;
+  onAction: (req: PlanetActionRequest) => void;
+};
 
 /** Full drill-down: Galaxy → System schematic → Planet card. */
-export function SystemView({ system }: { system: StarSystem }) {
+export function SystemView({
+  system,
+  readOnly = false,
+  playerFactionId,
+  onSelectOwnFleet,
+  onSelectOwnLegion,
+  planetManage,
+}: {
+  system: StarSystem;
+  /** Player /view — look only, no GM edit tools. */
+  readOnly?: boolean;
+  playerFactionId?: string;
+  onSelectOwnFleet?: (fleetId: string) => void;
+  onSelectOwnLegion?: (legionId: string) => void;
+  /** When set, owned/empty planets open player construction UI. */
+  planetManage?: PlayerPlanetManageProps;
+}) {
   const world = useWorldStore((s) => s.world);
   const mapFocus = useWorldStore((s) => s.mapFocus);
   const openPlanetView = useWorldStore((s) => s.openPlanetView);
@@ -45,10 +79,10 @@ export function SystemView({ system }: { system: StarSystem }) {
   const paintPlanetOwner = useWorldStore((s) => s.paintPlanetOwner);
   const paintPlanetCoOwner = useWorldStore((s) => s.paintPlanetCoOwner);
   const togglePlanetContested = useWorldStore((s) => s.togglePlanetContested);
-  const paintingRes = tool === "paint_resource";
-  const paintingOwner = tool === "paint_faction";
-  const paintingCo = tool === "paint_coowner";
-  const paintingContest = tool === "mark_contested";
+  const paintingRes = !readOnly && tool === "paint_resource";
+  const paintingOwner = !readOnly && tool === "paint_faction";
+  const paintingCo = !readOnly && tool === "paint_coowner";
+  const paintingContest = !readOnly && tool === "mark_contested";
   const paintingClaim =
     paintingRes || paintingOwner || paintingCo || paintingContest;
 
@@ -91,7 +125,7 @@ export function SystemView({ system }: { system: StarSystem }) {
     <div className="system-view">
       <nav className="sys-crumb" aria-label="Иерархия">
         <button type="button" className="crumb-link" onClick={closeSystemView}>
-          Галактика
+          {readOnly ? "К карте" : "Галактика"}
         </button>
         <span className="crumb-sep">›</span>
         <button
@@ -188,60 +222,133 @@ export function SystemView({ system }: { system: StarSystem }) {
             )}
             {(fleetsHere.length > 0 || legionsHere.length > 0) && (
               <ul className="sys-force-list">
-                {fleetsHere.map((f) => (
-                  <li key={f.id}>
-                    ✦ {f.name}{" "}
-                    <span className="hint">
-                      (
-                      {world.factions.find((x) => x.id === f.factionId)?.name ??
-                        "?"}
-                      )
-                    </span>
-                  </li>
-                ))}
-                {legionsHere.map((l) => (
-                  <li key={l.id}>
-                    ⚑ {l.name}{" "}
-                    <span className="hint">
-                      (
-                      {world.factions.find((x) => x.id === l.factionId)?.name ??
-                        "?"}
-                      )
-                    </span>
-                  </li>
-                ))}
+                {fleetsHere.map((f) => {
+                  const own =
+                    readOnly &&
+                    !!playerFactionId &&
+                    f.factionId === playerFactionId &&
+                    !!onSelectOwnFleet;
+                  const label = (
+                    <>
+                      ✦ {f.name}{" "}
+                      <span className="hint">
+                        (
+                        {world.factions.find((x) => x.id === f.factionId)
+                          ?.name ?? "?"}
+                        )
+                      </span>
+                    </>
+                  );
+                  return (
+                    <li key={f.id}>
+                      {own ? (
+                        <button
+                          type="button"
+                          className="sys-force-btn"
+                          onClick={() => onSelectOwnFleet(f.id)}
+                        >
+                          {label}
+                          <span className="hint"> · на карту</span>
+                        </button>
+                      ) : (
+                        label
+                      )}
+                    </li>
+                  );
+                })}
+                {legionsHere.map((l) => {
+                  const own =
+                    readOnly &&
+                    !!playerFactionId &&
+                    l.factionId === playerFactionId &&
+                    !!onSelectOwnLegion;
+                  const label = (
+                    <>
+                      ⚑ {l.name}{" "}
+                      <span className="hint">
+                        (
+                        {world.factions.find((x) => x.id === l.factionId)
+                          ?.name ?? "?"}
+                        )
+                      </span>
+                    </>
+                  );
+                  return (
+                    <li key={l.id}>
+                      {own ? (
+                        <button
+                          type="button"
+                          className="sys-force-btn"
+                          onClick={() => onSelectOwnLegion(l.id)}
+                        >
+                          {label}
+                          <span className="hint"> · на карту</span>
+                        </button>
+                      ) : (
+                        label
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
 
           {planet ? (
+            readOnly && planetManage ? (
+              <PlayerPlanetManage
+                system={system}
+                planet={planet}
+                factionId={planetManage.factionId}
+                stocks={planetManage.stocks}
+                reservedAp={planetManage.reservedAp}
+                apMax={planetManage.apMax}
+                buildings={planetManage.buildings}
+                colonies={planetManage.colonies}
+                busy={planetManage.busy}
+                message={planetManage.message}
+                onAction={planetManage.onAction}
+                onBack={() => openSystemView(system.id)}
+              />
+            ) : (
             <PlanetDetail
               planet={planet}
+              readOnly={readOnly}
               onBack={() => openSystemView(system.id)}
-              onChange={(patch) => updatePlanet(planet.id, patch)}
+              onChange={(patch) => {
+                if (!readOnly) updatePlanet(planet.id, patch);
+              }}
               onRemove={() => {
+                if (readOnly) return;
                 removePlanet(planet.id);
                 openSystemView(system.id);
               }}
               races={world.races}
             />
+            )
           ) : (
             <>
               <div className="block-title">
                 Планеты ({ordered.length})
-                <button
-                  type="button"
-                  className="btn ghost"
-                  style={{ marginLeft: "auto" }}
-                  onClick={() => addPlanet()}
-                  disabled={isCorridorSystem(system)}
-                >
-                  + Планета
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ marginLeft: "auto" }}
+                    onClick={() => addPlanet()}
+                    disabled={isCorridorSystem(system)}
+                  >
+                    + Планета
+                  </button>
+                )}
               </div>
               <div className="planet-card-grid">
                 {ordered.length === 0 && (
-                  <p className="hint">Нет планет — добавьте или сгенерируйте.</p>
+                  <p className="hint">
+                    {readOnly
+                      ? "В видимых данных нет планет."
+                      : "Нет планет — добавьте или сгенерируйте."}
+                  </p>
                 )}
                 {ordered.map((p) => (
                   <button
@@ -291,10 +398,12 @@ export function SystemView({ system }: { system: StarSystem }) {
         </div>
       </div>
 
-      <details className="sys-editor-fold">
-        <summary>Полная правка системы (звёзды, станции, владение…)</summary>
-        <SystemEditor system={system} />
-      </details>
+      {!readOnly && (
+        <details className="sys-editor-fold">
+          <summary>Полная правка системы (звёзды, станции, владение…)</summary>
+          <SystemEditor system={system} />
+        </details>
+      )}
     </div>
   );
 }
@@ -329,16 +438,20 @@ function PlanetDetail({
   onChange,
   onRemove,
   races,
+  readOnly = false,
 }: {
   planet: Planet;
   onBack: () => void;
   onChange: (patch: Partial<Planet>) => void;
   onRemove: () => void;
   races: { id: string; name: string }[];
+  readOnly?: boolean;
 }) {
   const world = useWorldStore((s) => s.world);
   const habit = classifyPlanet(planet);
   const [zone, setZone] = useState<PlanetBuildingZone>("surface");
+  const ownerName =
+    world.factions.find((f) => f.id === planet.ownerFactionId)?.name ?? null;
 
   const surface = planet.surfaceBuildings ?? [];
   const orbital = planet.orbitalBuildings ?? [];
@@ -366,6 +479,59 @@ function PlanetDetail({
       },
     ]);
   };
+
+  if (readOnly) {
+    return (
+      <div className="planet-detail planet-detail--readonly">
+        <div className="planet-detail-head">
+          <button type="button" className="btn ghost" onClick={onBack}>
+            ← К системе
+          </button>
+          <span className={`habit-badge ${habit}`}>{HABIT_LABELS[habit]}</span>
+        </div>
+        <h3 className="planet-detail-title">{planet.name}</h3>
+        <div className="sys-meta">
+          <div className="sys-meta-row">
+            <span>Тип / климат</span>
+            <strong>
+              {PLANET_TYPE_LABELS[planet.type]} · {CLIMATE_LABELS[planet.climate]}
+            </strong>
+          </div>
+          <div className="sys-meta-row">
+            <span>Колония</span>
+            <strong>
+              {COLONY_TYPE_LABELS[planet.colonyType ?? "none"]}
+              {planet.population > 0
+                ? ` · нас. ${formatPop(planet.population)}`
+                : ""}
+            </strong>
+          </div>
+          <div className="sys-meta-row">
+            <span>Владелец</span>
+            <strong>{ownerName ?? "—"}</strong>
+          </div>
+          <div className="sys-meta-row">
+            <span>Постройки</span>
+            <strong>
+              пов. {surface.length}/{surfaceMax} · орб. {orbital.length}/
+              {orbitalMax}
+            </strong>
+          </div>
+        </div>
+        {(surface.length > 0 || orbital.length > 0) && (
+          <ul className="sys-force-list">
+            {[...surface, ...orbital].map((b) => (
+              <li key={b.id}>
+                {b.name || PLANET_BUILDING_KIND_LABELS[b.kind]}{" "}
+                <span className="hint">({b.zone})</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="hint">Осмотр. Управление — на своих колониях.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="planet-detail">

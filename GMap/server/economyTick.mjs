@@ -23,22 +23,17 @@ import {
   adjustStock,
 } from "./ledger.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
+import {
+  planetCapFromBuildings,
+  collectPlanetYields,
+} from "./planetActions.mjs";
 
 function floor(n) {
   return Math.floor(Number(n) || 0);
 }
 
 function planetCap(planet, content) {
-  const base = 20;
-  let cap = base;
-  for (const b of planet.buildings ?? []) {
-    if (b.disabled) continue;
-    if (b.kind === "residential" || b.kind === "habitat") cap += 15;
-    if (b.kind === "capitol") cap += 10;
-  }
-  if (planet.colonyType === "core") cap += 25;
-  if (planet.colonyType === "outpost") cap += 5;
-  return cap;
+  return planetCapFromBuildings(planet, content);
 }
 
 function habitabilityForPlanet(planet, racesContent, composition) {
@@ -157,6 +152,11 @@ function mapResourceYield(sys, content) {
   // inhabited bonus supply
   const pop = (sys.planets ?? []).reduce((s, p) => s + (p.population || 0), 0);
   if (pop > 0) yields["currency.supply"] += 1;
+  // Planet resources + buildings / colony posture
+  const fromPlanets = collectPlanetYields(sys, content);
+  for (const [cur, amt] of Object.entries(fromPlanets)) {
+    yields[cur] = (yields[cur] || 0) + Number(amt || 0);
+  }
   return yields;
 }
 

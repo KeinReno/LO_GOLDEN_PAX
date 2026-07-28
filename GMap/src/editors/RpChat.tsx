@@ -8,6 +8,7 @@ type Episode = {
   status: string;
   visibility?: string;
   kind?: string;
+  ref?: string | null;
 };
 
 type Chapter = {
@@ -85,12 +86,16 @@ function initialOf(name: string | null | undefined): string {
   return s.slice(0, 1).toUpperCase();
 }
 
-function channelHint(ep: Episode | undefined): string {
+function channelHint(ep: Episode | undefined, mode: "master" | "player"): string {
   if (!ep) return "";
-  if (ep.kind === "hq") return "Только ваша фракция и мастер";
-  if (ep.kind === "ooc") return "Общий канал стола (вне игры)";
+  if (ep.kind === "hq") {
+    return mode === "player"
+      ? "Текстовый отыгрыш с мастером"
+      : "Штаб фракции ↔ мастер";
+  }
+  if (ep.kind === "ooc") return "Служебный канал (только мастер)";
   if (ep.status === "closed") return "Архив — только чтение";
-  return "Сцена кампании";
+  return mode === "player" ? "Сцена с мастером" : "Сцена кампании";
 }
 
 export type RpChatProps = {
@@ -109,6 +114,8 @@ export type RpChatProps = {
   factionColor?: string;
   /** Future: default avatar URL for this player. */
   avatarUrl?: string | null;
+  /** Master: jump to this faction's HQ when set/changed. */
+  focusFactionId?: string | null;
 };
 
 /** RP channel chat — shared by GM Campaign tab and player /view. */
@@ -123,6 +130,7 @@ export function RpChat({
   onMessagesLoaded,
   factionColor,
   avatarUrl,
+  focusFactionId = null,
 }: RpChatProps) {
   const session = useContext(CampaignSessionCtx);
   const masterToken = masterTokenProp ?? session?.masterToken ?? "";
@@ -161,10 +169,12 @@ export function RpChat({
       [];
     for (const c of index?.chapters || []) {
       for (const e of c.episodes || []) {
+        // Players: no table-wide / OOC — only HQ and GM scenes
+        if (mode === "player" && e.kind === "ooc") continue;
         out.push({ chapterId: c.id, chapterTitle: c.title, episode: e });
       }
     }
-    // HQ first, then open scenes, then OOC, then closed
+    // HQ first, then open scenes, then OOC (master), then closed
     const rank = (e: Episode) => {
       if (e.kind === "hq") return 0;
       if (e.status === "closed") return 4;
@@ -173,7 +183,7 @@ export function RpChat({
     };
     out.sort((a, b) => rank(a.episode) - rank(b.episode));
     return out;
-  }, [index]);
+  }, [index, mode]);
 
   const chapter = index?.chapters.find((c) => c.id === chapterId);
   const episode = chapter?.episodes.find((e) => e.id === episodeId);
@@ -236,6 +246,25 @@ export function RpChat({
   useEffect(() => {
     void loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    if (mode !== "master" || !focusFactionId || !index) return;
+    for (const c of index.chapters || []) {
+      for (const e of c.episodes || []) {
+        const hit =
+          e.kind === "hq" &&
+          (e.ref === `faction:${focusFactionId}` ||
+            e.id === `hq_${focusFactionId}` ||
+            e.visibility === `gm_player:${focusFactionId}`);
+        if (hit) {
+          setChapterId(c.id);
+          setEpisodeId(e.id);
+          setChannelPickerOpen(false);
+          return;
+        }
+      }
+    }
+  }, [mode, focusFactionId, index]);
 
   useEffect(() => {
     if (!chapterId || !episodeId) return;
@@ -353,7 +382,7 @@ export function RpChat({
             {episode?.title || "Канал…"}
           </span>
           <span className="rp-channel-btn-meta">
-            {channelHint(episode)}
+            {channelHint(episode, mode)}
             {closed ? " · архив" : ""}
           </span>
         </button>
@@ -399,9 +428,11 @@ export function RpChat({
                 <strong>{ep.title}</strong>
                 <span className="hint">
                   {ep.kind === "hq"
-                    ? "Штаб"
+                    ? mode === "player"
+                      ? "С мастером"
+                      : "Штаб"
                     : ep.kind === "ooc"
-                      ? "Общий"
+                      ? "Мастер"
                       : ep.status === "closed"
                         ? "Архив"
                         : "Сцена"}

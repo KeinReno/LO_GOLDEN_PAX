@@ -11,6 +11,30 @@ export type PublicContent = {
   pois?: Record<string, { label?: string; name?: string }>;
   rules?: { apPerTurn?: number };
   intents?: Record<string, { ap?: number }>;
+  buildings?: Record<
+    string,
+    {
+      id: string;
+      kind: string;
+      zone: "surface" | "orbital";
+      name: string;
+      ap?: number;
+      cost?: Record<string, number>;
+      maxPerPlanet?: number;
+    }
+  >;
+  colonies?: Record<
+    string,
+    {
+      id: string;
+      colonyType: string;
+      name: string;
+      colonizeAp?: number;
+      colonizeCost?: Record<string, number>;
+      setTypeAp?: number;
+      setTypeCost?: Record<string, number>;
+    }
+  >;
   loadedAt?: string;
 };
 

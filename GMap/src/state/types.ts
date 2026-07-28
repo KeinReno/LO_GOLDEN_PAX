@@ -702,6 +702,8 @@ export interface UiState {
   diplomacyPanelOpen: boolean;
   /** Floating RP chat window (GM editor). */
   rpFloatOpen: boolean;
+  /** When opening RP float, prefer this faction's HQ episode. */
+  rpFocusFactionId: string | null;
   /** Right-click radial / context menu target. */
   contextMenu: ContextMenuState | null;
   /** After RMB order pick — next system click applies route + stance. */

@@ -82,10 +82,15 @@ export function getPendingForFaction(factionId, turn) {
 }
 
 export function reservedAp(factionId, turn) {
-  return getPendingForFaction(factionId, turn).reduce(
-    (sum, i) => sum + (i.apCost ?? 0),
-    0,
-  );
+  // Pending + already-applied instant actions (build/colonize) spend AP this turn.
+  return readIntents()
+    .filter(
+      (i) =>
+        i.factionId === factionId &&
+        (turn == null || i.turn === turn) &&
+        (i.status === "pending" || i.status === "applied"),
+    )
+    .reduce((sum, i) => sum + (i.apCost ?? 0), 0);
 }
 
 function validateIntentGates(world, factionId, defId, payload) {

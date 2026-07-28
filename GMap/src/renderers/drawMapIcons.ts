@@ -665,7 +665,8 @@ export function layoutFleetsAroundSystem(
   }
 
   const n = ordered.length;
-  const rx = 36 + Math.min(n, 8) * 4;
+  // Orbit radius ~2× prior — larger hit/visual fleet icons
+  const rx = 72 + Math.min(n, 8) * 8;
   const ry = rx * 0.48;
   const a0 = -0.85;
   const a1 = 1.15;
@@ -1518,12 +1519,12 @@ export function layoutLegionsAroundSystem(
   const n = legions.length;
   // South row, wide spacing — clear of fleets (east) and resources (SW)
   return legions.map((legion, i) => {
-    const offset = (i - (n - 1) / 2) * 22;
+    const offset = (i - (n - 1) / 2) * 44;
     const bob = anim ? Math.sin(anim.t * 2 + i) * 0.4 : 0;
     return {
       legion,
       x: p.x + offset,
-      y: p.y + 30 + bob,
+      y: p.y + 56 + bob,
     };
   });
 }

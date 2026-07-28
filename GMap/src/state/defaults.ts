@@ -213,6 +213,7 @@ export const COLONY_TYPE_LABELS: Record<string, string> = {
   outpost: "Форпост",
   colony: "Колония",
   core: "Мир-ядро",
+  capital: "Мир-ядро",
   fortress: "Крепость",
   mining: "Добыча",
   research: "Исследовательский",

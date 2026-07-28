@@ -23,12 +23,18 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import type { MapCanvasApi, MapViewModel } from "../renderers/MapCanvas";
+import type {
+  MapCanvasApi,
+  MapContextPick,
+  MapUnitDropPayload,
+  MapViewModel,
+} from "../renderers/MapCanvas";
 import type {
   OrderType,
   ViewerPayload,
   WorldState,
 } from "../state/types";
+import { formatHopTurns, hopDistance, hopPath } from "../state/pathfinding";
 import {
   VIEWER_LAYER_CHIPS,
   LAYER_PRESET_BUTTONS,
@@ -51,22 +57,28 @@ import {
 } from "../ui/viewerGraphics";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { FloatingRpWindow } from "../editors/FloatingRpWindow";
-import { TurnStampHud } from "../ui/TurnStampHud";
+import { SystemDossier } from "../editors/SystemDossier";
 import { useWorldStore } from "../state/worldStore";
 import {
   PlayerForcesPanel,
   PlayerHqHome,
   PlayerOrdersPanel,
-  ORDER_TYPE_LABELS,
 } from "./PlayerHqPanels";
+import type {
+  BuildingDef,
+  ColonyDef,
+  PlanetActionRequest,
+} from "./PlayerPlanetManage";
 import { RpChat } from "../editors/RpChat";
+import { ViewerContextMenu } from "./ViewerContextMenu";
+import { fetchContent } from "../state/contentCatalog";
 
 const MapCanvas = lazy(() =>
   import("../renderers/MapCanvas").then((m) => ({ default: m.MapCanvas })),
 );
 
-/** HQ tabs vs opt-in map (Pixi mounts only in "map"). */
-type PlayerView = "hq" | "forces" | "orders" | "map";
+/** Map-first rooms; forces opens from Штаб. RP = scene with GM only. */
+type PlayerView = "hq" | "forces" | "orders" | "map" | "rp";
 
 const PLAYER_START_KEY = "gmap-player-start";
 
@@ -89,8 +101,8 @@ function writeStoredStart(mode: "hq" | "map"): void {
 }
 
 function defaultStartForDevice(): "hq" | "map" {
-  /* HQ-first for everyone until map is chosen once (stored in localStorage). */
-  return "hq";
+  /* Galaxy map is the home screen (Stellaris / ES2 style). */
+  return "map";
 }
 
 function rpSeenStorageKey(factionId: string): string {
@@ -125,10 +137,9 @@ interface FactionOption {
 function isLikelyMobile(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return (
-      window.matchMedia("(max-width: 900px)").matches ||
-      window.matchMedia("(pointer: coarse)").matches
-    );
+    // Width-first: coarse pointer alone (Win touch laptops) must not
+    // force mobile chrome / bottom padding on a wide desktop window.
+    return window.matchMedia("(max-width: 900px)").matches;
   } catch {
     return false;
   }
@@ -201,19 +212,34 @@ export function ViewerPage() {
   const [payload, setPayload] = useState<ViewerPayload | null>(null);
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null);
   const [selectedFleetId, setSelectedFleetId] = useState<string | null>(null);
+  const [selectedLegionId, setSelectedLegionId] = useState<string | null>(null);
+  const [viewerCtx, setViewerCtx] = useState<MapContextPick | null>(null);
   const [orderType, setOrderType] = useState<OrderType>("move_fleet");
   const [orderNote, setOrderNote] = useState("");
   const [orderMsg, setOrderMsg] = useState<string | null>(null);
   const [apMax, setApMax] = useState(3);
   const [reservedAp, setReservedAp] = useState(0);
   const [targetSystemId, setTargetSystemId] = useState<string | null>(null);
+  const [pickingTarget, setPickingTarget] = useState(false);
+  /** Mobile: tap system to move selected own unit (fallback to drag). */
+  const [touchMoveArmed, setTouchMoveArmed] = useState(false);
+  const [planetBusy, setPlanetBusy] = useState(false);
+  const [planetMsg, setPlanetMsg] = useState<string | null>(null);
+  const [buildingsCatalog, setBuildingsCatalog] = useState<
+    Record<string, BuildingDef>
+  >({});
+  const [coloniesCatalog, setColoniesCatalog] = useState<
+    Record<string, ColonyDef>
+  >({});
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<PlayerView>("hq");
+  const [viewMode, setViewMode] = useState<PlayerView>("map");
   const [rpFloatOpen, setRpFloatOpen] = useState(false);
   const [rpUnread, setRpUnread] = useState(0);
   const loadWorld = useWorldStore((s) => s.loadWorld);
+  const openSystemView = useWorldStore((s) => s.openSystemView);
+  const closeSystemView = useWorldStore((s) => s.closeSystemView);
   const [perfMode, setPerfMode] = useState<PerfMode>(
     () => readStoredPerf() ?? defaultPerfForDevice(),
   );
@@ -310,7 +336,42 @@ export function ViewerPage() {
 
   useEffect(() => {
     bump();
-  }, [layers, perfMode, graphics, selectedSystemId, selectedFleetId, payload]);
+  }, [
+    layers,
+    perfMode,
+    graphics,
+    selectedSystemId,
+    selectedFleetId,
+    selectedLegionId,
+    payload,
+  ]);
+
+  useEffect(() => {
+    if (!orderMsg || pickingTarget) return;
+    const t = window.setTimeout(() => setOrderMsg(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [orderMsg, pickingTarget]);
+
+  useEffect(() => {
+    void fetchContent().then((c) => {
+      if (!c) return;
+      if (c.buildings) setBuildingsCatalog(c.buildings as Record<string, BuildingDef>);
+      if (c.colonies) setColoniesCatalog(c.colonies as Record<string, ColonyDef>);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!pickingTarget && !touchMoveArmed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPickingTarget(false);
+        setTouchMoveArmed(false);
+        setOrderMsg(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pickingTarget, touchMoveArmed]);
 
   useEffect(() => {
     void loadFactions();
@@ -348,12 +409,18 @@ export function ViewerPage() {
           updatedAt?: string | null;
         };
         mapStampRef.current = stamp;
-        setPayload({
+        setPayload((prev) => ({
           world: data.world,
           factionId: data.factionId,
           visibleSystemIds: data.visibleSystemIds,
           updatedAt: data.updatedAt ?? ver.updatedAt,
-        });
+          tableRevision: data.tableRevision ?? ver.tableRevision,
+          economy: data.economy ?? prev?.economy,
+          apMax: data.apMax ?? prev?.apMax,
+          reservedAp: data.reservedAp ?? prev?.reservedAp,
+        }));
+        if (typeof data.apMax === "number") setApMax(data.apMax);
+        if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
         loadWorld(data.world);
         setSyncHint(
           `Карта обновлена · ход ${data.world.meta.turn} · ${data.visibleSystemIds.length} систем`,
@@ -522,7 +589,7 @@ export function ViewerPage() {
         updatedAt?: string | null;
       };
       credsRef.current = { factionId, password };
-      mapStampRef.current = `${data.world.meta.updatedAt ?? data.updatedAt ?? ""}|${data.world.meta.turn}`;
+      mapStampRef.current = `${data.tableRevision ?? data.world.meta.tableRevision ?? ""}|${data.world.meta.updatedAt ?? data.updatedAt ?? ""}|${data.world.meta.turn}`;
 
       const chosen = loginPerf;
       const nextLayers = layersForPerfChoice(chosen);
@@ -568,8 +635,9 @@ export function ViewerPage() {
     setViewMode(v);
     setMenuOpen(false);
     setSettingsOpen(false);
-    setRpFloatOpen(false);
+    setRpFloatOpen(v === "rp");
     if (v !== "map") setSheetOpen(false);
+    setTouchMoveArmed(false);
     writeStoredStart(v === "map" ? "map" : "hq");
   };
 
@@ -607,6 +675,52 @@ export function ViewerPage() {
     }
   };
 
+  const runPlanetAction = async (req: PlanetActionRequest) => {
+    if (!payload) return;
+    setPlanetBusy(true);
+    setPlanetMsg(null);
+    try {
+      const res = await fetch("/api/planet/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          ...req,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.world) {
+        setPayload({
+          ...payload,
+          world: data.world,
+          visibleSystemIds: data.visibleSystemIds ?? payload.visibleSystemIds,
+          economy: data.economy
+            ? { ...payload.economy, ...data.economy }
+            : payload.economy,
+          reservedAp: data.reservedAp ?? payload.reservedAp,
+          apMax: data.apMax ?? payload.apMax,
+        });
+        loadWorld(data.world);
+      }
+      if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      if (typeof data.apMax === "number") setApMax(data.apMax);
+      const labels: Record<string, string> = {
+        build: "Постройка завершена",
+        demolish: "Постройка снесена",
+        colonize: "Колония основана",
+        set_colony_type: "Тип колонии изменён",
+      };
+      setPlanetMsg(labels[req.action] ?? "Готово");
+      bump();
+    } catch (e) {
+      setPlanetMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPlanetBusy(false);
+    }
+  };
+
   const cancelOrder = async (orderId: string) => {
     if (!payload) return;
     try {
@@ -620,15 +734,34 @@ export function ViewerPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
-      setPayload({
-        ...payload,
-        world: {
-          ...payload.world,
-          orders: payload.world.orders.filter((x) => x.id !== orderId),
-        },
-      });
-      setReservedAp((r) => Math.max(0, r - 1));
+      const cancelled = payload.world.orders.find((o) => o.id === orderId);
+      let world = {
+        ...payload.world,
+        orders: payload.world.orders.filter((x) => x.id !== orderId),
+      };
+      if (cancelled?.fleetId) {
+        world = {
+          ...world,
+          fleets: world.fleets.map((f) =>
+            f.id === cancelled.fleetId ? { ...f, route: [] } : f,
+          ),
+        };
+      }
+      if (cancelled?.legionId) {
+        world = {
+          ...world,
+          legions: world.legions.map((l) =>
+            l.id === cancelled.legionId ? { ...l, route: [] } : l,
+          ),
+        };
+      }
+      setPayload({ ...payload, world });
+      loadWorld(world);
+      if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      else setReservedAp((r) => Math.max(0, r - 1));
+      if (typeof data.apMax === "number") setApMax(data.apMax);
       setOrderMsg("Приказ отменён");
+      bump();
     } catch (e) {
       setOrderMsg(e instanceof Error ? e.message : String(e));
     }
@@ -654,12 +787,14 @@ export function ViewerPage() {
       world: payload.world,
       selectedSystemId,
       selectedFleetId,
-      selectedLegionId: null,
+      selectedLegionId,
       selectedLinkId: null,
       selectedSectorId: null,
       linkDraftFromId: null,
       sectorDraftPoints: [],
       ...layers,
+      /* Routes/orders must always show for player moves. */
+      showOrders: true,
       /* Capital→systems spokes clutter player map; never for viewer. */
       showSupply: false,
       activeFactionId: payload.factionId,
@@ -685,6 +820,126 @@ export function ViewerPage() {
     () => payload?.world.fleets.find((f) => f.id === selectedFleetId) ?? null,
     [payload, selectedFleetId],
   );
+  const selectedLegion = useMemo(
+    () => payload?.world.legions.find((l) => l.id === selectedLegionId) ?? null,
+    [payload, selectedLegionId],
+  );
+
+  const applyLocalMoveRoute = (
+    world: WorldState,
+    kind: "fleet" | "legion",
+    unitId: string,
+    toSystemId: string,
+  ): WorldState => {
+    const fromId =
+      kind === "fleet"
+        ? world.fleets.find((f) => f.id === unitId)?.systemId
+        : world.legions.find((l) => l.id === unitId)?.systemId;
+    const path = hopPath(world, fromId, toSystemId);
+    const route = path.length >= 2 ? path.slice(1) : [];
+    if (kind === "fleet") {
+      return {
+        ...world,
+        fleets: world.fleets.map((f) =>
+          f.id === unitId ? { ...f, route, stance: "move" as const } : f,
+        ),
+      };
+    }
+    return {
+      ...world,
+      legions: world.legions.map((l) =>
+        l.id === unitId ? { ...l, route } : l,
+      ),
+    };
+  };
+
+  const submitMoveOrder = async (
+    kind: "fleet" | "legion",
+    unitId: string,
+    toSystemId: string,
+    hops?: number,
+  ) => {
+    if (!payload) return;
+    setOrderMsg(null);
+    const fromSystemId =
+      kind === "fleet"
+        ? payload.world.fleets.find((f) => f.id === unitId)?.systemId
+        : payload.world.legions.find((l) => l.id === unitId)?.systemId;
+    const body = {
+      factionId: payload.factionId,
+      password,
+      type: kind === "fleet" ? ("move_fleet" as const) : ("move_legion" as const),
+      fleetId: kind === "fleet" ? unitId : undefined,
+      legionId: kind === "legion" ? unitId : undefined,
+      fromSystemId,
+      toSystemId,
+      note:
+        hops != null && Number.isFinite(hops)
+          ? `Перетаскивание · ${formatHopTurns(hops)}`
+          : "Перетаскивание",
+    };
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || res.statusText);
+      }
+      const data = await res.json();
+      const withRoute = applyLocalMoveRoute(
+        payload.world,
+        kind,
+        unitId,
+        toSystemId,
+      );
+      const nextWorld = {
+        ...withRoute,
+        orders: [...withRoute.orders, data.order],
+      };
+      setPayload({
+        ...payload,
+        world: nextWorld,
+      });
+      loadWorld(nextWorld);
+      if (typeof data.apMax === "number") setApMax(data.apMax);
+      if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      else if (typeof data.intent?.apCost === "number") {
+        setReservedAp((r) => r + data.intent.apCost);
+      }
+      const hopsLabel =
+        hops != null && Number.isFinite(hops)
+          ? ` · ${formatHopTurns(hops)}`
+          : "";
+      const nextAp =
+        typeof data.reservedAp === "number"
+          ? data.reservedAp
+          : reservedAp + (data.intent?.apCost ?? 0);
+      setOrderMsg(
+        `Приказ на ход принят${hopsLabel} · AP ${nextAp}/${data.apMax ?? apMax}`,
+      );
+      bump();
+    } catch (e) {
+      setOrderMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const onUnitDrop = (drop: MapUnitDropPayload) => {
+    if (drop.kind === "fleet") {
+      setSelectedFleetId(drop.unitId);
+      setSelectedLegionId(null);
+    } else {
+      setSelectedLegionId(drop.unitId);
+      setSelectedFleetId(null);
+    }
+    setSelectedSystemId(drop.toSystemId);
+    setTargetSystemId(drop.toSystemId);
+    setOrderType(drop.kind === "fleet" ? "move_fleet" : "move_legion");
+    setSheetOpen(false);
+    void submitMoveOrder(drop.kind, drop.unitId, drop.toSystemId, drop.hops);
+  };
 
   const submitOrder = async () => {
     if (!payload) return;
@@ -694,8 +949,12 @@ export function ViewerPage() {
       password,
       type: orderType,
       fleetId: selectedFleetId ?? undefined,
+      legionId: selectedLegionId ?? undefined,
       fromSystemId:
-        selectedFleet?.systemId ?? selectedSystemId ?? undefined,
+        selectedFleet?.systemId ??
+        selectedLegion?.systemId ??
+        selectedSystemId ??
+        undefined,
       toSystemId: targetSystemId ?? selectedSystemId ?? undefined,
       note: orderNote,
     };
@@ -710,19 +969,39 @@ export function ViewerPage() {
         throw new Error(data.error || res.statusText);
       }
       const data = await res.json();
-      setPayload({
-        ...payload,
-        world: {
-          ...payload.world,
-          orders: [...payload.world.orders, data.order],
-        },
-      });
+      let nextWorld = {
+        ...payload.world,
+        orders: [...payload.world.orders, data.order],
+      };
+      const toId = body.toSystemId;
+      if (
+        toId &&
+        (orderType === "move_fleet" || orderType === "move_legion")
+      ) {
+        const unitId =
+          orderType === "move_fleet" ? selectedFleetId : selectedLegionId;
+        if (unitId) {
+          nextWorld = applyLocalMoveRoute(
+            nextWorld,
+            orderType === "move_fleet" ? "fleet" : "legion",
+            unitId,
+            toId,
+          );
+        }
+      }
+      setPayload({ ...payload, world: nextWorld });
+      loadWorld(nextWorld);
       if (typeof data.apMax === "number") setApMax(data.apMax);
-      if (typeof data.intent?.apCost === "number") {
+      if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      else if (typeof data.intent?.apCost === "number") {
         setReservedAp((r) => r + data.intent.apCost);
       }
+      const nextAp =
+        typeof data.reservedAp === "number"
+          ? data.reservedAp
+          : reservedAp + (data.intent?.apCost ?? 0);
       setOrderMsg(
-        `Приказ принят · AP ${reservedAp + (data.intent?.apCost ?? 0)}/${data.apMax ?? apMax}`,
+        `Приказ принят · AP ${nextAp}/${data.apMax ?? apMax}`,
       );
       bump();
     } catch (e) {
@@ -737,7 +1016,8 @@ export function ViewerPage() {
           <p className="login-eyebrow">Доступ к кампании</p>
           <h1>LO GOLDEN PAX</h1>
           <p className="hint" style={{ textAlign: "center" }}>
-            На телефоне откроется штаб без карты. Карту можно включить отдельно.
+            После входа — карта галактики. Штаб, приказы и сцена с мастером —
+            отдельными панелями.
           </p>
           {factions.length === 0 && !error && (
             <p className="hint">Синхронизация списка держав…</p>
@@ -817,10 +1097,152 @@ export function ViewerPage() {
   }
 
   const faction = payload.world.factions.find((f) => f.id === payload.factionId);
+  const pendingCount = payload.world.orders.filter(
+    (o) => o.status === "pending",
+  ).length;
+  const desktopGlass =
+    !mobile &&
+    (viewMode === "hq" || viewMode === "forces" || viewMode === "orders");
+  const mobileRoom =
+    mobile &&
+    (viewMode === "hq" || viewMode === "forces" || viewMode === "orders");
+  // Map-first on mobile: HQ/orders are sheets over the map, not a separate page.
+  const showMapLayer =
+    viewMode === "map" ||
+    desktopGlass ||
+    mobileRoom ||
+    (!mobile && viewMode === "rp");
+
+  const hqPanel = (
+    <PlayerHqHome
+      payload={payload}
+      reservedAp={reservedAp}
+      apMax={apMax}
+      rpUnread={rpUnread}
+      pendingOrders={pendingCount}
+      orderMsg={orderMsg}
+      onSetIndustryTax={(tier) => void setIndustryTax(tier)}
+      onOpenForces={() => goView("forces")}
+      onOpenOrders={() => goView("orders")}
+      onOpenRp={() => {
+        goView("rp");
+        setRpUnread(0);
+      }}
+      onOpenMap={() => goView("map")}
+    />
+  );
+
+  const forcesPanel = (
+    <PlayerForcesPanel
+      payload={payload}
+      selectedFleetId={selectedFleetId}
+      selectedLegionId={selectedLegionId}
+      onSelectFleet={(id) => {
+        setSelectedFleetId(id);
+        setSelectedLegionId(null);
+        const fleet = payload.world.fleets.find((f) => f.id === id);
+        if (fleet) {
+          setSelectedSystemId(fleet.systemId);
+          goView("map");
+          window.setTimeout(
+            () => mapApiRef.current?.focusSystem(fleet.systemId),
+            80,
+          );
+        }
+        setOrderMsg(`Флот выбран: ${fleet?.name ?? id}`);
+      }}
+      onSelectLegion={(id) => {
+        setSelectedLegionId(id);
+        setSelectedFleetId(null);
+        const leg = payload.world.legions.find((l) => l.id === id);
+        if (leg) {
+          setSelectedSystemId(leg.systemId);
+          goView("map");
+          window.setTimeout(
+            () => mapApiRef.current?.focusSystem(leg.systemId),
+            80,
+          );
+        }
+        setOrderMsg(`Легион выбран: ${leg?.name ?? id}`);
+      }}
+      onSelectSystem={(id) => {
+        setSelectedSystemId(id);
+        setTargetSystemId(id);
+      }}
+      onOrderWithFleet={(id) => {
+        setSelectedFleetId(id);
+        setSelectedLegionId(null);
+        setOrderType("move_fleet");
+        const fleet = payload.world.fleets.find((f) => f.id === id);
+        if (fleet) setSelectedSystemId(fleet.systemId);
+        goView("orders");
+      }}
+      onOrderWithLegion={(id) => {
+        setSelectedLegionId(id);
+        setSelectedFleetId(null);
+        setOrderType("move_legion");
+        const leg = payload.world.legions.find((l) => l.id === id);
+        if (leg) setSelectedSystemId(leg.systemId);
+        goView("orders");
+      }}
+      onOpenMap={() => goView("map")}
+    />
+  );
+
+  const ordersPanel = (
+    <PlayerOrdersPanel
+      payload={payload}
+      orderType={orderType}
+      setOrderType={(t) => setOrderType(t as OrderType)}
+      orderNote={orderNote}
+      setOrderNote={setOrderNote}
+      orderMsg={orderMsg}
+      selectedFleetId={selectedFleetId}
+      setSelectedFleetId={setSelectedFleetId}
+      selectedFleetName={selectedFleet?.name ?? null}
+      selectedLegionId={selectedLegionId}
+      setSelectedLegionId={setSelectedLegionId}
+      selectedLegionName={selectedLegion?.name ?? null}
+      targetSystemId={targetSystemId}
+      setTargetSystemId={setTargetSystemId}
+      onSubmit={() => void submitOrder()}
+      onCancelOrder={(id) => void cancelOrder(id)}
+      onPickTargetOnMap={() => {
+        setPickingTarget(true);
+        setOrderMsg("Кликните систему на карте — цель приказа");
+        goView("map");
+      }}
+    />
+  );
+
+  const roomPanel =
+    viewMode === "forces"
+      ? forcesPanel
+      : viewMode === "orders"
+        ? ordersPanel
+        : viewMode === "hq"
+          ? hqPanel
+          : null;
+
+  const factionCss = {
+    ["--faction" as string]: faction?.color ?? "#c9a227",
+    ["--faction-fill" as string]:
+      faction?.fillColor ?? faction?.color ?? "#c9a227",
+  };
 
   return (
-    <div className="viewer-shell">
-      <header className="viewer-topbar">
+    <div
+      className={`viewer-shell ${mobile ? "viewer-shell--mobile" : "viewer-shell--desktop"}`}
+      style={factionCss}
+    >
+      {faction?.emblemPath && (
+        <div
+          className="viewer-faction-wash"
+          aria-hidden
+          style={{ backgroundImage: `url(${faction.emblemPath})` }}
+        />
+      )}
+      <header className="viewer-topbar viewer-topbar--empire">
         <button
           type="button"
           className="viewer-icon-btn"
@@ -837,20 +1259,59 @@ export function ViewerPage() {
           <div>
             <strong>{faction?.name ?? "Игрок"}</strong>
             <span className="hint">
-              видно систем: {payload.visibleSystemIds.length}
+              ход {payload.world.meta.turn} · видно{" "}
+              {payload.visibleSystemIds.length}
             </span>
           </div>
         </div>
-        <span
-          className="viewer-ap-pill"
-          title="Занято AP / лимит на ход"
-        >
+        <span className="viewer-ap-pill" title="Занято AP / лимит на ход">
           AP {reservedAp}/{apMax}
         </span>
-        <div className="viewer-turn-seal" title="Текущий ход кампании">
-          <span>ход</span>
-          <strong>{payload.world.meta.turn}</strong>
-        </div>
+        {!mobile && (
+          <nav className="viewer-empire-banner" aria-label="Управление державой">
+            <button
+              type="button"
+              className={viewMode === "hq" ? "on" : ""}
+              onClick={() => goView("hq")}
+            >
+              Штаб
+            </button>
+            <button
+              type="button"
+              className={viewMode === "forces" ? "on" : ""}
+              onClick={() => goView("forces")}
+            >
+              Силы
+            </button>
+            <button
+              type="button"
+              className={viewMode === "orders" ? "on" : ""}
+              onClick={() => goView("orders")}
+            >
+              Приказы
+              {pendingCount > 0 ? ` · ${pendingCount}` : ""}
+            </button>
+            <button
+              type="button"
+              className={viewMode === "rp" ? "on" : ""}
+              onClick={() => {
+                goView("rp");
+                setRpUnread(0);
+              }}
+            >
+              Сцена
+              {rpUnread > 0 ? ` · ${rpUnread > 9 ? "9+" : rpUnread}` : ""}
+            </button>
+            <button
+              type="button"
+              className={viewMode === "map" && !desktopGlass ? "on" : ""}
+              onClick={() => goView("map")}
+              title="Карта галактики"
+            >
+              Карта
+            </button>
+          </nav>
+        )}
         <button
           type="button"
           className="viewer-icon-btn"
@@ -863,12 +1324,12 @@ export function ViewerPage() {
         >
           <Settings size={18} strokeWidth={2} aria-hidden />
         </button>
-        {viewMode === "map" && (
+        {showMapLayer && (
           <button
             type="button"
             className="viewer-icon-btn"
             aria-label="Инфо"
-            disabled={!selectedSystem && !selectedFleet}
+            disabled={!selectedSystem && !selectedFleet && !selectedLegion}
             onClick={() => setSheetOpen(true)}
           >
             <Info size={18} strokeWidth={2} aria-hidden />
@@ -876,13 +1337,14 @@ export function ViewerPage() {
         )}
       </header>
 
-      <main className={viewMode === "map" ? "viewer-map" : "viewer-hq"}>
-        {viewMode === "map" ? (
+      <main className={showMapLayer ? "viewer-map" : "viewer-hq"}>
+        {showMapLayer ? (
           <Suspense
             fallback={
               <div className="viewer-map-loading">
+                <div className="viewer-map-loading-pulse" aria-hidden />
                 <p>Загрузка карты…</p>
-                <p className="hint">WebGL · можно остаться в штабе</p>
+                <p className="hint">Подготовка театра</p>
                 <button
                   type="button"
                   className="btn ghost"
@@ -899,27 +1361,214 @@ export function ViewerPage() {
               apiRef={mapApiRef}
               readModel={readModel}
               onModelSubscribe={subscribe}
-              onSystemClick={(id) => {
+              playerFactionId={payload.factionId}
+              onUnitDrop={(drop) => {
+                setTouchMoveArmed(false);
+                onUnitDrop(drop);
+              }}
+              onUnitDragStart={(kind, unitId) => {
+                if (kind === "fleet") {
+                  setSelectedFleetId(unitId);
+                  setSelectedLegionId(null);
+                  const fleet = payload.world.fleets.find((f) => f.id === unitId);
+                  if (fleet) setSelectedSystemId(fleet.systemId);
+                } else {
+                  setSelectedLegionId(unitId);
+                  setSelectedFleetId(null);
+                  const leg = payload.world.legions.find((l) => l.id === unitId);
+                  if (leg) setSelectedSystemId(leg.systemId);
+                }
+                setSheetOpen(false);
+                setTouchMoveArmed(false);
+                bump();
+              }}
+              onViewerContextMenu={(pick) => {
+                setViewerCtx(pick);
+                setSheetOpen(false);
+                setTouchMoveArmed(false);
+                if (pick.fleetId) {
+                  setSelectedFleetId(pick.fleetId);
+                  setSelectedLegionId(null);
+                } else if (pick.legionId) {
+                  setSelectedLegionId(pick.legionId);
+                  setSelectedFleetId(null);
+                }
+                if (pick.systemId) setSelectedSystemId(pick.systemId);
+              }}
+              onSystemOpen={(id) => {
                 setSelectedSystemId(id);
+                setSheetOpen(false);
+                setTouchMoveArmed(false);
+                openSystemView(id);
+              }}
+              onSystemClick={(id) => {
                 if (id) {
                   setTargetSystemId(id);
-                  setSheetOpen(true);
+                  if (pickingTarget) {
+                    setSelectedSystemId(id);
+                    setPickingTarget(false);
+                    setOrderMsg(
+                      `Цель: ${
+                        payload.world.systems.find((s) => s.id === id)?.name ??
+                        id
+                      }`,
+                    );
+                    goView("orders");
+                    bump();
+                    return;
+                  }
+                  if (touchMoveArmed) {
+                    const kind = selectedLegionId ? "legion" : "fleet";
+                    const unitId = selectedLegionId ?? selectedFleetId;
+                    const unit =
+                      kind === "legion"
+                        ? payload.world.legions.find((l) => l.id === unitId)
+                        : payload.world.fleets.find((f) => f.id === unitId);
+                    if (
+                      unitId &&
+                      unit &&
+                      unit.factionId === payload.factionId &&
+                      unit.systemId !== id
+                    ) {
+                      const hops = hopDistance(
+                        payload.world,
+                        unit.systemId,
+                        id,
+                      );
+                      setTouchMoveArmed(false);
+                      if (Number.isFinite(hops) && hops > 0) {
+                        void submitMoveOrder(kind, unitId, id, hops);
+                      } else {
+                        setOrderMsg("Нет пути до этой системы");
+                      }
+                      bump();
+                      return;
+                    }
+                    setTouchMoveArmed(false);
+                  }
                 }
+                setSelectedSystemId(id);
                 bump();
               }}
               onFleetClick={(id) => {
                 setSelectedFleetId(id);
+                setSelectedLegionId(null);
                 const fleet = payload.world.fleets.find((f) => f.id === id);
                 if (fleet) setSelectedSystemId(fleet.systemId);
-                setSheetOpen(true);
+                setTouchMoveArmed(false);
+                bump();
+              }}
+              onLegionClick={(id) => {
+                setSelectedLegionId(id);
+                setSelectedFleetId(null);
+                const leg = payload.world.legions.find((l) => l.id === id);
+                if (leg) setSelectedSystemId(leg.systemId);
+                setTouchMoveArmed(false);
                 bump();
               }}
             />
-            <TurnStampHud
-              turn={payload.world.meta.turn}
-              name={payload.world.meta.name}
-              enabled={graphics.turnStamp !== false}
+            <ViewerContextMenu
+              menu={viewerCtx}
+              payload={payload}
+              onClose={() => setViewerCtx(null)}
+              onSelectFleet={(id) => {
+                setSelectedFleetId(id);
+                setSelectedLegionId(null);
+                const f = payload.world.fleets.find((x) => x.id === id);
+                if (f) setSelectedSystemId(f.systemId);
+              }}
+              onSelectLegion={(id) => {
+                setSelectedLegionId(id);
+                setSelectedFleetId(null);
+                const l = payload.world.legions.find((x) => x.id === id);
+                if (l) setSelectedSystemId(l.systemId);
+              }}
+              onSelectSystem={(id) => {
+                setSelectedSystemId(id);
+                setTargetSystemId(id);
+              }}
+              onOpenSystem={(id) => {
+                setSelectedSystemId(id);
+                openSystemView(id);
+              }}
+              onMoveUnit={(kind, unitId, toSystemId, hops) => {
+                void submitMoveOrder(kind, unitId, toSystemId, hops);
+              }}
+              onOrderType={(kind, opts) => {
+                setOrderType(kind);
+                if (opts.fleetId) {
+                  setSelectedFleetId(opts.fleetId);
+                  setSelectedLegionId(null);
+                }
+                if (opts.systemId) {
+                  setSelectedSystemId(opts.systemId);
+                  setTargetSystemId(opts.systemId);
+                }
+                goView("orders");
+              }}
+              onOpenOrders={() => goView("orders")}
+              onOpenRp={() => goView("rp")}
             />
+            {pickingTarget && (
+              <div className="viewer-toast viewer-toast--pick" role="status">
+                Укажите систему-цель · Esc — отмена
+              </div>
+            )}
+            {touchMoveArmed && (
+              <div className="viewer-toast viewer-toast--pick" role="status">
+                Коснитесь системы-цели · или тяните юнит пальцем
+              </div>
+            )}
+            {mobile &&
+              viewMode === "map" &&
+              (selectedFleet || selectedLegion) &&
+              (selectedFleet?.factionId === payload.factionId ||
+                selectedLegion?.factionId === payload.factionId) && (
+                <div className="viewer-touch-bar" role="toolbar">
+                  <div className="viewer-touch-bar-main">
+                    <strong>
+                      {selectedFleet?.name ?? selectedLegion?.name}
+                    </strong>
+                    <span className="hint">
+                      Тяните на систему или «Ход»
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn ${touchMoveArmed ? "primary" : "ghost"}`}
+                    onClick={() => {
+                      setTouchMoveArmed((v) => !v);
+                      setSheetOpen(false);
+                      setViewerCtx(null);
+                    }}
+                  >
+                    Ход
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    disabled={!selectedSystemId}
+                    onClick={() => {
+                      if (!selectedSystemId) return;
+                      setTouchMoveArmed(false);
+                      openSystemView(selectedSystemId);
+                    }}
+                  >
+                    Внутрь
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => {
+                      setTouchMoveArmed(false);
+                      setSelectedFleetId(null);
+                      setSelectedLegionId(null);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
             <div className="viewer-zoom" aria-label="Масштаб">
               <button
                 type="button"
@@ -946,105 +1595,69 @@ export function ViewerPage() {
                 <Home size={18} strokeWidth={2} aria-hidden />
               </button>
             </div>
-            <div className="viewer-map-hint">
-              <Settings size={12} strokeWidth={2} aria-hidden /> настройки сверху
-              · щипок / зум · тап — досье
-            </div>
-            {(selectedFleetId || targetSystemId) && (
-              <div className="viewer-order-draft">
-                <div className="viewer-order-draft-main">
-                  <strong>
-                    {ORDER_TYPE_LABELS[orderType] || "Приказ"}
-                  </strong>
-                  <span className="hint">
-                    {selectedFleet?.name ?? "флот?"} →{" "}
-                    {payload.world.systems.find((s) => s.id === targetSystemId)
-                      ?.name ?? "цель?"}
-                    {" · "}1 AP
-                  </span>
-                </div>
-                <div className="viewer-order-draft-actions">
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => goView("orders")}
-                  >
-                    Править
-                  </button>
-                  <button
-                    type="button"
-                    className="btn primary"
-                    disabled={!selectedFleetId || !targetSystemId}
-                    onClick={() => void submitOrder()}
-                  >
-                    Заверить
-                  </button>
-                </div>
+            {orderMsg && viewMode === "map" && (
+              <div className="viewer-toast" role="status">
+                {orderMsg}
               </div>
             )}
+            {desktopGlass && roomPanel && (
+              <aside className="viewer-glass-panel" aria-label="Панель державы">
+                <div className="viewer-glass-panel-head">
+                  <strong>
+                    {viewMode === "orders"
+                      ? "Приказы"
+                      : viewMode === "forces"
+                        ? "Силы"
+                        : "Штаб"}
+                  </strong>
+                  <button
+                    type="button"
+                    className="btn ghost viewer-glass-close"
+                    aria-label="Закрыть панель"
+                    onClick={() => goView("map")}
+                  >
+                    Закрыть
+                  </button>
+                </div>
+                <div className="viewer-glass-panel-body">{roomPanel}</div>
+              </aside>
+            )}
           </Suspense>
-        ) : viewMode === "forces" ? (
-          <PlayerForcesPanel
-            payload={payload}
-            selectedFleetId={selectedFleetId}
-            onSelectFleet={(id) => {
-              setSelectedFleetId(id);
-              const fleet = payload.world.fleets.find((f) => f.id === id);
-              if (fleet) setSelectedSystemId(fleet.systemId);
-              setOrderMsg(`Флот выбран: ${fleet?.name ?? id}`);
-            }}
-            onSelectSystem={(id) => {
-              setSelectedSystemId(id);
-              setTargetSystemId(id);
-            }}
-            onOrderWithFleet={(id) => {
-              setSelectedFleetId(id);
-              const fleet = payload.world.fleets.find((f) => f.id === id);
-              if (fleet) setSelectedSystemId(fleet.systemId);
-              goView("orders");
-            }}
-          />
-        ) : viewMode === "orders" ? (
-          <PlayerOrdersPanel
-            payload={payload}
-            orderType={orderType}
-            setOrderType={(t) => setOrderType(t as OrderType)}
-            orderNote={orderNote}
-            setOrderNote={setOrderNote}
-            orderMsg={orderMsg}
-            selectedFleetId={selectedFleetId}
-            setSelectedFleetId={setSelectedFleetId}
-            selectedFleetName={selectedFleet?.name ?? null}
-            targetSystemId={targetSystemId}
-            setTargetSystemId={setTargetSystemId}
-            onSubmit={() => void submitOrder()}
-            onCancelOrder={(id) => void cancelOrder(id)}
-            onPickTargetOnMap={() => {
-              setOrderMsg("Выберите систему на карте — она станет целью приказа");
-              goView("map");
-            }}
-          />
-        ) : (
-          <PlayerHqHome
-            payload={payload}
-            reservedAp={reservedAp}
-            apMax={apMax}
-            rpUnread={rpUnread}
-            pendingOrders={
-              payload.world.orders.filter((o) => o.status === "pending").length
-            }
-            orderMsg={orderMsg}
-            onSetIndustryTax={(tier) => void setIndustryTax(tier)}
-            onOpenForces={() => goView("forces")}
-            onOpenOrders={() => goView("orders")}
-            onOpenRp={() => {
-              setRpFloatOpen(true);
-              setRpUnread(0);
-            }}
-            onOpenMap={() => goView("map")}
-          />
-        )}
+        ) : null}
       </main>
+
+      {mobileRoom && roomPanel && (
+        <>
+          <button
+            type="button"
+            className="viewer-backdrop sheet"
+            aria-label="Закрыть"
+            onClick={() => goView("map")}
+          />
+          <aside
+            className="viewer-sheet tall open viewer-sheet--room"
+            aria-label="Панель державы"
+          >
+            <div className="viewer-sheet-grab">
+              <p className="viewer-sheet-kicker">
+                {viewMode === "orders"
+                  ? "Приказы"
+                  : viewMode === "forces"
+                    ? "Силы"
+                    : "Штаб"}
+              </p>
+              <button
+                type="button"
+                className="viewer-sheet-close"
+                onClick={() => goView("map")}
+              >
+                На карту
+              </button>
+            </div>
+            <div className="viewer-sheet-body">{roomPanel}</div>
+          </aside>
+        </>
+      )}
 
       {(menuOpen || settingsOpen) && (
         <button
@@ -1275,9 +1888,11 @@ export function ViewerPage() {
         </section>
 
         <section>
-          <h3>Комнаты</h3>
+          <h3>Держава</h3>
           <p className="hint">
-            Штаб · Силы · Приказы · Связь · Карта — нижняя панель.
+            Карта — театр. Двойной клик / ПКМ «Провалиться» — система и планеты.
+            Флот/легион — перетаскивание (маршрут на карте). Штаб / приказы /
+            сцена — сверху. Сцена только с мастером.
           </p>
           <button
             type="button"
@@ -1294,10 +1909,10 @@ export function ViewerPage() {
             className="btn ghost block"
             onClick={() => {
               setMenuOpen(false);
-              setRpFloatOpen(true);
+              goView("rp");
             }}
           >
-            Открыть связь
+            Сцена с мастером
           </button>
         </section>
 
@@ -1356,7 +1971,7 @@ export function ViewerPage() {
         </section>
       </aside>
 
-      {sheetOpen && (selectedSystem || selectedFleet) && (
+      {sheetOpen && (selectedSystem || selectedFleet || selectedLegion) && (
         <button
           type="button"
           className="viewer-backdrop sheet"
@@ -1366,7 +1981,7 @@ export function ViewerPage() {
       )}
 
       <aside
-        className={`viewer-sheet ${sheetOpen && (selectedSystem || selectedFleet) ? "open" : ""}`}
+        className={`viewer-sheet ${sheetOpen && (selectedSystem || selectedFleet || selectedLegion) ? "open" : ""}`}
       >
         <div className="viewer-sheet-grab">
           <p className="viewer-sheet-kicker">Сводка системы</p>
@@ -1379,84 +1994,60 @@ export function ViewerPage() {
           </button>
         </div>
         <div className="viewer-sheet-body">
-          {!selectedSystem && !selectedFleet && (
-            <p className="hint">Выберите систему на карте</p>
+          {!selectedSystem && !selectedFleet && !selectedLegion && (
+            <p className="hint">Выберите систему или юнит на карте</p>
           )}
           {selectedSystem && (
             <div>
               <h2 className="system-title">{selectedSystem.name}</h2>
               <p className="hint">
-                {selectedSystem.kind === "corridor" ||
-                selectedSystem.stars.length === 0
-                  ? "Коридорный узел (без звезды)"
-                  : `Звёзд: ${selectedSystem.stars.length} · планет: ${selectedSystem.planets.length}`}
+                {(() => {
+                  const owner = payload.world.factions.find(
+                    (f) => f.id === selectedSystem.ownerFactionId,
+                  );
+                  const kind =
+                    selectedSystem.kind === "corridor" ||
+                    selectedSystem.stars.length === 0
+                      ? "Коридор"
+                      : `${selectedSystem.stars.length}★ · ${selectedSystem.planets.length} планет`;
+                  return `${kind}${owner ? ` · ${owner.name}` : " · нейтрал"}`;
+                })()}
               </p>
               {selectedSystem.planets.length > 0 && (
-                <div className="census-box">
+                <p className="hint">
                   {(() => {
-                    const c = selectedSystem.planets.reduce(
-                      (acc, p) => {
-                        if (p.population > 0) acc.inhabited += 1;
-                        else if (
-                          p.type === "gas" ||
-                          p.type === "toxic" ||
-                          p.climate === "frozen" ||
-                          p.climate === "infernal"
-                        ) {
-                          acc.uninhabitable += 1;
-                        } else acc.habitable += 1;
-                        return acc;
-                      },
-                      { inhabited: 0, habitable: 0, uninhabitable: 0 },
-                    );
-                    return (
-                      <>
-                        <div className="census-row">
-                          <span className="pip inhabited" /> Заселённые:{" "}
-                          {c.inhabited}
-                        </div>
-                        <div className="census-row">
-                          <span className="pip habitable" /> Пригодные:{" "}
-                          {c.habitable}
-                        </div>
-                        <div className="census-row">
-                          <span className="pip uninhabitable" /> Непригодные:{" "}
-                          {c.uninhabitable}
-                        </div>
-                      </>
-                    );
+                    const inhab = selectedSystem.planets.filter(
+                      (p) => p.population > 0,
+                    ).length;
+                    return `Колоний: ${inhab} · ресурсы: ${
+                      selectedSystem.resources.length
+                        ? selectedSystem.resources.slice(0, 4).join(", ")
+                        : "—"
+                    }`;
                   })()}
-                </div>
+                </p>
               )}
-              <p className="hint">
-                Ресурсы:{" "}
-                {selectedSystem.resources.length
-                  ? selectedSystem.resources.join(", ")
-                  : "—"}
-              </p>
               {(selectedSystem.stations?.length ?? 0) > 0 && (
                 <p className="hint">
                   Станции:{" "}
                   {selectedSystem.stations!.map((st) => st.name).join(", ")}
                 </p>
               )}
-              {selectedSystem.planets.map((p) => (
-                <div key={p.id} className="planet-card">
-                  <strong>
-                    {p.orbitIndex != null ? `◉${p.orbitIndex} ` : ""}
-                    {p.name}
-                  </strong>
-                  <div className="hint">
-                    {p.type} / {p.climate}
-                    {p.colonyType && p.colonyType !== "none"
-                      ? ` · ${p.colonyType}`
-                      : ""}
-                    {p.population > 0
-                      ? ` · нас. ${p.population}`
-                      : " · без колонии"}
+              {selectedSystem.planets
+                .filter((p) => p.population > 0 || p.colonyType !== "none")
+                .slice(0, 3)
+                .map((p) => (
+                  <div key={p.id} className="planet-card">
+                    <strong>
+                      {p.orbitIndex != null ? `◉${p.orbitIndex} ` : ""}
+                      {p.name}
+                    </strong>
+                    <div className="hint">
+                      {p.type}
+                      {p.population > 0 ? ` · нас. ${p.population}` : ""}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
           {selectedFleet && (
@@ -1468,73 +2059,93 @@ export function ViewerPage() {
                   .join(", ")}
               </div>
               <div className="hint">Стойка: {selectedFleet.stance}</div>
+              <p className="hint">
+                {mobile
+                  ? "Тяните пальцем на систему (ходы на превью). Долгое нажатие — меню. Либо «Ход» в нижней панели."
+                  : "Перетащите на систему — расход ходов. ПКМ — атака и прочее."}
+              </p>
+            </div>
+          )}
+          {selectedLegion && (
+            <div className="planet-card">
+              <strong>{selectedLegion.name}</strong>
+              <div className="hint">
+                Сила {selectedLegion.strength} · {selectedLegion.status}
+              </div>
+              <p className="hint">
+                {mobile
+                  ? "Тяните пальцем на систему. Долгое нажатие — меню."
+                  : "Перетащите на систему — расход ходов. ПКМ — марш."}
+              </p>
             </div>
           )}
           <div className="viewer-sheet-orders">
-            <p className="hint">Приказ с этой точки (тот же черновик, что в штабе)</p>
-            <div className="viewer-sheet-order-types">
-              {(
-                [
-                  ["move_fleet", "Идти сюда"],
-                  ["attack_system", "Атаковать"],
-                  ["claim_system", "Захватить"],
-                ] as const
-              ).map(([t, label]) => (
+            <p className="hint">
+              {mobile
+                ? "Действия — долгое нажатие на карте. Здесь сводка."
+                : "Действия с объектами — ПКМ на карте. Здесь только сводка."}
+            </p>
+            {(selectedFleetId || selectedLegionId) && selectedSystemId && (
+              <button
+                type="button"
+                className="btn primary block"
+                onClick={() => {
+                  setTargetSystemId(selectedSystemId);
+                  setOrderType(
+                    selectedLegionId ? "move_legion" : "move_fleet",
+                  );
+                  setSheetOpen(false);
+                  goView("orders");
+                }}
+              >
+                К приказам…
+              </button>
+            )}
+            {selectedSystem &&
+              selectedSystem.ownerFactionId !== payload.factionId && (
                 <button
-                  key={t}
                   type="button"
-                  className={`btn ghost ${orderType === t ? "active" : ""}`}
-                  disabled={!selectedFleetId || !targetSystemId}
+                  className="btn ghost block"
                   onClick={() => {
-                    setOrderType(t);
-                    void submitOrder();
+                    setTargetSystemId(selectedSystem.id);
+                    setOrderType("claim_system");
                     setSheetOpen(false);
+                    goView("orders");
                   }}
                 >
-                  {label}
+                  Захватить (в приказы)…
                 </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="btn block"
-              onClick={() => {
-                setSheetOpen(false);
-                goView("orders");
-              }}
-            >
-              Открыть приказы…
-            </button>
+              )}
           </div>
         </div>
       </aside>
 
       {mobile ? (
         <>
-          {rpFloatOpen && (
+          {viewMode === "rp" && (
             <button
               type="button"
               className="viewer-backdrop sheet"
-              aria-label="Закрыть связь"
-              onClick={() => setRpFloatOpen(false)}
+              aria-label="Закрыть сцену"
+              onClick={() => goView("map")}
             />
           )}
           <aside
-            className={`viewer-sheet tall ${rpFloatOpen ? "open" : ""}`}
-            aria-hidden={!rpFloatOpen}
+            className={`viewer-sheet tall ${viewMode === "rp" ? "open" : ""}`}
+            aria-hidden={viewMode !== "rp"}
           >
             <div className="viewer-sheet-grab">
-              <p className="viewer-sheet-kicker">Связь</p>
+              <p className="viewer-sheet-kicker">Сцена с мастером</p>
               <button
                 type="button"
                 className="viewer-sheet-close"
-                onClick={() => setRpFloatOpen(false)}
+                onClick={() => goView("map")}
               >
                 Закрыть
               </button>
             </div>
             <div className="viewer-sheet-body">
-              {rpFloatOpen && (
+              {viewMode === "rp" && (
                 <RpChat
                   mode="player"
                   layout="fill"
@@ -1561,10 +2172,15 @@ export function ViewerPage() {
         </>
       ) : (
         <FloatingRpWindow
-          open={rpFloatOpen}
+          open={viewMode === "rp" || rpFloatOpen}
           onOpenChange={(o) => {
             setRpFloatOpen(o);
-            if (o) setRpUnread(0);
+            if (o) {
+              setViewMode("rp");
+              setRpUnread(0);
+            } else if (viewMode === "rp") {
+              setViewMode("map");
+            }
           }}
           mode="player"
           factionId={payload.factionId}
@@ -1578,7 +2194,7 @@ export function ViewerPage() {
           onMsg={(m) => setOrderMsg(m)}
           unread={rpUnread}
           storageKey={`gmap-rp-float-geom-player-${payload.factionId}`}
-          title="Связь"
+          title="Сцена · мастер"
           onMessagesLoaded={(msgs) => {
             const latest = msgs[msgs.length - 1];
             if (latest?.at) {
@@ -1589,22 +2205,23 @@ export function ViewerPage() {
         />
       )}
 
-      <nav className="viewer-dock" aria-label="Комнаты игрока">
+      {mobile && (
+      <nav className="viewer-dock" aria-label="Навигация игрока">
         <button
           type="button"
-          className={`viewer-dock-btn ${viewMode === "hq" && !rpFloatOpen ? "active" : ""}`}
+          className={`viewer-dock-btn ${viewMode === "map" ? "active" : ""}`}
+          onClick={() => goView("map")}
+        >
+          <MapIcon size={18} strokeWidth={2} aria-hidden />
+          Карта
+        </button>
+        <button
+          type="button"
+          className={`viewer-dock-btn ${viewMode === "hq" || viewMode === "forces" ? "active" : ""}`}
           onClick={() => goView("hq")}
         >
           <Landmark size={18} strokeWidth={2} aria-hidden />
           Штаб
-        </button>
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "forces" ? "active" : ""}`}
-          onClick={() => goView("forces")}
-        >
-          <Swords size={18} strokeWidth={2} aria-hidden />
-          Силы
         </button>
         <button
           type="button"
@@ -1613,41 +2230,84 @@ export function ViewerPage() {
         >
           <ScrollText size={18} strokeWidth={2} aria-hidden />
           Приказы
-          {payload.world.orders.filter((o) => o.status === "pending").length >
-            0 && (
-            <span className="dock-badge">
-              {
-                payload.world.orders.filter((o) => o.status === "pending")
-                  .length
-              }
-            </span>
+          {pendingCount > 0 && (
+            <span className="dock-badge">{pendingCount}</span>
           )}
         </button>
         <button
           type="button"
-          className={`viewer-dock-btn ${rpFloatOpen ? "active" : ""}`}
+          className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
           onClick={() => {
-            setMenuOpen(false);
-            setSettingsOpen(false);
-            setSheetOpen(false);
-            setRpFloatOpen((o) => !o);
+            goView("rp");
+            setRpUnread(0);
           }}
         >
           <MessageSquare size={18} strokeWidth={2} aria-hidden />
-          Связь
-          {rpUnread > 0 && !rpFloatOpen && (
+          Сцена
+          {rpUnread > 0 && viewMode !== "rp" && (
             <span className="dock-badge">{rpUnread > 9 ? "9+" : rpUnread}</span>
           )}
         </button>
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "map" && !rpFloatOpen ? "active" : ""}`}
-          onClick={() => goView("map")}
-        >
-          <MapIcon size={18} strokeWidth={2} aria-hidden />
-          Карта
-        </button>
       </nav>
+      )}
+      <SystemDossier
+        readOnly
+        playerActions={{
+          factionId: payload.factionId,
+          onClaim: (systemId) => {
+            setSelectedSystemId(systemId);
+            setTargetSystemId(systemId);
+            setOrderType("claim_system");
+            goView("orders");
+          },
+          onAttack: (systemId) => {
+            setSelectedSystemId(systemId);
+            setTargetSystemId(systemId);
+            setOrderType("attack_system");
+            goView("orders");
+          },
+          onOpenRp: () => goView("rp"),
+          onSelectOwnFleet: (fleetId) => {
+            closeSystemView();
+            setSelectedFleetId(fleetId);
+            setSelectedLegionId(null);
+            const fleet = payload.world.fleets.find((f) => f.id === fleetId);
+            if (fleet) setSelectedSystemId(fleet.systemId);
+            goView("map");
+            if (fleet) {
+              window.setTimeout(
+                () => mapApiRef.current?.focusSystem(fleet.systemId),
+                80,
+              );
+            }
+          },
+          onSelectOwnLegion: (legionId) => {
+            closeSystemView();
+            setSelectedLegionId(legionId);
+            setSelectedFleetId(null);
+            const leg = payload.world.legions.find((l) => l.id === legionId);
+            if (leg) setSelectedSystemId(leg.systemId);
+            goView("map");
+            if (leg) {
+              window.setTimeout(
+                () => mapApiRef.current?.focusSystem(leg.systemId),
+                80,
+              );
+            }
+          },
+        }}
+        planetManage={{
+          factionId: payload.factionId,
+          stocks: payload.economy?.stocks ?? {},
+          reservedAp,
+          apMax,
+          buildings: buildingsCatalog,
+          colonies: coloniesCatalog,
+          busy: planetBusy,
+          message: planetMsg,
+          onAction: (req) => void runPlanetAction(req),
+        }}
+      />
     </div>
   );
 }

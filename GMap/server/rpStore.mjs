@@ -256,9 +256,9 @@ export function ensurePlayerChannels(
   if (!ooc) {
     ooc = {
       id: OOC_EPISODE_ID,
-      title: "Общий стол",
+      title: "Служебный (мастер)",
       status: "open",
-      visibility: "all",
+      visibility: "gm_only",
       kind: "ooc",
       ref: null,
       createdAt: new Date().toISOString(),
@@ -266,10 +266,17 @@ export function ensurePlayerChannels(
     ch.episodes.push(ooc);
     ensureEpisodeFiles(campaignId, ch.id, ooc.id);
     dirty = true;
-  } else if (ooc.title === "Открытие стола") {
-    ooc.title = "Общий стол";
+  } else {
+    if (ooc.title === "Открытие стола" || ooc.title === "Общий стол") {
+      ooc.title = "Служебный (мастер)";
+      dirty = true;
+    }
     ooc.kind = ooc.kind || "ooc";
-    dirty = true;
+    // Players: no table-wide chat — RP is GM↔faction only for now.
+    if (ooc.visibility !== "gm_only") {
+      ooc.visibility = "gm_only";
+      dirty = true;
+    }
   }
 
   // Soft-migrate legacy default episode name / visibility

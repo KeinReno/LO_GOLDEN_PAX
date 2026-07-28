@@ -119,6 +119,8 @@ interface WorldStore extends UiState {
   }>) => void;
   setDiplomacyPanelOpen: (open: boolean) => void;
   setRpFloatOpen: (open: boolean) => void;
+  /** Open floating RP focused on a faction HQ channel (null = last / home). */
+  openRpForFaction: (factionId: string | null) => void;
   setGmShellMode: (mode: GmShellMode) => void;
   setOpenQuestId: (id: string | null) => void;
   upsertQuest: (quest: Quest) => void;
@@ -395,6 +397,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   openQuestId: null,
   diplomacyPanelOpen: false,
   rpFloatOpen: false,
+  rpFocusFactionId: null,
   gmShellMode: readGmShellMode(),
   contextMenu: null,
 
@@ -480,7 +483,14 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   toggleShowQuests: () => set((s) => ({ showQuests: !s.showQuests })),
   applyMapLayerFlags: (flags) => set((s) => ({ ...s, ...flags })),
   setDiplomacyPanelOpen: (open) => set({ diplomacyPanelOpen: open }),
-  setRpFloatOpen: (open) => set({ rpFloatOpen: open }),
+  setRpFloatOpen: (open) =>
+    set(
+      open
+        ? { rpFloatOpen: true }
+        : { rpFloatOpen: false, rpFocusFactionId: null },
+    ),
+  openRpForFaction: (factionId) =>
+    set({ rpFloatOpen: true, rpFocusFactionId: factionId }),
   setGmShellMode: (mode) => {
     try {
       localStorage.setItem(GM_SHELL_KEY, mode);

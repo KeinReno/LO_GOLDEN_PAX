@@ -64,7 +64,7 @@ const TOOL_GROUPS: {
       { id: "add_corridor", label: "Коридор", hint: "Клик — узел без звезды" },
       {
         id: "add_link",
-        label: "Связь",
+        label: "Сцена",
         hint: "Клик A → B: создать/снять гиперлинк. Клик по линии — выбрать",
       },
       {

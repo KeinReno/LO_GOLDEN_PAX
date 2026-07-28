@@ -46,6 +46,12 @@ export function usePendingIntents() {
     void refresh();
   }, [refresh, world.meta.turn, world.meta.tableRevision]);
 
+  // Dock: poll — player orders do not bump tableRevision.
+  useEffect(() => {
+    const id = window.setInterval(() => void refresh(), 5000);
+    return () => window.clearInterval(id);
+  }, [refresh]);
+
   const pending = intents.filter((i) => i.status === "pending");
   return { world, intents, pending, busy, apCap, refresh };
 }
@@ -61,7 +67,7 @@ export function IntentsInbox({
 }) {
   const { world, pending, busy, apCap, refresh } = usePendingIntents();
   const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
-  const setRpFloatOpen = useWorldStore((s) => s.setRpFloatOpen);
+  const openRpForFaction = useWorldStore((s) => s.openRpForFaction);
 
   useEffect(() => {
     onPendingCount?.(pending.length);
@@ -91,6 +97,9 @@ export function IntentsInbox({
           </p>
         </>
       )}
+      {variant === "dock" && busy && (
+        <p className="hint live-inbox-busy">Обновляю очередь…</p>
+      )}
       {!hideRefresh && (
         <div className="btn-col">
           <button
@@ -106,14 +115,31 @@ export function IntentsInbox({
       {factions.map((f) => {
         const list = byFaction.get(f.id) ?? [];
         const used = list.reduce((s, i) => s + (i.apCost ?? 0), 0);
+        const apPct = Math.min(100, Math.round((used / Math.max(apCap, 1)) * 100));
         if (variant === "dock" && list.length === 0) {
           return (
-            <div key={f.id} className="live-faction-card live-faction-card--quiet">
+            <div
+              key={f.id}
+              className="live-faction-card live-faction-card--quiet"
+              style={{ ["--card-faction" as string]: f.color }}
+            >
               <div className="live-faction-card-head">
                 <strong style={{ color: f.color }}>{f.name}</strong>
                 <span className="hint">AP 0/{apCap}</span>
               </div>
-              <p className="hint live-faction-quiet">тихо</p>
+              <div className="live-faction-ap">
+                <span style={{ width: "0%" }} />
+              </div>
+              <div className="live-faction-quiet-row">
+                <p className="hint live-faction-quiet">тихо</p>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => openRpForFaction(f.id)}
+                >
+                  В сцену
+                </button>
+              </div>
             </div>
           );
         }
@@ -121,6 +147,7 @@ export function IntentsInbox({
           <div
             key={f.id}
             className={`live-faction-card ${list.length ? "has-orders" : ""}`}
+            style={{ ["--card-faction" as string]: f.color }}
           >
             <div className="live-faction-card-head">
               <strong style={{ color: f.color }}>{f.name}</strong>
@@ -128,6 +155,9 @@ export function IntentsInbox({
                 AP {used}/{apCap}
                 {list.length > 0 ? ` · ${list.length}` : ""}
               </span>
+            </div>
+            <div className="live-faction-ap">
+              <span style={{ width: `${apPct}%` }} />
             </div>
             {list.length === 0 ? (
               variant === "panel" ? (
@@ -173,9 +203,9 @@ export function IntentsInbox({
                         <button
                           type="button"
                           className="btn ghost"
-                          onClick={() => setRpFloatOpen(true)}
+                          onClick={() => openRpForFaction(i.factionId)}
                         >
-                          В связь
+                          В сцену
                         </button>
                       </div>
                     </li>

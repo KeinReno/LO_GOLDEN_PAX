@@ -3,20 +3,13 @@ import { IntentsInbox } from "./IntentsInbox";
 import { useWorldStore } from "../state/worldStore";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 
-/** Right rail for Live table — command center, not inspector. */
+/** Right rail for Live table — inbox + close-turn, not a second TopBar. */
 export function GmLiveDock({ onRequestTick }: { onRequestTick: () => void }) {
   const world = useWorldStore((s) => s.world);
-  const setRpFloatOpen = useWorldStore((s) => s.setRpFloatOpen);
+  const openRpForFaction = useWorldStore((s) => s.openRpForFaction);
   const [pendingCount, setPendingCount] = useState(0);
-  const {
-    shareStatus,
-    shareViewUrl,
-    shareLastViewUrl,
-    openForPlayers,
-    setShareOpen,
-    shareOpen,
-    onSaveToServer,
-  } = useCampaignSessionCtx();
+  const { shareStatus, shareViewUrl, shareLastViewUrl } =
+    useCampaignSessionCtx();
 
   const displayShare = shareViewUrl || shareLastViewUrl;
   const online = shareStatus === "online";
@@ -32,9 +25,12 @@ export function GmLiveDock({ onRequestTick }: { onRequestTick: () => void }) {
     <aside className="panel panel-right gm-live-dock">
       <header className="gm-live-dock-head">
         <div>
-          <p className="gm-live-kicker">Ход {world.meta.turn}</p>
-          <h3>Приказы</h3>
+          <p className="gm-live-kicker">Стол · ход {world.meta.turn}</p>
+          <h3>Очередь приказов</h3>
         </div>
+        {pendingCount > 0 && (
+          <span className="gm-live-pending-pill">{pendingCount}</span>
+        )}
       </header>
 
       <p className="gm-live-status-line">
@@ -47,38 +43,32 @@ export function GmLiveDock({ onRequestTick }: { onRequestTick: () => void }) {
         {world.meta.tableRevision != null
           ? ` · rev ${world.meta.tableRevision}`
           : ""}
-        {pendingCount > 0 ? ` · ${pendingCount} в очереди` : ""}
       </p>
 
+      <div className="gm-live-quick">
+        <button
+          type="button"
+          className="btn ghost block"
+          onClick={() => openRpForFaction(null)}
+          title="Сцены с фракциями (не общий чат игроков)"
+        >
+          Сцена · мастер
+        </button>
+      </div>
+
       <div className="gm-live-inbox">
-        <IntentsInbox variant="dock" onPendingCount={setPendingCount} />
+        <p className="gm-live-inbox-title">По державам</p>
+        <IntentsInbox
+          variant="dock"
+          hideRefresh
+          onPendingCount={setPendingCount}
+        />
       </div>
 
       <footer className="gm-live-dock-foot">
-        <button
-          type="button"
-          className="btn ghost block"
-          onClick={() => setRpFloatOpen(true)}
-        >
-          Связь
-        </button>
-        <button
-          type="button"
-          className="btn ghost block"
-          onClick={() => {
-            if (displayShare) setShareOpen(!shareOpen);
-            else void openForPlayers();
-          }}
-        >
-          {online || displayShare ? "Ссылка игрокам" : "Открыть для игроков"}
-        </button>
-        <button
-          type="button"
-          className="btn ghost block"
-          onClick={() => void onSaveToServer()}
-        >
-          Сохранить / опубликовать
-        </button>
+        <p className="hint gm-live-foot-hint">
+          Ссылка и сохранение — в верхней панели (···). Здесь — очередь и тик.
+        </p>
         <button
           type="button"
           className="btn primary block gm-live-tick-btn"

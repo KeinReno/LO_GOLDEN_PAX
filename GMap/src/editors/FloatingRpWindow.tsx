@@ -57,7 +57,7 @@ export type FloatingRpWindowProps = RpChatProps & {
 export function FloatingRpWindow({
   open,
   onOpenChange,
-  title = "Связь",
+  title = "Сцена · мастер",
   storageKey = "gmap-rp-float-geom",
   unread = 0,
   zIndex = 220,

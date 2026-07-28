@@ -39,9 +39,9 @@ export function TurnStampHud({
       <div style={{ color: "#c9a227", fontWeight: 600, fontSize: 15 }}>
         Ход {t}
       </div>
-      <div style={{ opacity: 0.75, marginTop: 2, maxWidth: 220 }}>
-        {n}
-      </div>
+      {n ? (
+        <div style={{ opacity: 0.75, marginTop: 2, maxWidth: 220 }}>{n}</div>
+      ) : null}
     </div>
   );
 }

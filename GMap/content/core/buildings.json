@@ -1,0 +1,132 @@
+{
+  "building.residential": {
+    "id": "building.residential",
+    "kind": "residential",
+    "zone": "surface",
+    "name": "Жилой район",
+    "ap": 1,
+    "cost": { "currency.metal": 10, "currency.supply": 6 },
+    "effects": [{ "effect": "pop_cap_add", "args": { "amount": 15 } }]
+  },
+  "building.farm": {
+    "id": "building.farm",
+    "kind": "farm",
+    "zone": "surface",
+    "name": "Агрокомплекс",
+    "ap": 1,
+    "cost": { "currency.metal": 8, "currency.supply": 4 },
+    "effects": [
+      { "effect": "yield_flat", "args": { "currency": "currency.supply", "amount": 2 } }
+    ]
+  },
+  "building.mine": {
+    "id": "building.mine",
+    "kind": "mine",
+    "zone": "surface",
+    "name": "Шахта",
+    "ap": 1,
+    "cost": { "currency.metal": 12, "currency.supply": 3 },
+    "effects": [
+      { "effect": "yield_flat", "args": { "currency": "currency.metal", "amount": 2 } }
+    ]
+  },
+  "building.factory": {
+    "id": "building.factory",
+    "kind": "factory",
+    "zone": "surface",
+    "name": "Завод",
+    "ap": 1,
+    "cost": { "currency.metal": 16, "currency.supply": 5 },
+    "effects": [
+      { "effect": "yield_flat", "args": { "currency": "currency.metal", "amount": 1 } },
+      { "effect": "yield_flat", "args": { "currency": "currency.supply", "amount": 1 } }
+    ]
+  },
+  "building.lab": {
+    "id": "building.lab",
+    "kind": "lab",
+    "zone": "surface",
+    "name": "Лаборатория",
+    "ap": 1,
+    "cost": { "currency.metal": 14, "currency.supply": 6 },
+    "effects": []
+  },
+  "building.barracks": {
+    "id": "building.barracks",
+    "kind": "barracks",
+    "zone": "surface",
+    "name": "Казарма",
+    "ap": 1,
+    "cost": { "currency.metal": 12, "currency.supply": 8 },
+    "effects": []
+  },
+  "building.capitol": {
+    "id": "building.capitol",
+    "kind": "capitol",
+    "zone": "surface",
+    "name": "Администрация",
+    "ap": 1,
+    "cost": { "currency.metal": 20, "currency.supply": 10 },
+    "maxPerPlanet": 1,
+    "effects": [{ "effect": "pop_cap_add", "args": { "amount": 10 } }]
+  },
+  "building.defense": {
+    "id": "building.defense",
+    "kind": "defense",
+    "zone": "surface",
+    "name": "Оборона",
+    "ap": 1,
+    "cost": { "currency.metal": 14, "currency.supply": 4 },
+    "effects": []
+  },
+  "building.spaceport": {
+    "id": "building.spaceport",
+    "kind": "spaceport",
+    "zone": "orbital",
+    "name": "Космопорт",
+    "ap": 1,
+    "cost": { "currency.metal": 18, "currency.supply": 6 },
+    "maxPerPlanet": 1,
+    "effects": [
+      { "effect": "yield_flat", "args": { "currency": "currency.supply", "amount": 1 } }
+    ]
+  },
+  "building.shipyard": {
+    "id": "building.shipyard",
+    "kind": "shipyard",
+    "zone": "orbital",
+    "name": "Верфь",
+    "ap": 1,
+    "cost": { "currency.metal": 24, "currency.supply": 8 },
+    "effects": [
+      { "effect": "yield_flat", "args": { "currency": "currency.metal", "amount": 1 } }
+    ]
+  },
+  "building.habitat": {
+    "id": "building.habitat",
+    "kind": "habitat",
+    "zone": "orbital",
+    "name": "Орбитальный хабитат",
+    "ap": 1,
+    "cost": { "currency.metal": 16, "currency.supply": 10 },
+    "effects": [{ "effect": "pop_cap_add", "args": { "amount": 15 } }]
+  },
+  "building.orbital_defense": {
+    "id": "building.orbital_defense",
+    "kind": "defense",
+    "zone": "orbital",
+    "name": "Орбитальная оборона",
+    "ap": 1,
+    "cost": { "currency.metal": 16, "currency.supply": 5 },
+    "effects": []
+  },
+  "building.orbital_lab": {
+    "id": "building.orbital_lab",
+    "kind": "lab",
+    "zone": "orbital",
+    "name": "Орбитальная лаборатория",
+    "ap": 1,
+    "cost": { "currency.metal": 18, "currency.supply": 7 },
+    "effects": []
+  }
+}

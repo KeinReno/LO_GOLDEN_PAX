@@ -36,6 +36,7 @@ import {
   cancelIntent,
   reservedAp,
 } from "./intents.mjs";
+import { applyPlanetAction } from "./planetActions.mjs";
 import { processTurn, getLastJournal } from "./processTurn.mjs";
 import { startTickScheduler, getSchedulerStatus } from "./tickScheduler.mjs";
 import {
@@ -902,7 +903,19 @@ export function createApiMiddleware() {
           return;
         }
         const result = cancelIntent(intentId, faction.id);
-        sendJson(res, result.ok ? 200 : 400, result);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const turn = world?.meta?.turn ?? 0;
+        sendJson(res, 200, {
+          ...result,
+          reservedAp: reservedAp(faction.id, turn),
+          apMax: resolveApMax(
+            getContent().rules?.apPerTurn ?? 3,
+            buildModifierStack([]),
+          ),
+        });
         return;
       }
 
@@ -1068,10 +1081,26 @@ export function createApiMiddleware() {
           return;
         }
         const filtered = filterWorldForFaction(world, faction.id);
+        const eco = getFactionPublicEco(faction.id);
+        const apMax = eco.rules?.apPerTurn
+          ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
+          : resolveApMax(
+              getContent().rules?.apPerTurn ?? 3,
+              buildModifierStack([]),
+            );
         sendJson(res, 200, {
           factionId: faction.id,
           updatedAt: world.meta?.updatedAt ?? null,
           tableRevision: world.meta?.tableRevision ?? 0,
+          apMax,
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          economy: {
+            stocks: eco.stocks,
+            taxes: eco.taxes,
+            pendingPolicy: eco.pendingPolicy,
+            pressure: eco.pressure,
+            deficit: eco.deficit,
+          },
           ...filtered,
         });
         return;
@@ -1111,6 +1140,63 @@ export function createApiMiddleware() {
             pendingPolicy: eco.pendingPolicy,
             pressure: eco.pressure,
             deficit: eco.deficit,
+          },
+          ...filtered,
+        });
+        return;
+      }
+
+      /** Instant planet management: build / demolish / colonize / set_colony_type. */
+      if (url.pathname === "/api/planet/action" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!faction || faction.password !== body.password) {
+          sendJson(res, 401, { error: "Неверный пароль" });
+          return;
+        }
+        const eco = getFactionPublicEco(faction.id);
+        const apMax = eco.rules?.apPerTurn
+          ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
+          : resolveApMax(
+              getContent().rules?.apPerTurn ?? 3,
+              buildModifierStack([]),
+            );
+        const result = applyPlanetAction({
+          world,
+          factionId: faction.id,
+          action: body.action,
+          systemId: body.systemId,
+          planetId: body.planetId,
+          buildingId: body.buildingId,
+          instanceId: body.instanceId,
+          colonyType: body.colonyType,
+          note: body.note,
+          apMax,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const filtered = filterWorldForFaction(world, faction.id);
+        const ecoAfter = getFactionPublicEco(faction.id);
+        sendJson(res, 200, {
+          ok: true,
+          intent: result.intent,
+          cost: result.cost ?? null,
+          building: result.building ?? null,
+          apMax,
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          economy: {
+            stocks: ecoAfter.stocks,
+            taxes: ecoAfter.taxes,
+            pendingPolicy: ecoAfter.pendingPolicy,
+            pressure: ecoAfter.pressure,
+            deficit: ecoAfter.deficit,
           },
           ...filtered,
         });
@@ -1168,7 +1254,13 @@ export function createApiMiddleware() {
           note: body.note || "",
           createdAt: result.intent.submittedAt,
         };
-        sendJson(res, 200, { ok: true, order, intent: result.intent, apMax });
+        sendJson(res, 200, {
+          ok: true,
+          order,
+          intent: result.intent,
+          apMax,
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+        });
         return;
       }
 

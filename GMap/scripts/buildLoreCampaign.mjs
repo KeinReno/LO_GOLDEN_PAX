@@ -28,7 +28,7 @@ const OUT = path.join(__dirname, "../public/campaigns/lo_golden_pax.json");
 const SCHEMA_VERSION = 6;
 
 const FACTIONS = [
-  { id: "faction_belator", name: "Империя Белатор", color: "#e39a12", password: "solis", kind: "state" },
+  { id: "faction_belator", name: "Империя Белатор", color: "#e39a12", password: "4848", kind: "state" },
   { id: "faction_turon", name: "Турон / Туранмал", color: "#c01818", password: "turon", kind: "state" },
   { id: "faction_federation", name: "Федерация Коринфад", color: "#4ec4d4", password: "korin", kind: "state" },
   { id: "faction_korvun", name: "Корвун'тай", color: "#1a3a8a", password: "fold", kind: "state" },

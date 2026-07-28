@@ -67,6 +67,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const openPolityEditor = useWorldStore((s) => s.openPolityEditor);
   const setDiplomacyPanelOpen = useWorldStore((s) => s.setDiplomacyPanelOpen);
   const rpFloatOpen = useWorldStore((s) => s.rpFloatOpen);
+  const rpFocusFactionId = useWorldStore((s) => s.rpFocusFactionId);
   const setRpFloatOpen = useWorldStore((s) => s.setRpFloatOpen);
   const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const setGmShellMode = useWorldStore((s) => s.setGmShellMode);
@@ -299,7 +300,8 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
       masterToken={masterToken}
       onMsg={setSyncMsg}
       storageKey="gmap-rp-float-geom-gm"
-      title="Связь"
+      title="Сцена · мастер"
+      focusFactionId={rpFocusFactionId}
     />
   );
 
@@ -332,7 +334,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
                 : shareStatus}
           </button>
           {pending.length > 0 && (
-            <span className="live-inbox-badge" title="Pending приказы">
+            <span className="live-inbox-badge" title="Pending приказы в доке справа">
               Inbox {pending.length}
             </span>
           )}
@@ -340,20 +342,14 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             type="button"
             className={`btn ghost ${rpFloatOpen ? "active" : ""}`}
             onClick={() => setRpFloatOpen(!rpFloatOpen)}
+            title="Отыгрыш с фракциями"
           >
-            Связь
-          </button>
-          <button
-            type="button"
-            className="btn primary live-tick-top"
-            onClick={onRequestTick}
-          >
-            Тик хода
+            Сцена
           </button>
           <button
             type="button"
             className="btn ghost"
-            title="Сохранить, державы, токен…"
+            title="Сохранить, ссылка, державы…"
             onClick={() => setMenuOpen((o) => !o)}
           >
             ···
@@ -376,6 +372,16 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             <button
               type="button"
               className="btn primary block"
+              onClick={() => {
+                onRequestTick();
+                setMenuOpen(false);
+              }}
+            >
+              Закрыть ход · превью
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
               onClick={() => {
                 void onSaveToServer();
                 setMenuOpen(false);
@@ -579,7 +585,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
         <RpFloatLauncher
           open={rpFloatOpen}
           onToggle={() => setRpFloatOpen(!rpFloatOpen)}
-          label="Связь"
+          label="Сцена"
         />
         <button
           type="button"

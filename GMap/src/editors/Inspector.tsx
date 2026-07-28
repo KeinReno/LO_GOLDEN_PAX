@@ -70,7 +70,7 @@ export function Inspector() {
             : legion
               ? "Легион"
               : link
-                ? "Связь"
+                ? "Сцена"
                 : sector
                   ? "Сектор"
                   : system

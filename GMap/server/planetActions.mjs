@@ -1,0 +1,441 @@
+/**
+ * Instant planetary actions: build / demolish / colonize / set colony type.
+ */
+import { getContent } from "./contentLoader.mjs";
+import {
+  readLedger,
+  writeLedger,
+  ensureFactionEco,
+  adjustStock,
+} from "./ledger.mjs";
+import { reservedAp, readIntents, writeIntents } from "./intents.mjs";
+import { writeLiveBoard } from "./tableStore.mjs";
+import { resolveAlias } from "./normalizeWorld.mjs";
+
+function normalizeColonyType(type) {
+  if (!type || type === "none") return "none";
+  if (type === "capital") return "core";
+  return type;
+}
+
+function findSystemPlanet(world, systemId, planetId) {
+  const system = (world.systems ?? []).find((s) => s.id === systemId);
+  if (!system) return { error: "Система не найдена" };
+  const planet = (system.planets ?? []).find((p) => p.id === planetId);
+  if (!planet) return { error: "Планета не найдена" };
+  return { system, planet };
+}
+
+function planetOwnerId(system, planet) {
+  return planet.ownerFactionId || system.ownerFactionId || null;
+}
+
+function canManagePlanet(system, planet, factionId) {
+  return planetOwnerId(system, planet) === factionId;
+}
+
+function canColonizePlanet(system, planet, factionId) {
+  if (system.ownerFactionId !== factionId) return false;
+  if ((planet.population ?? 0) > 0) return false;
+  const ct = normalizeColonyType(planet.colonyType);
+  if (ct && ct !== "none") return false;
+  if (planet.ownerFactionId && planet.ownerFactionId !== factionId) return false;
+  if (planet.colonizable === false) return false;
+  return !!(planet.habitable || planet.colonizable !== false);
+}
+
+function buildingDefs(content) {
+  return content.buildings || {};
+}
+
+function colonyDefs(content) {
+  return content.colonies || {};
+}
+
+function defForKindZone(content, kind, zone) {
+  return Object.values(buildingDefs(content)).find(
+    (d) => d.kind === kind && d.zone === zone,
+  );
+}
+
+function colonyDefForType(content, colonyType) {
+  const t = normalizeColonyType(colonyType);
+  return Object.values(colonyDefs(content)).find((d) => d.colonyType === t);
+}
+
+function buildCostMult(factionId) {
+  const content = getContent();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  let mult = 1;
+  for (const th of content.rules?.tax?.pressureThresholds || []) {
+    if ((eco.pressure ?? 0) >= (th.min ?? 99)) {
+      for (const e of th.effects || []) {
+        if (e.effect === "cost_mult" && (e.args?.tag === "build" || !e.args?.tag)) {
+          mult *= Number(e.args?.mult ?? 1);
+        }
+      }
+    }
+  }
+  return mult;
+}
+
+function scaledCost(cost, mult) {
+  const out = {};
+  for (const [k, v] of Object.entries(cost || {})) {
+    out[k] = Math.ceil(Number(v || 0) * mult);
+  }
+  return out;
+}
+
+function canAfford(eco, cost) {
+  for (const [cur, amt] of Object.entries(cost || {})) {
+    if ((eco.stocks?.[cur] ?? 0) < amt) {
+      return { ok: false, error: `Не хватает ${cur} (нужно ${amt})` };
+    }
+  }
+  return { ok: true };
+}
+
+function spendCost(ledger, factionId, cost, turn, intentId, reason) {
+  for (const [cur, amt] of Object.entries(cost || {})) {
+    if (!amt) continue;
+    adjustStock(ledger, factionId, cur, -amt, { turn, reason, intentId });
+  }
+}
+
+function recordAppliedIntent({
+  factionId,
+  defId,
+  payload,
+  note,
+  turn,
+  apCost,
+}) {
+  const intent = {
+    id: `int_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    defId,
+    factionId,
+    turn,
+    status: "applied",
+    apCost,
+    payload: payload || {},
+    note: note || "",
+    submittedAt: new Date().toISOString(),
+    resolvedAt: new Date().toISOString(),
+    source: "planet",
+    legacyType: defId.replace(/^intent\./, ""),
+  };
+  const list = readIntents();
+  list.push(intent);
+  writeIntents(list);
+  return intent;
+}
+
+function checkAp(factionId, turn, apCost, apMax) {
+  if (apCost <= 0) return { ok: true };
+  const used = reservedAp(factionId, turn);
+  if (used + apCost > apMax) {
+    return {
+      ok: false,
+      error: `Недостаточно AP (занято ${used}/${apMax}, нужно ещё ${apCost})`,
+    };
+  }
+  return { ok: true };
+}
+
+function checkBuildForbidden(factionId) {
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  if (eco.deficit === "empty") {
+    return { ok: false, error: "Пустая казна: строительство запрещено" };
+  }
+  return { ok: true };
+}
+
+/**
+ * @returns {{ ok: true, intent, world, planet } | { ok: false, error: string }}
+ */
+export function applyPlanetAction({
+  world,
+  factionId,
+  action,
+  systemId,
+  planetId,
+  buildingId,
+  instanceId,
+  colonyType,
+  note,
+  apMax,
+}) {
+  const content = getContent();
+  const turn = world.meta?.turn ?? 0;
+  const found = findSystemPlanet(world, systemId, planetId);
+  if (found.error) return { ok: false, error: found.error };
+  const { system, planet } = found;
+
+  if (action === "build") {
+    const forbid = checkBuildForbidden(factionId);
+    if (!forbid.ok) return forbid;
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    if ((planet.population ?? 0) <= 0 && normalizeColonyType(planet.colonyType) === "none") {
+      return { ok: false, error: "Сначала колонизируйте планету" };
+    }
+    const def = buildingDefs(content)[buildingId];
+    if (!def) return { ok: false, error: "Неизвестное здание" };
+    const zone = def.zone === "orbital" ? "orbital" : "surface";
+    const listKey = zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
+    const list = [...(planet[listKey] ?? [])];
+    const max =
+      zone === "orbital" ? (planet.orbitalSlots ?? 4) : (planet.surfaceSlots ?? 8);
+    if (list.length >= max) {
+      return { ok: false, error: `Нет свободных слотов (${zone})` };
+    }
+    if (def.maxPerPlanet) {
+      const all = [
+        ...(planet.surfaceBuildings ?? []),
+        ...(planet.orbitalBuildings ?? []),
+      ];
+      const same = all.filter((b) => b.kind === def.kind && !b.disabled).length;
+      if (same >= def.maxPerPlanet) {
+        return { ok: false, error: `Лимит «${def.name}» на планете` };
+      }
+    }
+    const apCost = def.ap ?? content.intents?.["intent.build"]?.ap ?? 1;
+    const apGate = checkAp(factionId, turn, apCost, apMax);
+    if (!apGate.ok) return apGate;
+    const cost = scaledCost(def.cost, buildCostMult(factionId));
+    const ledger = readLedger();
+    const eco = ensureFactionEco(ledger, factionId);
+    const afford = canAfford(eco, cost);
+    if (!afford.ok) return afford;
+
+    const building = {
+      id: `bld_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      name: def.name,
+      kind: def.kind,
+      zone,
+    };
+    list.push(building);
+    planet[listKey] = list;
+    if (!planet.ownerFactionId) planet.ownerFactionId = factionId;
+
+    const intent = recordAppliedIntent({
+      factionId,
+      defId: "intent.build",
+      payload: { systemId, planetId, buildingId, instanceId: building.id },
+      note,
+      turn,
+      apCost,
+    });
+    spendCost(ledger, factionId, cost, turn, intent.id, "build");
+    writeLedger(ledger);
+    writeLiveBoard(world, { backup: false, reason: "planet_build" });
+    return { ok: true, intent, world, planet, cost, building };
+  }
+
+  if (action === "demolish") {
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    const apCost = content.intents?.["intent.demolish"]?.ap ?? 0;
+    const apGate = checkAp(factionId, turn, apCost, apMax);
+    if (!apGate.ok) return apGate;
+    let removed = null;
+    for (const key of ["surfaceBuildings", "orbitalBuildings"]) {
+      const list = planet[key] ?? [];
+      const idx = list.findIndex((b) => b.id === instanceId);
+      if (idx >= 0) {
+        removed = list[idx];
+        planet[key] = list.filter((b) => b.id !== instanceId);
+        break;
+      }
+    }
+    if (!removed) return { ok: false, error: "Постройка не найдена" };
+    const intent = recordAppliedIntent({
+      factionId,
+      defId: "intent.demolish",
+      payload: { systemId, planetId, instanceId },
+      note,
+      turn,
+      apCost,
+    });
+    writeLiveBoard(world, { backup: false, reason: "planet_demolish" });
+    return { ok: true, intent, world, planet, removed };
+  }
+
+  if (action === "colonize") {
+    const forbid = checkBuildForbidden(factionId);
+    if (!forbid.ok) return forbid;
+    if (!canColonizePlanet(system, planet, factionId)) {
+      return {
+        ok: false,
+        error: "Нельзя колонизировать (нужна своя система и пустая планета)",
+      };
+    }
+    const targetType = normalizeColonyType(colonyType || "outpost");
+    if (targetType === "none") {
+      return { ok: false, error: "Укажите тип колонии" };
+    }
+    const cdef = colonyDefForType(content, targetType);
+    if (!cdef) return { ok: false, error: "Неизвестный тип колонии" };
+    const apCost = cdef.colonizeAp ?? content.intents?.["intent.colonize"]?.ap ?? 1;
+    const apGate = checkAp(factionId, turn, apCost, apMax);
+    if (!apGate.ok) return apGate;
+    const cost = scaledCost(cdef.colonizeCost, buildCostMult(factionId));
+    const ledger = readLedger();
+    const eco = ensureFactionEco(ledger, factionId);
+    const afford = canAfford(eco, cost);
+    if (!afford.ok) return afford;
+
+    planet.colonyType = targetType;
+    planet.population = Math.max(
+      planet.population || 0,
+      cdef.colonizePopulation ?? 2,
+    );
+    planet.ownerFactionId = factionId;
+    planet.habitable = planet.habitable ?? true;
+    planet.colonizable = true;
+    planet.surveyed = true;
+    if (!planet.surfaceBuildings) planet.surfaceBuildings = [];
+    if (!planet.orbitalBuildings) planet.orbitalBuildings = [];
+
+    const intent = recordAppliedIntent({
+      factionId,
+      defId: "intent.colonize",
+      payload: { systemId, planetId, colonyType: targetType },
+      note,
+      turn,
+      apCost,
+    });
+    spendCost(ledger, factionId, cost, turn, intent.id, "colonize");
+    writeLedger(ledger);
+    writeLiveBoard(world, { backup: false, reason: "planet_colonize" });
+    return { ok: true, intent, world, planet, cost };
+  }
+
+  if (action === "set_colony_type") {
+    const forbid = checkBuildForbidden(factionId);
+    if (!forbid.ok) return forbid;
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    if ((planet.population ?? 0) <= 0) {
+      return { ok: false, error: "Нет колонии — сначала колонизируйте" };
+    }
+    const targetType = normalizeColonyType(colonyType);
+    if (!targetType || targetType === "none") {
+      return { ok: false, error: "Укажите тип колонии" };
+    }
+    if (normalizeColonyType(planet.colonyType) === targetType) {
+      return { ok: false, error: "Тип уже установлен" };
+    }
+    const cdef = colonyDefForType(content, targetType);
+    if (!cdef) return { ok: false, error: "Неизвестный тип колонии" };
+    const apCost =
+      cdef.setTypeAp ?? content.intents?.["intent.set_colony_type"]?.ap ?? 1;
+    const apGate = checkAp(factionId, turn, apCost, apMax);
+    if (!apGate.ok) return apGate;
+    const cost = scaledCost(cdef.setTypeCost, buildCostMult(factionId));
+    const ledger = readLedger();
+    const eco = ensureFactionEco(ledger, factionId);
+    const afford = canAfford(eco, cost);
+    if (!afford.ok) return afford;
+
+    planet.colonyType = targetType;
+
+    const intent = recordAppliedIntent({
+      factionId,
+      defId: "intent.set_colony_type",
+      payload: { systemId, planetId, colonyType: targetType },
+      note,
+      turn,
+      apCost,
+    });
+    spendCost(ledger, factionId, cost, turn, intent.id, "set_colony_type");
+    writeLedger(ledger);
+    writeLiveBoard(world, { backup: false, reason: "planet_set_type" });
+    return { ok: true, intent, world, planet, cost };
+  }
+
+  return { ok: false, error: `Неизвестное действие: ${action}` };
+}
+
+export function planetCapFromBuildings(planet, content) {
+  const base = 20;
+  let cap = base;
+  const all = [
+    ...(planet.surfaceBuildings ?? []),
+    ...(planet.orbitalBuildings ?? []),
+    ...(planet.buildings ?? []),
+  ];
+  for (const b of all) {
+    if (b.disabled) continue;
+    const def = defForKindZone(content, b.kind, b.zone || "surface");
+    let added = false;
+    for (const e of def?.effects || []) {
+      if (e.effect === "pop_cap_add") {
+        cap += Number(e.args?.amount || 0);
+        added = true;
+      }
+    }
+    if (!added) {
+      if (b.kind === "residential" || b.kind === "habitat") cap += 15;
+      if (b.kind === "capitol") cap += 10;
+    }
+  }
+  const ct = normalizeColonyType(planet.colonyType);
+  const cdef = colonyDefForType(content, ct);
+  for (const e of cdef?.effects || []) {
+    if (e.effect === "pop_cap_add") cap += Number(e.args?.amount || 0);
+  }
+  if (!cdef) {
+    if (ct === "core") cap += 25;
+    if (ct === "outpost") cap += 5;
+  }
+  return cap;
+}
+
+export function collectPlanetYields(system, content) {
+  const yields = { "currency.metal": 0, "currency.supply": 0 };
+  for (const planet of system.planets ?? []) {
+    for (const r of planet.resources ?? []) {
+      const key = resolveAlias("resources", r);
+      let def = content.map_resources?.[key];
+      if (!def) {
+        def = Object.values(content.map_resources || {}).find(
+          (x) => x.name === r || x.id === key,
+        );
+      }
+      if (!def?.yield) continue;
+      for (const [cur, amt] of Object.entries(def.yield)) {
+        yields[cur] = (yields[cur] || 0) + Number(amt || 0);
+      }
+    }
+    const all = [
+      ...(planet.surfaceBuildings ?? []),
+      ...(planet.orbitalBuildings ?? []),
+    ];
+    for (const b of all) {
+      if (b.disabled) continue;
+      const def = defForKindZone(content, b.kind, b.zone || "surface");
+      for (const e of def?.effects || []) {
+        if (e.effect === "yield_flat") {
+          const cur = e.args?.currency;
+          if (cur) yields[cur] = (yields[cur] || 0) + Number(e.args?.amount || 0);
+        }
+      }
+    }
+    const ct = normalizeColonyType(planet.colonyType);
+    const cdef = colonyDefForType(content, ct);
+    for (const e of cdef?.effects || []) {
+      if (e.effect === "yield_flat") {
+        const cur = e.args?.currency;
+        if (cur) yields[cur] = (yields[cur] || 0) + Number(e.args?.amount || 0);
+      }
+    }
+  }
+  return yields;
+}

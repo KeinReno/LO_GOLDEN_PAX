@@ -83,13 +83,22 @@ import { ORDER_ARROW_COLORS } from "../state/defaults";
 import { questsAtSystem } from "../state/mapFeatures";
 import { POI_PAINT_TOOLS } from "../state/types";
 import { hasSpaceObject } from "../state/spaceObjects";
+import { formatHopTurns, hopDistance, hopPath } from "../state/pathfinding";
 import { registerMapPngExporter } from "../io/mapExportBridge";
 
 const SYSTEM_HIT_R = 20;
-const SYSTEM_DROP_R = 48;
-const FLEET_HIT_R = 32;
-const LEGION_HIT_R = 30;
+const SYSTEM_DROP_R = 72;
+const FLEET_HIT_R = 64;
+const LEGION_HIT_R = 60;
+/** Minimum on-screen hit size (px) so finger targets stay usable when zoomed out. */
+const MIN_TOUCH_HIT_PX = 48;
+const DRAG_START_PX = 14;
+const LONG_PRESS_MS = 450;
 const LINK_HIT_PX = 10;
+const FLEET_ICON_SIZE = 36;
+const FLEET_ICON_SIZE_SEL = 44;
+const LEGION_ICON_SIZE = 34;
+const LEGION_ICON_SIZE_SEL = 40;
 
 export interface MapViewModel {
   world: WorldState;
@@ -146,6 +155,8 @@ export interface MapViewModel {
 export interface MapCanvasApi {
   zoomBy: (factor: number) => void;
   resetView: () => void;
+  /** Pan camera so system is centered (viewer Forces / search). */
+  focusSystem: (systemId: string) => void;
 }
 
 /**
@@ -343,12 +354,42 @@ function territoryFingerprint(world: WorldState): string {
   return `${sys}||${fac}`;
 }
 
+export type MapUnitDropPayload = {
+  kind: "fleet" | "legion";
+  unitId: string;
+  fromSystemId: string;
+  toSystemId: string;
+  hops: number;
+};
+
+export type MapContextPick = {
+  screenX: number;
+  screenY: number;
+  worldX: number;
+  worldY: number;
+  systemId: string | null;
+  fleetId: string | null;
+  legionId: string | null;
+  linkId: string | null;
+};
+
 interface MapCanvasProps {
   mode?: "editor" | "viewer";
   readModel?: () => MapViewModel;
   onModelSubscribe?: (cb: () => void) => () => void;
   onSystemClick?: (systemId: string | null) => void;
   onFleetClick?: (fleetId: string) => void;
+  onLegionClick?: (legionId: string) => void;
+  /** Viewer: only these faction's units can be dragged to order a move. */
+  playerFactionId?: string | null;
+  /** Viewer: drop after drag → submit move order (editor relocates in-store). */
+  onUnitDrop?: (drop: MapUnitDropPayload) => void;
+  /** Viewer: highlight own unit while dragging (no sheet). */
+  onUnitDragStart?: (kind: "fleet" | "legion", unitId: string) => void;
+  /** Viewer RMB menu (editor uses worldStore contextMenu). */
+  onViewerContextMenu?: (pick: MapContextPick) => void;
+  /** Viewer: double-click system → dive into system view. */
+  onSystemOpen?: (systemId: string) => void;
   interactive?: boolean;
   apiRef?: MutableRefObject<MapCanvasApi | null>;
 }
@@ -359,6 +400,12 @@ export function MapCanvas({
   onModelSubscribe,
   onSystemClick,
   onFleetClick,
+  onLegionClick,
+  playerFactionId = null,
+  onUnitDrop,
+  onUnitDragStart,
+  onViewerContextMenu,
+  onSystemOpen,
   interactive = true,
   apiRef,
 }: MapCanvasProps) {
@@ -402,6 +449,15 @@ export function MapCanvas({
     moved: boolean;
     startX: number;
     startY: number;
+    startScreenX: number;
+    startScreenY: number;
+    pointerId: number | null;
+  } | null>(null);
+  const longPressRef = useRef<{
+    timer: number;
+    sx: number;
+    sy: number;
+    fired: boolean;
   } | null>(null);
   const multiDragRef = useRef<{
     ids: string[];
@@ -417,7 +473,14 @@ export function MapCanvas({
     additive: boolean;
   } | null>(null);
   const lastPointerWorldRef = useRef<Point>({ x: 0, y: 0 });
-  const panRef = useRef({ active: false, lx: 0, ly: 0 });
+  const panRef = useRef<{
+    active: boolean;
+    lx: number;
+    ly: number;
+    pendingSystemId?: string | null;
+    startX?: number;
+    startY?: number;
+  }>({ active: false, lx: 0, ly: 0 });
   const labelMapRef = useRef<Map<string, Text>>(new Map());
   const fleetStackLabelMapRef = useRef<Map<string, Text>>(new Map());
   const emblemMapRef = useRef<Map<string, Sprite>>(new Map());
@@ -427,14 +490,27 @@ export function MapCanvas({
   const lastDtRef = useRef(0);
   const iconOverlayRef = useRef<MapIconOverlay | null>(null);
   const battleFxRef = useRef<BattleParticleField | null>(null);
+  const dragHintLabelRef = useRef<Text | null>(null);
   const readModelRef = useRef(readModel);
   const onSystemClickRef = useRef(onSystemClick);
   const onFleetClickRef = useRef(onFleetClick);
+  const onLegionClickRef = useRef(onLegionClick);
+  const onUnitDropRef = useRef(onUnitDrop);
+  const onUnitDragStartRef = useRef(onUnitDragStart);
+  const onViewerContextMenuRef = useRef(onViewerContextMenu);
+  const onSystemOpenRef = useRef(onSystemOpen);
+  const playerFactionIdRef = useRef(playerFactionId);
   const onModelSubscribeRef = useRef(onModelSubscribe);
   const apiRefInternal = useRef(apiRef);
   readModelRef.current = readModel;
   onSystemClickRef.current = onSystemClick;
   onFleetClickRef.current = onFleetClick;
+  onLegionClickRef.current = onLegionClick;
+  onUnitDropRef.current = onUnitDrop;
+  onUnitDragStartRef.current = onUnitDragStart;
+  onViewerContextMenuRef.current = onViewerContextMenu;
+  onSystemOpenRef.current = onSystemOpen;
+  playerFactionIdRef.current = playerFactionId;
   onModelSubscribeRef.current = onModelSubscribe;
   apiRefInternal.current = apiRef;
 
@@ -623,6 +699,14 @@ export function MapCanvas({
 
       host.appendChild(app.canvas);
       app.canvas.style.touchAction = "none";
+      app.canvas.style.userSelect = "none";
+      (app.canvas.style as CSSStyleDeclaration & {
+        webkitUserSelect?: string;
+        webkitTouchCallout?: string;
+      }).webkitUserSelect = "none";
+      (app.canvas.style as CSSStyleDeclaration & {
+        webkitTouchCallout?: string;
+      }).webkitTouchCallout = "none";
       if (bare) app.ticker.maxFPS = 15;
       else if (tier === "lite") app.ticker.maxFPS = 30;
       else if (tier === "soft") app.ticker.maxFPS = 45;
@@ -743,6 +827,19 @@ export function MapCanvas({
       });
       ro.observe(host);
 
+      const focusSystemInView = (systemId: string) => {
+        const sys = getModel().world.systems.find((s) => s.id === systemId);
+        if (!sys || !worldLayerRef.current) return;
+        const layer = worldLayerRef.current;
+        const iso = toIso(sys.x, sys.y);
+        const scale = layer.scale.x || 1;
+        layer.position.set(
+          app.screen.width / 2 - iso.x * scale,
+          app.screen.height / 2 - iso.y * scale,
+        );
+        dirtyRef.current = true;
+      };
+
       const api: MapCanvasApi = {
         zoomBy: (factor) => {
           zoomAtScreen(app.screen.width / 2, app.screen.height / 2, factor);
@@ -750,6 +847,7 @@ export function MapCanvas({
         resetView: () => {
           applyFit();
         },
+        focusSystem: focusSystemInView,
       };
       if (apiRefInternal.current) apiRefInternal.current.current = api;
 
@@ -759,14 +857,99 @@ export function MapCanvas({
         return fromIso(local.x, local.y);
       };
 
+      /** Grow hitboxes in iso-space when zoomed out so fingers can still hit. */
+      const isoHitR = (base: number, minPx = MIN_TOUCH_HIT_PX) => {
+        const scale = worldLayer.scale.x || 1;
+        return Math.max(base, minPx / Math.max(scale, 0.08));
+      };
+
+      const clearLongPress = () => {
+        const lp = longPressRef.current;
+        if (lp?.timer) window.clearTimeout(lp.timer);
+        longPressRef.current = null;
+      };
+
+      const releaseUnitPointer = () => {
+        const drag = unitDragRef.current;
+        if (drag?.pointerId != null) {
+          try {
+            if (app.canvas.hasPointerCapture?.(drag.pointerId)) {
+              app.canvas.releasePointerCapture(drag.pointerId);
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+      };
+
+      const captureUnitPointer = (e: FederatedPointerEvent) => {
+        const native = e.nativeEvent as PointerEvent | undefined;
+        const pid = native?.pointerId;
+        if (pid == null || !app.canvas.setPointerCapture) return null;
+        try {
+          app.canvas.setPointerCapture(pid);
+          return pid;
+        } catch {
+          return null;
+        }
+      };
+
+      const buildViewerPick = (
+        e: FederatedPointerEvent,
+        worldPos: Point,
+        model: MapViewModel,
+      ): MapContextPick => {
+        const fleetHit = findFleetAt(worldPos, model);
+        const legionHit = findLegionAt(worldPos, model);
+        const hit = findSystemAt(worldPos, model.world.systems);
+        const rect = app.canvas.getBoundingClientRect();
+        return {
+          screenX: rect.left + e.global.x,
+          screenY: rect.top + e.global.y,
+          worldX: worldPos.x,
+          worldY: worldPos.y,
+          systemId: hit?.id ?? null,
+          fleetId: fleetHit,
+          legionId: legionHit,
+          linkId: null,
+        };
+      };
+
+      const armLongPress = (e: FederatedPointerEvent, worldPos: Point) => {
+        clearLongPress();
+        if (mode !== "viewer") return;
+        if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
+        const sx = e.global.x;
+        const sy = e.global.y;
+        const timer = window.setTimeout(() => {
+          const lp = longPressRef.current;
+          if (!lp || lp.fired) return;
+          lp.fired = true;
+          releaseUnitPointer();
+          unitDragRef.current = null;
+          panRef.current.active = false;
+          onViewerContextMenuRef.current?.(
+            buildViewerPick(e, worldPos, getModel()),
+          );
+          try {
+            navigator.vibrate?.(10);
+          } catch {
+            /* ignore */
+          }
+          dirtyRef.current = true;
+        }, LONG_PRESS_MS);
+        longPressRef.current = { timer, sx, sy, fired: false };
+      };
+
       const findSystemAt = (
         p: Point,
         systems: StarSystem[],
-        hitR = SYSTEM_HIT_R,
+        hitR?: number,
       ): StarSystem | null => {
+        const r = hitR ?? isoHitR(SYSTEM_HIT_R, 40);
         const tip = toIso(p.x, p.y);
         let best: StarSystem | null = null;
-        let bestD = hitR * hitR;
+        let bestD = r * r;
         for (const s of systems) {
           const sp = toIso(s.x, s.y);
           const dx = tip.x - sp.x;
@@ -791,7 +974,7 @@ export function MapCanvas({
           bySystem.set(f.systemId, list);
         }
         let bestId: string | null = null;
-        let bestD = FLEET_HIT_R * FLEET_HIT_R;
+        let bestD = isoHitR(FLEET_HIT_R) ** 2;
         const anim = animRef.current;
         for (const [sysId, fleets] of bySystem) {
           const sys = byId.get(sysId);
@@ -828,7 +1011,7 @@ export function MapCanvas({
           bySystem.set(l.systemId, list);
         }
         let bestId: string | null = null;
-        let bestD = LEGION_HIT_R * LEGION_HIT_R;
+        let bestD = isoHitR(LEGION_HIT_R) ** 2;
         const anim = animRef.current;
         for (const [sysId, legs] of bySystem) {
           const sys = byId.get(sysId);
@@ -860,21 +1043,96 @@ export function MapCanvas({
 
           // RMB: native contextmenu handler below (Pixi button===2 is flaky)
           if (e.button === 2) {
-            if (mode === "viewer") {
-              panRef.current = { active: true, lx: e.global.x, ly: e.global.y };
-            }
             return;
           }
 
           if (mode === "viewer") {
+            const fid = playerFactionIdRef.current;
             const fleetId = findFleetAt(worldPos, model);
             if (fleetId) {
-              onFleetClickRef.current?.(fleetId);
+              const fleet = model.world.fleets.find((f) => f.id === fleetId);
+              // Defer click until pointerup — drag must not open the sheet.
+              if (fleet && fid && fleet.factionId === fid) {
+                const pointerId = captureUnitPointer(e);
+                unitDragRef.current = {
+                  kind: "fleet",
+                  id: fleetId,
+                  moved: false,
+                  startX: worldPos.x,
+                  startY: worldPos.y,
+                  startScreenX: e.global.x,
+                  startScreenY: e.global.y,
+                  pointerId,
+                };
+                lastPointerWorldRef.current = worldPos;
+                onUnitDragStartRef.current?.("fleet", fleetId);
+                armLongPress(e, worldPos);
+                dirtyRef.current = true;
+              } else {
+                onFleetClickRef.current?.(fleetId);
+                armLongPress(e, worldPos);
+              }
+              return;
+            }
+            const legionId = findLegionAt(worldPos, model);
+            if (legionId) {
+              const legion = model.world.legions.find((l) => l.id === legionId);
+              if (legion && fid && legion.factionId === fid) {
+                const pointerId = captureUnitPointer(e);
+                unitDragRef.current = {
+                  kind: "legion",
+                  id: legionId,
+                  moved: false,
+                  startX: worldPos.x,
+                  startY: worldPos.y,
+                  startScreenX: e.global.x,
+                  startScreenY: e.global.y,
+                  pointerId,
+                };
+                lastPointerWorldRef.current = worldPos;
+                onUnitDragStartRef.current?.("legion", legionId);
+                armLongPress(e, worldPos);
+                dirtyRef.current = true;
+              } else {
+                onLegionClickRef.current?.(legionId);
+                armLongPress(e, worldPos);
+              }
               return;
             }
             const hit = findSystemAt(worldPos, model.world.systems);
-            onSystemClickRef.current?.(hit?.id ?? null);
-            if (!hit) {
+            if (hit) {
+              armLongPress(e, worldPos);
+              const now = performance.now();
+              const last = lastClickRef.current;
+              // Double-tap open — only for mouse; touch uses long-press menu / explicit dive.
+              if (
+                e.pointerType === "mouse" &&
+                last &&
+                last.id === hit.id &&
+                now - last.t < 380
+              ) {
+                onSystemOpenRef.current?.(hit.id);
+                lastClickRef.current = null;
+              } else {
+                lastClickRef.current = { id: hit.id, t: now };
+                // Defer system click to pointerup for touch (avoid fighting drag/pan).
+                if (e.pointerType === "touch" || e.pointerType === "pen") {
+                  panRef.current = {
+                    active: true,
+                    lx: e.global.x,
+                    ly: e.global.y,
+                    pendingSystemId: hit.id,
+                    startX: e.global.x,
+                    startY: e.global.y,
+                  };
+                } else {
+                  onSystemClickRef.current?.(hit.id);
+                }
+              }
+            } else {
+              clearLongPress();
+              lastClickRef.current = null;
+              onSystemClickRef.current?.(null);
               panRef.current = { active: true, lx: e.global.x, ly: e.global.y };
             }
             return;
@@ -1156,6 +1414,9 @@ export function MapCanvas({
               moved: false,
               startX: worldPos.x,
               startY: worldPos.y,
+              startScreenX: e.global.x,
+              startScreenY: e.global.y,
+              pointerId: captureUnitPointer(e),
             };
             lastPointerWorldRef.current = worldPos;
             dirtyRef.current = true;
@@ -1176,6 +1437,9 @@ export function MapCanvas({
               moved: false,
               startX: worldPos.x,
               startY: worldPos.y,
+              startScreenX: e.global.x,
+              startScreenY: e.global.y,
+              pointerId: captureUnitPointer(e),
             };
             lastPointerWorldRef.current = worldPos;
             dirtyRef.current = true;
@@ -1260,17 +1524,14 @@ export function MapCanvas({
         });
 
         app.stage.on("pointermove", (e: FederatedPointerEvent) => {
-          if (panRef.current.active && worldLayerRef.current) {
-            const dx = e.global.x - panRef.current.lx;
-            const dy = e.global.y - panRef.current.ly;
-            panRef.current.lx = e.global.x;
-            panRef.current.ly = e.global.y;
-            worldLayerRef.current.x += dx;
-            worldLayerRef.current.y += dy;
-            return;
+          const lp = longPressRef.current;
+          if (lp && !lp.fired) {
+            if (
+              Math.hypot(e.global.x - lp.sx, e.global.y - lp.sy) > DRAG_START_PX
+            ) {
+              clearLongPress();
+            }
           }
-
-          if (mode !== "editor") return;
 
           if (unitDragRef.current) {
             const p = toWorld(e);
@@ -1278,13 +1539,43 @@ export function MapCanvas({
             const d = unitDragRef.current;
             if (
               !d.moved &&
-              Math.hypot(p.x - d.startX, p.y - d.startY) > 6
+              Math.hypot(
+                e.global.x - d.startScreenX,
+                e.global.y - d.startScreenY,
+              ) > DRAG_START_PX
             ) {
               d.moved = true;
+              clearLongPress();
+              panRef.current.active = false;
             }
             dirtyRef.current = true;
             return;
           }
+
+          if (panRef.current.active && worldLayerRef.current) {
+            const dx = e.global.x - panRef.current.lx;
+            const dy = e.global.y - panRef.current.ly;
+            panRef.current.lx = e.global.x;
+            panRef.current.ly = e.global.y;
+            // Finger slid — cancel pending system tap.
+            if (
+              panRef.current.pendingSystemId &&
+              panRef.current.startX != null &&
+              panRef.current.startY != null &&
+              Math.hypot(
+                e.global.x - panRef.current.startX,
+                e.global.y - panRef.current.startY,
+              ) > DRAG_START_PX
+            ) {
+              panRef.current.pendingSystemId = null;
+              clearLongPress();
+            }
+            worldLayerRef.current.x += dx;
+            worldLayerRef.current.y += dy;
+            return;
+          }
+
+          if (mode !== "editor") return;
 
           if (multiDragRef.current) {
             const p = toWorld(e);
@@ -1326,25 +1617,76 @@ export function MapCanvas({
         });
 
         const endPointer = (_e?: FederatedPointerEvent) => {
+          const longFired = !!longPressRef.current?.fired;
+          clearLongPress();
+
           if (unitDragRef.current) {
             const drag = unitDragRef.current;
+            releaseUnitPointer();
             unitDragRef.current = null;
-            if (drag.moved) {
+            if (drag.moved && !longFired) {
+              const modelNow = getModel();
               const target = findSystemAt(
                 lastPointerWorldRef.current,
-                getModel().world.systems,
-                SYSTEM_DROP_R,
+                modelNow.world.systems,
+                isoHitR(SYSTEM_DROP_R, 56),
               );
               if (target) {
-                const st = useWorldStore.getState();
-                if (drag.kind === "fleet") {
-                  st.relocateFleet(drag.id, target.id);
+                const unit =
+                  drag.kind === "fleet"
+                    ? modelNow.world.fleets.find((f) => f.id === drag.id)
+                    : modelNow.world.legions.find((l) => l.id === drag.id);
+                const fromSystemId = unit?.systemId ?? "";
+                const hops = hopDistance(
+                  modelNow.world,
+                  fromSystemId,
+                  target.id,
+                );
+                if (mode === "viewer") {
+                  if (
+                    fromSystemId &&
+                    fromSystemId !== target.id &&
+                    Number.isFinite(hops)
+                  ) {
+                    onUnitDropRef.current?.({
+                      kind: drag.kind,
+                      unitId: drag.id,
+                      fromSystemId,
+                      toSystemId: target.id,
+                      hops,
+                    });
+                  }
                 } else {
-                  st.relocateLegion(drag.id, target.id);
+                  const st = useWorldStore.getState();
+                  if (drag.kind === "fleet") {
+                    st.relocateFleet(drag.id, target.id);
+                  } else {
+                    st.relocateLegion(drag.id, target.id);
+                  }
                 }
               }
+            } else if (mode === "viewer" && !longFired) {
+              // Tap without drag → select
+              if (drag.kind === "fleet") onFleetClickRef.current?.(drag.id);
+              else onLegionClickRef.current?.(drag.id);
             }
             dirtyRef.current = true;
+          } else if (
+            mode === "viewer" &&
+            !longFired &&
+            panRef.current.pendingSystemId
+          ) {
+            const sid = panRef.current.pendingSystemId;
+            panRef.current.pendingSystemId = null;
+            const now = performance.now();
+            const last = lastClickRef.current;
+            if (last && last.id === sid && now - last.t < 420) {
+              onSystemOpenRef.current?.(sid);
+              lastClickRef.current = null;
+            } else {
+              lastClickRef.current = { id: sid, t: now };
+              onSystemClickRef.current?.(sid);
+            }
           }
 
           multiDragRef.current = null;
@@ -1392,6 +1734,7 @@ export function MapCanvas({
           }
           draggingIdRef.current = null;
           panRef.current.active = false;
+          panRef.current.pendingSystemId = null;
         };
 
         app.stage.on("pointerup", endPointer);
@@ -1399,7 +1742,6 @@ export function MapCanvas({
 
         const openContextMenu = (ev: MouseEvent) => {
           ev.preventDefault();
-          if (mode !== "editor") return;
           const layer = worldLayerRef.current;
           if (!layer) return;
           const rect = app.canvas.getBoundingClientRect();
@@ -1407,7 +1749,6 @@ export function MapCanvas({
           const sy = ev.clientY - rect.top;
           const local = layer.toLocal({ x: sx, y: sy });
           const worldPos = fromIso(local.x, local.y);
-          const state = useWorldStore.getState();
           const model = getModel();
           const fleetHit = findFleetAt(worldPos, model);
           const legionHit = findLegionAt(worldPos, model);
@@ -1417,7 +1758,7 @@ export function MapCanvas({
             model.world.links,
             model.world.systems,
           );
-          state.setContextMenu({
+          const pick: MapContextPick = {
             screenX: ev.clientX,
             screenY: ev.clientY,
             worldX: worldPos.x,
@@ -1427,7 +1768,13 @@ export function MapCanvas({
             legionId: legionHit,
             linkId:
               !fleetHit && !legionHit && !hit ? (linkHit?.id ?? null) : null,
-          });
+          };
+          if (mode === "viewer") {
+            onViewerContextMenuRef.current?.(pick);
+            return;
+          }
+          const state = useWorldStore.getState();
+          state.setContextMenu(pick);
           if (fleetHit) {
             state.selectFleet(fleetHit);
             state.selectSystem(
@@ -1492,6 +1839,10 @@ export function MapCanvas({
       const onTouchStart = (ev: TouchEvent) => {
         if (ev.touches.length === 2) {
           panRef.current.active = false;
+          panRef.current.pendingSystemId = null;
+          clearLongPress();
+          releaseUnitPointer();
+          unitDragRef.current = null;
           const a = ev.touches[0]!;
           const b = ev.touches[1]!;
           const rect = app.canvas.getBoundingClientRect();
@@ -1899,9 +2250,18 @@ export function MapCanvas({
       if (showOrders) {
         for (const order of world.orders) {
           if (order.status !== "pending") continue;
-          const from = order.fromSystemId
-            ? byId.get(order.fromSystemId)
-            : null;
+          let fromId = order.fromSystemId ?? null;
+          if (!fromId && order.fleetId) {
+            fromId =
+              world.fleets.find((f) => f.id === order.fleetId)?.systemId ??
+              null;
+          }
+          if (!fromId && order.legionId) {
+            fromId =
+              world.legions.find((l) => l.id === order.legionId)?.systemId ??
+              null;
+          }
+          const from = fromId ? byId.get(fromId) : null;
           const to = order.toSystemId ? byId.get(order.toSystemId) : null;
           if (!from || !to) continue;
           const color =
@@ -1910,6 +2270,21 @@ export function MapCanvas({
               : order.type === "claim_system"
                 ? 0xf0c14a
                 : 0x4cc9f0;
+          if (
+            order.type === "move_fleet" ||
+            order.type === "move_legion"
+          ) {
+            const path = hopPath(world, from.id, to.id);
+            if (path.length >= 2) {
+              for (let i = 0; i < path.length - 1; i++) {
+                const a = byId.get(path[i]!);
+                const b = byId.get(path[i + 1]!);
+                if (!a || !b) continue;
+                drawOrderArrow(ordersG, a.x, a.y, b.x, b.y, color, anim);
+              }
+              continue;
+            }
+          }
           drawOrderArrow(ordersG, from.x, from.y, to.x, to.y, color, anim);
         }
 
@@ -2268,20 +2643,79 @@ export function MapCanvas({
         }
       }
 
-      if (dropTarget) {
+      if (dropTarget && drag) {
+        const unit =
+          drag.kind === "fleet"
+            ? world.fleets.find((x) => x.id === drag.id)
+            : world.legions.find((x) => x.id === drag.id);
+        const hops = hopDistance(world, unit?.systemId, dropTarget.id);
+        const path = hopPath(world, unit?.systemId, dropTarget.id);
+        const reachable = Number.isFinite(hops) && hops > 0;
+        const same = hops === 0;
+        const ring = reachable ? 0xc9a227 : same ? 0x7a8899 : 0xe85d4c;
+        const ringSoft = reachable ? 0xffe08a : same ? 0x9aa8b8 : 0xff8a7a;
+        if (path.length >= 2) {
+          for (let pass = 0; pass < 2; pass++) {
+            for (let i = 0; i < path.length - 1; i++) {
+              const a = byId.get(path[i]!);
+              const b = byId.get(path[i + 1]!);
+              if (!a || !b) continue;
+              const ai = toIso(a.x, a.y);
+              const bi = toIso(b.x, b.y);
+              fleetsG.moveTo(ai.x, ai.y);
+              fleetsG.lineTo(bi.x, bi.y);
+            }
+            fleetsG.stroke(
+              pass === 0
+                ? { width: 5, color: 0x05070c, alpha: 0.55 }
+                : {
+                    width: 2.4,
+                    color: ring,
+                    alpha: reachable ? 0.92 : 0.55,
+                  },
+            );
+          }
+        }
         const dp = toIso(dropTarget.x, dropTarget.y);
-        fleetsG.circle(dp.x, dp.y, 22);
+        fleetsG.circle(dp.x, dp.y, 28);
         fleetsG.stroke({
-          width: 2,
-          color: 0xc9a227,
-          alpha: 0.85,
+          width: 2.2,
+          color: ring,
+          alpha: 0.9,
         });
-        fleetsG.circle(dp.x, dp.y, 16);
+        fleetsG.circle(dp.x, dp.y, 20);
         fleetsG.stroke({
           width: 1,
-          color: 0xffe08a,
+          color: ringSoft,
           alpha: 0.45,
         });
+        const hint = same
+          ? "уже здесь"
+          : reachable
+            ? formatHopTurns(hops)
+            : "нет пути";
+        let tip = dragHintLabelRef.current;
+        if (!tip) {
+          tip = new Text({
+            text: hint,
+            style: {
+              fontSize: 14,
+              fill: 0xffe8a8,
+              fontFamily: "Rajdhani, Segoe UI, sans-serif",
+              fontWeight: "700",
+              stroke: { color: 0x05070c, width: 3.5 },
+            },
+          });
+          tip.anchor.set(0.5, 1);
+          dragHintLabelRef.current = tip;
+          labels.addChild(tip);
+        }
+        tip.text = hint;
+        tip.style.fill = reachable ? 0xffe8a8 : same ? 0xc8d0dc : 0xffb0a4;
+        tip.visible = true;
+        tip.position.set(dp.x, dp.y - 32);
+      } else if (dragHintLabelRef.current) {
+        dragHintLabelRef.current.visible = false;
       }
 
       if (showFleets) {
@@ -2324,7 +2758,7 @@ export function MapCanvas({
               y: item.slot.y,
               icon: fleetSlotIcon(item.slot.fleet.kind),
               tint: item.col,
-              size: selected ? 22 : 18,
+              size: selected ? FLEET_ICON_SIZE_SEL : FLEET_ICON_SIZE,
               selected,
               stackCount: item.slot.stackCount,
             });
@@ -2385,7 +2819,7 @@ export function MapCanvas({
                 y: dragIso.y,
                 icon: fleetSlotIcon(f.kind),
                 tint: col,
-                size: 22,
+                size: FLEET_ICON_SIZE_SEL,
                 selected: true,
               });
               drawFleetStanceBadge(fleetsG, dragIso.x, dragIso.y, f.stance, true, 1);
@@ -2433,7 +2867,7 @@ export function MapCanvas({
                 y: slot.y,
                 icon: legionSlotIcon(slot.legion.status),
                 tint: col,
-                size: selected ? 20 : 17,
+                size: selected ? LEGION_ICON_SIZE_SEL : LEGION_ICON_SIZE,
                 selected,
               });
               drawLegionStanceBadge(
@@ -2467,7 +2901,7 @@ export function MapCanvas({
                 y: dragIso.y,
                 icon: legionSlotIcon(l.status),
                 tint: col,
-                size: 20,
+                size: LEGION_ICON_SIZE_SEL,
                 selected: true,
               });
               drawLegionStanceBadge(legionsG, dragIso.x, dragIso.y, l.status, true);

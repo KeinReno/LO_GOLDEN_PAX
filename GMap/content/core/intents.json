@@ -57,5 +57,34 @@
     "ap": 1,
     "ops": ["refugee_convoy"],
     "params": ["fromSystemId", "toSystemId", "amount"]
+  },
+
+  "intent.build": {
+    "id": "intent.build",
+    "ap": 1,
+    "instant": true,
+    "ops": ["build"],
+    "params": ["systemId", "planetId", "buildingId"]
+  },
+  "intent.demolish": {
+    "id": "intent.demolish",
+    "ap": 0,
+    "instant": true,
+    "ops": ["demolish"],
+    "params": ["systemId", "planetId", "instanceId"]
+  },
+  "intent.colonize": {
+    "id": "intent.colonize",
+    "ap": 1,
+    "instant": true,
+    "ops": ["colonize"],
+    "params": ["systemId", "planetId", "colonyType"]
+  },
+  "intent.set_colony_type": {
+    "id": "intent.set_colony_type",
+    "ap": 1,
+    "instant": true,
+    "ops": ["set_colony_type"],
+    "params": ["systemId", "planetId", "colonyType"]
   }
 }
