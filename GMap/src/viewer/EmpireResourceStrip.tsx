@@ -14,17 +14,13 @@ import {
   type CategoryCurrency,
 } from "../state/economyLabels";
 import { buildResourceIndex } from "../state/resourceIndex";
+import { fmtSigned } from "../state/numberFormat";
 import type { ViewerPayload, WorldState } from "../state/types";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import type { EconomyFlowBreakdown, FlowCell } from "./economyFlowTypes";
 
 const HOVER_OPEN_MS = 380;
 const HOVER_CLOSE_MS = 160;
-
-function fmtSigned(n: number): string {
-  if (n > 0) return `+${n}`;
-  return String(n);
-}
 
 /** Count deposits of each resource name/id on owned planets. */
 function countOwnedDeposits(
@@ -122,7 +118,7 @@ function CategoryHoverPanel({
         <div>
           <span className="hint">Спрос</span>
           <strong className="empire-res-stat-num empire-res-demand">
-            −{demand}
+            −{fmtSigned(demand).replace("+", "")}
           </strong>
         </div>
         <div>
@@ -152,7 +148,7 @@ function CategoryHoverPanel({
                     <span className="empire-res-tier-flow">
                       <span className="eco-up">{fmtSigned(cell.rate)}</span>
                       {" / "}
-                      <span className="empire-res-demand">−{cell.demand}</span>
+                      <span className="empire-res-demand">−{fmtSigned(cell.demand).replace("+", "")}</span>
                       {" · "}
                       <span className={cell.net >= 0 ? "eco-up" : "eco-down"}>
                         {fmtSigned(cell.net)}
@@ -276,7 +272,7 @@ function CategoryCell({
     `${cat.name} (${cat.short})`,
     `имеется ${stock}`,
     total
-      ? `приток ${fmtSigned(total.rate)}, спрос −${total.demand}, итог ${fmtSigned(total.net)}`
+      ? `приток ${fmtSigned(total.rate)}, спрос ${fmtSigned(total.demand).replace("+", "")}, итог ${fmtSigned(total.net)}`
       : null,
     "Удержите курсор — детали и ресурсы.",
   ]
@@ -329,7 +325,7 @@ function CategoryCell({
       {hasNet && (
         <span
           className={`empire-res-delta ${net > 0 ? "up" : net < 0 ? "down" : ""}`}
-          title={`Итог за ход: ${fmtSigned(net)} (приток ${fmtSigned(total!.rate)}, спрос −${total!.demand})`}
+          title={`Итог за ход: ${fmtSigned(net)} (приток ${fmtSigned(total!.rate)}, спрос ${fmtSigned(total!.demand).replace("+", "")})`}
         >
           {fmtSigned(net)}
         </span>

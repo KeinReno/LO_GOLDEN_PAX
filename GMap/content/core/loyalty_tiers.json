@@ -1,0 +1,37 @@
+{
+  "loyalty_tiers": [
+    {
+      "max": 20,
+      "effects": [
+        { "effect": "revolt_risk", "args": { "chancePerTurn": 0.1 } },
+        { "effect": "production_mult", "args": { "mult": 0.7 } }
+      ]
+    },
+    {
+      "min": 20,
+      "max": 40,
+      "effects": [
+        { "effect": "production_mult", "args": { "mult": 0.85 } }
+      ]
+    },
+    {
+      "min": 40,
+      "max": 60,
+      "effects": []
+    },
+    {
+      "min": 60,
+      "max": 80,
+      "effects": [
+        { "effect": "production_mult", "args": { "mult": 1.05 } }
+      ]
+    },
+    {
+      "min": 80,
+      "effects": [
+        { "effect": "production_mult", "args": { "mult": 1.1 } },
+        { "effect": "loyalty_add", "args": { "amount": 1 } }
+      ]
+    }
+  ]
+}

@@ -19,6 +19,7 @@ import { MapContextMenu } from "./editors/MapContextMenu";
 import { GmLiveDock } from "./editors/GmLiveDock";
 import { GmTickDialog } from "./editors/GmTickDialog";
 import { ViewerPage } from "./viewer/ViewerPage";
+import { DragCardDemo } from "./ui/DragCardDemo";
 import { useWorldStore } from "./state/worldStore";
 import { fetchContent } from "./state/contentCatalog";
 
@@ -239,6 +240,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<EditorPage />} />
         <Route path="/view" element={<ViewerPage />} />
+        <Route path="/demo/cards" element={<DragCardDemo />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

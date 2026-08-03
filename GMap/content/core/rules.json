@@ -36,10 +36,63 @@
   "combat": {
     "allowEarlyResolve": true
   },
+  "cardBattle": {
+    "handSize": 4,
+    "drawPerRound": 1,
+    "maxRounds": 8,
+    "forceCardThreshold": 5,
+    "triggers": {
+      "mutualConsent": true,
+      "gmForce": true,
+      "powerCorridor": { "min": 0.40, "max": 0.60 }
+    }
+  },
+  "engagement": {
+    "maxRounds": 3,
+    "requiresPlayerInput": true,
+    "assaultPhases": ["bombard", "landing", "ground", "occupation"]
+  },
+  "veterancy": {
+    "thresholds": [0, 100, 250, 500, 900, 1500],
+    "bonuses": [
+      {},
+      { "stat_mult": { "defense": 1.05 } },
+      { "stat_mult": { "defense": 1.1, "damage": 1.05 } },
+      { "stat_mult": { "defense": 1.15, "damage": 1.1 } },
+      { "stat_mult": { "defense": 1.2, "damage": 1.15 } },
+      { "stat_mult": { "defense": 1.25, "damage": 1.2 } }
+    ],
+    "xpPerBattle": 50,
+    "xpLossOnUnitUpgrade": 0.5
+  },
   "depot": {
     "maxAttackHopsWithoutDepot": 2,
     "maxAttackHopsWithDepot": 5,
     "noDepotUpkeepMult": 1.2
+  },
+  "logistics": {
+    "baseRangeHops": 3,
+    "depotRangeBonus": 2,
+    "supplyDecayPerHop": 0.15,
+    "connectedBonuses": [
+      {
+        "effect": "production_mult",
+        "args": { "resource": "currency.industria", "mult": 1.05 }
+      },
+      { "effect": "ap_add", "args": { "amount": 1 } }
+    ],
+    "disconnectedPenalties": [
+      {
+        "effect": "logistics_disconnected_penalty",
+        "args": {
+          "productionMult": 0.5,
+          "upkeepMult": 1.3,
+          "combatDefMult": 0.7
+        }
+      }
+    ],
+    "blockadedIsDisconnected": true,
+    "quarantineBreaksLogistics": true
   },
   "fog": {
     "storage": "per_system",

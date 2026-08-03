@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ViewerPayload } from "../state/types";
+import type { CardBattleState, ViewerPayload } from "../state/types";
 
 export const COMBAT_STANCES = [
   "hold",
@@ -34,6 +34,7 @@ const THEATER_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  active: "идёт",
   commit: "к бою",
   contact: "контакт",
   resolved: "завершён",
@@ -50,6 +51,14 @@ export type ViewerEngagement = {
   theater: string;
   systemId: string;
   status: string;
+  phase?: string;
+  mode?: string;
+  roundsElapsed?: number;
+  maxRounds?: number;
+  requiresPlayerInput?: boolean;
+  cardBattleOffer?: boolean;
+  cardBattleRequests?: string[];
+  cardBattle?: CardBattleState | null;
   sides: EngagementSide[];
   result?: {
     outcome?: string;
@@ -66,8 +75,12 @@ function factionName(world: ViewerPayload["world"], id: string): string {
   return world.factions.find((f) => f.id === id)?.name ?? id;
 }
 
-function isOpenEngagement(eng: ViewerEngagement): boolean {
-  return eng.status === "commit" || eng.status === "contact";
+export function isOpenEngagement(eng: ViewerEngagement): boolean {
+  return (
+    eng.status === "active" ||
+    eng.status === "commit" ||
+    eng.status === "contact"
+  );
 }
 
 function lossLine(
@@ -141,6 +154,8 @@ type ActiveCardProps = {
     engagementId: string,
     anchor: { clientX: number; clientY: number },
   ) => void;
+  onRequestCardBattle?: (engagementId: string) => void;
+  onOpenCardBattle?: (engagementId: string) => void;
   compact?: boolean;
 };
 
@@ -150,6 +165,8 @@ function ActiveEngagementCard({
   busy,
   onSubmitStance,
   onOpenStanceRing,
+  onRequestCardBattle,
+  onOpenCardBattle,
   compact,
 }: ActiveCardProps) {
   const sys = systemName(payload.world, eng.systemId);
@@ -160,22 +177,34 @@ function ActiveEngagementCard({
     .filter((s) => s.factionId !== payload.factionId)
     .map((s) => factionName(payload.world, s.factionId))
     .join(", ");
+  const requested = (eng.cardBattleRequests || []).includes(payload.factionId);
+  const isCard = eng.mode === "card";
 
   return (
     <article
-      className={`order-card eng-card${compact ? " eng-card-compact" : ""}`}
+      className={`order-card eng-card${compact ? " eng-card-compact" : ""}${isCard ? " eng-card-cardmode" : ""}`}
       onClick={(e) => {
+        if (isCard && onOpenCardBattle) {
+          onOpenCardBattle(eng.id);
+          return;
+        }
         if (
           mySide &&
           !mySide.locked &&
           onOpenStanceRing &&
-          !(e.target instanceof HTMLSelectElement)
+          !(e.target instanceof HTMLSelectElement) &&
+          !(e.target instanceof HTMLButtonElement)
         ) {
           onOpenStanceRing(eng.id, { clientX: e.clientX, clientY: e.clientY });
         }
       }}
       onKeyDown={(e) => {
         if (e.key !== "Enter" && e.key !== " ") return;
+        if (isCard && onOpenCardBattle) {
+          e.preventDefault();
+          onOpenCardBattle(eng.id);
+          return;
+        }
         if (mySide && !mySide.locked && onOpenStanceRing) {
           e.preventDefault();
           const rect = e.currentTarget.getBoundingClientRect();
@@ -185,14 +214,23 @@ function ActiveEngagementCard({
           });
         }
       }}
-      role={onOpenStanceRing && mySide && !mySide.locked ? "button" : undefined}
+      role={
+        (isCard && onOpenCardBattle) ||
+        (onOpenStanceRing && mySide && !mySide.locked)
+          ? "button"
+          : undefined
+      }
       tabIndex={
-        onOpenStanceRing && mySide && !mySide.locked ? 0 : undefined
+        (isCard && onOpenCardBattle) ||
+        (onOpenStanceRing && mySide && !mySide.locked)
+          ? 0
+          : undefined
       }
     >
       <div className="eng-card-head">
         <strong>
           {theater} · {sys}
+          {isCard ? " · карты" : ""}
         </strong>
         <span className="eng-status-pill">{status}</span>
       </div>
@@ -214,7 +252,35 @@ function ActiveEngagementCard({
           </>
         )}
       </p>
-      {mySide && (
+      {eng.cardBattleOffer && !isCard && (
+        <p className="hint eng-card-offer">
+          Силы близки — можно предложить карточный бой.
+        </p>
+      )}
+      {isCard && onOpenCardBattle && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => onOpenCardBattle(eng.id)}
+          >
+            Открыть стол
+          </button>
+        </div>
+      )}
+      {!isCard && onRequestCardBattle && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="btn ghost"
+            disabled={busy || requested}
+            onClick={() => onRequestCardBattle(eng.id)}
+          >
+            {requested ? "Карточный бой запрошен" : "Запросить карточный бой"}
+          </button>
+        </div>
+      )}
+      {mySide && !isCard && (
         <div onClick={(e) => e.stopPropagation()}>
           <StancePicker
             engagementId={eng.id}
@@ -234,6 +300,8 @@ export function PlayerEngagementPanel({
   engagements,
   onSubmitStance,
   onOpenStanceRing,
+  onRequestCardBattle,
+  onOpenCardBattle,
   busy = false,
   msg,
   filterSystemId,
@@ -247,6 +315,8 @@ export function PlayerEngagementPanel({
     engagementId: string,
     anchor: { clientX: number; clientY: number },
   ) => void;
+  onRequestCardBattle?: (engagementId: string) => void;
+  onOpenCardBattle?: (engagementId: string) => void;
   busy?: boolean;
   msg?: string | null;
   /** When set, only show engagements in this system (map sheet). */
@@ -302,6 +372,8 @@ export function PlayerEngagementPanel({
               busy={busy}
               onSubmitStance={onSubmitStance}
               onOpenStanceRing={onOpenStanceRing}
+              onRequestCardBattle={onRequestCardBattle}
+              onOpenCardBattle={onOpenCardBattle}
               compact={!!filterSystemId}
             />
           ))}
@@ -322,6 +394,7 @@ export function PlayerEngagementPanel({
                   <strong>
                     {theater} · {sys}
                     {eng.result?.outcome ? ` · ${eng.result.outcome}` : ""}
+                    {eng.mode === "card" ? " · карты" : ""}
                   </strong>
                   <br />
                   <span className="hint">

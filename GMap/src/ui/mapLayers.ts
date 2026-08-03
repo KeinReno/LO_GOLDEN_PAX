@@ -20,6 +20,8 @@ export interface MapLayerFlags {
   showDeadZones: boolean;
   showTraffic: boolean;
   showQuests: boolean;
+  /** Loyalty heat halo (A3). */
+  showLoyalty: boolean;
   /**
    * Signal icon layout on systems:
    * false/undefined = priority stack (1–2 icons + "+N")
@@ -48,7 +50,8 @@ export type LayerLucideIcon =
   | "truck"
   | "zap"
   | "help-circle"
-  | "activity";
+  | "activity"
+  | "heart";
 
 export const DEFAULT_MAP_LAYERS: MapLayerFlags = {
   showLinks: true,
@@ -70,6 +73,7 @@ export const DEFAULT_MAP_LAYERS: MapLayerFlags = {
   showDeadZones: true,
   showTraffic: true,
   showQuests: true,
+  showLoyalty: false,
   showSignalFan: false,
 };
 
@@ -94,6 +98,7 @@ export const MOBILE_LIGHT_LAYERS: MapLayerFlags = {
   showDeadZones: false,
   showTraffic: false,
   showQuests: false,
+  showLoyalty: false,
   showSignalFan: false,
 };
 
@@ -117,6 +122,7 @@ export const ULTRALIGHT_LAYERS: MapLayerFlags = {
   showDeadZones: false,
   showTraffic: false,
   showQuests: false,
+  showLoyalty: false,
   showSignalFan: false,
 };
 
@@ -225,7 +231,9 @@ export type LayerPresetId =
   | "military"
   | "war"
   | "econ"
+  | "logistics"
   | "quest"
+  | "loyalty"
   | "gm"
   | "minimal";
 
@@ -351,6 +359,31 @@ export const LAYER_PRESETS: {
     },
   },
   {
+    id: "logistics",
+    label: "Логистика",
+    hint: "Сеть снабжения: зелёный / узкое место / отрезано",
+    flags: {
+      showTerritory: true,
+      showOwnership: true,
+      showSectors: false,
+      showFactionLabels: true,
+      showLabels: true,
+      showLinks: true,
+      showFleets: false,
+      showLegions: false,
+      showOrders: false,
+      showDiplomacy: false,
+      showSupply: true,
+      showCaravans: false,
+      showTraffic: false,
+      showJumpRange: false,
+      showBlockades: true,
+      showQuests: false,
+      showFogPreview: false,
+      showDeadZones: false,
+    },
+  },
+  {
     id: "quest",
     label: "Квест",
     hint: "Квесты и подписи, минимум войны",
@@ -369,6 +402,32 @@ export const LAYER_PRESETS: {
       showCaravans: false,
       showTraffic: false,
       showQuests: true,
+      showLoyalty: false,
+      showJumpRange: false,
+      showBlockades: false,
+      showFogPreview: false,
+    },
+  },
+  {
+    id: "loyalty",
+    label: "Лояльность",
+    hint: "Ореол лояльности населения: красный / жёлтый / зелёный",
+    flags: {
+      showTerritory: true,
+      showOwnership: false,
+      showSectors: false,
+      showFactionLabels: true,
+      showLabels: true,
+      showLinks: true,
+      showFleets: false,
+      showLegions: false,
+      showOrders: false,
+      showDiplomacy: false,
+      showSupply: false,
+      showCaravans: false,
+      showTraffic: false,
+      showQuests: false,
+      showLoyalty: true,
       showJumpRange: false,
       showBlockades: false,
       showFogPreview: false,
@@ -393,6 +452,7 @@ export const LAYER_PRESETS: {
       showCaravans: true,
       showTraffic: true,
       showQuests: true,
+      showLoyalty: false,
       showJumpRange: true,
       showBlockades: true,
       showDeadZones: true,
@@ -463,6 +523,18 @@ export const MAP_MODE_PRESETS: {
     hint: "Туман-превью, дипломатия, владение, всё видно",
     hotkey: "F9",
   },
+  {
+    id: "logistics",
+    label: "Логистика",
+    hint: "Сеть снабжения от столицы",
+    hotkey: "F10",
+  },
+  {
+    id: "loyalty",
+    label: "Лояльность",
+    hint: "Ореол лояльности населения",
+    hotkey: "F4",
+  },
 ];
 
 const MAP_MODE_PRESET_IDS = new Set<LayerPresetId>([
@@ -470,7 +542,9 @@ const MAP_MODE_PRESET_IDS = new Set<LayerPresetId>([
   "military",
   "war",
   "econ",
+  "logistics",
   "quest",
+  "loyalty",
   "gm",
 ]);
 
@@ -497,6 +571,7 @@ const MODE_MATCH_KEYS: MapLayerKey[] = [
   "showCaravans",
   "showTraffic",
   "showQuests",
+  "showLoyalty",
   "showFogPreview",
   "showDeadZones",
 ];

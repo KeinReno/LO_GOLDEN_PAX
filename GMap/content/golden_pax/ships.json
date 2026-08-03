@@ -2,25 +2,88 @@
   "ship.belator_dread": {
     "id": "ship.belator_dread",
     "name": "Громоносец",
-    "roles": ["capital", "bombard"],
-    "stats": { "damage": 70, "armor": 75, "shields": 55, "hp": 280, "accuracy": 42 },
+    "roles": [
+      "capital",
+      "bombard"
+    ],
+    "stats": {
+      "damage": 70,
+      "armor": 75,
+      "shields": 55,
+      "hp": 280,
+      "accuracy": 42
+    },
     "targeting": "capital_first",
-    "theaterMult": { "space": 1, "assault": 1.0, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 1,
+      "ground": 0
+    },
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Громоносец · элита"
+      }
+    }
   },
   "ship.swarm_brood": {
     "id": "ship.swarm_brood",
     "name": "Роевая масса",
-    "roles": ["screen", "carrier"],
-    "stats": { "damage": 18, "armor": 12, "shields": 8, "hp": 55, "accuracy": 55 },
+    "roles": [
+      "screen",
+      "carrier"
+    ],
+    "stats": {
+      "damage": 18,
+      "armor": 12,
+      "shields": 8,
+      "hp": 55,
+      "accuracy": 55
+    },
     "targeting": "screen_first",
-    "theaterMult": { "space": 1, "assault": 0.4, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.4,
+      "ground": 0
+    },
+    "raceVariants": {
+      "race_swarm": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Роевая масса · элита"
+      }
+    }
   },
   "ship.advent_cruiser": {
     "id": "ship.advent_cruiser",
     "name": "Звёздный Адвент",
-    "roles": ["line", "capital"],
-    "stats": { "damage": 45, "armor": 50, "shields": 40, "hp": 200, "accuracy": 48 },
+    "roles": [
+      "line",
+      "capital"
+    ],
+    "stats": {
+      "damage": 45,
+      "armor": 50,
+      "shields": 40,
+      "hp": 200,
+      "accuracy": 48
+    },
     "targeting": "line_first",
-    "theaterMult": { "space": 1, "assault": 0.7, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.7,
+      "ground": 0
+    },
+    "raceVariants": {
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Звёздный Адвент · элита"
+      }
+    }
   }
 }

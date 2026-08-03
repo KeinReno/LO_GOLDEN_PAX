@@ -97,6 +97,39 @@ export function drawSupplyChains(
   anim: AnimClock,
 ): void {
   if (!factionId) return;
+  const byId = new Map(world.systems.map((s) => [s.id, s]));
+  const owned = world.systems.filter((s) => s.ownerFactionId === factionId);
+  const hasLogistics = owned.some((s) => s.logistics != null);
+
+  if (hasLogistics) {
+    for (const sys of owned) {
+      const L = sys.logistics;
+      if (!L) continue;
+      const parent = L.parentId ? byId.get(L.parentId) : null;
+      const from = parent ?? owned.find((s) => s.isCapital) ?? null;
+      if (!from || from.id === sys.id) continue;
+      const a = toIso(from.x, from.y);
+      const b = toIso(sys.x, sys.y);
+      const connected = L.connectedToCapital;
+      const color = !connected
+        ? 0xe85d4c
+        : L.bottlenecked
+          ? 0xe8c547
+          : 0x5cdb95;
+      const width = 1 + Math.max(0.4, (L.supplyLevel || 0) * 2.4);
+      const alpha = connected
+        ? 0.4 + Math.sin(anim.t * 2) * 0.08
+        : 0.45 + Math.sin(anim.t * 3) * 0.1;
+      g.moveTo(a.x, a.y);
+      g.lineTo(b.x, b.y);
+      g.stroke({ width: width + 1.6, color: 0x0a0e14, alpha: 0.35 });
+      g.moveTo(a.x, a.y);
+      g.lineTo(b.x, b.y);
+      g.stroke({ width, color, alpha });
+    }
+    return;
+  }
+
   const spokes = buildSupplySpokes(world, factionId);
   for (const { from, to } of spokes) {
     const a = toIso(from.x, from.y);

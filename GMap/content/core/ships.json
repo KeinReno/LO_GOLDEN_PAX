@@ -81,7 +81,56 @@
         "count": 1,
         "per": "turn"
       }
-    ]
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Корвет · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Корвет · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Корвет · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Корвет · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Корвет · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Корвет · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Корвет · voidborn"
+      }
+    }
   },
   "ship.frigate": {
     "id": "ship.frigate",
@@ -176,7 +225,56 @@
         "count": 1,
         "per": "turn"
       }
-    ]
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Фрегат · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Фрегат · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Фрегат · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Фрегат · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Фрегат · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Фрегат · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Фрегат · voidborn"
+      }
+    }
   },
   "ship.cruiser": {
     "id": "ship.cruiser",
@@ -297,7 +395,56 @@
         "count": 2,
         "per": "turn"
       }
-    ]
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Крейсер · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Крейсер · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Крейсер · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Крейсер · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Крейсер · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Крейсер · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Крейсер · voidborn"
+      }
+    }
   },
   "ship.battleship": {
     "id": "ship.battleship",
@@ -418,7 +565,56 @@
         "count": 3,
         "per": "turn"
       }
-    ]
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Линкор · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Линкор · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Линкор · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Линкор · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Линкор · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Линкор · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Линкор · voidborn"
+      }
+    }
   },
   "ship.carrier": {
     "id": "ship.carrier",
@@ -508,7 +704,56 @@
         "count": 4,
         "per": "turn"
       }
-    ]
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Носитель · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Носитель · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Носитель · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Носитель · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Носитель · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Носитель · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Носитель · voidborn"
+      }
+    }
   },
   "ship.dreadnought": {
     "id": "ship.dreadnought",
@@ -632,7 +877,56 @@
       }
     ],
     "signature": "T8 столп флота; требует антиматерия-реактор",
-    "tradeoff": "огромный upkeep"
+    "tradeoff": "огромный upkeep",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Дредноут · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Дредноут · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Дредноут · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Дредноут · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Дредноут · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Дредноут · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Дредноут · voidborn"
+      }
+    }
   },
   "ship.psi_cruiser": {
     "id": "ship.psi_cruiser",
@@ -739,7 +1033,56 @@
       }
     ],
     "signature": "Псион-щиты и тактика на гриниде/зро",
-    "tradeoff": "требует псион-расу"
+    "tradeoff": "требует псион-расу",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Пси-крейсер · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Пси-крейсер · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Пси-крейсер · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Пси-крейсер · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Пси-крейсер · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Пси-крейсер · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Пси-крейсер · voidborn"
+      }
+    }
   },
   "ship.black_iron": {
     "id": "ship.black_iron",
@@ -862,6 +1205,55 @@
       }
     ],
     "signature": "T9 флагман на блакуле; разрушение материи",
-    "tradeoff": "требует блакула T8+"
+    "tradeoff": "требует блакула T8+",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Чёрное Железо · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Чёрное Железо · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Чёрное Железо · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Чёрное Железо · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Чёрное Железо · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Чёрное Железо · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.15,
+          "hp": 0.95
+        },
+        "name": "Чёрное Железо · voidborn"
+      }
+    }
   }
 }

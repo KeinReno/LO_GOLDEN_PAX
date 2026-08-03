@@ -26,6 +26,18 @@
     "ops": ["combat_stance"],
     "params": ["engagementId", "stance"]
   },
+  "intent.request_card_battle": {
+    "id": "intent.request_card_battle",
+    "ap": 0,
+    "ops": ["request_card_battle"],
+    "params": ["engagementId"]
+  },
+  "intent.play_card": {
+    "id": "intent.play_card",
+    "ap": 0,
+    "ops": ["play_card"],
+    "params": ["engagementId", "cardId"]
+  },
 
   "intent.claim_system": {
     "id": "intent.claim_system",
@@ -90,6 +102,12 @@
     "ops": ["refugee_convoy"],
     "params": ["fromSystemId", "toSystemId", "amount"]
   },
+  "intent.give_npc_task": {
+    "id": "intent.give_npc_task",
+    "ap": 1,
+    "ops": ["give_npc_task"],
+    "params": ["npcId", "taskLabel", "etaTurn", "effects", "linkedQuestId"]
+  },
 
   "intent.build": {
     "id": "intent.build",
@@ -118,5 +136,51 @@
     "instant": true,
     "ops": ["set_colony_type"],
     "params": ["systemId", "planetId", "colonyType"]
+  },
+  "intent.make_diplo_offer": {
+    "id": "intent.make_diplo_offer",
+    "ap": 0,
+    "instant": true,
+    "ops": ["make_diplo_offer"],
+    "params": ["toFactionId", "give", "want", "note"],
+    "description": "Дипломатическое предложение (give/want). Обычно через /api/diplo/offers."
+  },
+  "intent.break_treaty": {
+    "id": "intent.break_treaty",
+    "ap": 1,
+    "ops": ["break_treaty"],
+    "params": ["withFactionId", "treatyType"],
+    "description": "Разорвать договор — opinion −20 casus belli"
+  },
+  "intent.research_upgrade": {
+    "id": "intent.research_upgrade",
+    "ap": 1,
+    "ops": ["research_upgrade"],
+    "params": ["techId", "upgradeId"]
+  },
+
+  "intent.throw_quest_dice": {
+    "id": "intent.throw_quest_dice",
+    "ap": 0,
+    "instant": true,
+    "ops": ["throw_quest_dice"],
+    "params": [],
+    "description": "Бросок 1d6 — число ежходных квестов на ход"
+  },
+  "intent.resolve_quest_choice": {
+    "id": "intent.resolve_quest_choice",
+    "ap": 0,
+    "instant": true,
+    "ops": ["resolve_quest_choice"],
+    "params": ["questId", "choiceId"],
+    "description": "Выбор по квесту (effects через questEngine)"
+  },
+  "intent.resolve_quest_dice": {
+    "id": "intent.resolve_quest_dice",
+    "ap": 0,
+    "instant": true,
+    "ops": ["resolve_quest_dice"],
+    "params": ["questId", "specIndex"],
+    "description": "Серверный бросок кубика по квесту"
   }
 }

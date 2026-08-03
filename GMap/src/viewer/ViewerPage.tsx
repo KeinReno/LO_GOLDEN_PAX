@@ -84,7 +84,8 @@ import {
   ResearchPanel,
 } from "./ResearchPanel";
 import type { EconomyCategory } from "../state/contentCatalog";
-import { DealDesk, type DiploOffer } from "./DealDesk";
+import { ViewerDiploPanel } from "./ViewerDiploPanel";
+import type { DiploOffer } from "./DealDesk";
 import { ForcesArmory } from "./ForcesArmory";
 import {
   COMBAT_STANCE_LABELS,
@@ -93,6 +94,7 @@ import {
   type CombatStanceId,
   type ViewerEngagement,
 } from "./PlayerEngagementPanel";
+import { CardBattleTable } from "./CardBattleTable";
 import {
   ViewerQuestDossier,
   ViewerQuestPanel,
@@ -103,7 +105,7 @@ import type {
   ColonyDef,
   PlanetActionRequest,
 } from "./PlayerPlanetManage";
-import { RpChat } from "../editors/RpChat";
+import { CourtPanel } from "./CourtPanel";
 import { ViewerContextMenu } from "./ViewerContextMenu";
 import { buildViewerAlerts } from "./buildViewerAlerts";
 import {
@@ -439,6 +441,8 @@ export function ViewerPage() {
     x: number;
     y: number;
   } | null>(null);
+  const [cardBattleId, setCardBattleId] = useState<string | null>(null);
+  const [cardBattleMinimized, setCardBattleMinimized] = useState(false);
   const [systemFocusId, setSystemFocusId] = useState<string | null>(null);
   const [flowData, setFlowData] = useState<EconomyFlowBreakdown | null>(null);
   const [economyPopover, setEconomyPopover] = useState<{
@@ -897,6 +901,42 @@ export function ViewerPage() {
     }
   };
 
+  const submitQuestAction = async (
+    action: string,
+    extra: Record<string, unknown> = {},
+  ) => {
+    if (!payload) return { ok: false as const, error: "no payload" };
+    try {
+      const res = await fetch("/api/quest/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          action,
+          ...extra,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.world) {
+        setPayload({
+          ...payload,
+          world: data.world,
+          economy: data.economy ?? payload.economy,
+          updatedAt: data.updatedAt ?? payload.updatedAt,
+          tableRevision: data.tableRevision ?? payload.tableRevision,
+        });
+      }
+      if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      return { ok: true as const, ...data };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOrderMsg(msg);
+      return { ok: false as const, error: msg };
+    }
+  };
+
   const setTax = async (taxSlot: string, tierId: string) => {
     if (!payload) return;
     const taxLabels: Record<string, Record<string, string>> = {
@@ -1027,6 +1067,48 @@ export function ViewerPage() {
     }
   };
 
+  const submitRequestCardBattle = async (engagementId: string) => {
+    if (!payload) return;
+    setStanceBusy(true);
+    try {
+      const res = await fetch(
+        `/api/engagements/${engagementId}/request_card`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            factionId: payload.factionId,
+            password,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      setOrderMsg(
+        data.mutual
+          ? "Карточный бой начат (взаимное согласие)"
+          : "Запрос карточного боя отправлен",
+      );
+      if (data.engagement) {
+        setEngagements((prev) =>
+          prev.map((e) =>
+            e.id === engagementId ? (data.engagement as ViewerEngagement) : e,
+          ),
+        );
+        if (data.engagement.mode === "card") {
+          setCardBattleMinimized(false);
+          setCardBattleId(engagementId);
+        }
+      } else {
+        await refreshEngagements(payload.factionId);
+      }
+    } catch (err) {
+      setOrderMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setStanceBusy(false);
+    }
+  };
+
   const applyDiploSession = (data: ViewerPayload & {
     diploOffers?: ViewerPayload["diploOffers"];
     economy?: ViewerPayload["economy"];
@@ -1100,6 +1182,37 @@ export function ViewerPage() {
         });
       }
       setResearchMsg(`Исследовано: ${data.tech?.name ?? techId}`);
+    } catch (err) {
+      setResearchMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResearchBusy(false);
+    }
+  };
+
+  const researchUpgrade = async (techId: string, upgradeId: string) => {
+    if (!payload) return;
+    setResearchBusy(true);
+    setResearchMsg(null);
+    try {
+      const res = await fetch("/api/economy/research-upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          techId,
+          upgradeId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.economy) {
+        setPayload({
+          ...payload,
+          economy: { ...payload.economy, ...data.economy },
+        });
+      }
+      setResearchMsg(`Улучшено: ${data.upgrade?.name ?? upgradeId}`);
     } catch (err) {
       setResearchMsg(err instanceof Error ? err.message : String(err));
     } finally {
@@ -2317,11 +2430,17 @@ export function ViewerPage() {
   const researchPanel = payload.economy ? (
     <ResearchPanel
       eco={payload.economy}
+      world={payload.world}
+      factionId={payload.factionId}
       onResearch={(id) => void researchTech(id)}
+      onResearchUpgrade={(techId, upgradeId) =>
+        void researchUpgrade(techId, upgradeId)
+      }
       busy={researchBusy}
       msg={researchMsg}
       branch={researchBranch}
       onBranchChange={setResearchBranch}
+      asRoom={false}
     />
   ) : (
     <div className="hq-panel">
@@ -2376,7 +2495,7 @@ export function ViewerPage() {
     []) as DiploOffer[];
 
   const diplomacyPanel = (
-    <DealDesk
+    <ViewerDiploPanel
       payload={payload}
       economy={payload.economy}
       incoming={diploIncoming}
@@ -2401,6 +2520,7 @@ export function ViewerPage() {
         void diploOfferAction("cancel", { offerId: id }, "Предложение отозвано")
       }
       onGift={(toId, cur, amt) => void submitTransfer(toId, cur, amt)}
+      onTransfer={(toId, cur, amt) => void submitTransfer(toId, cur, amt)}
     />
   );
 
@@ -2408,6 +2528,41 @@ export function ViewerPage() {
     <ViewerQuestPanel
       payload={payload}
       onSelectQuest={(id) => setOpenQuestId(id)}
+      actions={{
+        onThrowYearlyDice: async () => {
+          const res = await submitQuestAction("throw_quest_dice");
+          if (!res.ok) return { ok: false };
+          setOrderMsg(res.message || `Ежходные квесты: ${res.count ?? 0}`);
+          return {
+            ok: true,
+            roll: res.roll as number | undefined,
+            message: res.message as string | undefined,
+          };
+        },
+        onResolveChoice: async (questId, choiceId) => {
+          const res = await submitQuestAction("resolve_quest_choice", {
+            questId,
+            choiceId,
+          });
+          if (res.ok) setOrderMsg("Выбор по квесту применён");
+          return res.ok;
+        },
+        onResolveDice: async (questId, specIndex, choiceId) => {
+          const res = await submitQuestAction("resolve_quest_dice", {
+            questId,
+            specIndex,
+            choiceId,
+          });
+          if (!res.ok) return { ok: false };
+          setOrderMsg((res.message as string) || "Бросок записан");
+          return {
+            ok: true,
+            rolls: res.rolls as number[] | undefined,
+            success: res.success as boolean | null | undefined,
+            message: res.message as string | undefined,
+          };
+        },
+      }}
     />
   );
 
@@ -3493,6 +3648,13 @@ export function ViewerPage() {
               void submitCombatStance(engId, stance)
             }
             onOpenStanceRing={(engId, anchor) => openStanceRing(engId, anchor)}
+            onRequestCardBattle={(engId) =>
+              void submitRequestCardBattle(engId)
+            }
+            onOpenCardBattle={(engId) => {
+              setCardBattleMinimized(false);
+              setCardBattleId(engId);
+            }}
           />
         </section>
       </aside>
@@ -3574,7 +3736,9 @@ export function ViewerPage() {
               {openEngagementCount > 0 &&
                 engagements.some(
                   (e) =>
-                    (e.status === "commit" || e.status === "contact") &&
+                    (e.status === "active" ||
+                      e.status === "commit" ||
+                      e.status === "contact") &&
                     e.systemId === selectedSystem.id,
                 ) && (
                   <section className="hq-card" style={{ marginTop: 8 }}>
@@ -3591,6 +3755,13 @@ export function ViewerPage() {
                       onOpenStanceRing={(engId, anchor) =>
                         openStanceRing(engId, anchor)
                       }
+                      onRequestCardBattle={(engId) =>
+                        void submitRequestCardBattle(engId)
+                      }
+                      onOpenCardBattle={(engId) => {
+                        setCardBattleMinimized(false);
+                        setCardBattleId(engId);
+                      }}
                     />
                   </section>
                 )}
@@ -3696,7 +3867,7 @@ export function ViewerPage() {
             aria-hidden={viewMode !== "rp"}
           >
             <div className="viewer-sheet-grab">
-              <p className="viewer-sheet-kicker">Сцена с мастером</p>
+              <p className="viewer-sheet-kicker">Двор · хроника</p>
               <button
                 type="button"
                 className="viewer-sheet-close"
@@ -3707,18 +3878,25 @@ export function ViewerPage() {
             </div>
             <div className="viewer-sheet-body">
               {viewMode === "rp" && (
-                <RpChat
-                  mode="player"
-                  layout="fill"
-                  factionId={payload.factionId}
+                <CourtPanel
+                  payload={payload}
                   password={password}
+                  layout="fill"
                   factionColor={faction?.color}
                   avatarUrl={faction?.avatarUrl}
-                  systems={payload.world.systems.map((s) => ({
-                    id: s.id,
-                    name: s.name,
-                  }))}
                   onMsg={(m) => setOrderMsg(m)}
+                  onGiveNpcTask={async (npcId, opts) => {
+                    await submitPlayerIntent(
+                      "intent.give_npc_task",
+                      {
+                        npcId,
+                        taskLabel: opts.taskLabel,
+                        etaTurn: opts.etaTurn,
+                        linkedQuestId: opts.linkedQuestId,
+                      },
+                      `Поручение для двора принято`,
+                    );
+                  }}
                   onMessagesLoaded={(msgs) => {
                     const latest = msgs[msgs.length - 1];
                     if (latest?.at) {
@@ -3743,27 +3921,38 @@ export function ViewerPage() {
               setViewMode("map");
             }
           }}
-          mode="player"
-          factionId={payload.factionId}
-          password={password}
-          factionColor={faction?.color}
-          avatarUrl={faction?.avatarUrl}
-          systems={payload.world.systems.map((s) => ({
-            id: s.id,
-            name: s.name,
-          }))}
-          onMsg={(m) => setOrderMsg(m)}
           unread={rpUnread}
           storageKey={`gmap-rp-float-geom-player-${payload.factionId}`}
-          title="Сцена · мастер"
-          onMessagesLoaded={(msgs) => {
-            const latest = msgs[msgs.length - 1];
-            if (latest?.at) {
-              writeRpSeenAt(payload.factionId, latest.at);
-            }
-            setRpUnread(0);
-          }}
-        />
+          title="Двор · хроника"
+        >
+          <CourtPanel
+            payload={payload}
+            password={password}
+            layout="fill"
+            factionColor={faction?.color}
+            avatarUrl={faction?.avatarUrl}
+            onMsg={(m) => setOrderMsg(m)}
+            onGiveNpcTask={async (npcId, opts) => {
+              await submitPlayerIntent(
+                "intent.give_npc_task",
+                {
+                  npcId,
+                  taskLabel: opts.taskLabel,
+                  etaTurn: opts.etaTurn,
+                  linkedQuestId: opts.linkedQuestId,
+                },
+                `Поручение для двора принято`,
+              );
+            }}
+            onMessagesLoaded={(msgs) => {
+              const latest = msgs[msgs.length - 1];
+              if (latest?.at) {
+                writeRpSeenAt(payload.factionId, latest.at);
+              }
+              setRpUnread(0);
+            }}
+          />
+        </FloatingRpWindow>
       )}
 
       {openQuest && (
@@ -3779,6 +3968,29 @@ export function ViewerPage() {
               () => mapApiRef.current?.focusSystem(systemId),
               80,
             );
+          }}
+          onResolveChoice={async (questId, choiceId) => {
+            const res = await submitQuestAction("resolve_quest_choice", {
+              questId,
+              choiceId,
+            });
+            if (res.ok) setOrderMsg("Выбор по квесту применён");
+            return res.ok;
+          }}
+          onResolveDice={async (questId, specIndex, choiceId) => {
+            const res = await submitQuestAction("resolve_quest_dice", {
+              questId,
+              specIndex,
+              choiceId,
+            });
+            if (!res.ok) return { ok: false };
+            setOrderMsg((res.message as string) || "Бросок записан");
+            return {
+              ok: true,
+              rolls: res.rolls as number[] | undefined,
+              success: res.success as boolean | null | undefined,
+              message: res.message as string | undefined,
+            };
           }}
         />
       )}
@@ -3910,12 +4122,12 @@ export function ViewerPage() {
             goView("rp");
             setRpUnread(0);
           }}
-          title={mobile ? "Сцена · 6" : "Сцена · 8"}
+          title={mobile ? "Двор · 6" : "Двор · 8"}
         >
           <span className="viewer-dock-icon" aria-hidden>
             <MessageSquare size={18} strokeWidth={2} />
           </span>
-          Сцена
+          Двор
           <kbd className="viewer-dock-kbd">{mobile ? "6" : "8"}</kbd>
           {rpUnread > 0 && viewMode !== "rp" && (
             <span className="dock-badge dock-badge--hot">
@@ -3961,6 +4173,44 @@ export function ViewerPage() {
               setStanceRing(null);
             }}
           />
+        );
+      })()}
+      {(() => {
+        if (cardBattleMinimized && !cardBattleId) return null;
+        const activeCard =
+          (cardBattleId &&
+            engagements.find((e) => e.id === cardBattleId)) ||
+          engagements.find(
+            (e) =>
+              e.mode === "card" &&
+              (e.status === "active" || e.status === "commit") &&
+              e.sides.some((s) => s.factionId === payload?.factionId),
+          ) ||
+          null;
+        if (!activeCard || activeCard.mode !== "card" || !payload) return null;
+        if (cardBattleMinimized && activeCard.id !== cardBattleId) return null;
+        const factionNames = Object.fromEntries(
+          payload.world.factions.map((f) => [f.id, f.name]),
+        );
+        return (
+          <div className="cbt-overlay" role="dialog" aria-modal="true">
+            <CardBattleTable
+              engagement={activeCard}
+              factionId={payload.factionId}
+              password={password}
+              factionNames={factionNames}
+              busy={stanceBusy}
+              onUpdated={(next) => {
+                setEngagements((prev) =>
+                  prev.map((e) => (e.id === next.id ? next : e)),
+                );
+              }}
+              onClose={() => {
+                setCardBattleId(null);
+                setCardBattleMinimized(true);
+              }}
+            />
+          </div>
         );
       })()}
       {systemFocusId && focusedSystem && payload && (

@@ -124,6 +124,7 @@ interface WorldStore extends UiState {
     showDeadZones: boolean;
     showTraffic: boolean;
     showQuests: boolean;
+    showLoyalty: boolean;
   }>) => void;
   setDiplomacyPanelOpen: (open: boolean) => void;
   setRpFloatOpen: (open: boolean) => void;
@@ -402,6 +403,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showDeadZones: true,
   showTraffic: true,
   showQuests: true,
+  showLoyalty: false,
   openQuestId: null,
   editorGraphics: readStoredEditorGraphics(),
   diplomacyPanelOpen: false,
@@ -1795,8 +1797,44 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
         { id: uuid(), aId: x, bId: y, relation },
       ];
     }
+    const turn = world.meta?.turn ?? 0;
+    const factions = (world.factions ?? []).map((fac) => {
+      if (fac.id !== aId && fac.id !== bId) return fac;
+      const otherId = fac.id === aId ? bId : aId;
+      const prev = fac.diplomacy ?? {
+        opinions: {},
+        treaties: [],
+        history: [],
+      };
+      const treaties = (prev.treaties ?? []).filter(
+        (t) => t.withFactionId !== otherId,
+      );
+      if (relation !== "neutral") {
+        treaties.push({
+          id: `treaty_${fac.id}_${otherId}_${relation}`,
+          type: relation,
+          withFactionId: otherId,
+          startedTurn: turn,
+          expiresTurn: null,
+          effects: [],
+        });
+      }
+      const history = [
+        ...(prev.history ?? []),
+        {
+          turn,
+          type: "relation",
+          withFactionId: otherId,
+          label: `Отношения: ${relation}`,
+        },
+      ].slice(-40);
+      return {
+        ...fac,
+        diplomacy: { ...prev, treaties, history },
+      };
+    });
     set({
-      world: touch({ ...world, diplomacy }),
+      world: touch({ ...world, diplomacy, factions }),
       _coalesce: `diplo:${x}:${y}`,
     } as HistoryPatch);
   },

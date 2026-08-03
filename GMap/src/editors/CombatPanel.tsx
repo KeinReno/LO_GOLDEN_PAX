@@ -10,6 +10,8 @@ type EngagementSide = {
   locked?: boolean;
 };
 
+type EngagementPhase = "bombard" | "landing" | "ground" | "occupation";
+
 type Engagement = {
   id: string;
   theater: string;
@@ -17,11 +19,16 @@ type Engagement = {
   planetId?: string | null;
   status: string;
   source?: string;
+  phase?: EngagementPhase | string;
+  roundsElapsed?: number;
+  maxRounds?: number;
+  mode?: string;
   sides: EngagementSide[];
   result?: {
     outcome?: string;
     powerA?: number;
     powerB?: number;
+    phase?: string;
     lossesA?: { defId: string; lost: number; before: number; after: number }[];
     lossesB?: { defId: string; lost: number; before: number; after: number }[];
   } | null;
@@ -29,14 +36,48 @@ type Engagement = {
 
 const STANCES = ["hold", "assault", "skirmish", "retreat", "bombard"];
 
+const ASSAULT_PHASES: { id: EngagementPhase; label: string }[] = [
+  { id: "bombard", label: "Обстрел" },
+  { id: "landing", label: "Высадка" },
+  { id: "ground", label: "Земля" },
+  { id: "occupation", label: "Оккупация" },
+];
+
+function isOpen(e: Engagement) {
+  return (
+    e.status === "active" || e.status === "commit" || e.status === "contact"
+  );
+}
+
 function lossLine(
   losses?: { defId: string; lost: number; before: number; after: number }[],
 ) {
   if (!losses?.length) return "—";
-  return losses
-    .filter((l) => l.lost > 0)
-    .map((l) => `${l.defId.replace(/^(ship|unit)\./, "")} −${l.lost}`)
-    .join(", ") || "без потерь";
+  return (
+    losses
+      .filter((l) => l.lost > 0)
+      .map((l) => `${l.defId.replace(/^(ship|unit)\./, "")} −${l.lost}`)
+      .join(", ") || "без потерь"
+  );
+}
+
+function PhaseRibbon({ phase }: { phase?: string }) {
+  const active = (phase || "bombard") as EngagementPhase;
+  return (
+    <ol className="combat-phase-ribbon" aria-label="Фазы штурма">
+      {ASSAULT_PHASES.map((p, i) => {
+        const idx = ASSAULT_PHASES.findIndex((x) => x.id === active);
+        const state =
+          p.id === active ? "active" : i < idx ? "done" : "pending";
+        return (
+          <li key={p.id} className={`combat-phase-step ${state}`}>
+            <span className="combat-phase-idx">{i + 1}</span>
+            <span className="combat-phase-label">{p.label}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 export function CombatPanel() {
@@ -85,9 +126,30 @@ export function CombatPanel() {
     }
   };
 
-  const open = list.filter(
-    (e) => e.status === "commit" || e.status === "contact",
-  );
+  const advancePhase = async (engId: string, fullResolve = false) => {
+    try {
+      const res = await fetch(`/api/engagements/${engId}/advance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": masterToken,
+        },
+        body: JSON.stringify({ fullResolve }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      setSyncMsg(
+        fullResolve
+          ? `Engagement ${engId} форс-резолв`
+          : `Фаза продвинута: ${data.engagement?.phase ?? "done"}`,
+      );
+      void refresh();
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const open = list.filter(isOpen);
   const recent = list
     .filter((e) => e.status === "resolved")
     .slice(-8)
@@ -102,8 +164,8 @@ export function CombatPanel() {
     <section>
       <h3>Бой · Engagement</h3>
       <p className="hint">
-        Столкновения space / ground / assault. Resolve на тике; потери по типам
-        в журнале.
+        Столкновения живут между тиками: стороны выбирают stance, затем резолв
+        (или авто через maxRounds). Assault — 4 фазы.
       </p>
       <button
         type="button"
@@ -120,21 +182,33 @@ export function CombatPanel() {
         </p>
       ) : (
         open.map((eng) => (
-          <div key={eng.id} className="order-card" style={{ marginTop: 8 }}>
+          <div key={eng.id} className="order-card combat-eng-card">
             <div>
               <strong>
                 {eng.theater} · {sysName(eng.systemId)}
               </strong>
               <br />
               <span className="hint">
-                {eng.status} · {eng.id}
+                {eng.status}
+                {eng.mode && eng.mode !== "auto" ? ` · ${eng.mode}` : ""} ·
+                раунд {eng.roundsElapsed ?? 0}/{eng.maxRounds ?? 3} · {eng.id}
               </span>
             </div>
+
+            {eng.theater === "assault" && (
+              <PhaseRibbon phase={eng.phase || "bombard"} />
+            )}
+
             {eng.sides.map((side) => (
-              <label key={side.factionId} className="field" style={{ marginTop: 6 }}>
+              <label
+                key={side.factionId}
+                className="field"
+                style={{ marginTop: 6 }}
+              >
                 <span>
                   {nameOf(side.factionId)}
                   {activeFactionId === side.factionId ? " (активная)" : ""}
+                  {side.locked ? " · locked" : ""}
                 </span>
                 <select
                   value={side.stance || "hold"}
@@ -150,6 +224,27 @@ export function CombatPanel() {
                 </select>
               </label>
             ))}
+
+            <div className="combat-eng-actions">
+              {eng.theater === "assault" && (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busy}
+                  onClick={() => void advancePhase(eng.id, false)}
+                >
+                  Следующая фаза
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={busy}
+                onClick={() => void advancePhase(eng.id, true)}
+              >
+                Early resolve
+              </button>
+            </div>
           </div>
         ))
       )}

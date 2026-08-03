@@ -996,7 +996,7 @@ function PlanetDetail({
   onBack: () => void;
   onChange: (patch: Partial<Planet>) => void;
   onRemove: () => void;
-  races: { id: string; name: string }[];
+  races: { id: string; name: string; color?: string }[];
   readOnly?: boolean;
 }) {
   const world = useWorldStore((s) => s.world);
@@ -1351,6 +1351,14 @@ function PlanetDetail({
               })
               .join(" · ") || "не задан — правьте в полной форме ниже"}
           </p>
+          <div className="loyalty-ring-block" aria-label="Лояльность">
+            <div className="block-title">Лояльность</div>
+            <LoyaltyRing
+              loyalty={planet.loyalty ?? 50}
+              composition={planet.raceComposition ?? []}
+              races={races}
+            />
+          </div>
         </>
       )}
       <label className="field">
@@ -1464,6 +1472,106 @@ function BuildingZoneEditor({
         +{" "}
         {zone === "surface" ? "Постройка на поверхности" : "Орбитальный объект"}
       </button>
+    </div>
+  );
+}
+
+function LoyaltyRing({
+  loyalty,
+  composition,
+  races,
+}: {
+  loyalty: number;
+  composition: { raceId: string; percent: number }[];
+  races: { id: string; name: string }[];
+}) {
+  const v = Math.max(0, Math.min(100, Math.round(loyalty)));
+  const tone = v < 20 ? "low" : v < 40 ? "warn" : v < 60 ? "mid" : "high";
+  const r = 36;
+  const c = 2 * Math.PI * r;
+  const filled = (v / 100) * c;
+  const slices = (composition.length
+    ? composition
+    : [{ raceId: "_", percent: 100 }]
+  ).filter((s) => (s.percent ?? 0) > 0);
+  let acc = 0;
+  const palette = [
+    "var(--signal-move)",
+    "var(--signal-build)",
+    "var(--signal-raid)",
+    "var(--signal-warning)",
+    "var(--signal-attack)",
+    "var(--text-secondary)",
+  ];
+
+  return (
+    <div className={`loyalty-ring loyalty-ring-${tone}`}>
+      <svg viewBox="0 0 100 100" width="88" height="88" aria-hidden>
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="var(--line-hairline)"
+          strokeWidth="8"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${filled} ${c - filled}`}
+          transform="rotate(-90 50 50)"
+        />
+        {slices.length > 1
+          ? slices.map((s, i) => {
+              const start = acc;
+              const sweep = (s.percent / 100) * 360;
+              acc += sweep;
+              const a0 = ((start - 90) * Math.PI) / 180;
+              const a1 = ((start + sweep - 90) * Math.PI) / 180;
+              const x0 = 50 + 22 * Math.cos(a0);
+              const y0 = 50 + 22 * Math.sin(a0);
+              const x1 = 50 + 22 * Math.cos(a1);
+              const y1 = 50 + 22 * Math.sin(a1);
+              const large = sweep > 180 ? 1 : 0;
+              return (
+                <path
+                  key={`${s.raceId}-${i}`}
+                  d={`M 50 50 L ${x0} ${y0} A 22 22 0 ${large} 1 ${x1} ${y1} Z`}
+                  fill={palette[i % palette.length]}
+                  opacity={0.55}
+                />
+              );
+            })
+          : null}
+        <text
+          x="50"
+          y="54"
+          textAnchor="middle"
+          className="loyalty-ring-value"
+          fill="var(--text-primary)"
+          fontSize="16"
+          fontFamily="var(--font-mono)"
+        >
+          {v}
+        </text>
+      </svg>
+      <ul className="loyalty-ring-legend">
+        {slices.map((s) => {
+          const name =
+            races.find((r) => r.id === s.raceId)?.name ?? s.raceId;
+          return (
+            <li key={s.raceId}>
+              <span>{name}</span>
+              <span className="mono">{s.percent}%</span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

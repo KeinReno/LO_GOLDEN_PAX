@@ -55,7 +55,9 @@ export function QuestPanel() {
               ? "активен"
               : quest.status === "done"
                 ? "завершён"
-                : "скрыт"}
+                : quest.status === "expired"
+                  ? "истёк"
+                  : "скрыт"}
             {system ? ` · ${system.name}` : ""}
           </p>
           <div className="btn-col">

@@ -37,7 +37,11 @@ const CURRENCIES = [
 const TREATY_OPTIONS: { id: DiplomacyRelation; label: string }[] = [
   { id: "trade", label: "Торговый договор" },
   { id: "alliance", label: "Союз" },
+  { id: "nap", label: "Пакт о ненападении" },
+  { id: "research_pact", label: "Научный пакт" },
+  { id: "migration_treaty", label: "Миграционный договор" },
   { id: "truce", label: "Перемирие" },
+  { id: "embargo", label: "Эмбарго" },
   { id: "war", label: "Объявление войны" },
   { id: "neutral", label: "Нейтралитет" },
 ];

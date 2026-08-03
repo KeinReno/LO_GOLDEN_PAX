@@ -4,12 +4,17 @@ import type { AlertFocusAnchor, AlertItem } from "./ViewerAlertFab";
 import type { EconomySystemSignal } from "./economyFlowTypes";
 
 const ENGAGEMENT_STATUS: Record<string, string> = {
+  active: "выберите stance",
   commit: "к бою",
   contact: "контакт",
 };
 
 function isOpenEngagement(eng: ViewerEngagement): boolean {
-  return eng.status === "commit" || eng.status === "contact";
+  return (
+    eng.status === "active" ||
+    eng.status === "commit" ||
+    eng.status === "contact"
+  );
 }
 
 function systemName(world: ViewerPayload["world"], id: string): string {
@@ -122,11 +127,15 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
   for (const eng of engagements) {
     if (!isOpenEngagement(eng)) continue;
     if (!eng.sides.some((s) => s.factionId === payload.factionId)) continue;
+    const mySide = eng.sides.find((s) => s.factionId === payload.factionId);
     items.push({
       id: `engagement-${eng.id}`,
       kind: "engagement",
-      title: `Бой: ${systemName(payload.world, eng.systemId)}`,
-      subtitle: ENGAGEMENT_STATUS[eng.status] ?? eng.status,
+      title: `Бой в системе ${systemName(payload.world, eng.systemId)}`,
+      subtitle:
+        mySide && !mySide.locked
+          ? "выберите stance"
+          : ENGAGEMENT_STATUS[eng.status] ?? eng.status,
       onFocus: (anchor) =>
         callbacks.onFocusEngagement(eng.systemId, eng.id, anchor),
     });

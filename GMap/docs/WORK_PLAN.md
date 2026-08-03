@@ -303,6 +303,7 @@ flowchart TD
 - [x] + refugees/quarantine/depot + GM narrative tools  
 - [x] + GM notes/timeline/consequences (GmOps timeline + timer_fired journal)  
 - [x] + RP episodes  
+- [x] + A7 Card Battle Mode (optional tactical layer over engagements)
 
 ---
 
@@ -341,6 +342,23 @@ flowchart TD
 2. Laws v1 / enact_law если понадобится за столом; playtest mid Cognitio.
 
 Стол: `npm run dev` + `players:*`; smoke: `npm run smoke` / `npm run smoke:tick`; market: `node scripts/smokeMarketMatch.mjs`.
+
+---
+
+## 9. Мульти-агентное расширение (AGENT_TASK_PLAN)
+
+| Агент | Статус |
+|-------|--------|
+| **A1 Foundation** | **done** — effects×12, `Faction.traits`, `faction_traits.json` (15+A8), `lint:balance`, PolityEditor |
+| **A2 Cards UI** | **done** — `DragCard` / `DropZone` / `CardVisual`, demo `/demo/cards`, `motion` |
+| **A3 Races & Loyalty** | **done** — 7 races×traits+balanceBudget, `loyalty.mjs`+tiers, revolt, raceVariants, map F4, SystemView ring |
+| **A4 Logistics** | **done** — `logistics.mjs`, supplyLevel, map mode F10, SystemDossier снабжение |
+| **A8 Diplomacy** | **done** — opinion tick, treaties→ModifierStack, `diplomacy_stances.json`, DiplomacyPanel + ViewerDiploPanel |
+| **A5 Science v2** | **done** — upgrades (~75), breakthroughs, race/faction exclusives, `intent.research_upgrade`, research_pact tech-share, ResearchPanel UI |
+| **A6 Combat Core** | **done** — engagement-as-event, stance window, 4-phase assault, stationary defense, veterancy, CombatPanel ribbon |
+| **A7 Card Battle** | **done** — `cardBattle.mjs`, `intent.play_card`, triggers, `CardBattleTable` drag-drop |
+| **A9 Quests & Dice** | **done** — `dice.mjs`, `questEngine`, `yearly_quests.json` (55), intents + `/api/quest/action`, ViewerQuestPanel sidebar, QuestDossier, DiceRoller |
+| **A10 RP Court** | **done** — `currentTask`, `intent.give_npc_task`, CourtPanel / NpcCard / Chronicle, tick + normalizeWorld |
 
 ---
 

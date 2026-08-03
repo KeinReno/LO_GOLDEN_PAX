@@ -36,21 +36,60 @@ function channelKey(effect, args = {}) {
       return `stat:${a.stat || "*"}`;
     case "tax_pressure":
       return "tax_pressure";
+    case "loyalty_add":
+    case "loyalty_mult":
+      return `loyalty:${a.raceId || "*"}`;
+    case "logistics_range_add":
+    case "logistics_disconnected_penalty":
+      return `logistics:${a.kind || "default"}`;
+    case "diplomacy_opinion_add":
+    case "diplomacy_trust_decay_mult":
+      return `diplomacy:${a.towardFactionId || "*"}`;
+    case "research_cost_mult":
+      return `research:${a.category || "*"}`;
+    case "npc_task_speed_mult":
+      return `npc_task:${a.kind || "*"}`;
+    case "revolt_risk":
+      return "revolt_risk";
+    case "unit_upgrade":
+    case "building_level_mult":
+    case "treaty_effect":
+      return `${effect}:${JSON.stringify(a)}`;
     default:
       return `${effect}:${JSON.stringify(a)}`;
   }
 }
 
+/** Composite / non-mergeable effects that must not be treated as mult/flat. */
+const OTHER_EFFECTS = new Set([
+  "logistics_disconnected_penalty",
+  "revolt_risk",
+  "unit_upgrade",
+  "treaty_effect",
+  "forbid_intent",
+  "allow_intent",
+  "unlock_property",
+  "unlock_tech_tier",
+  "slot_require",
+  "flow_convert",
+  "combat_stat_from_slot",
+]);
+
 function isMult(effect) {
+  if (OTHER_EFFECTS.has(effect)) return false;
   return effect.endsWith("_mult") || effect === "habitability_mult";
 }
 
 function isFlat(effect) {
+  if (OTHER_EFFECTS.has(effect)) return false;
   return (
     effect.endsWith("_flat") ||
     effect === "ap_add" ||
     effect === "stability_add" ||
-    effect === "tax_pressure"
+    effect === "tax_pressure" ||
+    effect === "loyalty_add" ||
+    effect === "diplomacy_opinion_add" ||
+    effect === "logistics_range_add"
   );
 }
 
@@ -83,7 +122,7 @@ export function buildModifierStack(effects, opts = {}) {
     let flat = 0;
     let mult = 1;
     for (const e of bucket.flats) {
-      const n = Number(e.args?.amount ?? 0);
+      const n = Number(e.args?.amount ?? e.args?.hops ?? 0);
       if (!Number.isNaN(n)) flat += n;
     }
     for (const e of bucket.mults) {

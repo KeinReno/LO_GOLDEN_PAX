@@ -1,0 +1,139 @@
+{
+  "neutral": {
+    "id": "neutral",
+    "name": "Нейтралитет",
+    "effects": [],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 0,
+    "mapColor": "#556677"
+  },
+  "trade": {
+    "id": "trade",
+    "name": "Торговый договор",
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": { "resource": "currency.metal", "mult": 1.05 }
+      }
+    ],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 10,
+    "mapColor": "#e8c547"
+  },
+  "alliance": {
+    "id": "alliance",
+    "name": "Союз",
+    "effects": [
+      {
+        "effect": "treaty_effect",
+        "args": {
+          "treatyId": "alliance",
+          "effect": "combat_assist",
+          "args": {}
+        }
+      },
+      {
+        "effect": "production_mult",
+        "args": { "resource": "currency.supply", "mult": 1.03 }
+      }
+    ],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 25,
+    "mapColor": "#5cdb95"
+  },
+  "war": {
+    "id": "war",
+    "name": "Война",
+    "effects": [],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 0,
+    "mapColor": "#e85d4c"
+  },
+  "vassal": {
+    "id": "vassal",
+    "name": "Вассалитет",
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": { "resource": "currency.metal", "mult": 0.95 }
+      }
+    ],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 20,
+    "mapColor": "#7b6cff"
+  },
+  "truce": {
+    "id": "truce",
+    "name": "Перемирие",
+    "effects": [],
+    "duration": "turns",
+    "defaultDurationTurns": 5,
+    "breakable": true,
+    "trustDecayOnBreak": 5,
+    "mapColor": "#c9a227"
+  },
+  "nap": {
+    "id": "nap",
+    "name": "Пакт о ненападении",
+    "effects": [],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 15,
+    "mapColor": "#7a9bb8"
+  },
+  "research_pact": {
+    "id": "research_pact",
+    "name": "Научный пакт",
+    "effects": [
+      {
+        "effect": "treaty_effect",
+        "args": {
+          "treatyId": "research_pact",
+          "effect": "production_mult",
+          "args": { "resource": "currency.cognitio", "mult": 1.05 }
+        }
+      },
+      {
+        "effect": "production_mult",
+        "args": { "resource": "currency.cognitio", "mult": 1.05 }
+      }
+    ],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 12,
+    "mapColor": "#9b6bff"
+  },
+  "migration_treaty": {
+    "id": "migration_treaty",
+    "name": "Миграционный договор",
+    "effects": [
+      {
+        "effect": "pop_growth_mult",
+        "args": { "mult": 1.04 }
+      }
+    ],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 8,
+    "mapColor": "#4cc9f0"
+  },
+  "embargo": {
+    "id": "embargo",
+    "name": "Эмбарго",
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": { "resource": "currency.metal", "mult": 0.9 }
+      }
+    ],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 5,
+    "mapColor": "#e8a54c"
+  }
+}

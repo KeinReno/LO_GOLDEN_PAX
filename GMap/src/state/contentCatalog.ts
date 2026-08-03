@@ -41,14 +41,36 @@ export type MapResourceDef = {
   yield?: Record<string, number>;
 };
 
+export type EffectInstance = {
+  effect: string;
+  args: Record<string, unknown>;
+};
+
+export type TechUpgrade = {
+  id: string;
+  name: string;
+  cost: Record<string, number>;
+  effects: EffectInstance[];
+  prerequisites?: string[];
+  balanceBudget?: number;
+};
+
 export type TechnologyDef = {
   id: string;
   name: string;
   category: EconomyCategory;
   era: number;
   cost?: Record<string, number>;
-  effects?: Array<{ effect: string; args: Record<string, unknown> }>;
+  effects?: EffectInstance[];
   prerequisites?: string[];
+  upgrades?: TechUpgrade[];
+  /** Only researchable when faction pop share of this race ≥ 30%. */
+  raceLock?: string;
+  /** Requires matching Faction.traits id. */
+  factionTraitLock?: string;
+  /** Era-5+ breakthrough tech (distinct radial styling). */
+  isBreakthrough?: boolean;
+  balanceBudget?: number;
 };
 
 export type PublicContent = {
@@ -188,6 +210,75 @@ export type PublicContent = {
       }
     >;
   };
+  faction_traits?: {
+    meta?: {
+      version?: number;
+      description?: string;
+      maxSelected?: number;
+      budgetRange?: [number, number];
+    };
+    traits?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        ideology?: string;
+        balanceBudget: number;
+        effects?: EffectInstance[];
+        conditions?: { minEra?: number; tag?: string };
+      }
+    >;
+  };
+  races?: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      tags?: string[];
+      traits?: Array<{
+        id: string;
+        effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+        balanceBudget?: number;
+      }>;
+      habitability?: Record<string, number>;
+      growth?: { baseRate?: number; crowdPenalty?: number };
+      xenorelations?: Record<string, number>;
+    }
+  >;
+  loyalty_tiers?: {
+    loyalty_tiers?: Array<{
+      min?: number;
+      max?: number;
+      effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+    }>;
+  };
+  yearly_quests?: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      summary?: string;
+      detail?: string;
+      filterBy?: string[];
+      choices?: Array<{
+        id: string;
+        label: string;
+        description?: string;
+        diceRequired?: Array<{ count: number; sides: number; label: string; threshold?: number }>;
+        effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+        onSuccess?: Array<{ effect: string; args?: Record<string, unknown> }>;
+        onFail?: Array<{ effect: string; args?: Record<string, unknown> }>;
+      }>;
+    }
+  >;
+  diplomacy_stances?: Record<
+    string,
+    {
+      id: string;
+      label?: string;
+      effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+    }
+  >;
   loadedAt?: string;
 };
 

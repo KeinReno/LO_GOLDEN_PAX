@@ -1,18 +1,71 @@
 /**
- * Engagement store + contact/resolve pipeline (P5).
+ * Engagement store + contact/resolve pipeline (P5 / A6).
+ * Engagements live between ticks until stances lock or maxRounds.
  */
 import path from "node:path";
 import { DATA_DIR, readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
-import { resolveEngagementFight, cleanupEmptyComposition } from "./combatResolve.mjs";
+import {
+  resolveEngagementFight,
+  resolveAssaultPhase,
+  cleanupEmptyComposition,
+  buildDefenseLayers,
+  ASSAULT_PHASES,
+} from "./combatResolve.mjs";
+import {
+  prepareCardBattle,
+  playCardRound,
+  passCardRound,
+  finalizeCardBattle,
+  shouldOfferCardBattle,
+  drawFromDeck,
+} from "./cardBattle.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { spawnRefugees } from "./narrative.mjs";
 
 export const ENGAGEMENTS_PATH = path.join(DATA_DIR, "engagements.json");
 
+export const OPEN_ENGAGEMENT_STATUSES = new Set([
+  "active",
+  "commit",
+  "contact",
+]);
+
+export function isOpenEngagement(eng) {
+  return eng && OPEN_ENGAGEMENT_STATUSES.has(eng.status);
+}
+
 export function readEngagements() {
   ensureDataDir();
   const raw = readJson(ENGAGEMENTS_PATH, null);
-  return Array.isArray(raw) ? raw : [];
+  const list = Array.isArray(raw) ? raw : [];
+  // Lazy import to avoid circular deps at module load
+  return list.map((e) => {
+    try {
+      // inline soft-normalize (mirror normalizeEngagement)
+      const status =
+        e.status === "commit" || e.status === "contact" ? "active" : e.status;
+      return {
+        ...e,
+        status: status || "active",
+        startedTurn: e.startedTurn ?? e.turnCreated ?? 0,
+        roundsElapsed: e.roundsElapsed ?? 0,
+        maxRounds: e.maxRounds ?? 3,
+        requiresPlayerInput:
+          e.requiresPlayerInput != null ? e.requiresPlayerInput : true,
+        mode: e.mode || "auto",
+        cardBattleRequests: Array.isArray(e.cardBattleRequests)
+          ? e.cardBattleRequests
+          : [],
+        sides: (e.sides || []).map((s) => ({
+          ...s,
+          locked: !!s.locked,
+          stance: s.stance || "hold",
+        })),
+      };
+    } catch {
+      return e;
+    }
+  });
 }
 
 export function writeEngagements(list) {
@@ -29,6 +82,17 @@ function atWar(world, aId, bId) {
   });
 }
 
+function engagementRules() {
+  const content = getContent();
+  return (
+    content.rules?.engagement || {
+      maxRounds: 3,
+      requiresPlayerInput: true,
+      assaultPhases: ASSAULT_PHASES,
+    }
+  );
+}
+
 export function createEngagement({
   theater,
   systemId,
@@ -37,33 +101,59 @@ export function createEngagement({
   sideB,
   turn,
   source,
+  world,
 }) {
-  return {
+  const rules = engagementRules();
+  const th = theater || "space";
+  const eng = {
     id: `eng_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    theater: theater || "space",
+    theater: th,
     systemId,
     planetId: planetId || null,
     turnCreated: turn ?? 0,
-    status: "commit",
+    startedTurn: turn ?? 0,
+    status: "active",
     source: source || "contact",
+    roundsElapsed: 0,
+    maxRounds: rules.maxRounds ?? 3,
+    requiresPlayerInput: rules.requiresPlayerInput !== false,
+    mode: "auto",
+    cardBattleRequests: [],
+    cardBattleOffer: false,
+    cardBattle: null,
+    gmForceCard: false,
     sides: [
       {
         factionId: sideA.factionId,
         fleetIds: sideA.fleetIds || [],
         legionIds: sideA.legionIds || [],
         stance: sideA.stance || "assault",
-        locked: true,
+        locked: false,
       },
       {
         factionId: sideB.factionId,
         fleetIds: sideB.fleetIds || [],
         legionIds: sideB.legionIds || [],
         stance: sideB.stance || "hold",
-        locked: true,
+        locked: false,
       },
     ],
     result: null,
   };
+
+  if (th === "assault") {
+    eng.phase = "bombard";
+    eng.orbitalControl = "defender";
+    eng.defenseLayers = world
+      ? buildDefenseLayers(world, eng)
+      : {
+          orbital: { guns: 0, shields: 0 },
+          surface: { guns: 0, bunkers: 0 },
+          garrison: { unitIds: [], fortBonus: 0 },
+        };
+  }
+
+  return eng;
 }
 
 function retreatFleet(world, fleetId, fromSystemId) {
@@ -86,11 +176,41 @@ function retreatFleet(world, fleetId, fromSystemId) {
   }
 }
 
+function applyOccupationEffects(world, eng, journal) {
+  const sys = (world.systems ?? []).find((s) => s.id === eng.systemId);
+  if (!sys) return;
+  const a = eng.sides[0];
+  const planets = (sys.planets || []).filter((p) =>
+    eng.planetId ? p.id === eng.planetId : true,
+  );
+  for (const p of planets) {
+    p.ownerFactionId = a.factionId;
+    if (typeof p.stability === "number") {
+      p.stability = Math.max(0, p.stability - 3);
+    } else {
+      p.stability = Math.max(0, 50 - 3);
+    }
+    if (typeof p.loyalty === "number") {
+      p.loyalty = Math.max(0, p.loyalty - 8);
+    }
+  }
+  let popHit = 0;
+  for (const p of planets) {
+    if ((p.population || 0) > 0) {
+      const loss = Math.max(1, Math.floor(p.population * 0.08));
+      p.population = Math.max(0, p.population - loss);
+      popHit += loss;
+    }
+  }
+  if (popHit > 0) spawnRefugees(world, eng.systemId, popHit, journal);
+  sys.contested = false;
+  sys.ownerFactionId = a.factionId;
+}
+
 function applyAftermath(world, eng, fight, journal) {
   const sys = (world.systems ?? []).find((s) => s.id === eng.systemId);
   if (sys) {
     sys.activity = "battle";
-    // scar tag via space object
     const objs = new Set(sys.spaceObjects || []);
     objs.add("debris");
     sys.spaceObjects = [...objs];
@@ -107,8 +227,11 @@ function applyAftermath(world, eng, fight, journal) {
     for (const fid of b.fleetIds || []) retreatFleet(world, fid, eng.systemId);
   }
 
-  // Assault success: contest / claim planet owner system if win attacker
-  if (eng.theater === "assault" && fight.outcome === "win_a" && sys) {
+  if (
+    (eng.theater === "assault" || fight.phase === "occupation") &&
+    fight.outcome === "win_a" &&
+    sys
+  ) {
     const prev = sys.ownerFactionId;
     if (prev && prev !== a.factionId) {
       sys.contested = true;
@@ -118,19 +241,25 @@ function applyAftermath(world, eng, fight, journal) {
     } else {
       sys.ownerFactionId = a.factionId;
     }
-    // pop hit + refugees
-    let popHit = 0;
-    for (const p of sys.planets || []) {
-      if ((p.population || 0) > 0) {
-        const loss = Math.max(1, Math.floor(p.population * 0.08));
-        p.population = Math.max(0, p.population - loss);
-        popHit += loss;
+    if (fight.phase === "occupation" || eng.phase === "occupation") {
+      applyOccupationEffects(world, eng, journal);
+    } else {
+      let popHit = 0;
+      for (const p of sys.planets || []) {
+        if ((p.population || 0) > 0) {
+          const loss = Math.max(1, Math.floor(p.population * 0.08));
+          p.population = Math.max(0, p.population - loss);
+          popHit += loss;
+        }
       }
+      if (popHit > 0) spawnRefugees(world, eng.systemId, popHit, journal);
     }
-    if (popHit > 0) spawnRefugees(world, eng.systemId, popHit, journal);
   }
 
-  if (eng.theater === "space" && (a.stance === "bombard" || eng.source === "bombard")) {
+  if (
+    eng.theater === "space" &&
+    (a.stance === "bombard" || eng.source === "bombard")
+  ) {
     if (sys) {
       let popHit = 0;
       for (const p of sys.planets || []) {
@@ -150,6 +279,7 @@ function applyAftermath(world, eng, fight, journal) {
     theater: eng.theater,
     systemId: eng.systemId,
     outcome: fight.outcome,
+    phase: fight.phase || eng.phase || null,
     powerA: Math.round(fight.powerA || 0),
     powerB: Math.round(fight.powerB || 0),
     lossesA: fight.lossesA,
@@ -158,10 +288,189 @@ function applyAftermath(world, eng, fight, journal) {
   });
 }
 
+function unlockSides(eng) {
+  for (const s of eng.sides || []) {
+    s.locked = false;
+  }
+}
+
+function bothSidesLocked(eng) {
+  return (eng.sides || []).length >= 2 && eng.sides.every((s) => s.locked);
+}
+
+function autoLockSides(eng) {
+  for (const s of eng.sides || []) {
+    if (!s.locked) {
+      s.locked = true;
+      s.stance = s.stance || "hold";
+    }
+  }
+}
+
+function finalizeEngagement(world, eng, fight, journal) {
+  eng.status = "resolved";
+  eng.result = fight;
+  applyAftermath(world, eng, fight, journal);
+}
+
+function advanceAssaultPhase(world, eng, fight, journal) {
+  eng.result = { ...(eng.result || {}), lastPhase: fight };
+  journal.push({
+    type: "engagement_phase",
+    engagementId: eng.id,
+    theater: eng.theater,
+    systemId: eng.systemId,
+    phase: fight.phase,
+    nextPhase: fight.nextPhase,
+    outcome: fight.outcome,
+    phaseNote: fight.phaseNote,
+    powerA: Math.round(fight.powerA || 0),
+    powerB: Math.round(fight.powerB || 0),
+    lossesA: fight.lossesA,
+    lossesB: fight.lossesB,
+    sides: eng.sides.map((s) => s.factionId),
+  });
+
+  if (!fight.continueEngagement || !fight.nextPhase) {
+    if (fight.outcome === "phase_continue") {
+      fight.outcome = "draw";
+    }
+    finalizeEngagement(world, eng, fight, journal);
+    return;
+  }
+
+  eng.phase = fight.nextPhase;
+  eng.defenseLayers = fight.defenseLayers || eng.defenseLayers;
+  eng.roundsElapsed = 0;
+  unlockSides(eng);
+  eng.status = "active";
+
+  if (fight.nextPhase === "occupation" && fight.outcome === "win_a") {
+    eng.sides.forEach((s) => {
+      s.locked = true;
+    });
+  }
+}
+
+/**
+ * Resolve open engagements that are ready (both locked or timed out).
+ */
 export function resolveOpenEngagements(world, journal) {
   const list = readEngagements();
-  const open = list.filter((e) => e.status === "commit" || e.status === "contact");
+  const open = list.filter((e) => isOpenEngagement(e));
+  let resolved = 0;
+
   for (const eng of open) {
+    if (eng.status === "commit" || eng.status === "contact") {
+      eng.status = "active";
+      if (eng.requiresPlayerInput == null) eng.requiresPlayerInput = true;
+      if (eng.roundsElapsed == null) eng.roundsElapsed = 0;
+      if (eng.maxRounds == null) {
+        eng.maxRounds = engagementRules().maxRounds ?? 3;
+      }
+      if (eng.startedTurn == null) eng.startedTurn = eng.turnCreated ?? 0;
+      if (eng.sides?.every((s) => s.locked == null)) {
+        for (const s of eng.sides) s.locked = true;
+      }
+    }
+
+    eng.roundsElapsed = (eng.roundsElapsed || 0) + 1;
+    const maxRounds = eng.maxRounds ?? engagementRules().maxRounds ?? 3;
+    const needsInput = eng.requiresPlayerInput !== false;
+    const locked = bothSidesLocked(eng);
+    const timedOut = eng.roundsElapsed >= maxRounds;
+
+    if (needsInput && !locked && !timedOut) {
+      journal.push({
+        type: "engagement_awaiting_stance",
+        engagementId: eng.id,
+        theater: eng.theater,
+        systemId: eng.systemId,
+        phase: eng.phase || null,
+        roundsElapsed: eng.roundsElapsed,
+        maxRounds,
+        message: `Бой в системе ${eng.systemId}, выберите stance`,
+        sides: eng.sides.map((s) => s.factionId),
+      });
+      continue;
+    }
+
+    if (timedOut && !locked) {
+      autoLockSides(eng);
+      journal.push({
+        type: "engagement_auto_resolve",
+        engagementId: eng.id,
+        systemId: eng.systemId,
+        reason: "max_rounds",
+        sides: eng.sides.map((s) => s.factionId),
+      });
+    }
+
+    if (eng.mode === "card") {
+      if (eng.cardBattle?.status === "resolved") {
+        finishCardEngagement(world, eng, journal);
+        resolved += 1;
+        continue;
+      }
+      if (!eng.cardBattle || eng.cardBattle.status !== "active") {
+        const prep = prepareCardBattle(eng, world, getContent());
+        if (!prep.ok) {
+          eng.mode = "auto";
+          journal.push({
+            type: "card_battle_prepare_failed",
+            engagementId: eng.id,
+            reason: prep.error,
+            sides: eng.sides.map((s) => s.factionId),
+          });
+          // fall through to auto resolve below
+        } else {
+          journal.push({
+            type: "card_battle_started",
+            engagementId: eng.id,
+            systemId: eng.systemId,
+            sides: eng.sides.map((s) => s.factionId),
+          });
+          continue;
+        }
+      } else {
+        journal.push({
+          type: "engagement_card_pending",
+          engagementId: eng.id,
+          systemId: eng.systemId,
+          round: eng.cardBattle.round,
+          currentSide: eng.cardBattle.currentSide,
+          sides: eng.sides.map((s) => s.factionId),
+        });
+        continue;
+      }
+    }
+
+    if (eng.mode === "card" && eng.cardBattle?.status === "active") {
+      continue;
+    }
+
+    if (eng.theater === "assault" && eng.phase) {
+      const fight = resolveAssaultPhase(world, eng);
+      if (!fight.ok) {
+        eng.status = "cancelled";
+        eng.result = fight;
+        journal.push({
+          type: "engagement_cancelled",
+          engagementId: eng.id,
+          reason: fight.error,
+        });
+        resolved += 1;
+        continue;
+      }
+      if (fight.continueEngagement && fight.nextPhase) {
+        advanceAssaultPhase(world, eng, fight, journal);
+      } else {
+        finalizeEngagement(world, eng, fight, journal);
+        resolved += 1;
+      }
+      continue;
+    }
+
     const fight = resolveEngagementFight(world, eng);
     if (!fight.ok) {
       eng.status = "cancelled";
@@ -171,15 +480,71 @@ export function resolveOpenEngagements(world, journal) {
         engagementId: eng.id,
         reason: fight.error,
       });
+      resolved += 1;
       continue;
     }
-    eng.status = "resolved";
-    eng.result = fight;
-    applyAftermath(world, eng, fight, journal);
+    finalizeEngagement(world, eng, fight, journal);
+    resolved += 1;
   }
+
   cleanupEmptyComposition(world);
   writeEngagements(list);
-  return open.length;
+  return resolved;
+}
+
+/**
+ * GM / early-resolve: force advance current phase or full resolve.
+ */
+export function advanceEngagement(engagementId, world, journal, opts = {}) {
+  const content = getContent();
+  const allowEarly = content.rules?.combat?.allowEarlyResolve !== false;
+  if (!allowEarly && !opts.force) {
+    return { ok: false, error: "early resolve disabled" };
+  }
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng || !isOpenEngagement(eng)) {
+    return { ok: false, error: "engagement not open" };
+  }
+  autoLockSides(eng);
+  eng.roundsElapsed = eng.maxRounds ?? 3;
+
+  if (eng.theater === "assault" && eng.phase && !opts.fullResolve) {
+    const fight = resolveAssaultPhase(world, eng);
+    if (!fight.ok) {
+      writeEngagements(list);
+      return { ok: false, error: fight.error };
+    }
+    if (fight.continueEngagement && fight.nextPhase) {
+      advanceAssaultPhase(world, eng, fight, journal);
+    } else {
+      finalizeEngagement(world, eng, fight, journal);
+    }
+  } else if (eng.theater === "assault" && eng.phase) {
+    let guard = 8;
+    while (isOpenEngagement(eng) && guard-- > 0) {
+      const fight = resolveAssaultPhase(world, eng);
+      if (!fight.ok) break;
+      if (fight.continueEngagement && fight.nextPhase) {
+        advanceAssaultPhase(world, eng, fight, journal);
+        autoLockSides(eng);
+      } else {
+        finalizeEngagement(world, eng, fight, journal);
+        break;
+      }
+    }
+  } else {
+    const fight = resolveEngagementFight(world, eng);
+    if (!fight.ok) {
+      writeEngagements(list);
+      return { ok: false, error: fight.error };
+    }
+    finalizeEngagement(world, eng, fight, journal);
+  }
+
+  cleanupEmptyComposition(world);
+  writeEngagements(list);
+  return { ok: true, engagement: eng };
 }
 
 /**
@@ -198,9 +563,10 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
 
     const theater =
       intent.payload?.theater ||
-      (intent.payload?.planetId || intent.payload?.assault ? "assault" : "space");
+      (intent.payload?.planetId || intent.payload?.assault
+        ? "assault"
+        : "space");
 
-    // Move already applied; find defender fleets/legions
     const defendersFleets = (world.fleets ?? [])
       .filter(
         (f) =>
@@ -240,7 +606,6 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
     if (!defFaction) defFaction = sys.ownerFactionId;
 
     if (!defFaction || defFaction === intent.factionId) {
-      // empty system claim-like attack
       sys.activity = "battle";
       journal.push({
         type: "attack_unopposed",
@@ -259,6 +624,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       planetId: intent.payload?.planetId || null,
       turn,
       source: "attack_intent",
+      world,
       sideA: {
         factionId: intent.factionId,
         fleetIds: attackerFleets,
@@ -268,37 +634,39 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       sideB: {
         factionId: defFaction,
         fleetIds: defendersFleets,
-        legionIds:
-          theater === "assault" || theater === "ground"
-            ? defendersLegions
-            : defendersLegions,
+        legionIds: defendersLegions,
         stance: "hold",
       },
     });
-    // ground-only if only legions
     if (
       attackerFleets.length === 0 &&
       defendersFleets.length === 0 &&
       (attackerLegions.length || defendersLegions.length)
     ) {
       eng.theater = "ground";
+      eng.phase = undefined;
+      eng.defenseLayers = undefined;
       eng.sides[0].legionIds = attackerLegions;
       eng.sides[1].legionIds = defendersLegions;
     }
     list.push(eng);
     created.push(eng);
+    applyCardBattleTriggers(world, eng);
     sys.activity = "battle";
     journal.push({
       type: "engagement_created",
       engagementId: eng.id,
       theater: eng.theater,
       systemId: toId,
+      phase: eng.phase || null,
       attacker: intent.factionId,
       defender: defFaction,
+      sides: [intent.factionId, defFaction],
+      mode: eng.mode,
+      cardBattleOffer: !!eng.cardBattleOffer,
     });
   }
 
-  // Auto contacts: same system, war, both have fleets
   const bySys = new Map();
   for (const f of world.fleets ?? []) {
     if (!bySys.has(f.systemId)) bySys.set(f.systemId, []);
@@ -315,7 +683,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
         const already = list.some(
           (e) =>
             e.systemId === systemId &&
-            (e.status === "commit" || e.status === "contact") &&
+            isOpenEngagement(e) &&
             e.sides.some((s) => s.factionId === a) &&
             e.sides.some((s) => s.factionId === b),
         );
@@ -325,6 +693,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
           systemId,
           turn,
           source: "auto_contact",
+          world,
           sideA: {
             factionId: a,
             fleetIds: fleets.filter((f) => f.factionId === a).map((f) => f.id),
@@ -338,6 +707,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
         });
         list.push(eng);
         created.push(eng);
+        applyCardBattleTriggers(world, eng);
         const sys = (world.systems ?? []).find((s) => s.id === systemId);
         if (sys) sys.activity = "battle";
         journal.push({
@@ -348,12 +718,14 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
           attacker: a,
           defender: b,
           source: "auto_contact",
+          sides: [a, b],
+          mode: eng.mode,
+          cardBattleOffer: !!eng.cardBattleOffer,
         });
       }
     }
   }
 
-  // Legion ground contacts
   const legBySys = new Map();
   for (const l of world.legions ?? []) {
     if (!legBySys.has(l.systemId)) legBySys.set(l.systemId, []);
@@ -371,7 +743,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
           (e) =>
             e.systemId === systemId &&
             e.theater === "ground" &&
-            (e.status === "commit" || e.status === "contact"),
+            isOpenEngagement(e),
         );
         if (already) continue;
         const eng = createEngagement({
@@ -379,6 +751,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
           systemId,
           turn,
           source: "auto_contact",
+          world,
           sideA: {
             factionId: a,
             legionIds: legs.filter((l) => l.factionId === a).map((l) => l.id),
@@ -392,6 +765,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
         });
         list.push(eng);
         created.push(eng);
+        applyCardBattleTriggers(world, eng);
         journal.push({
           type: "engagement_created",
           engagementId: eng.id,
@@ -399,6 +773,9 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
           systemId,
           attacker: a,
           defender: b,
+          sides: [a, b],
+          mode: eng.mode,
+          cardBattleOffer: !!eng.cardBattleOffer,
         });
       }
     }
@@ -415,7 +792,7 @@ export function setEngagementStance(engagementId, factionId, stance) {
   }
   const list = readEngagements();
   const eng = list.find((e) => e.id === engagementId);
-  if (!eng || (eng.status !== "commit" && eng.status !== "contact")) {
+  if (!eng || !isOpenEngagement(eng)) {
     return { ok: false, error: "engagement not open" };
   }
   const side = eng.sides.find((s) => s.factionId === factionId);
@@ -424,4 +801,185 @@ export function setEngagementStance(engagementId, factionId, stance) {
   side.locked = true;
   writeEngagements(list);
   return { ok: true, engagement: eng };
+}
+
+/**
+ * Card battle request: mutual consent → mode=card (+ prepare if world given).
+ */
+export function requestCardBattle(engagementId, factionId, world = null) {
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng || !isOpenEngagement(eng)) {
+    return { ok: false, error: "engagement not open" };
+  }
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const reqs = new Set(eng.cardBattleRequests || []);
+  reqs.add(factionId);
+  eng.cardBattleRequests = [...reqs];
+  const sideIds = eng.sides.map((s) => s.factionId);
+  const mutual = sideIds.every((id) => reqs.has(id));
+  if (mutual) {
+    eng.mode = "card";
+    if (world && (!eng.cardBattle || eng.cardBattle.status !== "active")) {
+      prepareCardBattle(eng, world, getContent());
+    }
+  }
+  writeEngagements(list);
+  return {
+    ok: true,
+    engagement: eng,
+    mode: eng.mode,
+    mutual,
+  };
+}
+
+export function forceCardBattle(engagementId, world = null) {
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng || !isOpenEngagement(eng)) {
+    return { ok: false, error: "engagement not open" };
+  }
+  eng.gmForceCard = true;
+  eng.mode = "card";
+  if (world && (!eng.cardBattle || eng.cardBattle.status !== "active")) {
+    prepareCardBattle(eng, world, getContent());
+  }
+  writeEngagements(list);
+  return { ok: true, engagement: eng };
+}
+
+function finishCardEngagement(world, eng, journal) {
+  const fin = finalizeCardBattle(eng.cardBattle, world);
+  const sideA = eng.sides[0];
+  const sideB = eng.sides[1];
+  let outcome = "draw";
+  if (fin.winnerFactionId === sideA?.factionId) outcome = "win_a";
+  else if (fin.winnerFactionId === sideB?.factionId) outcome = "win_b";
+
+  const fight = {
+    ok: true,
+    outcome,
+    powerA: 0,
+    powerB: 0,
+    lossesA: [],
+    lossesB: [],
+    mode: "card",
+    winnerFactionId: fin.winnerFactionId,
+  };
+  finalizeEngagement(world, eng, fight, journal);
+  journal.push({
+    type: "card_battle_resolved",
+    engagementId: eng.id,
+    outcome,
+    winnerFactionId: fin.winnerFactionId,
+  });
+}
+
+/**
+ * Apply triggers after engagement creation (power corridor offer / gm force).
+ */
+export function applyCardBattleTriggers(world, eng, opts = {}) {
+  const content = getContent();
+  const triggers = content.rules?.cardBattle?.triggers || {};
+
+  if (opts.gmForce || eng.gmForceCard) {
+    if (triggers.gmForce !== false) {
+      eng.mode = "card";
+      return { mode: "card", reason: "gm_force" };
+    }
+  }
+
+  const requests = new Set(eng.cardBattleRequests || []);
+  const sideIds = (eng.sides || []).map((s) => s.factionId);
+  const mutual =
+    triggers.mutualConsent !== false &&
+    sideIds.length >= 2 &&
+    sideIds.every((id) => requests.has(id));
+
+  if (mutual) {
+    eng.mode = "card";
+    return { mode: "card", reason: "mutual_consent" };
+  }
+
+  if (shouldOfferCardBattle(world, eng, content)) {
+    eng.cardBattleOffer = true;
+    return { mode: eng.mode || "auto", reason: "power_corridor_offer" };
+  }
+
+  eng.mode = eng.mode || "auto";
+  return { mode: eng.mode, reason: "auto" };
+}
+
+export function playEngagementCard(engagementId, factionId, cardId, world) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card") return { ok: false, error: "not card mode" };
+
+  if (!eng.cardBattle || eng.cardBattle.status !== "active") {
+    const prep = prepareCardBattle(eng, world, content);
+    if (!prep.ok) return prep;
+  }
+
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+
+  const result = playCardRound(eng.cardBattle, factionId, cardId, content);
+  if (!result.ok) return result;
+
+  eng.cardBattle = result.state;
+  const journal = [];
+  if (result.state.status === "resolved") {
+    finishCardEngagement(world, eng, journal);
+  }
+  writeEngagements(list);
+  return {
+    ok: true,
+    engagement: eng,
+    journal,
+    pairResult: result.pairResult,
+  };
+}
+
+export function passEngagementCard(engagementId, factionId, world) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card" || !eng.cardBattle) {
+    return { ok: false, error: "no card battle" };
+  }
+  const result = passCardRound(eng.cardBattle, factionId, content);
+  if (!result.ok) return result;
+  eng.cardBattle = result.state;
+  const journal = [];
+  if (result.state.status === "resolved") {
+    finishCardEngagement(world, eng, journal);
+  }
+  writeEngagements(list);
+  return { ok: true, engagement: eng, journal };
+}
+
+export function drawEngagementCard(engagementId, factionId, world) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card") return { ok: false, error: "not card mode" };
+  if (!eng.cardBattle || eng.cardBattle.status !== "active") {
+    const prep = prepareCardBattle(eng, world, content);
+    if (!prep.ok) return prep;
+  }
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const result = drawFromDeck(eng.cardBattle, factionId, content);
+  if (!result.ok) return result;
+  eng.cardBattle = result.state;
+  writeEngagements(list);
+  return { ok: true, engagement: eng, drawn: result.drawn };
 }

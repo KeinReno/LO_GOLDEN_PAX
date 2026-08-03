@@ -42,6 +42,7 @@ export function defaultFactionEco(factionId) {
     deficit: "ok",
     bottlenecks: {},
     unlockedTechs: [],
+    unlockedUpgrades: [],
     techTiers: { ...DEFAULT_TECH_TIERS },
     unlockedProperties: [],
   };
@@ -85,6 +86,7 @@ export function ensureFactionEco(ledger, factionId) {
   if (!f.deficit) f.deficit = "ok";
   if (!f.bottlenecks) f.bottlenecks = {};
   if (!Array.isArray(f.unlockedTechs)) f.unlockedTechs = [];
+  if (!Array.isArray(f.unlockedUpgrades)) f.unlockedUpgrades = [];
   if (!f.techTiers || typeof f.techTiers !== "object") {
     f.techTiers = { ...DEFAULT_TECH_TIERS };
   } else {
@@ -190,6 +192,7 @@ const EXPLAIN_CATEGORY_LABELS = {
 const PUBLIC_EXPLAIN_KINDS = new Set([
   "tax",
   "race",
+  "faction",
   "deficit",
   "pressure",
   "depot",
@@ -250,6 +253,40 @@ function formatEffectSnippet(effect, args = {}) {
   if (effect === "habitability_mult" && args.mult != null) {
     return `обитаемость ×${args.mult}`;
   }
+  if (effect === "loyalty_add" && args.amount != null) {
+    return `лояльность ${args.amount > 0 ? "+" : ""}${args.amount}`;
+  }
+  if (effect === "loyalty_mult" && args.mult != null) {
+    return `лояльность ×${args.mult}`;
+  }
+  if (effect === "logistics_range_add" && (args.hops != null || args.amount != null)) {
+    const h = args.hops ?? args.amount;
+    return `логистика +${h} хоп`;
+  }
+  if (effect === "research_cost_mult" && args.mult != null) {
+    return `наука ×${args.mult}`;
+  }
+  if (effect === "diplomacy_trust_decay_mult" && args.mult != null) {
+    return `доверие ×${args.mult}`;
+  }
+  if (effect === "move_cost_mult" && args.mult != null) {
+    return `ход ×${args.mult}`;
+  }
+  if (effect === "cost_mult" && args.mult != null) {
+    return `стоимость ×${args.mult}`;
+  }
+  if (effect === "forbid_intent" && args.intentId) {
+    return `запрет ${args.intentId}`;
+  }
+  if (effect === "unlock_property" && args.property) {
+    return `свойство ${args.property}`;
+  }
+  if (effect === "stability_add" && args.amount != null) {
+    return `стабильность ${args.amount > 0 ? "+" : ""}${args.amount}`;
+  }
+  if (effect === "pop_cap_flat" && args.amount != null) {
+    return `лимит нас. +${args.amount}`;
+  }
   return null;
 }
 
@@ -284,6 +321,7 @@ function summarizeExplainLines(lines, maxLines = 20) {
 export function sanitizeEconomyExplain(explainRows, opts = {}) {
   const lines = [];
   const raceTraits = new Map();
+  const factionTraits = new Map();
 
   for (const row of explainRows || []) {
     const { channel, flat, mult, sources } = row;
@@ -335,6 +373,21 @@ export function sanitizeEconomyExplain(explainRows, opts = {}) {
       if (!bucket.effects.includes(snippet)) bucket.effects.push(snippet);
     }
 
+    for (const s of sources || []) {
+      if (s.source?.kind !== "faction") continue;
+      const key = s.source.id || s.source.label || "faction";
+      const snippet = formatEffectSnippet(s.effect, s.args);
+      if (!snippet) continue;
+      if (!factionTraits.has(key)) {
+        factionTraits.set(key, {
+          label: s.source.label || "Держава",
+          effects: [],
+        });
+      }
+      const bucket = factionTraits.get(key);
+      if (!bucket.effects.includes(snippet)) bucket.effects.push(snippet);
+    }
+
     const sourceLabels = [
       ...new Set(
         publicSources.map((s) => s.source?.label).filter(Boolean),
@@ -379,6 +432,13 @@ export function sanitizeEconomyExplain(explainRows, opts = {}) {
       }))
       .filter((r) => r.summary)
       .slice(0, 6),
+    factionTraits: [...factionTraits.values()]
+      .map((r) => ({
+        label: r.label,
+        summary: r.effects.slice(0, 4).join(", "),
+      }))
+      .filter((r) => r.summary)
+      .slice(0, 6),
   };
 }
 
@@ -394,6 +454,7 @@ export function publicEconomyPayload(eco) {
     techTiers: eco.techTiers,
     unlockedProperties: eco.unlockedProperties,
     unlockedTechs: eco.unlockedTechs,
+    unlockedUpgrades: eco.unlockedUpgrades,
   };
   if (eco.bottlenecks != null) out.bottlenecks = eco.bottlenecks;
   if (eco.explain != null) out.explain = eco.explain;

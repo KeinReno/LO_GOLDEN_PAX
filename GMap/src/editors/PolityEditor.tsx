@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useWorldStore } from "../state/worldStore";
-import type { DiplomacyRelation, Faction } from "../state/types";
-import { DIPLOMACY_LABELS } from "../state/defaults";
+import type { DiplomacyRelation, Faction, FactionTrait } from "../state/types";
+import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS } from "../state/defaults";
 import { resolvePolityKind, FACTION_NAME_FONT_OPTIONS } from "../state/territory";
 import { fileToEmblemDataUrl } from "../io/emblemIo";
+import {
+  fetchContent,
+  getCachedContent,
+  type PublicContent,
+} from "../state/contentCatalog";
 import {
   MAP_MODE_PRESETS,
   applyLayerPreset,
@@ -13,14 +18,7 @@ import {
 
 type PolityTab = "profile" | "territory" | "diplomacy" | "map";
 
-const RELATIONS: DiplomacyRelation[] = [
-  "neutral",
-  "alliance",
-  "trade",
-  "war",
-  "vassal",
-  "truce",
-];
+const RELATIONS: DiplomacyRelation[] = [...DIPLOMACY_RELATIONS];
 
 const TABS: { id: PolityTab; label: string }[] = [
   { id: "profile", label: "Профиль" },
@@ -28,6 +26,21 @@ const TABS: { id: PolityTab; label: string }[] = [
   { id: "diplomacy", label: "Дипломатия" },
   { id: "map", label: "На карте" },
 ];
+
+const IDEOLOGY_LABELS: Record<string, string> = {
+  militarist: "Милитаризм",
+  technocrat: "Технократия",
+  trader: "Торговля",
+  puritan: "Пуританизм",
+  expansionist: "Экспансия",
+  isolationist: "Изоляционизм",
+  cosmopolitan: "Космополитизм",
+  swarm: "Рой",
+};
+
+const MAX_FACTION_TRAITS = 3;
+const BUDGET_MIN = -2;
+const BUDGET_MAX = 2;
 
 export function PolityEditor() {
   const world = useWorldStore((s) => s.world);
@@ -219,6 +232,56 @@ function PolityListRow({
 
 function ProfileTab({ faction }: { faction: Faction }) {
   const updateFaction = useWorldStore((s) => s.updateFaction);
+  const [catalog, setCatalog] = useState<PublicContent | null>(
+    () => getCachedContent(),
+  );
+
+  useEffect(() => {
+    void fetchContent().then((c) => {
+      if (c) setCatalog(c);
+    });
+  }, []);
+
+  const traitDefs = Object.values(catalog?.faction_traits?.traits || {});
+  const selected = faction.traits ?? [];
+  const selectedIds = new Set(selected.map((t) => t.id));
+  const budgetSum = selected.reduce(
+    (s, t) => s + (Number(t.balanceBudget) || 0),
+    0,
+  );
+  const budgetOutOfRange = budgetSum < BUDGET_MIN || budgetSum > BUDGET_MAX;
+
+  const toggleTrait = (def: {
+    id: string;
+    name: string;
+    ideology?: string;
+    balanceBudget: number;
+    effects?: FactionTrait["effects"];
+    conditions?: FactionTrait["conditions"];
+  }) => {
+    const exists = selectedIds.has(def.id);
+    let next: FactionTrait[];
+    if (exists) {
+      next = selected.filter((t) => t.id !== def.id);
+    } else {
+      if (selected.length >= MAX_FACTION_TRAITS) return;
+      next = [
+        ...selected,
+        {
+          id: def.id,
+          label: def.name,
+          ideology: def.ideology,
+          balanceBudget: def.balanceBudget ?? 0,
+          effects: (def.effects || []).map((e) => ({
+            effect: e.effect,
+            args: e.args ? { ...e.args } : {},
+          })),
+          conditions: def.conditions,
+        },
+      ];
+    }
+    updateFaction(faction.id, { traits: next });
+  };
 
   return (
     <div className="faction-edit polity-profile">
@@ -243,6 +306,121 @@ function ProfileTab({ faction }: { faction: Faction }) {
           onChange={(e) => updateFaction(faction.id, { name: e.target.value })}
         />
       </label>
+
+      <fieldset className="polity-traits">
+        <legend>Черты державы</legend>
+        <p className="hint">
+          До {MAX_FACTION_TRAITS} одновременно. Бюджет баланса:{" "}
+          <strong
+            className={
+              budgetOutOfRange ? "polity-budget-warn" : "polity-budget-ok"
+            }
+          >
+            {budgetSum > 0 ? `+${budgetSum}` : String(budgetSum)}
+          </strong>{" "}
+          (норма [{BUDGET_MIN}…{BUDGET_MAX}])
+        </p>
+        {budgetOutOfRange ? (
+          <p className="hint polity-budget-warn" role="alert">
+            Сумма balanceBudget вне диапазона — комбинация несбалансирована.
+          </p>
+        ) : null}
+        {traitDefs.length === 0 ? (
+          <p className="hint">Каталог черт не загружен (нужен API /content).</p>
+        ) : (
+          <ul className="polity-trait-list">
+            {traitDefs.map((def) => {
+              const on = selectedIds.has(def.id);
+              const disabled = !on && selected.length >= MAX_FACTION_TRAITS;
+              const budget = def.balanceBudget ?? 0;
+              return (
+                <li key={def.id}>
+                  <label
+                    className={
+                      on
+                        ? "polity-trait-row selected"
+                        : disabled
+                          ? "polity-trait-row disabled"
+                          : "polity-trait-row"
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={disabled}
+                      onChange={() => toggleTrait(def)}
+                    />
+                    <span className="polity-trait-body">
+                      <span className="polity-trait-name">{def.name}</span>
+                      <span className="hint">
+                        {IDEOLOGY_LABELS[def.ideology || ""] ||
+                          def.ideology ||
+                          "—"}{" "}
+                        · бюджет {budget > 0 ? `+${budget}` : budget}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </fieldset>
+
+      <label className="field">
+        <span>Основная раса</span>
+        <select
+          value={faction.primaryRaceId || ""}
+          onChange={(e) =>
+            updateFaction(faction.id, {
+              primaryRaceId: e.target.value || undefined,
+            })
+          }
+        >
+          <option value="">— не задана —</option>
+          {Object.values(catalog?.races || {}).map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {faction.primaryRaceId && catalog?.races?.[faction.primaryRaceId] ? (
+        <fieldset className="polity-traits polity-race-traits">
+          <legend>
+            Черты расы · {catalog.races[faction.primaryRaceId].name}
+          </legend>
+          <p className="hint">
+            Бюджет расы:{" "}
+            <strong>
+              {(catalog.races[faction.primaryRaceId].traits || []).reduce(
+                (s, t) => s + (Number(t.balanceBudget) || 0),
+                0,
+              )}
+            </strong>
+          </p>
+          <ul className="polity-trait-list">
+            {(catalog.races[faction.primaryRaceId].traits || []).map((t) => (
+              <li key={t.id}>
+                <div className="polity-trait-row">
+                  <span className="polity-trait-body">
+                    <span className="polity-trait-name">{t.id}</span>
+                    <span className="hint">
+                      бюджет{" "}
+                      {(t.balanceBudget ?? 0) > 0
+                        ? `+${t.balanceBudget}`
+                        : String(t.balanceBudget ?? 0)}{" "}
+                      · эффектов {(t.effects || []).length}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      ) : null}
+
       <label className="field">
         <span>Основной цвет</span>
         <input
@@ -644,6 +822,7 @@ function MapTab({ faction }: { faction: Faction }) {
         showDeadZones: s.showDeadZones,
         showTraffic: s.showTraffic,
         showQuests: s.showQuests,
+        showLoyalty: s.showLoyalty,
       }),
     ),
   );

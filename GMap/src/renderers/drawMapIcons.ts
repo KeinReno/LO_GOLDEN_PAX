@@ -239,6 +239,38 @@ export function drawOwnershipAura(
   }
 }
 
+/** Red / amber / green loyalty halo for map mode «Лояльность». */
+export function drawLoyaltyAura(
+  g: Graphics,
+  s: StarSystem,
+  loyalty: number | null,
+  anim: AnimClock,
+  opts?: { dim?: number },
+): void {
+  if (loyalty == null) return;
+  const dim = opts?.dim ?? 1;
+  const p = toIso(s.x, s.y);
+  const color =
+    loyalty < 20
+      ? 0xc44a3a
+      : loyalty < 40
+        ? 0xd4a017
+        : loyalty < 60
+          ? 0x8a93a5
+          : 0x3d9a5c;
+  const breathe = 1 + anim.pulse * 0.04;
+  const rx = 22 * breathe;
+  const ry = 11 * breathe;
+  ellipse(g, p.x, p.y + 2, rx, ry);
+  g.fill({ color, alpha: (0.12 + anim.pulse * 0.04) * dim });
+  ellipse(g, p.x, p.y + 2, rx * 1.15, ry * 1.15);
+  g.stroke({
+    width: 1.4,
+    color,
+    alpha: (0.35 + anim.pulse * 0.08) * dim,
+  });
+}
+
 export function drawIntelRing(
   g: Graphics,
   s: StarSystem,
@@ -1540,6 +1572,10 @@ export function drawDiplomacyLines(
     war: 0xe85d4c,
     vassal: 0x7b6cff,
     truce: 0xc9a227,
+    nap: 0x7a9bb8,
+    research_pact: 0x9b6bff,
+    migration_treaty: 0x4cc9f0,
+    embargo: 0xe8a54c,
     neutral: 0x556677,
   };
 

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ViewerPayload } from "../state/types";
-import type { TechnologyDef, EconomyCategory } from "../state/contentCatalog";
+import type {
+  TechnologyDef,
+  TechUpgrade,
+  EconomyCategory,
+} from "../state/contentCatalog";
 import { getCachedContent } from "../state/contentCatalog";
 import { canBuildWithTech } from "../state/techGate";
 import { StatefulButton } from "../ui/StatefulButton";
+import { useSpotlight } from "../ui/aceternityFx";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 import { ResearchRadialTree } from "./ResearchRadialTree";
 
@@ -27,7 +32,7 @@ export const RESEARCH_BRANCH_BY_DIGIT: Record<string, EconomyCategory> = {
   "6": "F",
 };
 
-function cognitioCost(tech: TechnologyDef): number {
+function cognitioCost(tech: TechnologyDef | TechUpgrade): number {
   return Number(tech.cost?.["currency.cognitio"] ?? 0);
 }
 
@@ -40,9 +45,11 @@ function prereqNames(
   return ids.map((id) => byId.get(id)?.name ?? id).join(", ");
 }
 
-function formatEffects(tech: TechnologyDef): string {
+function formatEffects(
+  effects: TechnologyDef["effects"] | TechUpgrade["effects"],
+): string {
   const parts: string[] = [];
-  for (const e of tech.effects || []) {
+  for (const e of effects || []) {
     if (e.effect === "unlock_tech_tier") {
       const cat = String(e.args.category ?? "");
       const to = e.args.to;
@@ -50,9 +57,106 @@ function formatEffects(tech: TechnologyDef): string {
       parts.push(`${label} → T${to}`);
     } else if (e.effect === "unlock_property") {
       parts.push(`свойство «${e.args.property}»`);
+    } else if (e.effect === "production_mult") {
+      parts.push(`+${Math.round((Number(e.args.mult) - 1) * 100)}% выход`);
+    } else if (e.effect === "upkeep_mult") {
+      parts.push(`${Math.round(Number(e.args.mult) * 100)}% апкип`);
+    } else if (e.effect === "stat_mult") {
+      parts.push(
+        `${e.args.stat} ×${e.args.mult}`,
+      );
+    } else if (e.effect === "research_cost_mult") {
+      parts.push(
+        `наука ×${e.args.mult}${e.args.category ? ` (${e.args.category})` : ""}`,
+      );
+    } else if (e.effect === "unit_upgrade") {
+      parts.push(`апгрейд ${e.args.from} → ${e.args.to}`);
+    } else {
+      parts.push(e.effect);
     }
   }
   return parts.join(" · ") || "—";
+}
+
+function lockLabel(tech: TechnologyDef): string | null {
+  const content = getCachedContent();
+  if (tech.raceLock) {
+    const name = content?.races?.[tech.raceLock]?.name ?? tech.raceLock;
+    return `Только для расы «${name}» (≥30%)`;
+  }
+  if (tech.factionTraitLock) {
+    const name =
+      content?.faction_traits?.traits?.[tech.factionTraitLock]?.name ??
+      tech.factionTraitLock;
+    return `Только с чертой «${name}»`;
+  }
+  return null;
+}
+
+function factionTraitIds(
+  traits: Array<string | { id: string }> | undefined,
+): string[] {
+  const out: string[] = [];
+  for (const t of traits || []) {
+    if (typeof t === "string") out.push(t);
+    else if (t?.id) out.push(t.id);
+  }
+  return out;
+}
+
+/** Weighted race share % across owned inhabited planets (client mirror of server). */
+function raceSharePercent(
+  world: ViewerPayload["world"] | undefined,
+  factionId: string | undefined,
+  raceId: string,
+): number {
+  if (!world || !factionId || !raceId) return 0;
+  const faction = world.factions?.find((f) => f.id === factionId);
+  let weighted = 0;
+  let popSum = 0;
+  for (const sys of world.systems || []) {
+    if (sys.ownerFactionId !== factionId) continue;
+    for (const p of sys.planets || []) {
+      const pop = Number(p.population || 0);
+      if (pop <= 0) continue;
+      popSum += pop;
+      const mix =
+        p.raceComposition?.length > 0
+          ? p.raceComposition
+          : [
+              {
+                raceId:
+                  (faction as { primaryRaceId?: string } | undefined)
+                    ?.primaryRaceId || "race_human",
+                percent: 100,
+              },
+            ];
+      for (const share of mix) {
+        if (share.raceId === raceId) {
+          weighted += pop * ((share.percent ?? 0) / 100);
+        }
+      }
+    }
+  }
+  if (popSum <= 0) return 0;
+  return (weighted / popSum) * 100;
+}
+
+function lockBlocksResearch(
+  tech: TechnologyDef,
+  world: ViewerPayload["world"] | undefined,
+  factionId: string | undefined,
+): boolean {
+  if (tech.raceLock) {
+    if (raceSharePercent(world, factionId, tech.raceLock) < 30) return true;
+  }
+  if (tech.factionTraitLock) {
+    const faction = world?.factions?.find((f) => f.id === factionId);
+    if (!factionTraitIds(faction?.traits).includes(tech.factionTraitLock)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function buildingsUnlockedByTech(
@@ -93,7 +197,10 @@ type NextBuy = { tech: TechnologyDef; cost: number };
  */
 export function ResearchPanel({
   eco,
+  world,
+  factionId,
   onResearch,
+  onResearchUpgrade,
   busy,
   msg,
   asRoom,
@@ -101,7 +208,10 @@ export function ResearchPanel({
   onBranchChange,
 }: {
   eco: ViewerPayload["economy"];
+  world?: ViewerPayload["world"];
+  factionId?: string;
   onResearch: (techId: string) => void;
+  onResearchUpgrade?: (techId: string, upgradeId: string) => void;
   busy?: boolean;
   msg?: string | null;
   asRoom?: boolean;
@@ -119,6 +229,8 @@ export function ResearchPanel({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [pendingUpgradeId, setPendingUpgradeId] = useState<string | null>(null);
+  const branchSpot = useSpotlight();
 
   const { byCat, byId } = useMemo(() => {
     const dict = getCachedContent()?.technologies || {};
@@ -144,18 +256,29 @@ export function ResearchPanel({
     () => new Set(eco?.unlockedTechs || []),
     [eco?.unlockedTechs],
   );
+  const unlockedUpgrades = useMemo(
+    () => new Set(eco?.unlockedUpgrades || []),
+    [eco?.unlockedUpgrades],
+  );
   const cognitio = eco?.stocks?.["currency.cognitio"] ?? 0;
   const tiers = eco?.techTiers || {};
   const unlockedProps = eco?.unlockedProperties || [];
 
   useEffect(() => {
     if (busy) return;
-    if (!pendingId) return;
-    if (msg?.startsWith("Исследовано")) {
-      setSuccessId(pendingId);
+    if (pendingId) {
+      if (msg?.startsWith("Исследовано")) {
+        setSuccessId(pendingId);
+      }
+      setPendingId(null);
     }
-    setPendingId(null);
-  }, [busy, pendingId, msg]);
+    if (pendingUpgradeId) {
+      if (msg?.startsWith("Улучшено")) {
+        setSuccessId(pendingUpgradeId);
+      }
+      setPendingUpgradeId(null);
+    }
+  }, [busy, pendingId, pendingUpgradeId, msg]);
 
   // Auto-select first affordable / next in focus branch
   useEffect(() => {
@@ -199,23 +322,57 @@ export function ResearchPanel({
       unlocked.has(p),
     );
     const cost = cognitioCost(selected);
-    const canBuy = !done && prereqOk && cognitio >= cost && !busy;
+    const lock = lockLabel(selected);
+    const lockBlocked = lockBlocksResearch(selected, world, factionId);
+    const canBuy =
+      !done && prereqOk && !lockBlocked && cognitio >= cost && !busy;
     let status = "доступно";
     if (done) status = "исследовано";
     else if (!prereqOk) status = "закрыто";
+    else if (lockBlocked) status = "эксклюзив";
     else if (cognitio < cost) status = "мало Знания";
     const buildings = buildingsUnlockedByTech(
       selected,
       tiers,
       unlockedProps,
     );
-    return { done, prereqOk, cost, canBuy, status, buildings };
-  }, [selected, unlocked, cognitio, busy, tiers, unlockedProps]);
+    const upgrades = selected.upgrades || [];
+    const upgradeDone = upgrades.filter((u) => unlockedUpgrades.has(u.id)).length;
+    return {
+      done,
+      prereqOk,
+      cost,
+      canBuy,
+      status,
+      buildings,
+      upgrades,
+      upgradeDone,
+      lock,
+      lockBlocked,
+    };
+  }, [
+    selected,
+    unlocked,
+    unlockedUpgrades,
+    cognitio,
+    busy,
+    tiers,
+    unlockedProps,
+    world,
+    factionId,
+  ]);
 
   const requestResearch = (techId: string) => {
     setPendingId(techId);
     setSuccessId(null);
     onResearch(techId);
+  };
+
+  const requestUpgrade = (techId: string, upgradeId: string) => {
+    if (!onResearchUpgrade) return;
+    setPendingUpgradeId(upgradeId);
+    setSuccessId(null);
+    onResearchUpgrade(techId, upgradeId);
   };
 
   const jumpToNextBuy = () => {
@@ -271,6 +428,19 @@ export function ResearchPanel({
               {nextBuy.cost}/{cognitio}
             </span>
           </span>
+          <div
+            className="research-cognitio-bar"
+            role="progressbar"
+            aria-valuenow={Math.min(cognitio, nextBuy.cost)}
+            aria-valuemin={0}
+            aria-valuemax={nextBuy.cost}
+          >
+            <span
+              style={{
+                width: `${Math.min(100, (cognitio / Math.max(1, nextBuy.cost)) * 100)}%`,
+              }}
+            />
+          </div>
         </button>
       )}
 
@@ -283,9 +453,10 @@ export function ResearchPanel({
           type="button"
           role="tab"
           aria-selected={focusBranch == null}
-          className={`research-branch-tab research-branch-tab--all ${focusBranch == null ? "on" : ""}`}
+          className={`research-branch-tab research-branch-tab--all fx-spotlight ${focusBranch == null ? "on" : ""}`}
           onClick={() => setFocusBranch(null)}
           title="Все ветви"
+          {...branchSpot.bind}
         >
           <strong>Все</strong>
           <span className="hint">колесо</span>
@@ -305,8 +476,8 @@ export function ResearchPanel({
               type="button"
               role="tab"
               aria-selected={focusBranch === c}
-              className={`research-branch-tab ${focusBranch === c ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
-              style={{ borderColor: CAT_COLOR[c] }}
+              className={`research-branch-tab fx-spotlight ${focusBranch === c ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
+              style={{ borderColor: CAT_COLOR[c], "--fx-spot-color": CAT_COLOR[c] } as React.CSSProperties}
               onClick={() => {
                 setFocusBranch(c);
                 const next = techs.find(
@@ -317,6 +488,7 @@ export function ResearchPanel({
                 if (next) setSelectedId(next.id);
               }}
               title={`${CAT_NAME[c]} · ${i + 1}`}
+              {...branchSpot.bind}
             >
               <span className="research-tab-hotkey">{i + 1}</span>
               <span style={{ color: CAT_COLOR[c] }}>{c}</span>
@@ -334,6 +506,7 @@ export function ResearchPanel({
         <ResearchRadialTree
           byCat={byCat}
           unlocked={unlocked}
+          unlockedUpgrades={unlockedUpgrades}
           cognitio={cognitio}
           selectedId={selectedId}
           focusBranch={focusBranch}
@@ -353,15 +526,34 @@ export function ResearchPanel({
                 >
                   {selected.category} · {CAT_NAME[selected.category]} · эра{" "}
                   {selected.era}
+                  {selected.isBreakthrough ? " · брейкро" : ""}
                 </span>
-                <h3>{selected.name}</h3>
+                <h3>
+                  {selected.name}
+                  {selectedState.lock ? (
+                    <span
+                      className="research-lock-badge"
+                      title={selectedState.lock}
+                    >
+                      {" "}
+                      🔒
+                    </span>
+                  ) : null}
+                </h3>
                 <span className="research-focus-status">
                   {selectedState.status}
+                  {selectedState.done && selectedState.upgrades.length > 0
+                    ? ` · ★${selectedState.upgradeDone}/${selectedState.upgrades.length}`
+                    : ""}
                 </span>
               </header>
 
+              {selectedState.lock ? (
+                <p className="hint research-lock-hint">{selectedState.lock}</p>
+              ) : null}
+
               <p className="research-detail-effect">
-                {formatEffects(selected)}
+                {formatEffects(selected.effects)}
               </p>
 
               <dl className="research-detail-meta">
@@ -384,6 +576,25 @@ export function ResearchPanel({
                 </div>
               </dl>
 
+              {!selectedState.done ? (
+                <div
+                  className="research-cognitio-bar research-cognitio-bar--detail"
+                  role="progressbar"
+                  aria-valuenow={Math.min(cognitio, selectedState.cost)}
+                  aria-valuemin={0}
+                  aria-valuemax={Math.max(1, selectedState.cost)}
+                >
+                  <span
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (cognitio / Math.max(1, selectedState.cost)) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              ) : null}
+
               {selectedState.buildings.length > 0 ? (
                 <p className="hint research-impact">
                   Откроет: {selectedState.buildings.join(", ")}
@@ -396,7 +607,7 @@ export function ResearchPanel({
 
               <div className="research-detail-cta">
                 <StatefulButton
-                  className={`btn ${selectedState.canBuy ? "primary" : ""}`}
+                  className={`btn ${selectedState.canBuy ? "primary fx-moving-border" : ""}`}
                   disabled={!selectedState.canBuy}
                   busy={busy && pendingId === selected.id}
                   success={successId === selected.id}
@@ -409,11 +620,64 @@ export function ResearchPanel({
                   {selectedState.done ? "Исследовано" : "Исследовать"}
                 </StatefulButton>
               </div>
+
+              {selectedState.done && selectedState.upgrades.length > 0 ? (
+                <div className="research-upgrades">
+                  <h4>Улучшения</h4>
+                  <ul>
+                    {selectedState.upgrades.map((u) => {
+                      const uDone = unlockedUpgrades.has(u.id);
+                      const uCost = cognitioCost(u);
+                      const preOk = (u.prerequisites || []).every(
+                        (p) => unlocked.has(p) || unlockedUpgrades.has(p),
+                      );
+                      const canUp =
+                        !uDone &&
+                        preOk &&
+                        cognitio >= uCost &&
+                        !busy &&
+                        !!onResearchUpgrade;
+                      return (
+                        <li
+                          key={u.id}
+                          className={uDone ? "is-done" : canUp ? "is-hot" : ""}
+                        >
+                          <div className="research-upgrade-head">
+                            <strong>
+                              {uDone ? "★ " : ""}
+                              {u.name}
+                            </strong>
+                            <span className="hint tabular">
+                              {uDone ? "изучено" : `${uCost} / ${cognitio}`}
+                            </span>
+                          </div>
+                          <p className="hint">{formatEffects(u.effects)}</p>
+                          {!uDone ? (
+                            <StatefulButton
+                              className={`btn sm ${canUp ? "primary" : ""}`}
+                              disabled={!canUp}
+                              busy={busy && pendingUpgradeId === u.id}
+                              success={successId === u.id}
+                              successLabel="Улучшено"
+                              onClick={() => {
+                                if (!canUp) return;
+                                requestUpgrade(selected.id, u.id);
+                              }}
+                            >
+                              Улучшить
+                            </StatefulButton>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
             </>
           )}
           {msg && (
             <p
-              className={`hint research-msg ${msg.startsWith("Исследовано") ? "is-ok" : "is-err"}`}
+              className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") ? "is-ok" : "is-err"}`}
               role="status"
             >
               {msg}

@@ -37,6 +37,7 @@ import {
   reservedAp,
 } from "./intents.mjs";
 import { applyPlanetAction } from "./planetActions.mjs";
+import { applyQuestAction } from "./questActions.mjs";
 import {
   applySystemAction,
   listStationCatalog,
@@ -102,6 +103,12 @@ import {
 import {
   readEngagements,
   setEngagementStance,
+  requestCardBattle,
+  forceCardBattle,
+  playEngagementCard,
+  passEngagementCard,
+  drawEngagementCard,
+  advanceEngagement,
 } from "./engagements.mjs";
 import {
   applyPresetToSystems,
@@ -740,6 +747,169 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/advance") &&
+        req.method === "POST"
+      ) {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const journal = [];
+        const result = advanceEngagement(engagementId, world, journal, {
+          fullResolve: !!body.fullResolve,
+          force: !!body.force,
+        });
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "engagement_advance" });
+        }
+        sendJson(res, result.ok ? 200 : 400, { ...result, journal });
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/request_card") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = requestCardBattle(engagementId, body.factionId, world);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/force_card") &&
+        req.method === "POST"
+      ) {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        const result = forceCardBattle(engagementId, world);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/play_card") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = playEngagementCard(
+          engagementId,
+          body.factionId,
+          body.cardId,
+          world,
+        );
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "play_card" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/pass_card") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = passEngagementCard(engagementId, body.factionId, world);
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "pass_card" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/draw_card") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = drawEngagementCard(engagementId, body.factionId, world);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
       if (url.pathname === "/api/narrative/paint" && req.method === "POST") {
         if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
@@ -1090,6 +1260,43 @@ export function createApiMiddleware() {
         }
         sendJson(res, 200, {
           ok: true,
+          tech: result.tech,
+          economy: getFactionPublicEco(body.factionId),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/research-upgrade" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!body.techId || !body.upgradeId) {
+          sendJson(res, 400, { error: "techId and upgradeId required" });
+          return;
+        }
+        const { researchUpgrade } = await import("./techActions.mjs");
+        const result = researchUpgrade(body.factionId, body.techId, body.upgradeId, {
+          turn: world.meta?.turn ?? null,
+          world,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          upgrade: result.upgrade,
           tech: result.tech,
           economy: getFactionPublicEco(body.factionId),
         });
@@ -1585,6 +1792,43 @@ export function createApiMiddleware() {
           reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
           economy: publicEconomyPayload(ecoAfter),
           ...filtered,
+        });
+        return;
+      }
+
+      /** Instant quest actions: yearly dice / choice / quest dice (A9). */
+      if (url.pathname === "/api/quest/action" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
+          return;
+        }
+        const result = applyQuestAction({
+          world,
+          factionId: auth.faction.id,
+          action: body.action,
+          questId: body.questId,
+          choiceId: body.choiceId,
+          specIndex: body.specIndex,
+          note: body.note,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const fresh = readLiveBoard() || world;
+        const ecoAfter = getFactionPublicEco(auth.faction.id);
+        sendJson(res, 200, {
+          ok: true,
+          ...result,
+          economy: publicEconomyPayload(ecoAfter),
+          ...playerSessionPayload(fresh, auth.faction),
         });
         return;
       }

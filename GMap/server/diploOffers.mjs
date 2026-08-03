@@ -1,6 +1,6 @@
 /**
  * Player↔player diplomatic deal offers (pending inbox).
- * Accept applies resource swaps + optional relation change immediately.
+ * Accept applies resource swaps + optional relation/treaty change immediately.
  */
 import path from "node:path";
 import {
@@ -17,6 +17,13 @@ import {
   ensureFactionEco,
   adjustStock,
 } from "./ledger.mjs";
+import {
+  syncTreatiesFromEdge,
+  bumpOpinion,
+  ensureFactionDiplomacy,
+} from "./opinionTick.mjs";
+import { recomputeUnlocksFromTechs } from "./techActions.mjs";
+import { getContent } from "./contentLoader.mjs";
 
 export const DIPLO_OFFERS_PATH = path.join(DATA_DIR, "diplo-offers.json");
 
@@ -27,6 +34,10 @@ const TREATIES = new Set([
   "truce",
   "war",
   "vassal",
+  "nap",
+  "research_pact",
+  "migration_treaty",
+  "embargo",
 ]);
 
 function emptyStore() {
@@ -190,7 +201,7 @@ function refundEscrow(offer, turn, reason) {
   writeLedger(ledger);
 }
 
-function setDiplomacyRelation(world, aId, bId, relation) {
+function setDiplomacyRelation(world, aId, bId, relation, turn) {
   const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
   const list = world.diplomacy ?? [];
   const idx = list.findIndex((d) => d.aId === x && d.bId === y);
@@ -205,6 +216,8 @@ function setDiplomacyRelation(world, aId, bId, relation) {
     });
   }
   world.diplomacy = list;
+  const stances = getContent()?.diplomacy_stances || {};
+  syncTreatiesFromEdge(world, aId, bId, relation, turn ?? 0, stances);
 }
 
 /**
@@ -286,17 +299,67 @@ export function respondDiploOffer({
   const treatyItem = [...(offer.give || []), ...(offer.want || [])].find(
     (i) => i.kind === "treaty",
   );
-  if (treatyItem) {
-    const world = readLiveBoard();
-    if (world) {
+
+  // Research pact: share unlocked tech catalogs (union both sides).
+  if (treatyItem?.treaty === "research_pact") {
+    const content = getContent();
+    const fromEco = ensureFactionEco(ledger, offer.fromFactionId);
+    const toEco = ensureFactionEco(ledger, offer.toFactionId);
+    const union = [
+      ...new Set([
+        ...(fromEco.unlockedTechs || []),
+        ...(toEco.unlockedTechs || []),
+      ]),
+    ];
+    fromEco.unlockedTechs = [...union];
+    toEco.unlockedTechs = [...union];
+    recomputeUnlocksFromTechs(fromEco, content);
+    recomputeUnlocksFromTechs(toEco, content);
+    writeLedger(ledger);
+  }
+
+  const world = readLiveBoard();
+  if (world) {
+    if (treatyItem) {
       setDiplomacyRelation(
         world,
         offer.fromFactionId,
         offer.toFactionId,
         treatyItem.treaty,
+        turn,
       );
-      writeLiveBoard(world, { backup: false, reason: "diplo_deal" });
     }
+    // Gift / deal opinion bump both ways
+    const fromFac = world.factions?.find((f) => f.id === offer.fromFactionId);
+    const toFac = world.factions?.find((f) => f.id === offer.toFactionId);
+    const hasResources = [...(offer.give || []), ...(offer.want || [])].some(
+      (i) => i.kind === "resource",
+    );
+    if (fromFac && toFac) {
+      ensureFactionDiplomacy(fromFac);
+      ensureFactionDiplomacy(toFac);
+      if (hasResources) {
+        bumpOpinion(toFac, offer.fromFactionId, 2, turn, "Получен дар / сделка");
+        bumpOpinion(fromFac, offer.toFactionId, 2, turn, "Сделка заключена");
+      }
+      if (treatyItem) {
+        bumpOpinion(
+          fromFac,
+          offer.toFactionId,
+          treatyItem.treaty === "war" ? -15 : 5,
+          turn,
+          `Договор: ${treatyItem.treaty}`,
+        );
+        bumpOpinion(
+          toFac,
+          offer.fromFactionId,
+          treatyItem.treaty === "war" ? -15 : 5,
+          turn,
+          `Договор: ${treatyItem.treaty}`,
+        );
+      }
+    }
+    writeLiveBoard(world, { backup: false, reason: "diplo_deal" });
   }
 
   store.offers[idx] = {

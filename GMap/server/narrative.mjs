@@ -1,7 +1,9 @@
 /**
  * Narrative POI / refugees / timers / consequence presets (P6).
+ * NPC court tasks (A10).
  */
 import { getContent } from "./contentLoader.mjs";
+import { rollNpcTaskProgress } from "./dice.mjs";
 
 export function systemSpaceObjectTags(sys) {
   const raw = sys?.spaceObjects;
@@ -368,4 +370,241 @@ export function applyRefugeeConvoy(world, intent, journal) {
     factionId: intent.factionId,
   });
   return true;
+}
+
+const COURT_EVENTS_MAX = 80;
+
+/** Append a court timeline event onto the world (ring buffer). */
+export function pushCourtEvent(world, entry) {
+  if (!Array.isArray(world.courtEvents)) world.courtEvents = [];
+  const ev = {
+    id:
+      entry.id ||
+      `ce_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    turn: entry.turn ?? world.meta?.turn ?? 0,
+    at: entry.at || new Date().toISOString(),
+    type: "court",
+    text: entry.text || "",
+    factionId: entry.factionId || null,
+    npcId: entry.npcId || null,
+    npcName: entry.npcName || null,
+  };
+  world.courtEvents.push(ev);
+  if (world.courtEvents.length > COURT_EVENTS_MAX) {
+    world.courtEvents = world.courtEvents.slice(-COURT_EVENTS_MAX);
+  }
+  return ev;
+}
+
+/**
+ * Assign a court task to an NPC (intent.give_npc_task).
+ * Rejects if NPC missing or already busy.
+ */
+export function applyGiveNpcTask(world, intent, journal) {
+  const npcId = intent.payload?.npcId;
+  const taskLabel = String(intent.payload?.taskLabel || "").trim();
+  const etaTurn = Math.floor(Number(intent.payload?.etaTurn));
+  const linkedQuestId = intent.payload?.linkedQuestId || null;
+  const effects = Array.isArray(intent.payload?.effects)
+    ? intent.payload.effects
+    : [];
+  const turn = world.meta?.turn ?? 0;
+
+  if (!npcId || !taskLabel) {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "npc_task_params",
+    });
+    return false;
+  }
+  if (!Number.isFinite(etaTurn) || etaTurn <= turn) {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "npc_task_eta",
+    });
+    return false;
+  }
+
+  const fac = (world.factions ?? []).find((f) => f.id === intent.factionId);
+  if (!fac) {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "faction_missing",
+    });
+    return false;
+  }
+  if (!Array.isArray(fac.npcs)) fac.npcs = [];
+  const npc = fac.npcs.find((n) => n.id === npcId);
+  if (!npc) {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "npc_missing",
+    });
+    return false;
+  }
+  if (npc.currentTask) {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "npc_busy",
+      npcId,
+    });
+    return false;
+  }
+  if (npc.status === "dead" || npc.status === "hidden") {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "npc_unavailable",
+      npcId,
+    });
+    return false;
+  }
+
+  npc.currentTask = {
+    id: `ntask_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    label: taskLabel,
+    startedTurn: turn,
+    etaTurn,
+    progress: 0,
+    effects,
+    linkedQuestId: linkedQuestId || undefined,
+  };
+  npc.status = "busy";
+
+  const text = `${npc.name}: поручение «${taskLabel}»`;
+  pushCourtEvent(world, {
+    turn,
+    text,
+    factionId: fac.id,
+    npcId: npc.id,
+    npcName: npc.name,
+  });
+  journal.push({
+    type: "court",
+    subtype: "npc_task_given",
+    intentId: intent.id,
+    factionId: fac.id,
+    npcId: npc.id,
+    npcName: npc.name,
+    taskLabel,
+    etaTurn,
+  });
+  return true;
+}
+
+function advanceLinkedQuest(world, linkedQuestId, journal, ctx) {
+  if (!linkedQuestId) return;
+  const quest = (world.quests ?? []).find((q) => q.id === linkedQuestId);
+  if (!quest) return;
+  if (!quest.arc || !Array.isArray(quest.arc.stages)) {
+    journal.push({
+      type: "court",
+      subtype: "quest_task_done",
+      questId: linkedQuestId,
+      npcId: ctx.npcId,
+    });
+    return;
+  }
+  const cur = quest.arc.currentStage ?? 0;
+  const next = cur + 1;
+  if (next >= quest.arc.stages.length) {
+    quest.arc.currentStage = quest.arc.stages.length - 1;
+    if (quest.status === "active") quest.status = "done";
+    journal.push({
+      type: "court",
+      subtype: "quest_arc_complete",
+      questId: quest.id,
+      npcId: ctx.npcId,
+    });
+  } else {
+    quest.arc.currentStage = next;
+    journal.push({
+      type: "court",
+      subtype: "quest_arc_advance",
+      questId: quest.id,
+      stage: next,
+      npcId: ctx.npcId,
+    });
+  }
+}
+
+/**
+ * Tick progress for all NPCs with currentTask.
+ * Quest-linked tasks use server dice for progress variance (A10 T10.8).
+ */
+export function processNpcTasks(world, turn, journal) {
+  let n = 0;
+  for (const fac of world.factions ?? []) {
+    if (!Array.isArray(fac.npcs)) continue;
+    for (const npc of fac.npcs) {
+      const task = npc.currentTask;
+      if (!task) continue;
+
+      const duration = Math.max(
+        1,
+        (task.etaTurn ?? turn + 1) - (task.startedTurn ?? turn),
+      );
+      let step = 1 / duration;
+      let diceRoll = null;
+      if (task.linkedQuestId) {
+        const r = rollNpcTaskProgress(world, npc);
+        step *= r.mult;
+        diceRoll = r.roll;
+      }
+
+      task.progress = Math.min(1, (task.progress ?? 0) + step);
+      n++;
+
+      const done =
+        (task.progress ?? 0) >= 1 || turn >= (task.etaTurn ?? Infinity);
+      if (!done) continue;
+
+      const effects = Array.isArray(task.effects) ? task.effects : [];
+      if (effects.length) {
+        if (!Array.isArray(fac.activeEffects)) fac.activeEffects = [];
+        for (const e of effects) {
+          fac.activeEffects.push({
+            ...e,
+            source: e.source || {
+              kind: "npc_task",
+              id: task.id,
+              label: `${npc.name}: ${task.label}`,
+            },
+          });
+        }
+      }
+
+      pushCourtEvent(world, {
+        turn,
+        text: `${npc.name} завершил задачу «${task.label}»`,
+        factionId: fac.id,
+        npcId: npc.id,
+        npcName: npc.name,
+      });
+      journal.push({
+        type: "court",
+        subtype: "npc_task_complete",
+        factionId: fac.id,
+        npcId: npc.id,
+        npcName: npc.name,
+        taskLabel: task.label,
+        taskId: task.id,
+        diceRoll,
+        effectsApplied: effects.length,
+      });
+
+      advanceLinkedQuest(world, task.linkedQuestId, journal, {
+        npcId: npc.id,
+      });
+
+      delete npc.currentTask;
+      if (npc.status === "busy") npc.status = "active";
+    }
+  }
+  return n;
 }

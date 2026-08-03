@@ -6,6 +6,245 @@
       "faction_nomad_f_0d845d87f2",
       "faction_pirates",
       "faction_south_swarm"
+    ],
+    "faction_belator": [
+      "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
+      "faction_a",
+      "faction_amalfea",
+      "faction_balsagon",
+      "faction_federation",
+      "faction_free_traders",
+      "faction_heshah",
+      "faction_huchi",
+      "faction_khanate",
+      "faction_korvun",
+      "faction_north_swarm",
+      "faction_or",
+      "faction_pirates",
+      "faction_sahale",
+      "faction_scavengers",
+      "faction_sikuri",
+      "faction_south_swarm",
+      "faction_taala",
+      "faction_turon"
+    ],
+    "faction_turon": [
+      "faction_belator",
+      "faction_heshah",
+      "faction_or",
+      "faction_pirates",
+      "faction_sikuri",
+      "faction_south_swarm",
+      "faction_taala"
+    ],
+    "faction_federation": [
+      "faction_a",
+      "faction_belator",
+      "faction_north_swarm",
+      "faction_pirates",
+      "faction_sahale"
+    ],
+    "faction_north_swarm": [
+      "faction_a",
+      "faction_belator",
+      "faction_federation",
+      "faction_heshah",
+      "faction_pirates",
+      "faction_sahale"
+    ],
+    "faction_korvun": [
+      "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
+      "faction_belator",
+      "faction_huchi",
+      "faction_or",
+      "faction_pirates",
+      "faction_scavengers",
+      "faction_taala"
+    ],
+    "faction_taala": [
+      "faction_belator",
+      "faction_korvun",
+      "faction_or",
+      "faction_pirates",
+      "faction_turon"
+    ],
+    "faction_heshah": [
+      "faction_belator",
+      "faction_north_swarm",
+      "faction_pirates",
+      "faction_sikuri",
+      "faction_turon"
+    ],
+    "faction_sikuri": [
+      "faction_belator",
+      "faction_heshah",
+      "faction_turon"
+    ],
+    "faction_huchi": [
+      "faction_korvun"
+    ],
+    "faction_south_swarm": [
+      "faction_belator",
+      "faction_free_traders",
+      "faction_nomad_f_672edfda15",
+      "faction_nomad_pax_terrialis",
+      "faction_pirates",
+      "faction_turon"
+    ],
+    "faction_balsagon": [
+      "faction_belator"
+    ],
+    "faction_pirates": [
+      "faction_amalfea",
+      "faction_federation",
+      "faction_free_traders",
+      "faction_heshah",
+      "faction_karned",
+      "faction_korvun",
+      "faction_nomad_f_0849e7d5d5",
+      "faction_nomad_f_0d845d87f2",
+      "faction_nomad_f_61f8054f59",
+      "faction_nomad_f_672edfda15",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_899b2c60de",
+      "faction_nomad_f_eb376e7120",
+      "faction_nomad_f_f3466a10f0",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_north_swarm",
+      "faction_scavengers",
+      "faction_south_swarm",
+      "faction_taala",
+      "faction_turon"
+    ],
+    "faction_or": [
+      "faction_belator",
+      "faction_korvun",
+      "faction_taala",
+      "faction_turon"
+    ],
+    "faction_amalfea": [
+      "faction_belator",
+      "faction_pirates"
+    ],
+    "faction_khanate": [
+      "faction_belator"
+    ],
+    "faction_sahale": [
+      "faction_a",
+      "faction_belator",
+      "faction_federation",
+      "faction_nomad_f_61f8054f59",
+      "faction_north_swarm"
+    ],
+    "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": [
+      "faction_belator",
+      "faction_korvun"
+    ],
+    "faction_nomad_pax_terrialis": [
+      "faction_nomad_f_0610a823c5",
+      "faction_nomad_f_08a06270a3",
+      "faction_nomad_f_38366f84e5",
+      "faction_nomad_f_eb376e7120",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_south_swarm"
+    ],
+    "faction_nomad_f_6d6fb61623": [
+      "faction_nomad_f_0849e7d5d5",
+      "faction_nomad_f_38366f84e5",
+      "faction_nomad_f_61f8054f59",
+      "faction_nomad_f_899b2c60de",
+      "faction_nomad_f_eb376e7120",
+      "faction_nomad_f_f3466a10f0",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_0d845d87f2": [
+      "faction_nomad_f_0610a823c5",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_f8d3f947d6": [
+      "faction_nomad_f_0610a823c5",
+      "faction_nomad_f_0d845d87f2",
+      "faction_nomad_f_61f8054f59",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_eb376e7120",
+      "faction_nomad_pax_terrialis",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_0849e7d5d5": [
+      "faction_nomad_f_61f8054f59",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_f3466a10f0",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_f3466a10f0": [
+      "faction_nomad_f_0849e7d5d5",
+      "faction_nomad_f_61f8054f59",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_899b2c60de",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_672edfda15": [
+      "faction_nomad_f_08a06270a3",
+      "faction_nomad_f_38366f84e5",
+      "faction_pirates",
+      "faction_scavengers",
+      "faction_south_swarm"
+    ],
+    "faction_nomad_f_899b2c60de": [
+      "faction_nomad_f_61f8054f59",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_f3466a10f0",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_0610a823c5": [
+      "faction_free_traders",
+      "faction_nomad_f_0d845d87f2",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_nomad_pax_terrialis"
+    ],
+    "faction_nomad_f_eb376e7120": [
+      "faction_nomad_f_08a06270a3",
+      "faction_nomad_f_38366f84e5",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_nomad_pax_terrialis",
+      "faction_pirates"
+    ],
+    "faction_nomad_f_38366f84e5": [
+      "faction_nomad_f_08a06270a3",
+      "faction_nomad_f_672edfda15",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_eb376e7120",
+      "faction_nomad_pax_terrialis"
+    ],
+    "faction_nomad_f_08a06270a3": [
+      "faction_nomad_f_38366f84e5",
+      "faction_nomad_f_672edfda15",
+      "faction_nomad_f_eb376e7120",
+      "faction_nomad_pax_terrialis",
+      "faction_scavengers"
+    ],
+    "faction_nomad_f_61f8054f59": [
+      "faction_nomad_f_0849e7d5d5",
+      "faction_nomad_f_6d6fb61623",
+      "faction_nomad_f_899b2c60de",
+      "faction_nomad_f_f3466a10f0",
+      "faction_nomad_f_f8d3f947d6",
+      "faction_pirates",
+      "faction_sahale"
+    ],
+    "faction_free_traders": [
+      "faction_nomad_f_0610a823c5",
+      "faction_pirates",
+      "faction_south_swarm"
+    ],
+    "faction_scavengers": [
+      "faction_korvun",
+      "faction_nomad_f_08a06270a3",
+      "faction_nomad_f_672edfda15",
+      "faction_pirates"
     ]
   }
 }

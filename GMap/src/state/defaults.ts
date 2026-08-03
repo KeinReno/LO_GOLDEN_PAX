@@ -110,7 +110,25 @@ export const DIPLOMACY_LABELS: Record<string, string> = {
   war: "Война",
   vassal: "Вассалитет",
   truce: "Перемирие",
+  nap: "Пакт о ненападении",
+  research_pact: "Научный пакт",
+  migration_treaty: "Миграционный договор",
+  embargo: "Эмбарго",
 };
+
+/** All selectable diplomacy relations (GM matrix + deal desk). */
+export const DIPLOMACY_RELATIONS = [
+  "neutral",
+  "alliance",
+  "trade",
+  "war",
+  "vassal",
+  "truce",
+  "nap",
+  "research_pact",
+  "migration_treaty",
+  "embargo",
+] as const;
 
 export const LEGION_STATUS_LABELS: Record<string, string> = {
   idle: "Ожидание",

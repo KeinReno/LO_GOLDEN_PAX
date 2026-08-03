@@ -1,0 +1,250 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Каталог фракционных черт (ModifierStack + balanceBudget). diplomacyBias — для A8 opinion tick.",
+    "maxSelected": 3,
+    "budgetRange": [-2, 2]
+  },
+  "traits": {
+    "trait.war_economy": {
+      "id": "trait.war_economy",
+      "name": "Военная экономика",
+      "ideology": "militarist",
+      "diplomacyBias": -2,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 1.1 } },
+        { "effect": "loyalty_mult", "args": { "mult": 0.95 } }
+      ]
+    },
+    "trait.technocracy": {
+      "id": "trait.technocracy",
+      "name": "Технократия",
+      "ideology": "technocrat",
+      "diplomacyBias": 1,
+      "balanceBudget": 1,
+      "effects": [
+        { "effect": "research_cost_mult", "args": { "mult": 0.9 } },
+        { "effect": "cost_mult", "args": { "tag": "building", "mult": 1.2 } }
+      ]
+    },
+    "trait.merchant_guilds": {
+      "id": "trait.merchant_guilds",
+      "name": "Купеческие гильдии",
+      "ideology": "trader",
+      "diplomacyBias": 2,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 1.15 } },
+        { "effect": "ap_add", "args": { "amount": -1 } }
+      ]
+    },
+    "trait.standing_army": {
+      "id": "trait.standing_army",
+      "name": "Постоянная армия",
+      "ideology": "militarist",
+      "diplomacyBias": -1,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.1 } },
+        { "effect": "upkeep_flat", "args": { "resource": "currency.supply", "amount": 1 } }
+      ]
+    },
+    "trait.citizen_militia": {
+      "id": "trait.citizen_militia",
+      "name": "Гражданское ополчение",
+      "ideology": "isolationist",
+      "diplomacyBias": -1,
+      "balanceBudget": -1,
+      "effects": [
+        { "effect": "stat_mult", "args": { "stat": "defense", "mult": 1.2 } },
+        { "effect": "move_cost_mult", "args": { "mult": 1.1 } }
+      ]
+    },
+    "trait.propaganda_machine": {
+      "id": "trait.propaganda_machine",
+      "name": "Пропагандистская машина",
+      "ideology": "puritan",
+      "diplomacyBias": -2,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "loyalty_add", "args": { "amount": 2 } },
+        { "effect": "research_cost_mult", "args": { "mult": 1.1 } }
+      ]
+    },
+    "trait.xenophile": {
+      "id": "trait.xenophile",
+      "name": "Ксенофилы",
+      "ideology": "cosmopolitan",
+      "diplomacyBias": 5,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "diplomacy_trust_decay_mult", "args": { "mult": 0.8 } },
+        { "effect": "loyalty_mult", "args": { "raceId": "race_belator", "mult": 0.9 } },
+        { "effect": "loyalty_mult", "args": { "raceId": "race_synth", "mult": 0.9 } }
+      ]
+    },
+    "trait.xenophobe": {
+      "id": "trait.xenophobe",
+      "name": "Ксенофобы",
+      "ideology": "puritan",
+      "diplomacyBias": -5,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "loyalty_add", "args": { "raceId": "race_human", "amount": 5 } },
+        { "effect": "diplomacy_trust_decay_mult", "args": { "mult": 1.2 } }
+      ]
+    },
+    "trait.frontier_culture": {
+      "id": "trait.frontier_culture",
+      "name": "Культура фронтира",
+      "ideology": "expansionist",
+      "diplomacyBias": -1,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "logistics_range_add", "args": { "hops": 1 } },
+        { "effect": "stability_add", "args": { "amount": -1 } }
+      ]
+    },
+    "trait.ecumenopolis": {
+      "id": "trait.ecumenopolis",
+      "name": "Экуменополис",
+      "ideology": "expansionist",
+      "diplomacyBias": 0,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "pop_cap_flat", "args": { "amount": 50 } },
+        { "effect": "pop_growth_mult", "args": { "mult": 0.8 } },
+        { "effect": "upkeep_flat", "args": { "resource": "currency.supply", "amount": 2 } }
+      ]
+    },
+    "trait.psi_doctrine": {
+      "id": "trait.psi_doctrine",
+      "name": "Пси-доктрина",
+      "ideology": "technocrat",
+      "diplomacyBias": 0,
+      "balanceBudget": 1,
+      "effects": [
+        { "effect": "unlock_property", "args": { "property": "psion_store" } },
+        { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 0.85 } },
+        { "effect": "production_mult", "args": { "resource": "currency.supply", "mult": 0.85 } }
+      ]
+    },
+    "trait.swarm_protocol": {
+      "id": "trait.swarm_protocol",
+      "name": "Протокол роя",
+      "ideology": "swarm",
+      "diplomacyBias": -3,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "pop_growth_mult", "args": { "mult": 1.5 } },
+        { "effect": "forbid_intent", "args": { "intentId": "intent.set_tax" } }
+      ]
+    },
+    "trait.void_navy": {
+      "id": "trait.void_navy",
+      "name": "Флот пустоты",
+      "ideology": "expansionist",
+      "diplomacyBias": -1,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "move_cost_mult", "args": { "mult": 0.8 } },
+        { "effect": "stability_add", "args": { "amount": -1 } }
+      ]
+    },
+    "trait.scholar_knights": {
+      "id": "trait.scholar_knights",
+      "name": "Рыцари-учёные",
+      "ideology": "technocrat",
+      "diplomacyBias": 1,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "research_cost_mult", "args": { "mult": 0.9 } },
+        { "effect": "stat_mult", "args": { "stat": "defense", "mult": 1.05 } },
+        { "effect": "pop_growth_mult", "args": { "mult": 0.9 } }
+      ]
+    },
+    "trait.raider_lords": {
+      "id": "trait.raider_lords",
+      "name": "Владыки налётчиков",
+      "ideology": "militarist",
+      "diplomacyBias": -4,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "stat_mult", "args": { "stat": "bombard", "mult": 1.2 } },
+        { "effect": "diplomacy_trust_decay_mult", "args": { "mult": 1.15 } }
+      ]
+    },
+    "trait.faction.aggressive": {
+      "id": "trait.faction.aggressive",
+      "name": "Агрессивные",
+      "ideology": "militarist",
+      "diplomacyBias": -5,
+      "balanceBudget": -1,
+      "effects": [
+        { "effect": "diplomacy_trust_decay_mult", "args": { "mult": 1.25 } }
+      ]
+    },
+    "trait.faction.diplomatic": {
+      "id": "trait.faction.diplomatic",
+      "name": "Дипломаты",
+      "ideology": "trader",
+      "diplomacyBias": 5,
+      "balanceBudget": 0,
+      "effects": [
+        {
+          "effect": "diplomacy_opinion_add",
+          "args": { "towardFactionId": "*", "amount": 2 }
+        },
+        { "effect": "diplomacy_trust_decay_mult", "args": { "mult": 0.75 } }
+      ]
+    },
+    "trait.faction.isolationist": {
+      "id": "trait.faction.isolationist",
+      "name": "Изоляционисты",
+      "ideology": "isolationist",
+      "diplomacyBias": -3,
+      "balanceBudget": 0,
+      "effects": [
+        { "effect": "diplomacy_trust_decay_mult", "args": { "mult": 1.1 } }
+      ]
+    },
+    "trait.faction.merchant": {
+      "id": "trait.faction.merchant",
+      "name": "Торговый дом",
+      "ideology": "trader",
+      "diplomacyBias": 2,
+      "balanceBudget": 0,
+      "effects": []
+    },
+    "trait.faction.expansionist": {
+      "id": "trait.faction.expansionist",
+      "name": "Экспансионисты",
+      "ideology": "expansionist",
+      "diplomacyBias": -2,
+      "balanceBudget": 0,
+      "effects": []
+    },
+    "trait.faction.technocrat": {
+      "id": "trait.faction.technocrat",
+      "name": "Технократы",
+      "ideology": "technocrat",
+      "diplomacyBias": 1,
+      "balanceBudget": 0,
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.cognitio", "mult": 1.05 }
+        }
+      ]
+    },
+    "trait.faction.puritan": {
+      "id": "trait.faction.puritan",
+      "name": "Пуритане",
+      "ideology": "puritan",
+      "diplomacyBias": -4,
+      "balanceBudget": 0,
+      "effects": []
+    }
+  }
+}

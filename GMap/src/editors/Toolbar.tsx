@@ -46,6 +46,7 @@ import { IntentsInbox } from "./IntentsInbox";
 import { EconomyPanel } from "./EconomyPanel";
 import { CombatPanel } from "./CombatPanel";
 import { GmOpsPanel } from "./GmOpsPanel";
+import { GmSystemsPanel } from "./GmSystemsPanel";
 import { OpsHealthPanel } from "./OpsHealthPanel";
 import { RESOURCE_POOL } from "../state/defaults";
 import { RESOURCE_ICON_SLUGS } from "../state/resourcePool.generated";
@@ -389,6 +390,7 @@ export function Toolbar() {
         showDeadZones: s.showDeadZones,
         showTraffic: s.showTraffic,
         showQuests: s.showQuests,
+        showLoyalty: s.showLoyalty,
       }),
     ),
   );
@@ -476,6 +478,7 @@ export function Toolbar() {
             showDeadZones: flags.showDeadZones,
             showTraffic: flags.showTraffic,
             showQuests: flags.showQuests,
+            showLoyalty: flags.showLoyalty,
           },
           id,
         ),
@@ -854,7 +857,7 @@ export function Toolbar() {
           <section>
             <h3>Режимы обзора</h3>
             <p className="hint">
-              F5–F9 — быстрые пресеты. Ниже — точечные слои.
+              F5–F10 — быстрые пресеты. Ниже — точечные слои.
             </p>
             <div className="layer-preset-row">
               {LAYER_PRESET_BUTTONS.map((p) => (
@@ -1163,6 +1166,7 @@ export function Toolbar() {
             <EconomyPanel />
             <CombatPanel />
             <GmOpsPanel />
+            <GmSystemsPanel />
             <OpsHealthPanel />
 
             {world.orders.length > 0 && gmShellMode !== "live" && (

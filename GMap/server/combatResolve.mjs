@@ -1,13 +1,18 @@
 /**
- * Combat resolve by roles + matchups + composition casualties (P5).
+ * Combat resolve by roles + matchups + composition casualties (P5 / A6).
+ * Veterancy, stationary defense units, assault phases.
  */
 import { getContent } from "./contentLoader.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
+import { logisticsCombatDefMult } from "./logistics.mjs";
+import { randomInt } from "node:crypto";
 
 const STANCE_DEFAULT = {
   powerMult: 1,
   casualtyTakenMult: 1,
 };
+
+const ASSAULT_PHASES = ["bombard", "landing", "ground", "occupation"];
 
 function shipDef(content, typeOrId) {
   const id = resolveAlias("ships", typeOrId);
@@ -75,10 +80,6 @@ function resolveRoleSlot(group, role, content) {
 
 /**
  * Property-layer damage multiplier (v1). No-op when attacker has no slot fills.
- * @param {object} attackerGroup
- * @param {object} defenderGroup
- * @param {object} content
- * @returns {number}
  */
 export function propertyCombatMult(attackerGroup, defenderGroup, content) {
   const cfg = content.combat_property_matchups;
@@ -124,21 +125,300 @@ function meanPropertyMultVsSample(attackers, defenderSample, content) {
   return sum / attackers.length;
 }
 
+export function veterancyConfig(content) {
+  return (
+    content.rules?.veterancy || {
+      thresholds: [0, 100, 250, 500, 900, 1500],
+      bonuses: [{}, {}, {}, {}, {}, {}],
+      xpPerBattle: 50,
+      xpLossOnUnitUpgrade: 0.5,
+    }
+  );
+}
+
+export function levelFromXp(xp, thresholds) {
+  const t = thresholds || veterancyConfig(getContent()).thresholds;
+  let level = 0;
+  for (let i = 0; i < t.length; i++) {
+    if ((xp || 0) >= t[i]) level = i;
+  }
+  return Math.min(level, (t.length || 1) - 1);
+}
+
+function applyStatMult(group, bonus) {
+  const sm = bonus?.stat_mult || {};
+  if (sm.damage) group.damage *= sm.damage;
+  if (sm.defense) group.armor *= sm.defense;
+  if (sm.armor) group.armor *= sm.armor;
+  if (sm.shields) group.shields *= sm.shields;
+  if (sm.hp) {
+    group.hp *= sm.hp;
+    group.maxHp *= sm.hp;
+  }
+}
+
+function applyVeterancyToGroup(group, content) {
+  const cfg = veterancyConfig(content);
+  const xp = group.ref?.xp ?? group.xp ?? 0;
+  const level =
+    group.ref?.level ?? group.level ?? levelFromXp(xp, cfg.thresholds);
+  group.xp = xp;
+  group.level = level;
+  const bonus = cfg.bonuses?.[level] || {};
+  applyStatMult(group, bonus);
+}
+
+/**
+ * Apply xp loss when a composition stack is upgraded via tech (A5 hook).
+ */
+export function applyVeterancyOnUnitUpgrade(compRef, content = getContent()) {
+  if (!compRef || typeof compRef !== "object") return;
+  const cfg = veterancyConfig(content);
+  const loss = cfg.xpLossOnUnitUpgrade ?? 0.5;
+  const xp = Math.floor((compRef.xp || 0) * loss);
+  compRef.xp = xp;
+  compRef.level = levelFromXp(xp, cfg.thresholds);
+}
+
+/**
+ * When tech unlocks `unit_upgrade` {from,to}: convert matching stacks and apply xp loss.
+ */
+export function applyUnitUpgradeEffectsToWorld(
+  world,
+  factionId,
+  effects,
+  content = getContent(),
+) {
+  if (!world || !factionId) return 0;
+  let changed = 0;
+  for (const e of effects || []) {
+    if (e?.effect !== "unit_upgrade") continue;
+    const from = e.args?.from;
+    const to = e.args?.to;
+    if (!from || !to) continue;
+    for (const fleet of world.fleets ?? []) {
+      if (fleet.factionId !== factionId) continue;
+      for (const g of fleet.composition || []) {
+        const id = g.defId || g.type;
+        if (id !== from) continue;
+        applyVeterancyOnUnitUpgrade(g, content);
+        g.defId = to;
+        g.type = to;
+        changed += 1;
+      }
+    }
+    for (const legion of world.legions ?? []) {
+      if (legion.factionId !== factionId) continue;
+      for (const g of legion.composition || []) {
+        const id = g.defId || g.type;
+        if (id !== from) continue;
+        applyVeterancyOnUnitUpgrade(g, content);
+        g.defId = to;
+        g.type = to;
+        changed += 1;
+      }
+    }
+  }
+  return changed;
+}
+
+export function awardVeterancyXp(groups, content = getContent()) {
+  const cfg = veterancyConfig(content);
+  const gain = cfg.xpPerBattle ?? 50;
+  for (const g of groups) {
+    if (!g.ref || (g.count || 0) <= 0 || g.stationary) continue;
+    g.ref.xp = (g.ref.xp || 0) + gain;
+    g.ref.level = levelFromXp(g.ref.xp, cfg.thresholds);
+  }
+}
+
+function pushStationaryUnit(groups, def, count, parentId) {
+  if (!def || count <= 0) return;
+  groups.push({
+    kind: "unit",
+    parentId: parentId || "defense",
+    parentKind: "stationary",
+    defId: def.id,
+    roles: def.roles || ["garrison"],
+    count,
+    hp: def.stats?.hp ?? 100,
+    maxHp: def.stats?.hp ?? 100,
+    damage: def.stats?.damage ?? 0,
+    armor: def.stats?.defense ?? def.stats?.armor ?? 0,
+    shields: def.stats?.shields ?? 0,
+    accuracy: 55,
+    targeting: def.targeting || "assault_first",
+    slotDefs: [],
+    filledSlots: {},
+    compSlots: [],
+    ref: null,
+    stationary: true,
+  });
+}
+
+/**
+ * Count defense/barracks buildings on relevant planets and spawn stationary units.
+ */
+export function gatherDefenseUnits(world, engagement, side, theater, content) {
+  if (theater === "space") return [];
+  const groups = [];
+  const sys = (world.systems ?? []).find((s) => s.id === engagement.systemId);
+  if (!sys) return groups;
+
+  const planets = (sys.planets || []).filter((p) => {
+    if (engagement.planetId) return p.id === engagement.planetId;
+    const owner = p.ownerFactionId || sys.ownerFactionId;
+    return owner === side.factionId;
+  });
+
+  let defenseCount = 0;
+  let barracksCount = 0;
+  for (const p of planets) {
+    const buildings = [
+      ...(p.surfaceBuildings || []),
+      ...(p.orbitalBuildings || []),
+      ...(p.buildings || []),
+    ];
+    for (const b of buildings) {
+      if (b.disabled) continue;
+      if (b.kind === "defense") defenseCount += 1;
+      if (b.kind === "barracks") barracksCount += 1;
+    }
+  }
+
+  // Optional A3/A4 hooks: loyalty / logistics combatDefMult
+  let defMult = 1;
+  for (const p of planets) {
+    if (typeof p.loyalty === "number" && p.loyalty < 40) {
+      defMult *= 0.85 + (p.loyalty / 40) * 0.15;
+    }
+  }
+  if (typeof sys.combatDefMult === "number") {
+    defMult *= sys.combatDefMult;
+  } else {
+    defMult *= logisticsCombatDefMult(sys, content);
+  }
+
+  const gunDef = unitDef(content, "unit.planetary_gun");
+  const bunkerDef = unitDef(content, "unit.bunker");
+  const domeDef = unitDef(content, "unit.shield_dome");
+
+  if (defenseCount > 0) {
+    pushStationaryUnit(groups, bunkerDef, defenseCount, `def_${sys.id}`);
+    pushStationaryUnit(groups, gunDef, defenseCount, `def_${sys.id}`);
+    if (defenseCount >= 2) {
+      pushStationaryUnit(
+        groups,
+        domeDef,
+        Math.floor(defenseCount / 2),
+        `def_${sys.id}`,
+      );
+    }
+  }
+  if (barracksCount > 0) {
+    pushStationaryUnit(groups, bunkerDef, barracksCount, `def_${sys.id}`);
+  }
+
+  if (defMult !== 1) {
+    for (const g of groups) {
+      g.damage *= defMult;
+      g.armor *= defMult;
+      g.shields *= defMult;
+    }
+  }
+  return groups;
+}
+
+export function buildDefenseLayers(world, engagement) {
+  const sys = (world.systems ?? []).find((s) => s.id === engagement.systemId);
+  const layers = {
+    orbital: { guns: 0, shields: 0 },
+    surface: { guns: 0, bunkers: 0 },
+    garrison: { unitIds: [], fortBonus: 0 },
+  };
+  if (!sys) return layers;
+
+  const planets = (sys.planets || []).filter((p) => {
+    if (engagement.planetId) return p.id === engagement.planetId;
+    return true;
+  });
+
+  for (const p of planets) {
+    const buildings = [
+      ...(p.surfaceBuildings || []),
+      ...(p.orbitalBuildings || []),
+      ...(p.buildings || []),
+    ];
+    for (const b of buildings) {
+      if (b.disabled) continue;
+      if (b.kind === "defense") {
+        if ((b.zone || "surface") === "orbital") {
+          layers.orbital.guns += 1;
+          layers.orbital.shields += 1;
+        } else {
+          layers.surface.guns += 1;
+          layers.surface.bunkers += 1;
+          layers.garrison.fortBonus += 5;
+        }
+      }
+      if (b.kind === "barracks") {
+        layers.surface.bunkers += 1;
+        layers.garrison.fortBonus += 3;
+      }
+    }
+  }
+  return layers;
+}
+
 /**
  * Flatten fleet/legion into fight groups.
  * @param {"space"|"ground"|"assault"} theater
  */
-export function gatherGroups(world, side, theater, content) {
+export function gatherGroups(world, side, theater, content, engagement = null) {
   const groups = [];
+  const faction = (world.factions ?? []).find((f) => f.id === side.factionId);
+
+  const resolveRaceId = (entity, systemId) => {
+    if (entity?.raceId) return entity.raceId;
+    if (faction?.primaryRaceId) return faction.primaryRaceId;
+    if (faction?.primaryRace) return faction.primaryRace;
+    const sys = (world.systems ?? []).find((s) => s.id === systemId);
+    const planet = (sys?.planets || []).find((p) => (p.population ?? 0) > 0);
+    const top = (planet?.raceComposition || [])
+      .slice()
+      .sort((a, b) => (b.percent || 0) - (a.percent || 0))[0];
+    return top?.raceId || null;
+  };
+
+  const applyRaceVariantStats = (group, def, raceId) => {
+    if (!raceId || !def?.raceVariants?.[raceId]) return;
+    const variant = def.raceVariants[raceId];
+    const mult = variant.statsMult || {};
+    for (const [k, m] of Object.entries(mult)) {
+      if (typeof group[k] === "number" && typeof m === "number") {
+        group[k] = group[k] * m;
+      }
+      if (k === "defense" && typeof m === "number" && typeof group.armor === "number") {
+        group.armor = group.armor * m;
+      }
+      if (k === "hp" && typeof m === "number") {
+        group.maxHp = (group.maxHp || group.hp) * m;
+      }
+    }
+    group.raceId = raceId;
+    if (variant.name) group.variantName = variant.name;
+  };
+
   for (const fleetId of side.fleetIds || []) {
     const fleet = (world.fleets ?? []).find((f) => f.id === fleetId);
     if (!fleet) continue;
+    const raceId = resolveRaceId(fleet, fleet.systemId);
     for (const g of fleet.composition || []) {
       const def = shipDef(content, g.defId || g.type);
       if (!def) continue;
       const tm = def.theaterMult?.[theater] ?? (theater === "space" ? 1 : 0);
       if (tm <= 0) continue;
-      groups.push({
+      const group = {
         kind: "ship",
         parentId: fleet.id,
         parentKind: "fleet",
@@ -156,12 +436,18 @@ export function gatherGroups(world, side, theater, content) {
         filledSlots: { ...(g.filledSlots || g.slotFills || {}) },
         compSlots: g.slots || [],
         ref: g,
-      });
+        xp: g.xp || 0,
+        level: g.level || 0,
+      };
+      applyRaceVariantStats(group, def, raceId);
+      applyVeterancyToGroup(group, content);
+      groups.push(group);
     }
   }
   for (const legionId of side.legionIds || []) {
     const legion = (world.legions ?? []).find((l) => l.id === legionId);
     if (!legion) continue;
+    const raceId = resolveRaceId(legion, legion.systemId);
     const comps =
       Array.isArray(legion.composition) && legion.composition.length > 0
         ? legion.composition
@@ -177,7 +463,7 @@ export function gatherGroups(world, side, theater, content) {
       if (!def) continue;
       const tm = def.theaterMult?.[theater] ?? (theater === "space" ? 0 : 1);
       if (tm <= 0) continue;
-      groups.push({
+      const group = {
         kind: "unit",
         parentId: legion.id,
         parentKind: "legion",
@@ -196,9 +482,33 @@ export function gatherGroups(world, side, theater, content) {
         compSlots: g.slots || [],
         ref: g,
         legion,
-      });
+        xp: g.xp || 0,
+        level: g.level || 0,
+      };
+      applyRaceVariantStats(group, def, raceId);
+      applyVeterancyToGroup(group, content);
+      groups.push(group);
     }
   }
+
+  if (engagement && theater !== "space") {
+    // Defender side gets planetary defense installations
+    const isDefender =
+      engagement.sides?.[1]?.factionId === side.factionId ||
+      side === engagement.sides?.[1];
+    if (isDefender) {
+      const defense = gatherDefenseUnits(
+        world,
+        engagement,
+        side,
+        theater,
+        content,
+      );
+      for (const g of defense) applyVeterancyToGroup(g, content);
+      groups.push(...defense);
+    }
+  }
+
   return groups;
 }
 
@@ -295,7 +605,6 @@ export function applyCasualties(groups, damagePoints, preferredTargeting) {
     }
   }
 
-  // Remove empty composition entries from parents later
   return log;
 }
 
@@ -315,8 +624,43 @@ function stanceMult(content, stanceId) {
   return content.combat_stances?.[stanceId] || STANCE_DEFAULT;
 }
 
+function filterGroupsByRoles(groups, roles) {
+  const set = new Set(roles);
+  return groups.filter((g) => (g.roles || []).some((r) => set.has(r)));
+}
+
+function degradeDefenseLayers(layers, power, phase) {
+  if (!layers) return { orbitalHit: 0, surfaceHit: 0 };
+  let remaining = power;
+  let orbitalHit = 0;
+  let surfaceHit = 0;
+  if (phase === "bombard") {
+    while (remaining > 8 && layers.orbital.shields > 0) {
+      layers.orbital.shields -= 1;
+      remaining -= 12;
+      orbitalHit += 1;
+    }
+    while (remaining > 8 && layers.orbital.guns > 0) {
+      layers.orbital.guns -= 1;
+      remaining -= 10;
+      orbitalHit += 1;
+    }
+    while (remaining > 8 && layers.surface.guns > 0) {
+      layers.surface.guns -= 1;
+      remaining -= 10;
+      surfaceHit += 1;
+    }
+    while (remaining > 8 && layers.surface.bunkers > 0) {
+      layers.surface.bunkers -= 1;
+      remaining -= 14;
+      surfaceHit += 1;
+    }
+  }
+  return { orbitalHit, surfaceHit };
+}
+
 /**
- * Resolve one engagement side vs side.
+ * Resolve one engagement side vs side (full fight, non-phased).
  */
 export function resolveEngagementFight(world, engagement) {
   const content = getContent();
@@ -328,8 +672,8 @@ export function resolveEngagementFight(world, engagement) {
     return { ok: false, error: "need two sides" };
   }
 
-  const groupsA = gatherGroups(world, sideA, theater, content);
-  const groupsB = gatherGroups(world, sideB, theater, content);
+  const groupsA = gatherGroups(world, sideA, theater, content, engagement);
+  const groupsB = gatherGroups(world, sideB, theater, content, engagement);
   if (groupsA.length === 0 && groupsB.length === 0) {
     return { ok: false, error: "no forces" };
   }
@@ -345,7 +689,48 @@ export function resolveEngagementFight(world, engagement) {
   powerA *= meanPropertyMultVsSample(groupsA, groupsB[0], content);
   powerB *= meanPropertyMultVsSample(groupsB, groupsA[0], content);
 
-  // Retreat: mostly escape
+  // Disconnected supply weakens the system owner (defender).
+  const fightSys = (world.systems ?? []).find(
+    (s) => s.id === engagement.systemId,
+  );
+  const logisticsDefMult = logisticsCombatDefMult(fightSys, content);
+  if (logisticsDefMult !== 1 && fightSys?.ownerFactionId) {
+    if (sideA.factionId === fightSys.ownerFactionId) powerA *= logisticsDefMult;
+    if (sideB.factionId === fightSys.ownerFactionId) powerB *= logisticsDefMult;
+  }
+
+  // Loyalty defense penalty / garrison defection (ground & assault)
+  const loyaltyNotes = [];
+  if ((theater === "ground" || theater === "assault") && fightSys) {
+    const inhabited = (fightSys.planets || []).filter(
+      (p) => (p.population ?? 0) > 0,
+    );
+    if (inhabited.length) {
+      const avg =
+        inhabited.reduce((s, p) => s + (p.loyalty ?? 50), 0) /
+        inhabited.length;
+      const ownerId = fightSys.ownerFactionId;
+      let defMult = 1;
+      if (avg < 20) {
+        if (randomInt(100) < 25) {
+          loyaltyNotes.push({
+            type: "garrison_defect",
+            loyalty: Math.round(avg),
+          });
+          defMult = 0.35;
+        } else {
+          defMult = 0.8;
+        }
+      } else if (avg < 40) {
+        defMult = 0.8;
+      }
+      if (defMult !== 1 && ownerId) {
+        if (sideA.factionId === ownerId) powerA *= defMult;
+        if (sideB.factionId === ownerId) powerB *= defMult;
+      }
+    }
+  }
+
   if ((sideA.stance || "hold") === "retreat" && powerA < powerB * 0.8) {
     return {
       ok: true,
@@ -355,6 +740,7 @@ export function resolveEngagementFight(world, engagement) {
       lossesA: [],
       lossesB: [],
       retreated: sideA.factionId,
+      phase: engagement.phase || null,
     };
   }
   if ((sideB.stance || "hold") === "retreat" && powerB < powerA * 0.8) {
@@ -366,14 +752,13 @@ export function resolveEngagementFight(world, engagement) {
       lossesA: [],
       lossesB: [],
       retreated: sideB.factionId,
+      phase: engagement.phase || null,
     };
   }
 
   const shareA = powerA / Math.max(1, powerA + powerB);
-  const rawDmgToB =
-    powerA * 0.55 * (stB.casualtyTakenMult ?? 1);
-  const rawDmgToA =
-    powerB * 0.55 * (stA.casualtyTakenMult ?? 1);
+  const rawDmgToB = powerA * 0.55 * (stB.casualtyTakenMult ?? 1);
+  const rawDmgToA = powerB * 0.55 * (stA.casualtyTakenMult ?? 1);
 
   const lossesB = applyCasualties(
     groupsB,
@@ -386,12 +771,13 @@ export function resolveEngagementFight(world, engagement) {
     groupsB[0]?.targeting || "line_first",
   );
   cleanupEmptyComposition(world);
+  awardVeterancyXp(groupsA, content);
+  awardVeterancyXp(groupsB, content);
 
   let outcome = "draw";
   if (shareA > 0.58) outcome = "win_a";
   else if (shareA < 0.42) outcome = "win_b";
 
-  // Destroyed sides
   const aliveA = groupsA.some((g) => g.count > 0);
   const aliveB = groupsB.some((g) => g.count > 0);
   if (aliveA && !aliveB) outcome = "win_a";
@@ -405,5 +791,187 @@ export function resolveEngagementFight(world, engagement) {
     powerB,
     lossesA,
     lossesB,
+    loyaltyNotes,
+    phase: engagement.phase || null,
   };
 }
+
+/**
+ * Resolve a single assault phase. Returns fight result + whether engagement continues.
+ */
+export function resolveAssaultPhase(world, engagement) {
+  const content = getContent();
+  const matchups = content.combat_matchups || {};
+  const phase = engagement.phase || "bombard";
+  const sideA = engagement.sides[0];
+  const sideB = engagement.sides[1];
+  if (!sideA || !sideB) {
+    return { ok: false, error: "need two sides" };
+  }
+
+  if (!engagement.defenseLayers) {
+    engagement.defenseLayers = buildDefenseLayers(world, engagement);
+  }
+  const layers = engagement.defenseLayers;
+
+  const theater = phase === "bombard" ? "space" : "assault";
+  let groupsA = gatherGroups(world, sideA, theater, content, engagement);
+  let groupsB = gatherGroups(world, sideB, theater === "space" ? "assault" : theater, content, engagement);
+
+  const stA = stanceMult(content, sideA.stance || "assault");
+  const stB = stanceMult(content, sideB.stance || "hold");
+
+  let powerA = 0;
+  let powerB = 0;
+  let lossesA = [];
+  let lossesB = [];
+  let phaseNote = null;
+  let continueEngagement = true;
+  let outcome = "phase_continue";
+
+  if (phase === "bombard") {
+    const bombA = filterGroupsByRoles(groupsA, ["bombard", "capital"]);
+    const bombPower =
+      bombA.reduce(
+        (s, g) => s + g.damage * g.count * (0.5 + g.accuracy / 200),
+        0,
+      ) * (stA.powerMult ?? 1);
+    powerA = bombPower;
+    const hits = degradeDefenseLayers(layers, bombPower, "bombard");
+    phaseNote = `orbital −${hits.orbitalHit}, surface −${hits.surfaceHit}`;
+
+    // Orbital guns return fire on bombarding ships only
+    const returnFire =
+      (layers.orbital.guns + layers.orbital.shields) * 8 * (stB.powerMult ?? 1);
+    powerB = returnFire;
+    lossesA = applyCasualties(bombA, returnFire * 0.4, "capital_first");
+    lossesB = [];
+    engagement.orbitalControl =
+      layers.orbital.guns + layers.orbital.shields <= 0
+        ? "attacker"
+        : layers.orbital.guns === 0
+          ? "contested"
+          : "defender";
+  } else if (phase === "landing") {
+    let assaultA = filterGroupsByRoles(groupsA, ["assault", "infantry"]);
+    if (assaultA.length === 0) assaultA = groupsA.filter((g) => g.kind === "unit");
+    const defB = filterGroupsByRoles(groupsB, [
+      "garrison",
+      "infantry",
+      "assault",
+    ]);
+    const shieldPenalty =
+      (layers.orbital?.shields || 0) > 0 ? 0.65 : 1;
+    const fortBonus = 1 + (layers.garrison?.fortBonus || 0) / 100;
+
+    const rolesA = rolePower(assaultA);
+    const rolesB = rolePower(defB);
+    powerA =
+      totalPower(rolesA, matchups, rolesB) *
+      (stA.powerMult ?? 1) *
+      shieldPenalty;
+    powerB =
+      totalPower(rolesB, matchups, rolesA) * (stB.powerMult ?? 1) * fortBonus;
+
+    lossesB = applyCasualties(
+      defB,
+      powerA * 0.5 * (stB.casualtyTakenMult ?? 1),
+      "garrison_first",
+    );
+    lossesA = applyCasualties(
+      assaultA,
+      powerB * 0.55 * (stA.casualtyTakenMult ?? 1),
+      "assault_first",
+    );
+    phaseNote =
+      (layers.orbital?.shields || 0) > 0
+        ? "landing under shields"
+        : "landing clear";
+  } else if (phase === "ground") {
+    const groundA = groupsA.filter((g) => g.kind === "unit" || g.stationary);
+    const groundB = groupsB.filter((g) => g.kind === "unit" || g.stationary);
+    const fortBonus = 1 + (layers.garrison?.fortBonus || 0) / 80;
+    const rolesA = rolePower(groundA);
+    const rolesB = rolePower(groundB);
+    powerA = totalPower(rolesA, matchups, rolesB) * (stA.powerMult ?? 1);
+    powerB =
+      totalPower(rolesB, matchups, rolesA) * (stB.powerMult ?? 1) * fortBonus;
+
+    lossesB = applyCasualties(
+      groundB,
+      powerA * 0.55 * (stB.casualtyTakenMult ?? 1),
+      groundA[0]?.targeting || "infantry_first",
+    );
+    lossesA = applyCasualties(
+      groundA,
+      powerB * 0.55 * (stA.casualtyTakenMult ?? 1),
+      groundB[0]?.targeting || "assault_first",
+    );
+
+    const aliveA = groundA.some((g) => g.count > 0);
+    const aliveB = groundB.some((g) => g.count > 0);
+    if (aliveA && !aliveB) outcome = "win_a";
+    else if (!aliveA && aliveB) outcome = "win_b";
+    else if (!aliveA && !aliveB) outcome = "draw";
+    else {
+      const share = powerA / Math.max(1, powerA + powerB);
+      if (share > 0.58) outcome = "win_a";
+      else if (share < 0.42) outcome = "win_b";
+      else outcome = "draw";
+    }
+  } else if (phase === "occupation") {
+    // Occupation: claim if attackers still have ground presence and defenders wiped
+    groupsA = gatherGroups(world, sideA, "assault", content, engagement);
+    groupsB = gatherGroups(world, sideB, "assault", content, engagement);
+    const aliveA = groupsA.some((g) => g.count > 0 && !g.stationary);
+    const aliveB = groupsB.some((g) => g.count > 0);
+    powerA = aliveA ? 1 : 0;
+    powerB = aliveB ? 1 : 0;
+    if (aliveA && !aliveB) outcome = "win_a";
+    else if (!aliveA) outcome = "win_b";
+    else outcome = "draw";
+    continueEngagement = false;
+    phaseNote = "occupation";
+  }
+
+  cleanupEmptyComposition(world);
+  awardVeterancyXp(groupsA, content);
+  awardVeterancyXp(groupsB, content);
+
+  const phaseIdx = ASSAULT_PHASES.indexOf(phase);
+  const nextPhase =
+    phaseIdx >= 0 && phaseIdx < ASSAULT_PHASES.length - 1
+      ? ASSAULT_PHASES[phaseIdx + 1]
+      : null;
+
+  // Decisive early end
+  if (phase === "ground" && (outcome === "win_a" || outcome === "win_b")) {
+    // Still run occupation for win_a claim; skip occupation for win_b
+    if (outcome === "win_b") {
+      continueEngagement = false;
+    } else if (nextPhase === "occupation") {
+      continueEngagement = true;
+    }
+  }
+  if (phase === "bombard" || phase === "landing") {
+    continueEngagement = true;
+    outcome = "phase_continue";
+  }
+  if (!nextPhase) continueEngagement = false;
+
+  return {
+    ok: true,
+    outcome,
+    powerA,
+    powerB,
+    lossesA,
+    lossesB,
+    phase,
+    nextPhase: continueEngagement ? nextPhase : null,
+    continueEngagement,
+    phaseNote,
+    defenseLayers: layers,
+  };
+}
+
+export { ASSAULT_PHASES };

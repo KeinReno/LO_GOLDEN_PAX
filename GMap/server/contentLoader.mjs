@@ -21,6 +21,7 @@ const FILE_KEYS = [
   "map_resources",
   "races",
   "taxes",
+  "loyalty_tiers",
   "pois",
   "combat_matchups",
   "combat_stances",
@@ -34,6 +35,9 @@ const FILE_KEYS = [
   "superpower_market",
   "faction_currencies",
   "market_quote_seed",
+  "faction_traits",
+  "diplomacy_stances",
+  "yearly_quests",
 ];
 
 let cache = null;
@@ -98,6 +102,7 @@ function loadContentPacks(packIds = ["core"]) {
   let map_resources = {};
   let races = {};
   let taxes = {};
+  let loyalty_tiers = {};
   let pois = {};
   let combat_matchups = {};
   let combat_stances = {};
@@ -111,6 +116,9 @@ function loadContentPacks(packIds = ["core"]) {
   let superpower_market = {};
   let faction_currencies = {};
   let market_quote_seed = {};
+  let faction_traits = { meta: {}, traits: {} };
+  let diplomacy_stances = {};
+  let yearly_quests = {};
   let id_aliases = { version: 1, ships: {}, resources: {}, units: {} };
 
   for (const id of packIds) {
@@ -133,6 +141,14 @@ function loadContentPacks(packIds = ["core"]) {
     map_resources = mergeDicts(map_resources, pack.map_resources);
     races = mergeDicts(races, pack.races);
     taxes = mergeDicts(taxes, pack.taxes);
+    if (pack.loyalty_tiers && typeof pack.loyalty_tiers === "object") {
+      loyalty_tiers = {
+        ...loyalty_tiers,
+        ...pack.loyalty_tiers,
+        loyalty_tiers:
+          pack.loyalty_tiers.loyalty_tiers || loyalty_tiers.loyalty_tiers,
+      };
+    }
     pois = mergeDicts(pois, pack.pois);
     combat_matchups = mergeDicts(combat_matchups, pack.combat_matchups);
     combat_stances = mergeDicts(combat_stances, pack.combat_stances);
@@ -162,6 +178,28 @@ function loadContentPacks(packIds = ["core"]) {
       faction_currencies,
       pack.faction_currencies,
     );
+    if (pack.faction_traits?.traits) {
+      faction_traits = {
+        meta: pack.faction_traits.meta || faction_traits.meta,
+        traits: {
+          ...(faction_traits.traits || {}),
+          ...pack.faction_traits.traits,
+        },
+      };
+    } else if (pack.faction_traits && typeof pack.faction_traits === "object") {
+      // Flat dict fallback (legacy)
+      const flat = { ...pack.faction_traits };
+      delete flat.meta;
+      delete flat.traits;
+      if (Object.keys(flat).length) {
+        faction_traits = {
+          meta: pack.faction_traits.meta || faction_traits.meta,
+          traits: { ...(faction_traits.traits || {}), ...flat },
+        };
+      }
+    }
+    diplomacy_stances = mergeDicts(diplomacy_stances, pack.diplomacy_stances);
+    yearly_quests = mergeDicts(yearly_quests, pack.yearly_quests);
     if (
       pack.market_quote_seed &&
       typeof pack.market_quote_seed === "object" &&
@@ -195,6 +233,7 @@ function loadContentPacks(packIds = ["core"]) {
     map_resources,
     races,
     taxes,
+    loyalty_tiers,
     pois,
     combat_matchups,
     combat_stances,
@@ -208,6 +247,9 @@ function loadContentPacks(packIds = ["core"]) {
     superpower_market,
     faction_currencies,
     market_quote_seed,
+    faction_traits,
+    diplomacy_stances,
+    yearly_quests,
     id_aliases,
     loadedAt: new Date().toISOString(),
   };
@@ -232,8 +274,10 @@ export function getPublicContent() {
       tax: c.rules.tax,
       population: c.rules.population,
       combat: c.rules.combat,
+      cardBattle: c.rules.cardBattle,
       fog: c.rules.fog,
     },
+    combat_matchups: c.combat_matchups,
     currencies: c.currencies,
     economy_schema: c.economy_schema,
     intents: c.intents,
@@ -242,6 +286,7 @@ export function getPublicContent() {
     map_resources: c.map_resources,
     races: c.races,
     taxes: c.taxes,
+    loyalty_tiers: c.loyalty_tiers,
     pois: c.pois,
     consequences: c.consequences,
     system_presets: c.system_presets,
@@ -253,6 +298,9 @@ export function getPublicContent() {
     combat_property_matchups: c.combat_property_matchups,
     faction_currencies: c.faction_currencies,
     market_quote_seed: c.market_quote_seed,
+    faction_traits: c.faction_traits,
+    diplomacy_stances: c.diplomacy_stances,
+    yearly_quests: c.yearly_quests,
     effects: Object.keys(c.effects.effects || {}),
     loadedAt: c.loadedAt,
   };

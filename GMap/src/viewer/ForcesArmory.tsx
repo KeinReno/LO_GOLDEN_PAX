@@ -16,6 +16,24 @@ type CatalogShip = {
 
 type CatalogUnit = CatalogShip;
 
+const VET_BONUS_HINTS = [
+  "нет бонуса",
+  "defense ×1.05",
+  "defense ×1.10 · damage ×1.05",
+  "defense ×1.15 · damage ×1.10",
+  "defense ×1.20 · damage ×1.15",
+  "defense ×1.25 · damage ×1.20",
+];
+
+function veterancyTooltip(c: {
+  xp?: number;
+  level?: number;
+}): string {
+  const level = Math.min(5, Math.max(0, c.level ?? 0));
+  const xp = c.xp ?? 0;
+  return `Veterancy ${level}/5 · XP ${xp} · ${VET_BONUS_HINTS[level] ?? ""}`;
+}
+
 /**
  * Armory / OOB workbench: formations + unit catalog with stats.
  */
@@ -225,6 +243,16 @@ export function ForcesArmory({
                         >
                           <strong>
                             {def?.name ?? c.type} ×{c.count}
+                            <span
+                              className="armory-vet-stars"
+                              title={veterancyTooltip(c)}
+                              aria-label={`Veterancy ${Math.min(5, Math.max(0, c.level ?? 0))}`}
+                            >
+                              {"★".repeat(Math.min(5, Math.max(0, c.level ?? 0)))}
+                              {"☆".repeat(
+                                Math.max(0, 5 - Math.min(5, Math.max(0, c.level ?? 0))),
+                              )}
+                            </span>
                           </strong>
                           {def?.stats && (
                             <span className="hint">
@@ -279,6 +307,43 @@ export function ForcesArmory({
               <p className="hint">
                 Сила: <strong>{selectedLegion.strength ?? "—"}</strong>
               </p>
+              {(selectedLegion.composition ?? []).length > 0 && (
+                <>
+                  <h4>Состав</h4>
+                  <ul className="armory-comp">
+                    {(selectedLegion.composition ?? []).map((c, i) => {
+                      const def = units.find(
+                        (u) =>
+                          u.id === c.defId ||
+                          u.id === c.type ||
+                          u.name === c.type,
+                      );
+                      return (
+                        <li key={`${c.defId || c.type}-${i}`}>
+                          <strong>
+                            {def?.name ?? c.defId ?? c.type} ×{c.count}
+                            <span
+                              className="armory-vet-stars"
+                              title={veterancyTooltip(c)}
+                              aria-label={`Veterancy ${Math.min(5, Math.max(0, c.level ?? 0))}`}
+                            >
+                              {"★".repeat(
+                                Math.min(5, Math.max(0, c.level ?? 0)),
+                              )}
+                              {"☆".repeat(
+                                Math.max(
+                                  0,
+                                  5 - Math.min(5, Math.max(0, c.level ?? 0)),
+                                ),
+                              )}
+                            </span>
+                          </strong>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
               <div className="armory-actions">
                 <button
                   type="button"

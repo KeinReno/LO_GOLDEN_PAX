@@ -14,6 +14,7 @@ const LABELS: Record<string, string> = {
   "intent.market_cancel": "Отмена заявки",
   "intent.scout_reveal": "Разведка",
   "intent.refugee_convoy": "Конвой беженцев",
+  "intent.give_npc_task": "Поручение двора",
 };
 
 export function intentLabel(defId: string): string {

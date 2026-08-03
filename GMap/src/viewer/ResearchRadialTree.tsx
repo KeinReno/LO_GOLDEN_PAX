@@ -65,6 +65,10 @@ export type RadialNode = {
   locked: boolean;
   canBuy: boolean;
   cost: number;
+  upgradeStars: number;
+  upgradeTotal: number;
+  exclusive: boolean;
+  breakthrough: boolean;
 };
 
 type Edge = {
@@ -100,6 +104,7 @@ function scramble(name: string): string {
 export function ResearchRadialTree({
   byCat,
   unlocked,
+  unlockedUpgrades,
   cognitio,
   selectedId,
   focusBranch,
@@ -108,6 +113,7 @@ export function ResearchRadialTree({
 }: {
   byCat: Map<EconomyCategory, TechnologyDef[]>;
   unlocked: Set<string>;
+  unlockedUpgrades?: Set<string>;
   cognitio: number;
   selectedId: string | null;
   focusBranch: EconomyCategory | null;
@@ -135,6 +141,7 @@ export function ResearchRadialTree({
   const { nodes, edges, rings } = useMemo(() => {
     const nodeList: RadialNode[] = [];
     const edgeList: Edge[] = [];
+    const ups = unlockedUpgrades || new Set<string>();
 
     for (const cat of CAT_ORDER) {
       const techs = byCat.get(cat) ?? [];
@@ -144,7 +151,12 @@ export function ResearchRadialTree({
 
       for (let i = 0; i < techs.length; i++) {
         const tech = techs[i];
-        const r = RING0 + i * RING_STEP;
+        const breakthrough = !!tech.isBreakthrough;
+        // Breakthroughs sit on a farther ring for visual separation
+        const ringIndex = breakthrough
+          ? Math.max(i, techs.filter((t) => !t.isBreakthrough).length)
+          : i;
+        const r = RING0 + ringIndex * RING_STEP + (breakthrough ? RING_STEP * 0.35 : 0);
         const { x, y } = polar(angle, r);
         const done = unlocked.has(tech.id);
         const prereqOk = (tech.prerequisites || []).every((p) =>
@@ -152,6 +164,10 @@ export function ResearchRadialTree({
         );
         const cost = cognitioCost(tech);
         const canBuy = !done && prereqOk && cognitio >= cost && !busy;
+        const upgradeTotal = (tech.upgrades || []).length;
+        const upgradeStars = (tech.upgrades || []).filter((u) =>
+          ups.has(u.id),
+        ).length;
         const node: RadialNode = {
           tech,
           x,
@@ -162,6 +178,10 @@ export function ResearchRadialTree({
           locked: !prereqOk && !done,
           canBuy,
           cost,
+          upgradeStars,
+          upgradeTotal,
+          exclusive: !!(tech.raceLock || tech.factionTraitLock),
+          breakthrough,
         };
         nodeList.push(node);
 
@@ -194,12 +214,12 @@ export function ResearchRadialTree({
     }
 
     const ringRs = Array.from(
-      { length: maxDepth },
+      { length: maxDepth + 1 },
       (_, i) => RING0 + i * RING_STEP,
     );
 
     return { nodes: nodeList, edges: edgeList, rings: ringRs };
-  }, [byCat, unlocked, cognitio, busy, maxDepth]);
+  }, [byCat, unlocked, unlockedUpgrades, cognitio, busy, maxDepth]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -372,6 +392,11 @@ export function ResearchRadialTree({
               : "";
           const selected = selectedId === n.tech.id;
           const label = n.locked ? scramble(n.tech.name) : n.tech.name;
+          const stars =
+            n.done && n.upgradeTotal > 0
+              ? "★".repeat(n.upgradeStars) +
+                "☆".repeat(Math.max(0, n.upgradeTotal - n.upgradeStars))
+              : "";
           return (
             <button
               key={n.tech.id}
@@ -382,6 +407,8 @@ export function ResearchRadialTree({
                 n.locked && "is-locked",
                 n.canBuy && "is-affordable",
                 selected && "is-selected",
+                n.breakthrough && "is-breakthrough",
+                n.exclusive && "is-exclusive",
                 dim,
               ]
                 .filter(Boolean)
@@ -389,22 +416,27 @@ export function ResearchRadialTree({
               style={{
                 left: `${(n.x / VB) * 100}%`,
                 top: `${(n.y / VB) * 100}%`,
-                ["--node-color" as string]: CAT_COLOR[n.tech.category],
+                ["--node-color" as string]: n.breakthrough
+                  ? "var(--accent, #c9a227)"
+                  : CAT_COLOR[n.tech.category],
               }}
               onClick={() => onSelect(n.tech.id)}
               title={
                 n.locked
                   ? "Закрыто"
-                  : `${n.tech.name} · ${n.cost} Знание`
+                  : `${n.tech.name} · ${n.cost} Знание${
+                      n.exclusive ? " · эксклюзив" : ""
+                    }${n.breakthrough ? " · брейкро" : ""}`
               }
             >
               <span className="research-radial-node-top">
                 <span className="research-radial-node-era">
+                  {n.exclusive ? "🔒" : ""}
                   {n.tech.category}
                   {n.tech.era}
                 </span>
                 <span className="research-radial-node-cost tabular">
-                  {n.done ? "✓" : n.cost}
+                  {n.done ? (stars || "✓") : n.cost}
                 </span>
               </span>
               <span

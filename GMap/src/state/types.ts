@@ -111,7 +111,45 @@ export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
   "grav_field",
 ];
 
-export type QuestStatus = "active" | "done" | "hidden";
+export type QuestStatus = "active" | "done" | "hidden" | "expired";
+
+export type QuestType = "main" | "side" | "faction" | "foreign" | "yearly";
+
+/** Dice roll requested by a quest / choice (resolved server-side). */
+export interface DiceSpec {
+  count: number;
+  sides: number;
+  label: string;
+  threshold?: number;
+}
+
+export interface QuestChoice {
+  id: string;
+  label: string;
+  description?: string;
+  effects?: EffectInstance[];
+  nextStageId?: string;
+  diceRequired?: DiceSpec[];
+  onSuccess?: EffectInstance[];
+  onFail?: EffectInstance[];
+}
+
+export interface QuestStage {
+  id: string;
+  label: string;
+  summary?: string;
+  choices?: QuestChoice[];
+  diceRequired?: DiceSpec[];
+}
+
+export interface QuestHistoryEntry {
+  at: string;
+  turn: number;
+  kind: "message" | "choice" | "dice" | "stage_change" | "reward";
+  body: string;
+  authorName?: string;
+  outcome?: string;
+}
 
 /** Master / player quest pin on the galaxy map. */
 export interface Quest {
@@ -122,6 +160,45 @@ export interface Quest {
   /** Anchor system (map icon). */
   systemId: string | null;
   status: QuestStatus;
+  /** Quest lane (A9). Defaults to "side" for legacy saves. */
+  type?: QuestType;
+  /** Owning / issuing faction (player yearly quests, foreign offers). */
+  sourceFactionId?: string | null;
+  /** Anchor / origin system for filtering / map focus. */
+  sourceSystemId?: string | null;
+  /** Court NPC who issued / owns this quest (A9/A10). */
+  sourceNpcId?: string | null;
+  /** Multi-stage arc progress (A9). */
+  arc?: { stages: QuestStage[]; currentStage: number };
+  /** Interaction timeline (choices, dice, rewards). */
+  history?: QuestHistoryEntry[];
+  /** Top-level choices when no arc / current stage has none. */
+  choices?: QuestChoice[];
+  /** Dice required before resolving the quest / current stage. */
+  diceRequired?: DiceSpec[];
+  /** Turn on which an unresolved yearly quest expires. */
+  expiresTurn?: number | null;
+  /** Catalog id from yearly_quests.json (if spawned). */
+  catalogId?: string | null;
+}
+
+/** Lasting ModifierStack effect attached to a faction (NPC tasks, etc.). */
+export interface FactionEffectInstance {
+  effect: string;
+  args?: Record<string, unknown>;
+  source?: { kind: string; id: string; label?: string };
+}
+
+/** Court timeline entry (RP Court / A10). */
+export interface CourtEvent {
+  id: string;
+  turn: number;
+  at: string;
+  type: "court";
+  text: string;
+  factionId?: string;
+  npcId?: string;
+  npcName?: string;
 }
 
 /** Civilian / trade caravan moving along a lane. */
@@ -295,7 +372,57 @@ export type DiplomacyRelation =
   | "trade"
   | "war"
   | "vassal"
-  | "truce";
+  | "truce"
+  | "nap"
+  | "research_pact"
+  | "migration_treaty"
+  | "embargo";
+
+/** Single modifier instance (content-driven; applied via ModifierStack). */
+export interface EffectInstance {
+  effect: string;
+  args?: Record<string, unknown>;
+  source?: { kind: string; id: string; label?: string };
+}
+
+/** Polity doctrine trait from `faction_traits.json` (stored on Faction). */
+export interface FactionTrait {
+  id: string;
+  label: string;
+  effects: EffectInstance[];
+  balanceBudget: number;
+  ideology?: string;
+  conditions?: { minEra?: number; tag?: string };
+}
+
+/** Bilateral treaty attached to a faction's diplomacy state. */
+export interface Treaty {
+  id: string;
+  type: DiplomacyRelation;
+  withFactionId: string;
+  startedTurn: number;
+  expiresTurn?: number | null;
+  effects: EffectInstance[];
+}
+
+/** Soft history row for the diplomacy timeline UI. */
+export interface DiplomacyEvent {
+  turn: number;
+  at?: string;
+  type: string;
+  withFactionId: string;
+  label: string;
+  opinionDelta?: number;
+}
+
+export interface FactionDiplomacy {
+  /** factionId → opinion (−100…+100). */
+  opinions: Record<string, number>;
+  treaties: Treaty[];
+  history?: DiplomacyEvent[];
+  /** Turns since last broken treaty (casus belli signal). */
+  lastBrokenTreatyTurn?: number | null;
+}
 
 export type OrderType =
   | "move_fleet"
@@ -397,6 +524,8 @@ export interface Planet {
   coOwnerFactionIds?: string[];
   /** Disputed claim — contested planet. */
   contested?: boolean;
+  /** Population loyalty 0–100 (server SoT, A3). */
+  loyalty?: number;
 }
 
 /** Drill-down focus: galaxy map stays at GMap x/y; system/planet are nested views. */
@@ -479,6 +608,17 @@ export interface StarSystem {
   questId?: string | null;
   /** Усиленный гражданский хаб (нити трафика). */
   trafficHub?: boolean;
+  /** Supply network status (server logistics tick). */
+  logistics?: {
+    connectedToCapital: boolean;
+    hopsToCapital: number;
+    viaDepot: boolean;
+    supplyLevel: number;
+    bottlenecked: boolean;
+    /** Parent system on the supply tree (for map drawing). */
+    parentId?: string | null;
+    computedAtTurn?: number;
+  };
 }
 
 export interface SystemLink {
@@ -500,6 +640,21 @@ export interface Sector {
   color?: string;
 }
 
+/** Active assignment for a court NPC (A10). */
+export interface NpcTask {
+  id: string;
+  label: string;
+  startedTurn: number;
+  /** Expected completion turn. */
+  etaTurn: number;
+  /** 0..1 progress toward completion. */
+  progress?: number;
+  /** Effects applied via ModifierStack on completion. */
+  effects?: FactionEffectInstance[];
+  /** Linked quest id (advance arc stage on finish). */
+  linkedQuestId?: string;
+}
+
 /** Court / RP actor attached to a polity (player HQ + GM dossier). */
 export interface FactionNpc {
   id: string;
@@ -512,7 +667,7 @@ export interface FactionNpc {
     | "architect"
     | "agent"
     | "other";
-  status?: "active" | "hidden" | "dead" | "away";
+  status?: "active" | "hidden" | "dead" | "away" | "busy";
   /** Soft location labels (resolved against renamed systems). */
   locationSystemName?: string;
   locationPlanetName?: string;
@@ -524,6 +679,10 @@ export interface FactionNpc {
   /** GM-only. */
   gmNotes?: string;
   tags?: string[];
+  /** Current court assignment (A10). */
+  currentTask?: NpcTask;
+  /** Soft opinion toward other NPCs (−100…+100). */
+  relationships?: Record<string, number>;
 }
 
 export interface Faction {
@@ -582,6 +741,26 @@ export interface Faction {
   gmNotes?: string;
   /** Court / key NPCs for HQ «Двор» panel. */
   npcs?: FactionNpc[];
+  /** Lasting ModifierStack effects from completed NPC tasks / events (A10). */
+  activeEffects?: FactionEffectInstance[];
+  /**
+   * Faction doctrine traits (max 3) from faction_traits catalog.
+   * Used by ModifierStack, logistics range, and science exclusives (`factionTraitLock`).
+   */
+  traits?: FactionTrait[];
+  /**
+   * Dominant / primary race id (xenorelations opinion).
+   * Falls back to race_human when unset.
+   */
+  primaryRaceId?: string;
+  /** Explicit capital for logistics BFS (else first owned isCapital). */
+  capitalSystemId?: string | null;
+  /** Opinion matrix, active treaties, soft history (A8). */
+  diplomacy?: FactionDiplomacy;
+  /** Soft loyalty store (A3/A9) — raceId → 0..100. */
+  loyaltyByRace?: Record<string, number>;
+  /** Aggregate loyalty fallback when race-specific missing. */
+  loyalty?: number;
 }
 
 export type PolityKind = "state" | "faction";
@@ -602,16 +781,36 @@ export interface TurnSnapshot {
   orders: PlayerOrder[];
   caravans?: Caravan[];
   quests?: Quest[];
+  /** Race→faction loyalty baselines (A3). */
+  loyaltyMatrix?: Record<string, Record<string, number>>;
+}
+
+export interface RaceTrait {
+  id: string;
+  effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+  balanceBudget?: number;
 }
 
 export interface Race {
   id: string;
   name: string;
+  tags?: string[];
+  traits?: RaceTrait[];
+  habitability?: Record<string, number>;
+  growth?: { baseRate?: number; crowdPenalty?: number };
+  xenorelations?: Record<string, number>;
 }
 
 export interface ShipGroup {
   type: string;
   count: number;
+  defId?: string;
+  hp?: number;
+  filledSlots?: Record<string, string>;
+  /** Veterancy experience points (A6). */
+  xp?: number;
+  /** Veterancy level 0..5 (A6). */
+  level?: number;
 }
 
 export interface Fleet {
@@ -637,6 +836,61 @@ export interface Legion {
   status: LegionStatus;
   /** Planned hops (system ids), same as fleets. */
   route?: string[];
+  /** Species for raceVariants (A3). */
+  raceId?: string | null;
+  composition?: Array<{
+    defId?: string;
+    type?: string;
+    count?: number;
+    hp?: number;
+    xp?: number;
+    level?: number;
+    filledSlots?: Record<string, string>;
+    slotFills?: Record<string, string>;
+    slots?: unknown[];
+  }>;
+}
+
+export type EngagementPhase =
+  | "bombard"
+  | "landing"
+  | "ground"
+  | "occupation";
+
+export interface EngagementSideState {
+  factionId: string;
+  fleetIds?: string[];
+  legionIds?: string[];
+  stance?: string;
+  locked?: boolean;
+}
+
+export interface EngagementDefenseLayers {
+  orbital: { guns: number; shields: number };
+  surface: { guns: number; bunkers: number };
+  garrison: { unitIds: string[]; fortBonus: number };
+}
+
+/** Live combat event between ticks (A6). */
+export interface Engagement {
+  id: string;
+  theater: "space" | "ground" | "assault" | string;
+  systemId: string;
+  planetId?: string | null;
+  turnCreated?: number;
+  startedTurn?: number;
+  status: string;
+  source?: string;
+  roundsElapsed?: number;
+  maxRounds?: number;
+  requiresPlayerInput?: boolean;
+  mode?: "auto" | "card" | string;
+  phase?: EngagementPhase;
+  orbitalControl?: "attacker" | "defender" | "contested";
+  defenseLayers?: EngagementDefenseLayers;
+  cardBattleRequests?: string[];
+  sides: EngagementSideState[];
+  result?: Record<string, unknown> | null;
 }
 
 /** Directed or undirected pair — stored with sorted ids for uniqueness. */
@@ -672,6 +926,8 @@ export interface CampaignMeta {
   /** Monotonic live-table revision (server SoT). */
   tableRevision?: number;
   contentPacks?: string[];
+  /** FactionId → turn when yearly quest dice was last rolled (A9). */
+  yearlyQuestRolls?: Record<string, number>;
 }
 
 export interface WorldState {
@@ -688,6 +944,10 @@ export interface WorldState {
   turnHistory: TurnSnapshot[];
   caravans: Caravan[];
   quests: Quest[];
+  /** Court timeline (A10) — ring of recent court events. */
+  courtEvents?: CourtEvent[];
+  /** Race→faction loyalty baselines (A3). */
+  loyaltyMatrix?: Record<string, Record<string, number>>;
 }
 
 export interface BrushSettings {
@@ -747,6 +1007,8 @@ export interface UiState {
   showDeadZones: boolean;
   showTraffic: boolean;
   showQuests: boolean;
+  /** Loyalty heat halo map mode (A3). */
+  showLoyalty: boolean;
   /** Open quest dossier id. */
   openQuestId: string | null;
   diplomacyPanelOpen: boolean;
@@ -827,6 +1089,53 @@ export interface TurnBriefing {
   events: TurnBriefingEvent[];
 }
 
+/** Card-battle tactical layer over the same fleet/legion composition. */
+export interface BattleCard {
+  cardId: string;
+  defId: string;
+  role: string;
+  count: number;
+  hp: number;
+  maxHp: number;
+  damage: number;
+  defense: number;
+  shields: number;
+  accuracy: number;
+  targeting: string;
+  filledSlots: Record<string, string>;
+  veterancyLevel: number;
+  /** Source composition parent (fleet/legion id). */
+  parentId?: string;
+  parentKind?: "fleet" | "legion";
+}
+
+export interface CardBattleLogEntry {
+  round: number;
+  side: string;
+  action: "play" | "pass" | "resolve" | "draw" | "base_hit";
+  cardId?: string;
+  outcome?: {
+    winnerCard?: string;
+    loserCard?: string;
+    damageDealt?: number;
+  };
+}
+
+export interface CardBattleState {
+  engagementId: string;
+  hands: { [sideId: string]: BattleCard[] };
+  decks: { [sideId: string]: BattleCard[] };
+  discard: { [sideId: string]: BattleCard[] };
+  frontLines: { [sideId: string]: BattleCard[] };
+  /** Soft HP pool when hitting with no opposing front-line card. */
+  baseHp: { [sideId: string]: number };
+  round: number;
+  currentSide: string;
+  status: "active" | "resolved";
+  log: CardBattleLogEntry[];
+  winnerFactionId?: string | null;
+}
+
 export interface ViewerPayload {
   world: WorldState;
   factionId: string;
@@ -876,6 +1185,8 @@ export interface ViewerPayload {
     /** Optional bottleneck map keyed by category (A–F). */
     bottlenecks?: Record<string, { tier?: number; deficit?: number } | number>;
     unlockedTechs?: string[];
+    /** Researched tech upgrade ids (e.g. tech.fusion.overclock). */
+    unlockedUpgrades?: string[];
     techTiers?: Record<string, number>;
     unlockedProperties?: string[];
     /** Recent ledger entries (delta/reason/turn) for breakdown + deltas. */
@@ -896,6 +1207,7 @@ export interface ViewerPayload {
         sources?: string[];
       }[];
       raceTraits?: { label: string; summary: string }[];
+      factionTraits?: { label: string; summary: string }[];
     };
   };
   /** Faction-filtered summary of the last processed turn (P2.5). */

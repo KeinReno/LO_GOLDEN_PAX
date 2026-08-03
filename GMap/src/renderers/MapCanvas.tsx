@@ -30,6 +30,7 @@ import {
   drawOrderArrow,
   drawOrderArrowIso,
   drawOwnershipAura,
+  drawLoyaltyAura,
   drawSectors,
   drawSelectionBrackets,
   drawSystemGlyph,
@@ -135,6 +136,8 @@ export interface MapViewModel {
   showDeadZones?: boolean;
   showTraffic?: boolean;
   showQuests?: boolean;
+  /** Loyalty heat halo (A3). */
+  showLoyalty?: boolean;
   /** Signal icons: fan arc vs priority stack +N */
   showSignalFan?: boolean;
   /** Viewer: systems with severe economy bottlenecks (badge). */
@@ -697,6 +700,7 @@ export function MapCanvas({
       showDeadZones: s.showDeadZones,
       showTraffic: s.showTraffic,
       showQuests: s.showQuests,
+      showLoyalty: s.showLoyalty,
       activeFactionId: s.activeFactionId,
       graphics: s.editorGraphics,
       perfMode: s.editorGraphics.cinematic ? "cinematic" : "quality",
@@ -2406,6 +2410,7 @@ export function MapCanvas({
         showDeadZones,
         showTraffic,
         showQuests,
+        showLoyalty = false,
         showSignalFan = false,
         activeFactionId,
         perfMode,
@@ -2585,14 +2590,14 @@ export function MapCanvas({
         if (showTraffic) {
           drawTrafficDensity(linksG, world, anim);
         }
-        if (showSupply && mode !== "viewer") {
+        if (showSupply) {
           drawSupplyChains(linksG, world, activeFactionId ?? null, anim);
         }
         if (showCaravans) {
           drawCaravans(linksG, world, world.caravans ?? [], anim);
         }
         drawTradeLanes(linksG, world, anim);
-      } else if (!bare && showSupply && mode !== "viewer" && tier === "soft") {
+      } else if (!bare && showSupply && tier === "soft") {
         drawSupplyChains(linksG, world, activeFactionId ?? null, anim);
       }
 
@@ -2828,6 +2833,18 @@ export function MapCanvas({
               shareColors,
               { dim: dimMul, emphasize },
             );
+          }
+        }
+
+        if (showLoyalty) {
+          const inhabited = (s.planets || []).filter(
+            (p) => (p.population ?? 0) > 0,
+          );
+          if (inhabited.length) {
+            const avg =
+              inhabited.reduce((sum, p) => sum + (p.loyalty ?? 50), 0) /
+              inhabited.length;
+            drawLoyaltyAura(systemsG, s, avg, geomAnim, { dim: dimMul });
           }
         }
 

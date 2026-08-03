@@ -16,7 +16,66 @@
         }
       }
     ],
-    "prerequisites": []
+    "prerequisites": [],
+    "upgrades": [
+      {
+        "id": "tech.geology.efficiency",
+        "name": "Глубинный замер",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.geology.austerity",
+        "name": "Экономная добыча",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.geology.feature",
+        "name": "Карта недр",
+        "cost": {
+          "currency.cognitio": 8
+        },
+        "effects": [
+          {
+            "effect": "capacity_add",
+            "args": {
+              "category": "A",
+              "tier": 2,
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.geology.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
   },
   "tech.deep_prospecting": {
     "id": "tech.deep_prospecting",
@@ -37,6 +96,65 @@
     ],
     "prerequisites": [
       "tech.geology"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.deep_prospecting.efficiency",
+        "name": "Оптимизация скважин",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.deep_prospecting.austerity",
+        "name": "Рецикл шлама",
+        "cost": {
+          "currency.cognitio": 10
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.deep_prospecting.feature",
+        "name": "Аномальный зонд",
+        "cost": {
+          "currency.cognitio": 13
+        },
+        "effects": [
+          {
+            "effect": "capacity_add",
+            "args": {
+              "category": "A",
+              "tier": 4,
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.deep_prospecting.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.asteroid_mining": {
@@ -58,6 +176,65 @@
     ],
     "prerequisites": [
       "tech.deep_prospecting"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.asteroid_mining.efficiency",
+        "name": "Оптимизация скважин",
+        "cost": {
+          "currency.cognitio": 19
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.asteroid_mining.austerity",
+        "name": "Рецикл шлама",
+        "cost": {
+          "currency.cognitio": 17
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.asteroid_mining.feature",
+        "name": "Аномальный зонд",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "capacity_add",
+            "args": {
+              "category": "A",
+              "tier": 6,
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.asteroid_mining.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.anomaly_tapping": {
@@ -79,6 +256,65 @@
     ],
     "prerequisites": [
       "tech.asteroid_mining"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.anomaly_tapping.efficiency",
+        "name": "Оптимизация скважин",
+        "cost": {
+          "currency.cognitio": 65
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.anomaly_tapping.austerity",
+        "name": "Рецикл шлама",
+        "cost": {
+          "currency.cognitio": 58
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.anomaly_tapping.feature",
+        "name": "Аномальный зонд",
+        "cost": {
+          "currency.cognitio": 79
+        },
+        "effects": [
+          {
+            "effect": "capacity_add",
+            "args": {
+              "category": "A",
+              "tier": 8,
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.anomaly_tapping.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.materials_science": {
@@ -98,7 +334,65 @@
         }
       }
     ],
-    "prerequisites": []
+    "prerequisites": [],
+    "upgrades": [
+      {
+        "id": "tech.materials_science.efficiency",
+        "name": "Закалка сплавов",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.materials_science.austerity",
+        "name": "Лёгкие сплавы",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.materials_science.feature",
+        "name": "Щитовой сплав",
+        "cost": {
+          "currency.cognitio": 8
+        },
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.materials_science.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
   },
   "tech.pyrometallurgy": {
     "id": "tech.pyrometallurgy",
@@ -119,6 +413,64 @@
     ],
     "prerequisites": [
       "tech.materials_science"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.pyrometallurgy.efficiency",
+        "name": "Кристалл-синхрон",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.pyrometallurgy.austerity",
+        "name": "Щитовой рецикл",
+        "cost": {
+          "currency.cognitio": 10
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.pyrometallurgy.feature",
+        "name": "Мета-резонанс",
+        "cost": {
+          "currency.cognitio": 13
+        },
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 2
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.pyrometallurgy.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.crystal_integration": {
@@ -146,6 +498,64 @@
     ],
     "prerequisites": [
       "tech.pyrometallurgy"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.crystal_integration.efficiency",
+        "name": "Кристалл-синхрон",
+        "cost": {
+          "currency.cognitio": 19
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.crystal_integration.austerity",
+        "name": "Щитовой рецикл",
+        "cost": {
+          "currency.cognitio": 17
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.crystal_integration.feature",
+        "name": "Мета-резонанс",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 3
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.crystal_integration.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.metamaterials": {
@@ -167,6 +577,64 @@
     ],
     "prerequisites": [
       "tech.crystal_integration"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.metamaterials.efficiency",
+        "name": "Кристалл-синхрон",
+        "cost": {
+          "currency.cognitio": 65
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.metamaterials.austerity",
+        "name": "Щитовой рецикл",
+        "cost": {
+          "currency.cognitio": 58
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.metamaterials.feature",
+        "name": "Мета-резонанс",
+        "cost": {
+          "currency.cognitio": 79
+        },
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 4
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.metamaterials.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.industrial_org": {
@@ -186,7 +654,65 @@
         }
       }
     ],
-    "prerequisites": []
+    "prerequisites": [],
+    "upgrades": [
+      {
+        "id": "tech.industrial_org.efficiency",
+        "name": "Конвейер 2.0",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.industrial_org.austerity",
+        "name": "Низкий апкип",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.industrial_org.feature",
+        "name": "Быстрая стройка",
+        "cost": {
+          "currency.cognitio": 8
+        },
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.industrial_org.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
   },
   "tech.modular_construction": {
     "id": "tech.modular_construction",
@@ -207,6 +733,64 @@
     ],
     "prerequisites": [
       "tech.industrial_org"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.modular_construction.efficiency",
+        "name": "Сборка без брака",
+        "cost": {
+          "currency.cognitio": 13
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.modular_construction.austerity",
+        "name": "Модульный сервис",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.modular_construction.feature",
+        "name": "Нано-ремонт",
+        "cost": {
+          "currency.cognitio": 15
+        },
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.modular_construction.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.cybernetics": {
@@ -228,6 +812,64 @@
     ],
     "prerequisites": [
       "tech.modular_construction"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.cybernetics.efficiency",
+        "name": "Сборка без брака",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.cybernetics.austerity",
+        "name": "Модульный сервис",
+        "cost": {
+          "currency.cognitio": 20
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.cybernetics.feature",
+        "name": "Нано-ремонт",
+        "cost": {
+          "currency.cognitio": 28
+        },
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.cybernetics.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.nanotech": {
@@ -249,6 +891,64 @@
     ],
     "prerequisites": [
       "tech.cybernetics"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.nanotech.efficiency",
+        "name": "Сборка без брака",
+        "cost": {
+          "currency.cognitio": 81
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.nanotech.austerity",
+        "name": "Модульный сервис",
+        "cost": {
+          "currency.cognitio": 72
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.nanotech.feature",
+        "name": "Нано-ремонт",
+        "cost": {
+          "currency.cognitio": 99
+        },
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.nanotech.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.energy_grid": {
@@ -268,7 +968,65 @@
         }
       }
     ],
-    "prerequisites": []
+    "prerequisites": [],
+    "upgrades": [
+      {
+        "id": "tech.energy_grid.efficiency",
+        "name": "Оверклок сети",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.energy_grid.austerity",
+        "name": "Холодный реактор",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.energy_grid.feature",
+        "name": "Импульсный буст",
+        "cost": {
+          "currency.cognitio": 8
+        },
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "shields",
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.energy_grid.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
   },
   "tech.plasma_engineering": {
     "id": "tech.plasma_engineering",
@@ -289,6 +1047,64 @@
     ],
     "prerequisites": [
       "tech.energy_grid"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.plasma_engineering.efficiency",
+        "name": "Плотный плазм",
+        "cost": {
+          "currency.cognitio": 13
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.plasma_engineering.austerity",
+        "name": "Энергосбережение",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.plasma_engineering.feature",
+        "name": "Антимат. стабилизация",
+        "cost": {
+          "currency.cognitio": 15
+        },
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "shields",
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.plasma_engineering.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.fusion": {
@@ -310,6 +1126,64 @@
     ],
     "prerequisites": [
       "tech.plasma_engineering"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.fusion.efficiency",
+        "name": "Плотный плазм",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.fusion.austerity",
+        "name": "Энергосбережение",
+        "cost": {
+          "currency.cognitio": 20
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.fusion.overclock",
+        "name": "Оверклок термояда",
+        "cost": {
+          "currency.cognitio": 28
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.fusion.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.antimatter": {
@@ -331,6 +1205,64 @@
     ],
     "prerequisites": [
       "tech.fusion"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.antimatter.efficiency",
+        "name": "Плотный плазм",
+        "cost": {
+          "currency.cognitio": 81
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.antimatter.austerity",
+        "name": "Энергосбережение",
+        "cost": {
+          "currency.cognitio": 72
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.antimatter.feature",
+        "name": "Антимат. стабилизация",
+        "cost": {
+          "currency.cognitio": 99
+        },
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "shields",
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.antimatter.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.hydroponics": {
@@ -350,7 +1282,64 @@
         }
       }
     ],
-    "prerequisites": []
+    "prerequisites": [],
+    "upgrades": [
+      {
+        "id": "tech.hydroponics.efficiency",
+        "name": "Селекция культур",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.hydroponics.austerity",
+        "name": "Автономный биоцикл",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.hydroponics.feature",
+        "name": "Ксено-адаптация",
+        "cost": {
+          "currency.cognitio": 8
+        },
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.hydroponics.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
   },
   "tech.medicine": {
     "id": "tech.medicine",
@@ -371,6 +1360,63 @@
     ],
     "prerequisites": [
       "tech.hydroponics"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.medicine.efficiency",
+        "name": "Клинический протокол",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.medicine.austerity",
+        "name": "Медицинский запас",
+        "cost": {
+          "currency.cognitio": 10
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.medicine.feature",
+        "name": "Биокатализ+",
+        "cost": {
+          "currency.cognitio": 13
+        },
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.medicine.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.biocatalysis": {
@@ -392,6 +1438,63 @@
     ],
     "prerequisites": [
       "tech.medicine"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.biocatalysis.efficiency",
+        "name": "Клинический протокол",
+        "cost": {
+          "currency.cognitio": 19
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.biocatalysis.austerity",
+        "name": "Медицинский запас",
+        "cost": {
+          "currency.cognitio": 17
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.biocatalysis.feature",
+        "name": "Биокатализ+",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.biocatalysis.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.xenobiology": {
@@ -413,6 +1516,63 @@
     ],
     "prerequisites": [
       "tech.biocatalysis"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.xenobiology.efficiency",
+        "name": "Клинический протокол",
+        "cost": {
+          "currency.cognitio": 65
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.xenobiology.austerity",
+        "name": "Медицинский запас",
+        "cost": {
+          "currency.cognitio": 58
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.xenobiology.feature",
+        "name": "Биокатализ+",
+        "cost": {
+          "currency.cognitio": 79
+        },
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.xenobiology.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.scientific_charter": {
@@ -432,7 +1592,65 @@
         }
       }
     ],
-    "prerequisites": []
+    "prerequisites": [],
+    "upgrades": [
+      {
+        "id": "tech.scientific_charter.efficiency",
+        "name": "Архивный индекс",
+        "cost": {
+          "currency.cognitio": 7
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.scientific_charter.austerity",
+        "name": "Дешёвый архив",
+        "cost": {
+          "currency.cognitio": 6
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.scientific_charter.feature",
+        "name": "Ксено-пси тренинг",
+        "cost": {
+          "currency.cognitio": 9
+        },
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "category": "F",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.scientific_charter.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
   },
   "tech.archaeology": {
     "id": "tech.archaeology",
@@ -453,6 +1671,64 @@
     ],
     "prerequisites": [
       "tech.scientific_charter"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.archaeology.efficiency",
+        "name": "Ментальная фокусировка",
+        "cost": {
+          "currency.cognitio": 14
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.archaeology.austerity",
+        "name": "Пси-эконом",
+        "cost": {
+          "currency.cognitio": 13
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.archaeology.feature",
+        "name": "Коридорный маяк",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "category": "F",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.archaeology.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.psionics": {
@@ -486,6 +1762,70 @@
     ],
     "prerequisites": [
       "tech.archaeology"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.psionics.efficiency",
+        "name": "Ментальная фокусировка",
+        "cost": {
+          "currency.cognitio": 26
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.psionics.austerity",
+        "name": "Пси-эконом",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.psionics.xeno_training",
+        "name": "Ксено-пси обучение",
+        "cost": {
+          "currency.cognitio": 32
+        },
+        "effects": [
+          {
+            "effect": "unlock_property",
+            "args": {
+              "property": "psion_store"
+            }
+          },
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "category": "F",
+              "mult": 0.95
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.psionics.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.white_corridors": {
@@ -519,6 +1859,69 @@
     ],
     "prerequisites": [
       "tech.psionics"
+    ],
+    "upgrades": [
+      {
+        "id": "tech.white_corridors.efficiency",
+        "name": "Ментальная фокусировка",
+        "cost": {
+          "currency.cognitio": 97
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.white_corridors.austerity",
+        "name": "Пси-эконом",
+        "cost": {
+          "currency.cognitio": 86
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.white_corridors.beacon",
+        "name": "Коридорный маяк",
+        "cost": {
+          "currency.cognitio": 119
+        },
+        "effects": [
+          {
+            "effect": "unlock_property",
+            "args": {
+              "property": "corridor_open"
+            }
+          },
+          {
+            "effect": "move_cost_mult",
+            "args": {
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.white_corridors.efficiency"
+        ],
+        "balanceBudget": 0
+      }
     ]
   },
   "tech.matter_destruction": {
@@ -546,6 +1949,449 @@
     ],
     "prerequisites": [
       "tech.white_corridors"
-    ]
+    ],
+    "upgrades": [
+      {
+        "id": "tech.matter_destruction.efficiency",
+        "name": "Ментальная фокусировка",
+        "cost": {
+          "currency.cognitio": 180
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.1
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.matter_destruction.austerity",
+        "name": "Пси-эконом",
+        "cost": {
+          "currency.cognitio": 160
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 0.9
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.matter_destruction.feature",
+        "name": "Коридорный маяк",
+        "cost": {
+          "currency.cognitio": 220
+        },
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "category": "F",
+              "mult": 0.92
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.matter_destruction.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ],
+    "isBreakthrough": true,
+    "balanceBudget": 1
+  },
+  "tech.black_iron_forges": {
+    "id": "tech.black_iron_forges",
+    "name": "Кузницы Чёрного Железа",
+    "category": "B",
+    "era": 5,
+    "isBreakthrough": true,
+    "cost": {
+      "currency.cognitio": 420
+    },
+    "effects": [
+      {
+        "effect": "unlock_tech_tier",
+        "args": {
+          "category": "B",
+          "to": 10
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "matter_destroy"
+        }
+      },
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "armor",
+          "mult": 1.15
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.metamaterials",
+      "tech.matter_destruction"
+    ],
+    "requireProperties": [
+      "matter_destroy"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.psi_armada": {
+    "id": "tech.psi_armada",
+    "name": "Пси-армада",
+    "category": "F",
+    "era": 5,
+    "isBreakthrough": true,
+    "cost": {
+      "currency.cognitio": 380
+    },
+    "effects": [
+      {
+        "effect": "unlock_tech_tier",
+        "args": {
+          "category": "F",
+          "to": 10
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "psion_emit"
+        }
+      },
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "damage",
+          "mult": 1.12
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.white_corridors"
+    ],
+    "requireProperties": [
+      "corridor_open"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.planetary_megastructures": {
+    "id": "tech.planetary_megastructures",
+    "name": "Планетарные мегаструктуры",
+    "category": "C",
+    "era": 5,
+    "isBreakthrough": true,
+    "cost": {
+      "currency.cognitio": 360
+    },
+    "effects": [
+      {
+        "effect": "unlock_tech_tier",
+        "args": {
+          "category": "C",
+          "to": 10
+        }
+      },
+      {
+        "effect": "building_level_mult",
+        "args": {
+          "mult": 1.15
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "corridor_open"
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.nanotech",
+      "tech.white_corridors"
+    ],
+    "requireProperties": [
+      "corridor_open"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.white_gate_network": {
+    "id": "tech.white_gate_network",
+    "name": "Сеть белых врат",
+    "category": "F",
+    "era": 5,
+    "isBreakthrough": true,
+    "cost": {
+      "currency.cognitio": 400
+    },
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "corridor_open"
+        }
+      },
+      {
+        "effect": "move_cost_mult",
+        "args": {
+          "mult": 0.85
+        }
+      },
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.cognitio",
+          "mult": 1.05
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.white_corridors"
+    ],
+    "requireProperties": [
+      "corridor_open"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.antimatter_singularity": {
+    "id": "tech.antimatter_singularity",
+    "name": "Антиматериальная сингулярность",
+    "category": "D",
+    "era": 5,
+    "isBreakthrough": true,
+    "cost": {
+      "currency.cognitio": 440
+    },
+    "effects": [
+      {
+        "effect": "unlock_tech_tier",
+        "args": {
+          "category": "D",
+          "to": 10
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "matter_destroy"
+        }
+      },
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 1.2
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.antimatter"
+    ],
+    "requireProperties": [
+      "matter_destroy"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.psionic.resonance": {
+    "id": "tech.psionic.resonance",
+    "name": "Пси-резонанс",
+    "category": "F",
+    "era": 3,
+    "raceLock": "race_psionic",
+    "cost": {
+      "currency.cognitio": 80
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "damage",
+          "mult": 1.2
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "psion_emit"
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.psionics"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.swarm.adaptation": {
+    "id": "tech.swarm.adaptation",
+    "name": "Роевая адаптация",
+    "category": "E",
+    "era": 3,
+    "raceLock": "race_swarm",
+    "cost": {
+      "currency.cognitio": 72
+    },
+    "effects": [
+      {
+        "effect": "pop_growth_mult",
+        "args": {
+          "mult": 1.5
+        }
+      },
+      {
+        "effect": "logistics_disconnected_penalty",
+        "args": {
+          "productionMult": 1,
+          "upkeepMult": 0.9,
+          "combatDefMult": 1
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.biocatalysis"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.synth.uplift": {
+    "id": "tech.synth.uplift",
+    "name": "Синт-аплифт",
+    "category": "C",
+    "era": 3,
+    "raceLock": "race_synth",
+    "cost": {
+      "currency.cognitio": 76
+    },
+    "effects": [
+      {
+        "effect": "unit_upgrade",
+        "args": {
+          "from": "ship.corvette",
+          "to": "ship.frigate"
+        }
+      },
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.1
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.cybernetics"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.technocracy.ai_research": {
+    "id": "tech.technocracy.ai_research",
+    "name": "ИИ-исследования",
+    "category": "F",
+    "era": 2,
+    "factionTraitLock": "trait.technocracy",
+    "cost": {
+      "currency.cognitio": 48
+    },
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.cognitio",
+          "mult": 1.2
+        }
+      },
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.scientific_charter"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.war_economy.doctrine": {
+    "id": "tech.war_economy.doctrine",
+    "name": "Доктрина военной экономики",
+    "category": "C",
+    "era": 2,
+    "factionTraitLock": "trait.war_economy",
+    "cost": {
+      "currency.cognitio": 44
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "damage",
+          "mult": 1.15
+        }
+      },
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.metal",
+          "mult": 1.05
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.industrial_org"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.psi_doctrine.chorus": {
+    "id": "tech.psi_doctrine.chorus",
+    "name": "Хор пси-доктрины",
+    "category": "F",
+    "era": 3,
+    "factionTraitLock": "trait.psi_doctrine",
+    "cost": {
+      "currency.cognitio": 70
+    },
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "psion_suppress"
+        }
+      },
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "shields",
+          "mult": 1.1
+        }
+      }
+    ],
+    "prerequisites": [
+      "tech.psionics"
+    ],
+    "balanceBudget": 1,
+    "upgrades": []
   }
 }

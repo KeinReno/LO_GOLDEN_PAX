@@ -1,0 +1,3062 @@
+{
+  "yq.hunger_1": {
+    "id": "yq.hunger_1",
+    "name": "Недород на окраине",
+    "summary": "На окраинной планете неурожай, население голодает.",
+    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "category": "hunger",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.hunger_2": {
+    "id": "yq.hunger_2",
+    "name": "Срыв поставок зерна",
+    "summary": "Конвой с зерном не дошёл — склады пустеют.",
+    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "category": "hunger",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.hunger_3": {
+    "id": "yq.hunger_3",
+    "name": "Засуха в колониях",
+    "summary": "Несколько колоний теряют урожай из-за засухи.",
+    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "category": "hunger",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.hunger_4": {
+    "id": "yq.hunger_4",
+    "name": "Порча хранилищ",
+    "summary": "Вредители уничтожили часть продовольственных запасов.",
+    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "category": "hunger",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -4
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.hunger_5": {
+    "id": "yq.hunger_5",
+    "name": "Голод в шахтёрском поясе",
+    "summary": "Шахтёрские поселения просят экстренной помощи.",
+    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "category": "hunger",
+    "filterBy": {
+      "lowLoyaltyRace": "race_swarm"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.revolt_1": {
+    "id": "yq.revolt_1",
+    "name": "Брожение на заводах",
+    "summary": "Рабочие требуют снижения налогов и гарантий.",
+    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "category": "revolt",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.revolt_2": {
+    "id": "yq.revolt_2",
+    "name": "Уличные беспорядки",
+    "summary": "В столичном мире вспыхнули стычки с охраной.",
+    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "category": "revolt",
+    "filterBy": {
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.revolt_3": {
+    "id": "yq.revolt_3",
+    "name": "Саботаж логистики",
+    "summary": "Неизвестные повредили узлы снабжения.",
+    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "category": "revolt",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -5
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.revolt_4": {
+    "id": "yq.revolt_4",
+    "name": "Мятеж гарнизона",
+    "summary": "Часть гарнизона отказывается выполнять приказы.",
+    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "category": "revolt",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.revolt_5": {
+    "id": "yq.revolt_5",
+    "name": "Пропаганда сепаратистов",
+    "summary": "Листовки призывают к отделению окраин.",
+    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "category": "revolt",
+    "filterBy": {
+      "lowLoyaltyRace": "race_karned"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.trade_1": {
+    "id": "yq.trade_1",
+    "name": "Выгодный караван",
+    "summary": "Купеческий дом предлагает льготный контракт.",
+    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "category": "trade",
+    "filterBy": {
+      "borderWithWar": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.trade_2": {
+    "id": "yq.trade_2",
+    "name": "Контрабандный маршрут",
+    "summary": "Контрабандисты ищут крышу за долю.",
+    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "category": "trade",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.trade_3": {
+    "id": "yq.trade_3",
+    "name": "Дефицит металла",
+    "summary": "Рынок металла взлетел — соседи просят обмен.",
+    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "category": "trade",
+    "filterBy": {
+      "hasRefugees": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.trade_4": {
+    "id": "yq.trade_4",
+    "name": "Ярмарка на границе",
+    "summary": "Пограничная ярмарка сулит прибыль и шум.",
+    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "category": "trade",
+    "filterBy": {
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.trade_5": {
+    "id": "yq.trade_5",
+    "name": "Срыв биржевой сделки",
+    "summary": "Сорвалась крупная сделка на общем рынке.",
+    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "category": "trade",
+    "filterBy": {
+      "minEra": 1,
+      "lowLoyaltyRace": "race_belator"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.pirates_1": {
+    "id": "yq.pirates_1",
+    "name": "Рейд пиратов",
+    "summary": "Пиратская флотилия атакует торговые линии.",
+    "detail": "Категория: pirates. Ситуативный ежходный квест.",
+    "category": "pirates",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -4
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.pirates_2": {
+    "id": "yq.pirates_2",
+    "name": "Выкуп за конвой",
+    "summary": "Пираты удерживают торговый конвой.",
+    "detail": "Категория: pirates. Ситуативный ежходный квест.",
+    "category": "pirates",
+    "filterBy": {
+      "requiresBuilding": "building.farm"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.pirates_3": {
+    "id": "yq.pirates_3",
+    "name": "База в поясе",
+    "summary": "Разведка нашла пиратскую базу в астероидах.",
+    "detail": "Категория: pirates. Ситуативный ежходный квест.",
+    "category": "pirates",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.pirates_4": {
+    "id": "yq.pirates_4",
+    "name": "Корсары у врат",
+    "summary": "Корсары блокируют гиперврата системы.",
+    "detail": "Категория: pirates. Ситуативный ежходный квест.",
+    "category": "pirates",
+    "filterBy": {
+      "maxWarCount": 2
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.pirates_5": {
+    "id": "yq.pirates_5",
+    "name": "Чёрный флаг",
+    "summary": "Флагман пиратов объявился у вашей границы.",
+    "detail": "Категория: pirates. Ситуативный ежходный квест.",
+    "category": "pirates",
+    "filterBy": {
+      "lowLoyaltyRace": "race_voidborn"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -5
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.anomaly_1": {
+    "id": "yq.anomaly_1",
+    "name": "Сигнал из пустоты",
+    "summary": "Аномальный сигнал из некартографированного сектора.",
+    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
+    "category": "anomaly",
+    "filterBy": {
+      "minEra": 1,
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.anomaly_2": {
+    "id": "yq.anomaly_2",
+    "name": "Искажение гиперполосы",
+    "summary": "Гиперполоса ведёт себя нестабильно.",
+    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
+    "category": "anomaly",
+    "filterBy": {
+      "borderWithWar": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.anomaly_3": {
+    "id": "yq.anomaly_3",
+    "name": "Артефакт в обломках",
+    "summary": "В обломках найден непонятный артефакт.",
+    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
+    "category": "anomaly",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.anomaly_4": {
+    "id": "yq.anomaly_4",
+    "name": "Теневой шторм",
+    "summary": "Теневой шторм грозит сорвать навигацию.",
+    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
+    "category": "anomaly",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.anomaly_5": {
+    "id": "yq.anomaly_5",
+    "name": "Зеркальный маяк",
+    "summary": "Маяк отвечает эхом чужих координат.",
+    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
+    "category": "anomaly",
+    "filterBy": {
+      "lowLoyaltyRace": "race_psionic"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.diplo_1": {
+    "id": "yq.diplo_1",
+    "name": "Дипломатический инцидент",
+    "summary": "Посланник оскорблён на приёме — нужен ответ.",
+    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+    "category": "diplo",
+    "filterBy": {
+      "hasRefugees": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.diplo_2": {
+    "id": "yq.diplo_2",
+    "name": "Просьба о посредничестве",
+    "summary": "Соседи просят выступить посредником.",
+    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+    "category": "diplo",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.diplo_3": {
+    "id": "yq.diplo_3",
+    "name": "Утечка архивов",
+    "summary": "Утекли архивы переговоров — скандал.",
+    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+    "category": "diplo",
+    "filterBy": {
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -4
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.diplo_4": {
+    "id": "yq.diplo_4",
+    "name": "Визит делегации",
+    "summary": "Иностранная делегация просит аудиенцию.",
+    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+    "category": "diplo",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.diplo_5": {
+    "id": "yq.diplo_5",
+    "name": "Срыв протокола",
+    "summary": "Нарушен протокол встречи двух держав.",
+    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+    "category": "diplo",
+    "filterBy": {
+      "minEra": 1,
+      "lowLoyaltyRace": "race_synth"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.science_1": {
+    "id": "yq.science_1",
+    "name": "Сбой лаборатории",
+    "summary": "В лаборатории авария — данные под угрозой.",
+    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "category": "science",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.science_2": {
+    "id": "yq.science_2",
+    "name": "Прорыв гипотезы",
+    "summary": "Учёные на пороге прорыва, нужны ресурсы.",
+    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "category": "science",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -5
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.science_3": {
+    "id": "yq.science_3",
+    "name": "Утечка образцов",
+    "summary": "Опасные образцы исчезли из хранилища.",
+    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "category": "science",
+    "filterBy": {
+      "minEra": 1,
+      "borderWithWar": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.science_4": {
+    "id": "yq.science_4",
+    "name": "Запрос экспедиции",
+    "summary": "Научный совет просит финансировать экспедицию.",
+    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "category": "science",
+    "filterBy": {
+      "requiresBuilding": "building.farm"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.science_5": {
+    "id": "yq.science_5",
+    "name": "Конкурирующий патент",
+    "summary": "Соседняя держава опережает вас в исследовании.",
+    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "category": "science",
+    "filterBy": {
+      "lowLoyaltyRace": "race_human",
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.military_1": {
+    "id": "yq.military_1",
+    "name": "Учения на границе",
+    "summary": "Соседи проводят крупные учения у границы.",
+    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "category": "military",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.military_2": {
+    "id": "yq.military_2",
+    "name": "Дезертирство",
+    "summary": "Группа солдат дезертировала с оружием.",
+    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "category": "military",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.military_3": {
+    "id": "yq.military_3",
+    "name": "Запрос подкреплений",
+    "summary": "Фронтовой командир требует подкреплений.",
+    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "category": "military",
+    "filterBy": {
+      "maxWarCount": 2
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.military_4": {
+    "id": "yq.military_4",
+    "name": "Потеря патруля",
+    "summary": "Патруль исчез в спорной системе.",
+    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "category": "military",
+    "filterBy": {
+      "minEra": 1,
+      "hasRefugees": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.military_5": {
+    "id": "yq.military_5",
+    "name": "Мобилизация резерва",
+    "summary": "Генштаб предлагает частичную мобилизацию.",
+    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "category": "military",
+    "filterBy": {
+      "lowLoyaltyRace": "race_swarm"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Вмешаться силой",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -4
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.migration_1": {
+    "id": "yq.migration_1",
+    "name": "Волна беженцев",
+    "summary": "К границе движется волна беженцев.",
+    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "category": "migration",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.migration_2": {
+    "id": "yq.migration_2",
+    "name": "Исход колонистов",
+    "summary": "Колонисты массово покидают окраину.",
+    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "category": "migration",
+    "filterBy": {
+      "minEra": 1,
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.migration_3": {
+    "id": "yq.migration_3",
+    "name": "Трудовой транзит",
+    "summary": "Мигранты ищут работу на ваших заводах.",
+    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "category": "migration",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.migration_4": {
+    "id": "yq.migration_4",
+    "name": "Переселение клана",
+    "summary": "Клан просит земли для переселения.",
+    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "category": "migration",
+    "filterBy": {
+      "borderWithWar": true
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -5
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_synth",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.migration_5": {
+    "id": "yq.migration_5",
+    "name": "Карантинный коридор",
+    "summary": "Нужен коридор для эвакуации населения.",
+    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "category": "migration",
+    "filterBy": {
+      "minEra": 1,
+      "lowLoyaltyRace": "race_karned"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_karned",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.epidemic_1": {
+    "id": "yq.epidemic_1",
+    "name": "Вспышка лихорадки",
+    "summary": "На планете вспышка неизвестной лихорадки.",
+    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "category": "epidemic",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_psionic",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.epidemic_2": {
+    "id": "yq.epidemic_2",
+    "name": "Карантинный спор",
+    "summary": "Медики требуют жёсткий карантин.",
+    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "category": "epidemic",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_swarm",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.epidemic_3": {
+    "id": "yq.epidemic_3",
+    "name": "Заражённый груз",
+    "summary": "В порту обнаружен заражённый груз.",
+    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "category": "epidemic",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "gamble",
+        "label": "Рискнуть",
+        "description": "Исход решит бросок кубика.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_voidborn",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.epidemic_4": {
+    "id": "yq.epidemic_4",
+    "name": "Эпидемия на станции",
+    "summary": "На орбитальной станции вспышка болезни.",
+    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "category": "epidemic",
+    "filterBy": {
+      "requiresRace": "race_human"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_human",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.epidemic_5": {
+    "id": "yq.epidemic_5",
+    "name": "Паника в колонии",
+    "summary": "Слухи о чуме сеют панику среди поселенцев.",
+    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "category": "epidemic",
+    "filterBy": {
+      "lowLoyaltyRace": "race_belator"
+    },
+    "choices": [
+      {
+        "id": "aid",
+        "label": "Помочь",
+        "description": "Потратить ресурсы ради стабильности.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Не вмешиваться и принять последствия.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "raceId": "race_belator",
+              "amount": -5
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": false
+  },
+  "yq.neutral_1": {
+    "id": "yq.neutral_1",
+    "name": "Случай на рубеже 1",
+    "summary": "Нейтральное событие без жёстких фильтров.",
+    "detail": "Доборный нейтральный квест для пула.",
+    "category": "neutral",
+    "filterBy": {},
+    "neutral": true,
+    "choices": [
+      {
+        "id": "accept",
+        "label": "Принять",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "pass",
+        "label": "Отклонить",
+        "effects": []
+      }
+    ]
+  },
+  "yq.neutral_2": {
+    "id": "yq.neutral_2",
+    "name": "Случай на рубеже 2",
+    "summary": "Нейтральное событие без жёстких фильтров.",
+    "detail": "Доборный нейтральный квест для пула.",
+    "category": "neutral",
+    "filterBy": {},
+    "neutral": true,
+    "choices": [
+      {
+        "id": "accept",
+        "label": "Принять",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "pass",
+        "label": "Отклонить",
+        "effects": []
+      }
+    ]
+  },
+  "yq.neutral_3": {
+    "id": "yq.neutral_3",
+    "name": "Случай на рубеже 3",
+    "summary": "Нейтральное событие без жёстких фильтров.",
+    "detail": "Доборный нейтральный квест для пула.",
+    "category": "neutral",
+    "filterBy": {},
+    "neutral": true,
+    "choices": [
+      {
+        "id": "accept",
+        "label": "Принять",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "pass",
+        "label": "Отклонить",
+        "effects": []
+      }
+    ]
+  },
+  "yq.neutral_4": {
+    "id": "yq.neutral_4",
+    "name": "Случай на рубеже 4",
+    "summary": "Нейтральное событие без жёстких фильтров.",
+    "detail": "Доборный нейтральный квест для пула.",
+    "category": "neutral",
+    "filterBy": {},
+    "neutral": true,
+    "choices": [
+      {
+        "id": "accept",
+        "label": "Принять",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "pass",
+        "label": "Отклонить",
+        "effects": []
+      }
+    ]
+  },
+  "yq.neutral_5": {
+    "id": "yq.neutral_5",
+    "name": "Случай на рубеже 5",
+    "summary": "Нейтральное событие без жёстких фильтров.",
+    "detail": "Доборный нейтральный квест для пула.",
+    "category": "neutral",
+    "filterBy": {},
+    "neutral": true,
+    "choices": [
+      {
+        "id": "accept",
+        "label": "Принять",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "pass",
+        "label": "Отклонить",
+        "effects": []
+      }
+    ]
+  }
+}

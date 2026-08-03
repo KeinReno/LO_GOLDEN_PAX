@@ -94645,7 +94645,72 @@
       "fullMapVision": false,
       "emblemPath": "",
       "neutralReputation": 0,
-      "nameFont": "Spectral, Georgia, serif"
+      "nameFont": "Spectral, Georgia, serif",
+      "traits": [
+        {
+          "id": "trait.war_economy",
+          "label": "Военная экономика",
+          "effects": [
+            {
+              "effect": "production_mult",
+              "args": {
+                "resource": "currency.metal",
+                "mult": 1.1
+              }
+            },
+            {
+              "effect": "loyalty_mult",
+              "args": {
+                "mult": 0.95
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "militarist"
+        },
+        {
+          "id": "trait.standing_army",
+          "label": "Постоянная армия",
+          "effects": [
+            {
+              "effect": "stat_mult",
+              "args": {
+                "stat": "damage",
+                "mult": 1.1
+              }
+            },
+            {
+              "effect": "upkeep_flat",
+              "args": {
+                "resource": "currency.supply",
+                "amount": 1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "militarist"
+        },
+        {
+          "id": "trait.void_navy",
+          "label": "Флот пустоты",
+          "effects": [
+            {
+              "effect": "move_cost_mult",
+              "args": {
+                "mult": 0.8
+              }
+            },
+            {
+              "effect": "stability_add",
+              "args": {
+                "amount": -1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "expansionist"
+        }
+      ]
     },
     {
       "id": "faction_turon",
@@ -94663,7 +94728,51 @@
       "password": "korin",
       "kind": "state",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.diplomatic",
+          "label": "Дипломаты",
+          "effects": [
+            {
+              "effect": "diplomacy_opinion_add",
+              "args": {
+                "towardFactionId": "*",
+                "amount": 2
+              }
+            },
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 0.75
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        },
+        {
+          "id": "trait.technocracy",
+          "label": "Технократия",
+          "effects": [
+            {
+              "effect": "research_cost_mult",
+              "args": {
+                "mult": 0.9
+              }
+            },
+            {
+              "effect": "cost_mult",
+              "args": {
+                "tag": "building",
+                "mult": 1.2
+              }
+            }
+          ],
+          "balanceBudget": 1,
+          "ideology": "technocrat"
+        }
+      ]
     },
     {
       "id": "faction_north_swarm",
@@ -94672,7 +94781,29 @@
       "password": "queen",
       "kind": "state",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.swarm_protocol",
+          "label": "Протокол роя",
+          "effects": [
+            {
+              "effect": "pop_growth_mult",
+              "args": {
+                "mult": 1.5
+              }
+            },
+            {
+              "effect": "forbid_intent",
+              "args": {
+                "intentId": "intent.set_tax"
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "swarm"
+        }
+      ]
     },
     {
       "id": "faction_korvun",
@@ -94726,7 +94857,29 @@
       "password": "ash",
       "kind": "faction",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.swarm_protocol",
+          "label": "Протокол роя",
+          "effects": [
+            {
+              "effect": "pop_growth_mult",
+              "args": {
+                "mult": 1.5
+              }
+            },
+            {
+              "effect": "forbid_intent",
+              "args": {
+                "intentId": "intent.set_tax"
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "swarm"
+        }
+      ]
     },
     {
       "id": "faction_balsagon",
@@ -94744,7 +94897,44 @@
       "password": "pirate",
       "kind": "faction",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.raider_lords",
+          "label": "Владыки налётчиков",
+          "effects": [
+            {
+              "effect": "stat_mult",
+              "args": {
+                "stat": "bombard",
+                "mult": 1.2
+              }
+            },
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.15
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "militarist"
+        },
+        {
+          "id": "trait.faction.aggressive",
+          "label": "Агрессивные",
+          "effects": [
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.25
+              }
+            }
+          ],
+          "balanceBudget": -1,
+          "ideology": "militarist"
+        }
+      ]
     },
     {
       "id": "faction_or",
@@ -94753,7 +94943,44 @@
       "password": "umbra",
       "kind": "state",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.xenophobe",
+          "label": "Ксенофобы",
+          "effects": [
+            {
+              "effect": "loyalty_add",
+              "args": {
+                "raceId": "race_human",
+                "amount": 5
+              }
+            },
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.2
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "puritan"
+        },
+        {
+          "id": "trait.faction.isolationist",
+          "label": "Изоляционисты",
+          "effects": [
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "isolationist"
+        }
+      ]
     },
     {
       "id": "faction_amalfea",
@@ -94762,7 +94989,58 @@
       "password": "amalfa",
       "kind": "state",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.diplomatic",
+          "label": "Дипломаты",
+          "effects": [
+            {
+              "effect": "diplomacy_opinion_add",
+              "args": {
+                "towardFactionId": "*",
+                "amount": 2
+              }
+            },
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 0.75
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        },
+        {
+          "id": "trait.xenophile",
+          "label": "Ксенофилы",
+          "effects": [
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 0.8
+              }
+            },
+            {
+              "effect": "loyalty_mult",
+              "args": {
+                "raceId": "race_belator",
+                "mult": 0.9
+              }
+            },
+            {
+              "effect": "loyalty_mult",
+              "args": {
+                "raceId": "race_synth",
+                "mult": 0.9
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "cosmopolitan"
+        }
+      ]
     },
     {
       "id": "faction_khanate",
@@ -94771,7 +95049,45 @@
       "password": "moon",
       "kind": "state",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.standing_army",
+          "label": "Постоянная армия",
+          "effects": [
+            {
+              "effect": "stat_mult",
+              "args": {
+                "stat": "damage",
+                "mult": 1.1
+              }
+            },
+            {
+              "effect": "upkeep_flat",
+              "args": {
+                "resource": "currency.supply",
+                "amount": 1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "militarist"
+        },
+        {
+          "id": "trait.faction.aggressive",
+          "label": "Агрессивные",
+          "effects": [
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.25
+              }
+            }
+          ],
+          "balanceBudget": -1,
+          "ideology": "militarist"
+        }
+      ]
     },
     {
       "id": "faction_sahale",
@@ -94780,7 +95096,36 @@
       "password": "sahale",
       "kind": "faction",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.void_navy",
+          "label": "Флот пустоты",
+          "effects": [
+            {
+              "effect": "move_cost_mult",
+              "args": {
+                "mult": 0.8
+              }
+            },
+            {
+              "effect": "stability_add",
+              "args": {
+                "amount": -1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "expansionist"
+        },
+        {
+          "id": "trait.faction.expansionist",
+          "label": "Экспансионисты",
+          "effects": [],
+          "balanceBudget": 0,
+          "ideology": "expansionist"
+        }
+      ]
     },
     {
       "kind": "state",
@@ -94789,7 +95134,23 @@
       "password": "2052",
       "id": "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.isolationist",
+          "label": "Изоляционисты",
+          "effects": [
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "isolationist"
+        }
+      ]
     },
     {
       "id": "faction_nomad_pax_terrialis",
@@ -94809,7 +95170,29 @@
       "kind": "state",
       "notes": "Рой мотыльковых инсектоидов: тихие сады, световые миграции, сборная экономика.",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.swarm_protocol",
+          "label": "Протокол роя",
+          "effects": [
+            {
+              "effect": "pop_growth_mult",
+              "args": {
+                "mult": 1.5
+              }
+            },
+            {
+              "effect": "forbid_intent",
+              "args": {
+                "intentId": "intent.set_tax"
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "swarm"
+        }
+      ]
     },
     {
       "id": "faction_nomad_f_0d845d87f2",
@@ -94829,7 +95212,16 @@
       "kind": "state",
       "notes": "Племенной торговый союз гничей: базары, посредничество, ночные сделки.",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.merchant",
+          "label": "Торговый дом",
+          "effects": [],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        }
+      ]
     },
     {
       "id": "faction_nomad_f_0849e7d5d5",
@@ -94879,7 +95271,16 @@
       "kind": "state",
       "notes": "Водная конфедерация мореходов: аква-верфи, маяки туманностей, торговые флотилии.",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.merchant",
+          "label": "Торговый дом",
+          "effects": [],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        }
+      ]
     },
     {
       "id": "faction_nomad_f_eb376e7120",
@@ -94889,7 +95290,30 @@
       "kind": "state",
       "notes": "Торговый нейтралитет Галивана. Tiranoc — биржа и магнит для пиратов «Вольных Стервятников».",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.merchant_guilds",
+          "label": "Купеческие гильдии",
+          "effects": [
+            {
+              "effect": "production_mult",
+              "args": {
+                "resource": "currency.metal",
+                "mult": 1.15
+              }
+            },
+            {
+              "effect": "ap_add",
+              "args": {
+                "amount": -1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        }
+      ]
     },
     {
       "id": "faction_nomad_f_38366f84e5",
@@ -94899,7 +95323,24 @@
       "kind": "state",
       "notes": "Технократия людей-синтетиков: дроны, верфи, холодные протоколы войны с кланами.",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.technocrat",
+          "label": "Технократы",
+          "effects": [
+            {
+              "effect": "production_mult",
+              "args": {
+                "resource": "currency.cognitio",
+                "mult": 1.05
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "technocrat"
+        }
+      ]
     },
     {
       "id": "faction_nomad_f_08a06270a3",
@@ -94909,7 +95350,16 @@
       "kind": "state",
       "notes": "Кланы северян-экспансионистов: крепости, рейды, вечный спор с Тринами и Маркштейном.",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.faction.expansionist",
+          "label": "Экспансионисты",
+          "effects": [],
+          "balanceBudget": 0,
+          "ideology": "expansionist"
+        }
+      ]
     },
     {
       "id": "faction_nomad_f_61f8054f59",
@@ -94929,7 +95379,37 @@
       "kind": "faction",
       "notes": "EXP · нейтральные торговцы окраин",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.merchant_guilds",
+          "label": "Купеческие гильдии",
+          "effects": [
+            {
+              "effect": "production_mult",
+              "args": {
+                "resource": "currency.metal",
+                "mult": 1.15
+              }
+            },
+            {
+              "effect": "ap_add",
+              "args": {
+                "amount": -1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        },
+        {
+          "id": "trait.faction.merchant",
+          "label": "Торговый дом",
+          "effects": [],
+          "balanceBudget": 0,
+          "ideology": "trader"
+        }
+      ]
     },
     {
       "id": "faction_scavengers",
@@ -94939,7 +95419,30 @@
       "kind": "faction",
       "notes": "EXP · мародёры руин и обломков",
       "neutralReputation": 0,
-      "fullMapVision": false
+      "fullMapVision": false,
+      "traits": [
+        {
+          "id": "trait.raider_lords",
+          "label": "Владыки налётчиков",
+          "effects": [
+            {
+              "effect": "stat_mult",
+              "args": {
+                "stat": "bombard",
+                "mult": 1.2
+              }
+            },
+            {
+              "effect": "diplomacy_trust_decay_mult",
+              "args": {
+                "mult": 1.15
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "militarist"
+        }
+      ]
     },
     {
       "id": "faction_karned",
@@ -95049,6 +95552,35 @@
           "factionId": "faction_karned",
           "locationSystemName": "Стрида",
           "locationPlanetName": "Гарденис"
+        }
+      ],
+      "traits": [
+        {
+          "id": "trait.faction.expansionist",
+          "label": "Экспансионисты",
+          "effects": [],
+          "balanceBudget": 0,
+          "ideology": "expansionist"
+        },
+        {
+          "id": "trait.frontier_culture",
+          "label": "Культура фронтира",
+          "effects": [
+            {
+              "effect": "logistics_range_add",
+              "args": {
+                "hops": 1
+              }
+            },
+            {
+              "effect": "stability_add",
+              "args": {
+                "amount": -1
+              }
+            }
+          ],
+          "balanceBudget": 0,
+          "ideology": "expansionist"
         }
       ]
     }

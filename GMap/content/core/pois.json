@@ -52,7 +52,8 @@
     "label": "Пропаганда-вышка",
     "effects": [
       { "effect": "stability_add", "args": { "amount": 1 } },
-      { "effect": "tax_pressure", "args": { "amount": -1 } }
+      { "effect": "tax_pressure", "args": { "amount": -1 } },
+      { "effect": "loyalty_add", "args": { "amount": 3 } }
     ]
   },
   "frontline": { "id": "poi.frontline", "name": "Линия фронта", "label": "Линия фронта" },

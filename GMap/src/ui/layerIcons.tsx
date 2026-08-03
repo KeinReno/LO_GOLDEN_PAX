@@ -6,6 +6,7 @@ import {
   EyeOff,
   Flag,
   Handshake,
+  Heart,
   HelpCircle,
   Landmark,
   Map,
@@ -38,4 +39,5 @@ export const LAYER_LUCIDE: Record<LayerLucideIcon, LucideIcon> = {
   zap: Zap,
   "help-circle": HelpCircle,
   activity: Activity,
+  heart: Heart,
 };

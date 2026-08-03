@@ -125,6 +125,70 @@
       "id": "demand_mod",
       "format": { "category": "string", "tier": "number", "amount": "number" },
       "description": "Модификатор demand потока (потребления). Отрицательное значение = снижение спроса."
+    },
+    "loyalty_add": {
+      "id": "loyalty_add",
+      "format": { "raceId": "string?", "amount": "number" },
+      "description": "Плоский бонус лояльности (опционально по расе)"
+    },
+    "loyalty_mult": {
+      "id": "loyalty_mult",
+      "format": { "raceId": "string?", "mult": "number" },
+      "description": "Множитель лояльности (опционально по расе)"
+    },
+    "logistics_range_add": {
+      "id": "logistics_range_add",
+      "format": { "hops": "number" },
+      "description": "Доп. дальность сети снабжения в хопах от столицы"
+    },
+    "logistics_disconnected_penalty": {
+      "id": "logistics_disconnected_penalty",
+      "format": {
+        "productionMult": "number",
+        "upkeepMult": "number",
+        "combatDefMult": "number"
+      },
+      "description": "Композитный штраф за отрезанность от логистики"
+    },
+    "unit_upgrade": {
+      "id": "unit_upgrade",
+      "format": { "from": "string", "to": "string" },
+      "description": "Разрешает апгрейд юнита from → to"
+    },
+    "building_level_mult": {
+      "id": "building_level_mult",
+      "format": { "mult": "number" },
+      "description": "Множитель эффективности уровней зданий"
+    },
+    "diplomacy_opinion_add": {
+      "id": "diplomacy_opinion_add",
+      "format": { "towardFactionId": "string", "amount": "number" },
+      "description": "Плоский сдвиг opinion к державе"
+    },
+    "diplomacy_trust_decay_mult": {
+      "id": "diplomacy_trust_decay_mult",
+      "format": { "mult": "number" },
+      "description": "Множитель затухания/набора дипломатического доверия"
+    },
+    "research_cost_mult": {
+      "id": "research_cost_mult",
+      "format": { "category": "string?", "mult": "number" },
+      "description": "Множитель стоимости исследований (опционально по категории)"
+    },
+    "treaty_effect": {
+      "id": "treaty_effect",
+      "format": { "treatyId": "string", "effect": "string", "args": "object" },
+      "description": "Эффект, привязанный к договору"
+    },
+    "revolt_risk": {
+      "id": "revolt_risk",
+      "format": { "chancePerTurn": "number" },
+      "description": "Шанс восстания за ход"
+    },
+    "npc_task_speed_mult": {
+      "id": "npc_task_speed_mult",
+      "format": { "mult": "number" },
+      "description": "Множитель скорости NPC-задач двора"
     }
   }
 }

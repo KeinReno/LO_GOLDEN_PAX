@@ -2,25 +2,85 @@
   "unit.belator_guard": {
     "id": "unit.belator_guard",
     "name": "Гвардия Белатора",
-    "roles": ["garrison", "infantry"],
-    "stats": { "damage": 16, "defense": 28, "hp": 140, "speed": 3 },
+    "roles": [
+      "garrison",
+      "infantry"
+    ],
+    "stats": {
+      "damage": 16,
+      "defense": 28,
+      "hp": 140,
+      "speed": 3
+    },
     "targeting": "assault_first",
-    "theaterMult": { "ground": 1.15, "assault": 0.95, "space": 0 }
+    "theaterMult": {
+      "ground": 1.15,
+      "assault": 0.95,
+      "space": 0
+    },
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Гвардия Белатора · элита"
+      }
+    }
   },
   "unit.swarm_skitter": {
     "id": "unit.swarm_skitter",
     "name": "Скиттеры Роя",
-    "roles": ["assault", "infantry"],
-    "stats": { "damage": 20, "defense": 10, "hp": 80, "speed": 8 },
+    "roles": [
+      "assault",
+      "infantry"
+    ],
+    "stats": {
+      "damage": 20,
+      "defense": 10,
+      "hp": 80,
+      "speed": 8
+    },
     "targeting": "infantry_first",
-    "theaterMult": { "ground": 1, "assault": 1.25, "space": 0 }
+    "theaterMult": {
+      "ground": 1,
+      "assault": 1.25,
+      "space": 0
+    },
+    "raceVariants": {
+      "race_swarm": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Скиттеры Роя · элита"
+      }
+    }
   },
   "unit.psi_cadre": {
     "id": "unit.psi_cadre",
     "name": "Пси-кадр",
-    "roles": ["psi", "assault"],
-    "stats": { "damage": 24, "defense": 12, "hp": 90, "speed": 5 },
+    "roles": [
+      "psi",
+      "assault"
+    ],
+    "stats": {
+      "damage": 24,
+      "defense": 12,
+      "hp": 90,
+      "speed": 5
+    },
     "targeting": "garrison_first",
-    "theaterMult": { "ground": 1.05, "assault": 1.15, "space": 0 }
+    "theaterMult": {
+      "ground": 1.05,
+      "assault": 1.15,
+      "space": 0
+    },
+    "raceVariants": {
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Пси-кадр · элита"
+      }
+    }
   }
 }

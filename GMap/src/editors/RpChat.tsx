@@ -116,6 +116,13 @@ export type RpChatProps = {
   avatarUrl?: string | null;
   /** Master: jump to this faction's HQ when set/changed. */
   focusFactionId?: string | null;
+  /** Open a specific chapter/episode (court → scene). */
+  initialChapterId?: string;
+  initialEpisodeId?: string;
+  /** Court integration: return to CourtPanel. */
+  onBackToCourt?: () => void;
+  /** Force read-only even if episode is open (archive preview). */
+  forceReadOnly?: boolean;
 };
 
 /** RP channel chat — shared by GM Campaign tab and player /view. */
@@ -131,14 +138,18 @@ export function RpChat({
   factionColor,
   avatarUrl,
   focusFactionId = null,
+  initialChapterId,
+  initialEpisodeId,
+  onBackToCourt,
+  forceReadOnly = false,
 }: RpChatProps) {
   const session = useContext(CampaignSessionCtx);
   const masterToken = masterTokenProp ?? session?.masterToken ?? "";
   const setSyncMsg = onMsg ?? session?.setSyncMsg;
 
   const [index, setIndex] = useState<RpIndex | null>(null);
-  const [chapterId, setChapterId] = useState("");
-  const [episodeId, setEpisodeId] = useState("");
+  const [chapterId, setChapterId] = useState(initialChapterId || "");
+  const [episodeId, setEpisodeId] = useState(initialEpisodeId || "");
   const [messages, setMessages] = useState<RpMessage[]>([]);
   const [msgType, setMsgType] = useState("ic");
   const [body, setBody] = useState("");
@@ -187,7 +198,7 @@ export function RpChat({
 
   const chapter = index?.chapters.find((c) => c.id === chapterId);
   const episode = chapter?.episodes.find((e) => e.id === episodeId);
-  const closed = episode?.status === "closed";
+  const closed = forceReadOnly || episode?.status === "closed";
 
   const loadIndex = useCallback(async () => {
     try {
@@ -197,6 +208,7 @@ export function RpChat({
       setIndex(data);
       setChapterId((cur) => {
         if (cur) return cur;
+        if (initialChapterId) return initialChapterId;
         if (!homeApplied.current && data.home?.chapterId) {
           return data.home.chapterId;
         }
@@ -204,6 +216,10 @@ export function RpChat({
       });
       setEpisodeId((cur) => {
         if (cur) return cur;
+        if (initialEpisodeId) {
+          homeApplied.current = true;
+          return initialEpisodeId;
+        }
         if (!homeApplied.current && data.home?.episodeId) {
           homeApplied.current = true;
           return data.home.episodeId;
@@ -219,7 +235,7 @@ export function RpChat({
     } catch (e) {
       setSyncMsg?.(e instanceof Error ? e.message : String(e));
     }
-  }, [headers, setSyncMsg]);
+  }, [headers, setSyncMsg, initialChapterId, initialEpisodeId]);
 
   const loadMessages = useCallback(async () => {
     if (!chapterId || !episodeId) {
@@ -372,6 +388,15 @@ export function RpChat({
   return (
     <div className={`rp-chat rp-chat--${layout} rp-chat--${mode}`}>
       <header className="rp-chat-head">
+        {onBackToCourt ? (
+          <button
+            type="button"
+            className="btn ghost rp-back-court"
+            onClick={onBackToCourt}
+          >
+            ← Во двор
+          </button>
+        ) : null}
         <button
           type="button"
           className="rp-channel-btn"

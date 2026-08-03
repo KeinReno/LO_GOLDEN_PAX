@@ -26,11 +26,19 @@ import {
   collectContactsAndAttacks,
   resolveOpenEngagements,
   setEngagementStance,
+  requestCardBattle,
+  playEngagementCard,
 } from "./engagements.mjs";
+import { runOpinionTick, breakTreaty, bumpOpinion } from "./opinionTick.mjs";
+import { getContent } from "./contentLoader.mjs";
+import { runLoyaltyPhase } from "./loyalty.mjs";
 import {
   processSystemTimers,
   applyRefugeeConvoy,
+  applyGiveNpcTask,
+  processNpcTasks,
 } from "./narrative.mjs";
+import { researchUpgrade } from "./techActions.mjs";
 import { hopPath, linkAllowsTravel } from "./pathfinding.mjs";
 import {
   getKnownFactionIds,
@@ -38,6 +46,13 @@ import {
   refreshAllFactionContacts,
 } from "./factionIntel.mjs";
 import { resolveVisibleWithFog, readFog } from "./fogStore.mjs";
+import { computeAllFactionLogistics } from "./logistics.mjs";
+import { expireQuests } from "./questEngine.mjs";
+import {
+  applyThrowQuestDice,
+  applyResolveQuestChoice,
+  applyResolveQuestDice,
+} from "./questActions.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
@@ -390,6 +405,73 @@ function applyCombatStance(world, intent, journal) {
   return true;
 }
 
+function applyRequestCardBattle(world, intent, journal) {
+  const engagementId = intent.payload?.engagementId;
+  if (!engagementId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "missing_engagement",
+    });
+    return false;
+  }
+  const result = requestCardBattle(engagementId, intent.factionId, world);
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "request_card_battle",
+    intentId: intent.id,
+    engagementId,
+    factionId: intent.factionId,
+    mutual: !!result.mutual,
+    mode: result.engagement?.mode ?? result.mode,
+  });
+  return true;
+}
+
+function applyPlayCard(world, intent, journal) {
+  const engagementId = intent.payload?.engagementId;
+  const cardId = intent.payload?.cardId;
+  if (!engagementId || !cardId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "missing_engagement_or_card",
+    });
+    return false;
+  }
+  const result = playEngagementCard(
+    engagementId,
+    intent.factionId,
+    cardId,
+    world,
+  );
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  for (const e of result.journal || []) journalPush(journal, e);
+  journalPush(journal, {
+    type: "play_card",
+    intentId: intent.id,
+    engagementId,
+    factionId: intent.factionId,
+    cardId,
+    battleStatus: result.engagement?.cardBattle?.status,
+  });
+  return true;
+}
+
 function applyBlockade(world, intent, journal) {
   const fleetId = intent.payload?.fleetId;
   const toId = intent.payload?.toSystemId;
@@ -555,6 +637,46 @@ function applyTransfer(world, intent, journal) {
     currencyId: intent.payload?.currencyId,
     amount: intent.payload?.amount,
   });
+  const fromFac = (world.factions ?? []).find((f) => f.id === intent.factionId);
+  const toFac = (world.factions ?? []).find((f) => f.id === toId);
+  const turn = world.meta?.turn ?? 0;
+  if (fromFac && toFac) {
+    bumpOpinion(toFac, intent.factionId, 2, turn, "Получен перевод");
+    bumpOpinion(fromFac, toId, 1, turn, "Отправлен перевод");
+  }
+  return true;
+}
+
+function applyBreakTreaty(world, intent, journal) {
+  const withId = intent.payload?.withFactionId;
+  if (!withId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "withFactionId_missing",
+    });
+    return false;
+  }
+  const turn = world.meta?.turn ?? 0;
+  breakTreaty(world, intent.factionId, withId, turn, getContent()?.diplomacy_stances);
+  // Reset edge to neutral
+  const [x, y] =
+    intent.factionId < withId
+      ? [intent.factionId, withId]
+      : [withId, intent.factionId];
+  const list = world.diplomacy ?? [];
+  const idx = list.findIndex((d) => d.aId === x && d.bId === y);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], relation: "neutral" };
+  }
+  world.diplomacy = list;
+  journalPush(journal, {
+    type: "break_treaty",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    withFactionId: withId,
+    treatyType: intent.payload?.treatyType ?? null,
+  });
   return true;
 }
 
@@ -665,6 +787,40 @@ function applyRefugeeConvoyIntent(world, intent, journal) {
   return applyRefugeeConvoy(world, intent, journal);
 }
 
+function applyResearchUpgrade(world, intent, journal) {
+  const techId = intent.payload?.techId;
+  const upgradeId = intent.payload?.upgradeId;
+  if (!techId || !upgradeId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "techId_upgradeId_required",
+    });
+    return false;
+  }
+  const result = researchUpgrade(intent.factionId, techId, upgradeId, {
+    turn: world.meta?.turn ?? null,
+    world,
+    intentId: intent.id,
+  });
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "research_upgrade",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    techId,
+    upgradeId,
+  });
+  return true;
+}
+
 const APPLIERS = {
   "intent.move_fleet": applyMoveFleet,
   "intent.move_legion": applyMoveLegion,
@@ -673,13 +829,21 @@ const APPLIERS = {
   "intent.blockade": applyBlockade,
   "intent.fortify": applyFortify,
   "intent.combat_stance": applyCombatStance,
+  "intent.request_card_battle": applyRequestCardBattle,
+  "intent.play_card": applyPlayCard,
   "intent.scout_reveal": applyScoutReveal,
   "intent.set_tax": applySetTax,
   "intent.transfer": applyTransfer,
+  "intent.break_treaty": applyBreakTreaty,
   "intent.market_convert": applyMarketConvert,
   "intent.market_offer": applyMarketOffer,
   "intent.market_cancel": applyMarketCancel,
   "intent.refugee_convoy": applyRefugeeConvoyIntent,
+  "intent.give_npc_task": applyGiveNpcTask,
+  "intent.research_upgrade": applyResearchUpgrade,
+  "intent.throw_quest_dice": applyThrowQuestDice,
+  "intent.resolve_quest_choice": applyResolveQuestChoice,
+  "intent.resolve_quest_dice": applyResolveQuestDice,
 };
 
 function advanceCaravans(world) {
@@ -714,6 +878,7 @@ export function processTurn(opts = {}) {
 
   const journal = [];
   processSystemTimers(world, turn, journal);
+  processNpcTasks(world, turn, journal);
 
   // Continue multi-hop routes from previous ticks (one hop each).
   advanceUnitRoutes(world, journal);
@@ -740,9 +905,17 @@ export function processTurn(opts = {}) {
 
   const nextIntents = readIntents();
   const deferredStance = [];
+  const deferredCard = [];
   for (const intent of intents) {
     if (intent.defId === "intent.combat_stance") {
       deferredStance.push(intent);
+      continue;
+    }
+    if (
+      intent.defId === "intent.request_card_battle" ||
+      intent.defId === "intent.play_card"
+    ) {
+      deferredCard.push(intent);
       continue;
     }
     const apply = APPLIERS[intent.defId];
@@ -774,6 +947,9 @@ export function processTurn(opts = {}) {
     resolveVisibleWithFog(w, fid, readFog()),
   );
 
+  // S4 logistics before combat + economy so combatDefMult / production use this tick's graph.
+  computeAllFactionLogistics(world, getContent());
+
   // P5: engagements from attacks + auto war contacts
   const attackApplied = nextIntents.filter(
     (i) =>
@@ -783,6 +959,21 @@ export function processTurn(opts = {}) {
   );
   const combatJournal = [];
   collectContactsAndAttacks(world, turn, attackApplied, combatJournal);
+
+  // Card-battle requests after contact (mutual → mode=card)
+  for (const intent of deferredCard.filter(
+    (i) => i.defId === "intent.request_card_battle",
+  )) {
+    const ok = applyRequestCardBattle(world, intent, journal);
+    const idx = nextIntents.findIndex((i) => i.id === intent.id);
+    if (idx >= 0) {
+      nextIntents[idx] = {
+        ...nextIntents[idx],
+        status: ok ? "applied" : "rejected",
+        resolvedAt: new Date().toISOString(),
+      };
+    }
+  }
 
   // Stance after contact (same-tick or leftover open engagements)
   for (const intent of deferredStance) {
@@ -797,15 +988,41 @@ export function processTurn(opts = {}) {
     }
   }
 
+  // Starts card battles (prepare) or auto-resolves
   resolveOpenEngagements(world, combatJournal);
+
+  // Play cards after battles are prepared
+  for (const intent of deferredCard.filter(
+    (i) => i.defId === "intent.play_card",
+  )) {
+    const ok = applyPlayCard(world, intent, journal);
+    const idx = nextIntents.findIndex((i) => i.id === intent.id);
+    if (idx >= 0) {
+      nextIntents[idx] = {
+        ...nextIntents[idx],
+        status: ok ? "applied" : "rejected",
+        resolvedAt: new Date().toISOString(),
+      };
+    }
+  }
+
   for (const e of combatJournal) journalPush(journal, e);
 
   writeIntents(nextIntents);
 
   advanceCaravans(world);
 
+  // A9: expire unresolved yearly quests before economy.
+  expireQuests(world, turn, journal);
+
+  const opinion = runOpinionTick(world, turn, getContent());
+  for (const e of opinion.journal) journalPush(journal, e);
+
   const econ = runEconomyTick(world, turn);
   for (const e of econ.journal) journalPush(journal, e);
+
+  const loyalty = runLoyaltyPhase(world, getContent());
+  for (const e of loyalty.journal) journalPush(journal, e);
 
   world.meta.turn = turn + 1;
   world.meta.updatedAt = new Date().toISOString();

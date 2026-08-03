@@ -1,12 +1,12 @@
 import { useDrag } from "@use-gesture/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Minus, Square, X } from "lucide-react";
 import { RpChat, type RpChatProps } from "./RpChat";
 
 type Geom = { x: number; y: number; w: number; h: number };
 
-const DEFAULT_GEOM: Geom = { x: 72, y: 72, w: 400, h: 520 };
+const DEFAULT_GEOM: Geom = { x: 48, y: 48, w: 920, h: 620 };
 const MIN_W = 280;
 const MIN_H = 280;
 
@@ -46,6 +46,8 @@ export type FloatingRpWindowProps = RpChatProps & {
   storageKey?: string;
   unread?: number;
   zIndex?: number;
+  /** Replace default RpChat body (e.g. CourtPanel). */
+  children?: ReactNode;
 };
 
 /** Draggable + resizable floating RP chat — @use-gesture. */
@@ -56,6 +58,7 @@ export function FloatingRpWindow({
   storageKey = "gmap-rp-float-geom",
   unread = 0,
   zIndex = 220,
+  children,
   ...chatProps
 }: FloatingRpWindowProps) {
   const [geom, setGeom] = useState<Geom>(() => readGeom(storageKey));
@@ -168,7 +171,7 @@ export function FloatingRpWindow({
       {!minimized && (
         <>
           <div className="rp-float-body">
-            <RpChat {...chatProps} layout="fill" />
+            {children ?? <RpChat {...chatProps} layout="fill" />}
           </div>
           <div
             className="rp-float-resize"

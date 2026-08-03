@@ -17,6 +17,7 @@ import {
   spawnRefugees,
   ownedDepotSystemIds,
 } from "./narrative.mjs";
+import { collectTreatyEffects } from "./opinionTick.mjs";
 import {
   readLedger,
   writeLedger,
@@ -43,6 +44,13 @@ import {
   CATEGORIES,
 } from "./flowEngine.mjs";
 import { getEffectiveMarketRates } from "./marketRates.mjs";
+import { collectLoyaltyTierEffects } from "./loyalty.mjs";
+import { collectTechModifierEffects } from "./techActions.mjs";
+import {
+  applyLogisticsEffects,
+  logisticsProductionMult,
+  logisticsUpkeepMult,
+} from "./logistics.mjs";
 
 function floor(n) {
   return Math.floor(Number(n) || 0);
@@ -84,6 +92,15 @@ function applyUpkeepChannel(delta, channel) {
     next = -floor(applyFlatThenMult(-next, channel));
   }
   return next;
+}
+
+/** Merge specific resource channel with wildcard production:* / upkeep:* */
+function mergeChannels(specific, wildcard) {
+  if (!specific && !wildcard) return null;
+  return {
+    flat: (specific?.flat || 0) + (wildcard?.flat || 0),
+    mult: (specific?.mult ?? 1) * (wildcard?.mult ?? 1),
+  };
 }
 
 function collectFactionEffects(world, factionId, eco, content) {
@@ -145,6 +162,54 @@ function collectFactionEffects(world, factionId, eco, content) {
   }
 
   effects.push(...collectPoiEffects(world, factionId, content));
+  effects.push(...collectLoyaltyTierEffects(world, factionId, content));
+  effects.push(...collectTechModifierEffects(eco, content));
+
+  if (faction) {
+    effects.push(...collectTreatyEffects(faction));
+  }
+
+  // Faction doctrine traits (A1)
+  for (const trait of faction?.traits || []) {
+    const traitId = typeof trait === "string" ? trait : trait.id;
+    const fromCatalog =
+      typeof trait === "string"
+        ? content.faction_traits?.traits?.[trait]
+        : null;
+    const effectsList =
+      fromCatalog?.effects ||
+      (typeof trait === "object" ? trait.effects : null) ||
+      [];
+    const label =
+      (typeof trait === "object" && trait.label) ||
+      fromCatalog?.name ||
+      traitId;
+    for (const e of effectsList) {
+      effects.push({
+        ...e,
+        source: {
+          kind: "faction",
+          id: traitId,
+          label,
+        },
+      });
+    }
+  }
+
+  effects.push(...applyLogisticsEffects(world, factionId, content));
+
+  // Completed NPC court tasks (A10)
+  for (const e of faction?.activeEffects || []) {
+    if (!e?.effect) continue;
+    effects.push({
+      ...e,
+      source: e.source || {
+        kind: "npc_task",
+        id: e.effect,
+        label: "Эффект двора",
+      },
+    });
+  }
 
   if (
     ownedDepotSystemIds(world, factionId).length === 0 &&
@@ -284,15 +349,19 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
   let pop = 0;
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
+    const prodScale = logisticsProductionMult(sys, c);
     for (const p of sys.planets ?? []) {
-      addPlanetExtraction(flows, p.resources || [], c, { maxTiers });
+      addPlanetExtraction(flows, p.resources || [], c, {
+        maxTiers,
+        rateScale: prodScale,
+      });
       pop += p.population || 0;
       if ((p.population || 0) > 0 || p.colonyType) inhabitedPlanets += 1;
     }
     const objs = c.space_objects?.objects || {};
     for (const poiType of sys.spaceObjects || []) {
       const objDef = objs[poiType];
-      if (objDef) applySpaceObjectEffects(flows, objDef);
+      if (objDef) applySpaceObjectEffects(flows, objDef, { rateScale: prodScale });
     }
   }
   if (inhabitedPlanets > 0) {
@@ -303,12 +372,17 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
   // Pass 2: building yields / converts (after inputs exist)
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
+    const prodScale = logisticsProductionMult(sys, c);
     for (const p of sys.planets ?? []) {
       for (const b of planetBuildingList(p)) {
         if (b.disabled) continue;
         const def = resolveBuildingDef(c, b);
         if (!def) continue;
-        addBuildingFlows(flows, def, c, b, { biosScale: labor, maxTiers });
+        addBuildingFlows(flows, def, c, b, {
+          biosScale: labor,
+          maxTiers,
+          rateScale: prodScale,
+        });
       }
     }
   }
@@ -316,11 +390,12 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
   // Pass 3: upkeep demand (buildings + fleet + pop)
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
+    const upkeepScale = logisticsUpkeepMult(sys, c);
     for (const p of sys.planets ?? []) {
       for (const b of planetBuildingList(p)) {
         if (b.disabled) continue;
         const def = resolveBuildingDef(c, b);
-        if (def) addUpkeepDemand(flows, def);
+        if (def) addUpkeepDemand(flows, def, { demandScale: upkeepScale });
       }
     }
   }
@@ -381,9 +456,18 @@ export function runEconomyTick(world, turn) {
       let delta = floor(totals[cat]?.net || 0);
       delta = applyProductionChannel(
         delta,
-        stack.channels[`production:${cur}`],
+        mergeChannels(
+          stack.channels[`production:${cur}`],
+          stack.channels["production:*"],
+        ),
       );
-      delta = applyUpkeepChannel(delta, stack.channels[`upkeep:${cur}`]);
+      delta = applyUpkeepChannel(
+        delta,
+        mergeChannels(
+          stack.channels[`upkeep:${cur}`],
+          stack.channels["upkeep:*"],
+        ),
+      );
       categoryNet[cur] = delta;
       channels[cur] = {
         base: floor(totals[cat]?.rate || 0),
@@ -414,8 +498,9 @@ export function runEconomyTick(world, turn) {
     for (const sys of world.systems ?? []) {
       if (sys.ownerFactionId !== fac.id) continue;
       const y = mapResourceYieldLegacyOnly(sys, content);
+      const scale = logisticsProductionMult(sys, content);
       for (const [k, v] of Object.entries(y)) {
-        legacyGross[k] = (legacyGross[k] || 0) + v;
+        legacyGross[k] = (legacyGross[k] || 0) + v * scale;
       }
       // Do NOT call collectPlanetYields — buildings already in flows (avoids double count)
     }
@@ -427,11 +512,17 @@ export function runEconomyTick(world, turn) {
 
     let metalAfter = applyFlatThenMult(
       bridgeMetal,
-      stack.channels["production:currency.metal"],
+      mergeChannels(
+        stack.channels["production:currency.metal"],
+        stack.channels["production:*"],
+      ),
     );
     let supplyAfter = applyFlatThenMult(
       bridgeSupply,
-      stack.channels["production:currency.supply"],
+      mergeChannels(
+        stack.channels["production:currency.supply"],
+        stack.channels["production:*"],
+      ),
     );
 
     const taxInd = taxRateFor(eco, content, "tax.industry");

@@ -71,6 +71,7 @@ export function sumRateAtLeast(flows, cat, minTier = 1) {
 export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
   const c = content || getContent();
   const maxTiers = opts.maxTiers || null;
+  const scale = Number(opts.rateScale ?? 1);
   for (const name of resourceNames || []) {
     const def = Object.values(c.map_resources || {}).find(
       (r) => r.name === name || r.id === name,
@@ -79,7 +80,7 @@ export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
     const t = Number(def.tier);
     if (maxTiers && Number(maxTiers[def.category] ?? 1) < t) continue;
     if (!flows[def.category]?.[t]) continue;
-    flows[def.category][t].rate += 1;
+    flows[def.category][t].rate += 1 * scale;
   }
 }
 
@@ -145,6 +146,9 @@ export function applyFlowConvert(flows, args, opts = {}) {
     produced = Math.floor(produced * Math.max(0, Math.min(1, scale)));
   }
 
+  const rateScale = Number(opts.rateScale ?? 1);
+  if (rateScale !== 1) produced = produced * rateScale;
+
   if (produced <= 0) return 0;
   flows[toCat][outTier].rate += produced;
   return produced;
@@ -167,6 +171,7 @@ function inferSecondary(fromCat, toCat, tier) {
 export function addBuildingFlows(flows, buildingDef, content, buildingInst = null, opts = {}) {
   const c = content || getContent();
   if (!buildingDef) return;
+  const rateScale = Number(opts.rateScale ?? 1);
   const cat = buildingDef.category;
   const baseTier = Number(buildingDef.tier) || 1;
   // Soft gate: building above unlocked tier+2 contributes nothing
@@ -188,6 +193,7 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
       applyFlowConvert(flows, args, {
         buildingTier: tier,
         biosScale: opts.biosScale,
+        rateScale,
         throughput: Number(e.args?.amount) || Math.max(1, Math.ceil(tier / 2) + 1),
       });
     } else if (e.effect === "capacity_add") {
@@ -197,7 +203,7 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
       if (cc && tt && flows[cc]?.[tt]) flows[cc][tt].capacity += amt;
     } else if (e.effect === "yield_flat" && !hasConvert) {
       const cur = e.args?.currency;
-      const amt = Number(e.args?.amount) || 0;
+      const amt = (Number(e.args?.amount) || 0) * rateScale;
       const mapped = currencyToCategory(cur, c) || cat;
       if (mapped && flows[mapped]?.[tier]) {
         flows[mapped][tier].rate += amt;
@@ -218,22 +224,23 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
           to: { category: edge.to, tier: `>=${tier}` },
           secondary: inferSecondary(edge.from, edge.to, tier),
         },
-        { buildingTier: tier, biosScale: opts.biosScale },
+        { buildingTier: tier, biosScale: opts.biosScale, rateScale },
       );
     }
   }
 }
 
-export function addUpkeepDemand(flows, consumerDef) {
+export function addUpkeepDemand(flows, consumerDef, opts = {}) {
+  const scale = Number(opts.demandScale ?? 1);
   for (const slot of consumerDef.upkeep_slots || []) {
     const cat = slot.require?.category;
     const tierMin = parseTierMin(slot.require?.tier) || 1;
     if (cat && flows[cat]?.[tierMin]) {
-      flows[cat][tierMin].demand += Number(slot.count) || 0;
+      flows[cat][tierMin].demand += (Number(slot.count) || 0) * scale;
       continue;
     }
     if (slot.require?.properties?.length) {
-      flows.D[1].demand += Number(slot.count) || 0;
+      flows.D[1].demand += (Number(slot.count) || 0) * scale;
     }
   }
 }
@@ -294,7 +301,8 @@ export function bottlenecks(flows) {
   return out;
 }
 
-export function applySpaceObjectEffects(flows, objDef) {
+export function applySpaceObjectEffects(flows, objDef, opts = {}) {
+  const scale = Number(opts.rateScale ?? 1);
   for (const e of objDef.effects || []) {
     const cc = e.args?.category;
     const tt = Number(e.args?.tier);
@@ -304,9 +312,9 @@ export function applySpaceObjectEffects(flows, objDef) {
     if (e.effect === "capacity_add") {
       flows[cc][tt].capacity += amt;
     } else if (e.effect === "rate_mod") {
-      flows[cc][tt].rate += amt;
+      flows[cc][tt].rate += amt * scale;
     } else if (e.effect === "demand_mod") {
-      flows[cc][tt].demand += amt;
+      flows[cc][tt].demand += amt * scale;
     }
   }
 }

@@ -84,10 +84,11 @@ function EconomyWhyPanel({
   explain: NonNullable<ViewerPayload["economy"]>["explain"];
 }) {
   if (!explain) return null;
-  const { lines, raceTraits } = explain;
+  const { lines, raceTraits, factionTraits } = explain;
   const hasLines = lines && lines.length > 0;
   const hasRace = raceTraits && raceTraits.length > 0;
-  if (!hasLines && !hasRace) return null;
+  const hasFaction = factionTraits && factionTraits.length > 0;
+  if (!hasLines && !hasRace && !hasFaction) return null;
 
   return (
     <details className="eco-why-panel">
@@ -110,6 +111,16 @@ function EconomyWhyPanel({
       {hasRace && (
         <ul className="eco-race-traits" aria-label="Расовые черты">
           {raceTraits!.map((r) => (
+            <li key={r.label}>
+              <strong>{r.label}</strong>
+              <span className="hint"> · {r.summary}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {hasFaction && (
+        <ul className="eco-faction-traits" aria-label="Черты державы">
+          {factionTraits!.map((r) => (
             <li key={r.label}>
               <strong>{r.label}</strong>
               <span className="hint"> · {r.summary}</span>
@@ -289,6 +300,12 @@ function formatBriefingEvent(
       return e.attacker === factionId
         ? `Бой начат: ${sys(e.systemId)} vs ${fac(e.defender)}`
         : `Бой начат: ${sys(e.systemId)} (защита)`;
+    case "engagement_awaiting_stance":
+      return `Бой в системе ${sys(e.systemId)}, выберите stance`;
+    case "engagement_phase":
+      return `Фаза боя ${e.phase ?? "—"} в ${sys(e.systemId)}`;
+    case "engagement_auto_resolve":
+      return `Автобой в ${sys(e.systemId)} (таймаут stance)`;
     case "engagement_resolved":
       return `Бой завершён в ${sys(e.systemId)}: ${e.outcome ?? "—"}`;
     case "engagement_cancelled":
@@ -344,6 +361,9 @@ function buildTurnBriefingBullets(
   const battles = briefing.events.filter((e) =>
     [
       "engagement_created",
+      "engagement_awaiting_stance",
+      "engagement_phase",
+      "engagement_auto_resolve",
       "engagement_resolved",
       "engagement_cancelled",
       "attack_committed",
@@ -387,6 +407,9 @@ function buildTurnBriefingBullets(
       ![
         "economy",
         "engagement_created",
+        "engagement_awaiting_stance",
+        "engagement_phase",
+        "engagement_auto_resolve",
         "engagement_resolved",
         "engagement_cancelled",
         "attack_committed",
@@ -851,7 +874,7 @@ export function PlayerHqHome({
           className={`btn block ${rpUnread > 0 ? "is-pulse" : ""}`}
           onClick={onOpenRp}
         >
-          Сцена{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
+          Двор{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
         </button>
         <button type="button" className="btn primary block" onClick={onOpenMap}>
           Открыть карту
