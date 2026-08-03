@@ -1,8 +1,60 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
+import type { StarSystem } from "../state/types";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 
 type Preset = { id: string; name: string };
+
+type TimerRow = {
+  systemId: string;
+  systemName: string;
+  id: string;
+  label: string;
+  expiresTurn: number;
+  turnsLeft: number;
+};
+
+function collectUpcomingTimers(
+  systems: StarSystem[],
+  currentTurn: number,
+  filterIds: string[] | null,
+): TimerRow[] {
+  const idSet = filterIds?.length ? new Set(filterIds) : null;
+  const rows: TimerRow[] = [];
+  for (const sys of systems) {
+    if (idSet && !idSet.has(sys.id)) continue;
+    for (const t of sys.timers ?? []) {
+      rows.push({
+        systemId: sys.id,
+        systemName: sys.name,
+        id: t.id,
+        label: t.label?.trim() || "—",
+        expiresTurn: t.expiresTurn,
+        turnsLeft: Math.max(0, t.expiresTurn - currentTurn),
+      });
+    }
+  }
+  return rows.sort(
+    (a, b) =>
+      a.expiresTurn - b.expiresTurn ||
+      a.systemName.localeCompare(b.systemName, "ru"),
+  );
+}
+
+function patchSystemTimers(
+  updates: { id: string; timers: StarSystem["timers"] }[],
+) {
+  const map = new Map(updates.map((u) => [u.id, u.timers]));
+  useWorldStore.setState((s) => ({
+    world: {
+      ...s.world,
+      systems: s.world.systems.map((sys) => {
+        const timers = map.get(sys.id);
+        return timers ? { ...sys, timers } : sys;
+      }),
+    },
+  }));
+}
 
 export function GmOpsPanel() {
   const world = useWorldStore((s) => s.world);
@@ -19,6 +71,8 @@ export function GmOpsPanel() {
   );
   const [gmNote, setGmNote] = useState("");
   const [timerTurns, setTimerTurns] = useState(3);
+  const [timerLabel, setTimerLabel] = useState("");
+  const [scopeBoard, setScopeBoard] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -42,6 +96,25 @@ export function GmOpsPanel() {
       : selectedSystemId
         ? [selectedSystemId]
         : [];
+
+  const currentTurn = world.meta?.turn ?? 0;
+  const timerRows = useMemo(
+    () =>
+      collectUpcomingTimers(
+        world.systems,
+        currentTurn,
+        scopeBoard || !ids.length ? null : ids,
+      ),
+    [world.systems, currentTurn, scopeBoard, ids],
+  );
+
+  const sys = world.systems.find((s) => s.id === selectedSystemId);
+
+  useEffect(() => {
+    if (ids.length === 1 && sys?.gmNotes != null) {
+      setGmNote(sys.gmNotes);
+    }
+  }, [ids.length, sys?.gmNotes, sys?.id]);
 
   const paintPreset = async (id: string) => {
     if (!ids.length) {
@@ -81,6 +154,14 @@ export function GmOpsPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
+      useWorldStore.setState((s) => ({
+        world: {
+          ...s.world,
+          systems: s.world.systems.map((row) =>
+            ids.includes(row.id) ? { ...row, gmNotes: gmNote } : row,
+          ),
+        },
+      }));
       setSyncMsg(`GM-заметка на ${data.count} систем(ы)`);
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : String(e));
@@ -88,11 +169,11 @@ export function GmOpsPanel() {
   };
 
   const addTimer = async () => {
-    const systemId = ids[0];
-    if (!systemId) {
-      setSyncMsg("Выберите систему");
+    if (!ids.length) {
+      setSyncMsg("Выберите систему(ы)");
       return;
     }
+    const label = timerLabel.trim() || "GM-таймер";
     try {
       const res = await fetch("/api/narrative/timer", {
         method: "POST",
@@ -101,21 +182,26 @@ export function GmOpsPanel() {
           "X-Master-Token": masterToken,
         },
         body: JSON.stringify({
-          systemId,
+          systemIds: ids,
           turns: timerTurns,
           action: { kind: "clear_activity" },
-          label: "GM timer",
+          label,
         }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        systems?: { id: string; timers: StarSystem["timers"] }[];
+        count?: number;
+      };
       if (!res.ok) throw new Error(data.error || res.statusText);
-      setSyncMsg(`Таймер +${timerTurns} хода на систему`);
+      if (data.systems?.length) patchSystemTimers(data.systems);
+      setSyncMsg(
+        `Таймер «${label}» через ${timerTurns} ход(ов) · ${data.count ?? ids.length} систем`,
+      );
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : String(e));
     }
   };
-
-  const sys = world.systems.find((s) => s.id === selectedSystemId);
 
   return (
     <section>
@@ -177,6 +263,35 @@ export function GmOpsPanel() {
         </div>
       )}
 
+      <div className="gm-timer-block" style={{ marginTop: 8 }}>
+        <div className="gm-timer-head">
+          <strong>Таймлайн</strong>
+          <label className="hint gm-timer-scope">
+            <input
+              type="checkbox"
+              checked={scopeBoard}
+              onChange={(e) => setScopeBoard(e.target.checked)}
+            />
+            вся карта
+          </label>
+        </div>
+        {timerRows.length === 0 ? (
+          <p className="hint">Нет активных таймеров</p>
+        ) : (
+          <ul className="gm-timer-list">
+            {timerRows.map((row) => (
+              <li key={row.id} className="gm-timer-row">
+                <span className="gm-timer-due" title={`Ход ${row.expiresTurn}`}>
+                  {row.turnsLeft === 0 ? "сейчас" : `+${row.turnsLeft}`}
+                </span>
+                <span className="gm-timer-label">{row.label}</span>
+                <span className="gm-timer-sys hint">{row.systemName}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <label className="field" style={{ marginTop: 8 }}>
         <span>GM-заметка (скрыта от игроков)</span>
         <textarea
@@ -191,7 +306,16 @@ export function GmOpsPanel() {
       </button>
 
       <label className="field" style={{ marginTop: 8 }}>
-        <span>Таймер (ходы)</span>
+        <span>Новый таймер — подпись</span>
+        <input
+          type="text"
+          value={timerLabel}
+          onChange={(e) => setTimerLabel(e.target.value)}
+          placeholder="например: конец блокады"
+        />
+      </label>
+      <label className="field">
+        <span>Через N ходов</span>
         <input
           type="number"
           min={1}
@@ -200,8 +324,13 @@ export function GmOpsPanel() {
           onChange={(e) => setTimerTurns(Number(e.target.value) || 1)}
         />
       </label>
-      <button type="button" className="btn ghost" onClick={() => void addTimer()}>
-        Закрыть активность через N ходов
+      <button
+        type="button"
+        className="btn ghost"
+        disabled={!ids.length}
+        onClick={() => void addTimer()}
+      >
+        Добавить таймер к выделенным
       </button>
     </section>
   );

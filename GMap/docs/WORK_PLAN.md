@@ -36,7 +36,7 @@ NOW ──► P0 Фундамент SoT
      ──► P5 Ships/units + Engagement (space→ground→assault)
      ──► P6 Нарративные POI + беженцы + GM tools
      ──► P7 RP эпизоды
-     ──► P8 Хостинг (белый IP) + polish
+     ──► P8 Хостинг (туннели) + polish
 ```
 
 | Этап | Ориентир | Статус |
@@ -49,7 +49,7 @@ NOW ──► P0 Фундамент SoT
 | P5 | после P1 defs + P2 tick | **done on v_0_2 (Engagement resolve)** |
 | P6 | после P4 pop + P3 fog | **done on v_0_2 (POI/refugees/GM)** |
 | P7 | после стабильного tick | **done on v_0_2 (RP episodes)** |
-| P8 | ~29.07+ белый IP | **partial** (8.2–8.6 + 8.7 stub; 8.1 IP later) |
+| P8 | polish + desktop | **mostly done** (8.1 won't-do; 8.2–8.6 landed; 8.7 readiness, migrate optional) |
 
 ---
 
@@ -100,14 +100,14 @@ NOW ──► P0 Фундамент SoT
 | P2.2 | `POST /api/turn/tick` + freeze + порядок resolve из спеки | L | ход закрывается сервером |
 | P2.3 | Cron 00:01 MSK + boot catch-up (1 пропущенный) | M | суточный авто |
 | P2.4 | Apply базовых ops: move_fleet / move_legion / claim (минимум) | L | приказы двигают мир |
-| P2.5 | Turn journal + фракционный краткий briefing stub | M | текст «что изменилось» |
+| P2.5 | Turn journal + фракционный краткий briefing stub | M | **done** — player «Сводка хода» + GM journal в Ops |
 | P2.6 | UI: AP remaining, pending vs committed | M | вкладка «Приказы» |
 
 **DoD:** сутки можно прогнать без ручного «подвигай все флоты»; AP режет день; бэкап тика есть.
 
 **Зависит от:** P0, P1 (`rules.apPerTurn`, intents defs).
 
-**Календарь:** до/около белого IP уже полезно гонять тик локально.
+**Календарь:** тик полезно гонять локально; доступ игрокам — через туннель (`npm run players:*`).
 
 ---
 
@@ -219,21 +219,23 @@ NOW ──► P0 Фундамент SoT
 
 ### P8 — Хостинг, лаунчер, полировка
 
-**Зачем:** стол без танцев с туннелем; вау без убийства мобилок.
+**Зачем:** polish + desktop launcher; доступ игроков — туннели + manual serve; вау без убийства мобилок.
+
+> **После плана июля (2026-07):** economy A–F + research уже на столе; property combat / gate — follow-ups.
 
 | # | Задача | Size | Выход |
 |---|--------|------|--------|
-| P8.1 | Белый IP: постоянный `serve` + проброс, CloudPub = fallback | M | стабильный `/view` |
-| P8.2 | Harden tokens, backup cron, мониторинг tick | M | |
-| P8.3 | Map modes (политика/война/econ/квест/GM) | M | |
-| P8.4 | Stamp хода + scar FX + export плаката | M | |
-| P8.5 | Optional `cinematic` preset (выключаемый) | M | |
-| P8.6 | Tauri launcher (опционально) | L | ✅ старт хоста + tray + TopBar badge |
-| P8.7 | Оценка SQLite (только если JSON болит) | M | решение go/no-go |
+| P8.1 | ~~Белый IP~~ **cancelled / won't-do** — CloudPub/ngrok/playit via `npm run players:*` | — | tunnel + manual serve (постоянный путь доступа) |
+| P8.2 | Harden tokens, backup cron, мониторинг tick | M | **done** — `/api/ops/health`, OpsHealthPanel (token/backup/freeze) |
+| P8.3 | Map modes (политика/война/econ/квест/GM) | M | **done** — Toolbar/viewer chips + F5–F9 |
+| P8.4 | Stamp хода + scar FX + export плаката | M | **done** — TurnStampHud, scar embers, Плакат PNG |
+| P8.5 | Optional `cinematic` preset (выключаемый) | M | **done** — opt-in desktop; editor toggle |
+| P8.6 | Tauri launcher (опционально) | L | **hardened** — dist/Node checks, `data/host.log`, lastError в badge, tray без unwrap |
+| P8.7 | Оценка SQLite (только если JSON болит) | M | **readiness** — store ping + JSON sizes в OpsHealthPanel; migrate опционально |
 
-**DoD:** игроки заходят по IP/DNS; тик живёт при перезапуске ПК (catch-up); mobile на quality/ultralight без cinematic.
+**DoD:** игроки заходят через туннель (`npm run players:*`); тик живёт при перезапуске ПК (catch-up); mobile на quality/ultralight без cinematic.
 
-**Зависит от:** рабочий стол P2+; белый IP ~29.07.2026.
+**Зависит от:** рабочий стол P2+.
 
 ---
 
@@ -253,7 +255,7 @@ NOW ──► P0 Фундамент SoT
 5. **P2.2–P2.4** — processTurn + apply move/claim  
 6. **P2.5–P2.6** — journal stub + UI AP  
 7. **P3.1–P3.3** — fog mask + brush + reveal флота  
-8. Если белый IP уже есть — **P8.1** параллельно (не блокирует P2)
+8. **P8.1 won't-do** — доступ игрокам через туннель (`npm run players:*`), параллельно не блокирует P2
 
 *Не начинать P5 бой и P7 RP, пока не зелёный P2 tick.*
 
@@ -286,19 +288,20 @@ flowchart TD
 
 Минимальный «можно вести кампанию сутками»:
 
-- [ ] P0 + P2 зелёные (тик, AP, move)  
-- [ ] P3 базовый fog brush  
-- [ ] P4 stocks + простой income + pop tick без миграции  
+- [x] P0 + P2 зелёные (тик, AP, move)  
+- [x] P3 базовый fog brush  
+- [x] P4 stocks + простой income + pop tick без миграции  
 - [x] P5.1–P5.10 Engagement combat (space/ground/assault + UI)
-- [x] P8.6 Tauri launcher (host + tray + badge; не заменяет P8.1)
-- [ ] P8.1 доступ игрокам стабилен  
+- [x] P8.6 Tauri launcher (host + tray + badge; hardened)
+- [x] P8.1 ~~белый IP~~ won't-do — туннели (`npm run players:*`) как постоянный путь  
+
 
 Полноценный сезон:
 
-- [ ] + taxes, races traits  
-- [ ] + ground/assault  
+- [x] + taxes, races traits (stack + HQ explain)  
+- [x] + ground/assault (Engagement resolve)  
 - [x] + refugees/quarantine/depot + GM narrative tools  
-- [ ] + GM notes/timeline/consequences  
+- [x] + GM notes/timeline/consequences (GmOps timeline + timer_fired journal)  
 - [x] + RP episodes  
 
 ---
@@ -325,15 +328,19 @@ flowchart TD
 | P3 | fog = per-system; флот = ephemeral reveal |
 | P4 | tax mode = `treasury`; pop = абстрактные единицы ~1–1.5%/ход; расы = weighted by % |
 | P5 | early resolve = да; retreat = по route; bombard = buildings+pop% с clamp |
-| P8 | туннель остаётся fallback |
+| P8 | туннели (`npm run players:*`) — постоянный путь доступа; белый IP won't-do |
 
 ---
 
 ## 8. Следующее действие
 
-**Стартовать P0.1** (live SoT через API) → сразу за ним **P1.1** (папка `content/core`).
+**Сделано недавно:** Market partial fills + multi-match; mid Cognitio (era3 −16%, era4 −10%, T10=400); tax pressure UX в HQ.
 
-Когда скажешь «начинаем» / переключишь в реализацию — идём строго по этому порядку, не прыгая в бой или RP раньше тика.
+**Дальше (приоритет):**
+1. **Отложить:** SQLite migrate — published ~3.4MB.
+2. Laws v1 / enact_law если понадобится за столом; playtest mid Cognitio.
+
+Стол: `npm run dev` + `players:*`; smoke: `npm run smoke` / `npm run smoke:tick`; market: `node scripts/smokeMarketMatch.mjs`.
 
 ---
 

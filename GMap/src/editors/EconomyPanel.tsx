@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
+import { FlowPanel } from "../viewer/FlowPanel";
+import { GmMarketRatesEditor } from "./GmMarketRatesEditor";
 
 type EcoFaction = {
   factionId: string;
@@ -81,6 +83,7 @@ export function EconomyPanel() {
       <h3>Держава · экономика</h3>
       <p className="hint">
         Stocks / налоги / дефицит. Доход и pop считаются на тике хода.
+        Рынок — v1 (стакан заявок + курсы GM).
       </p>
       <button
         type="button"
@@ -148,6 +151,19 @@ export function EconomyPanel() {
           })}
         </div>
       )}
+
+      {facId && (
+        <div style={{ marginTop: 12 }}>
+          <FlowPanel factionId={facId} />
+        </div>
+      )}
+
+      <div style={{ marginTop: 12 }}>
+        <GmMarketRatesEditor
+          masterToken={masterToken}
+          onMsg={setSyncMsg}
+        />
+      </div>
     </section>
   );
 }

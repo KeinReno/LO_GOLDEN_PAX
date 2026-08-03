@@ -9,7 +9,7 @@ export interface ViewerGraphicsPrefs {
   tableFx: boolean;
   /** Battle rings / particle field */
   battleFx: boolean;
-  /** Soft blur under territory fill (expensive) */
+  /** Soft baked bloom under territory fill (no live BlurFilter) */
   territoryGlow: boolean;
   /** Rebuild geometry every zoom frame (off = rebuild after gesture — recommended) */
   liveZoomRebuild: boolean;
@@ -100,13 +100,59 @@ export const GRAPHICS_FOR_PERF: Record<GraphicsPerfMode, ViewerGraphicsPrefs> =
   };
 
 const STORAGE_KEY = "gmap-viewer-graphics";
+const EDITOR_STORAGE_KEY = "gmap-editor-graphics";
+
+/** Desktop-quality defaults for the GM editor — cinematic off by default. */
+export const EDITOR_DEFAULT_GRAPHICS: ViewerGraphicsPrefs = {
+  ...GRAPHICS_FOR_PERF.quality,
+};
+
+export function isLikelyMobileViewport(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(max-width: 900px)").matches;
+  } catch {
+    return false;
+  }
+}
+
+/** Cinematic is desktop-only — downgrade if stored on a phone/tablet viewport. */
+export function clampPerfForDevice(mode: GraphicsPerfMode): GraphicsPerfMode {
+  if (mode === "cinematic" && isLikelyMobileViewport()) {
+    return "quality_mobile";
+  }
+  return mode;
+}
+
+export function readStoredEditorGraphics(): ViewerGraphicsPrefs {
+  try {
+    const raw = localStorage.getItem(EDITOR_STORAGE_KEY);
+    if (!raw) return { ...EDITOR_DEFAULT_GRAPHICS };
+    const parsed = JSON.parse(raw) as Partial<ViewerGraphicsPrefs>;
+    const merged = { ...EDITOR_DEFAULT_GRAPHICS, ...parsed };
+    if (isLikelyMobileViewport()) merged.cinematic = false;
+    return merged;
+  } catch {
+    return { ...EDITOR_DEFAULT_GRAPHICS };
+  }
+}
+
+export function writeStoredEditorGraphics(prefs: ViewerGraphicsPrefs): void {
+  try {
+    localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function readStoredGraphics(): ViewerGraphicsPrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_GRAPHICS };
     const parsed = JSON.parse(raw) as Partial<ViewerGraphicsPrefs>;
-    return { ...DEFAULT_GRAPHICS, ...parsed };
+    const merged = { ...DEFAULT_GRAPHICS, ...parsed };
+    if (isLikelyMobileViewport()) merged.cinematic = false;
+    return merged;
   } catch {
     return { ...DEFAULT_GRAPHICS };
   }
@@ -169,7 +215,7 @@ export const GRAPHICS_TOGGLES: {
   {
     key: "cinematic",
     label: "Cinematic",
-    hint: "Макс. эффекты (не для телефона)",
+    hint: "Доп. polish: звёзды, тени, пульс. Тяжелее — только ПК.",
   },
   {
     key: "liveZoomRebuild",

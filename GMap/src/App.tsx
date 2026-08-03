@@ -2,10 +2,15 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { MapCanvas } from "./renderers/MapCanvas";
 import { TurnStampHud } from "./ui/TurnStampHud";
+import { StatusStrip } from "./ui/StatusStrip";
+import { EditorShellLayout } from "./ui/EditorShellLayout";
 import { Toolbar } from "./editors/Toolbar";
 import { Inspector } from "./editors/Inspector";
 import { TopBar } from "./editors/TopBar";
-import { CampaignSessionProvider } from "./editors/CampaignSessionContext";
+import {
+  CampaignSessionProvider,
+  useCampaignSessionCtx,
+} from "./editors/CampaignSessionContext";
 import { DiplomacyPanel } from "./editors/DiplomacyPanel";
 import { SystemDossier } from "./editors/SystemDossier";
 import { PolityDossier } from "./editors/PolityDossier";
@@ -117,6 +122,16 @@ function EditorHotkeys({
   return null;
 }
 
+function EditorChrome() {
+  const { syncMsg, setSyncMsg } = useCampaignSessionCtx();
+  return (
+    <StatusStrip
+      message={syncMsg}
+      onDismiss={() => setSyncMsg(null)}
+    />
+  );
+}
+
 function EditorPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -140,79 +155,73 @@ function EditorPage() {
   return (
     <CampaignSessionProvider>
       <div
-        className={`app-shell app-shell--${gmShellMode}${
-          leftOpen ? "" : " left-collapsed"
-        }${rightOpen ? "" : " right-collapsed"}`}
+        className={`app-shell app-shell--panels app-shell--${gmShellMode}`}
       >
         <EditorHotkeys
           onToggleLeft={() => setLeftOpen((v) => !v)}
           onToggleRight={() => setRightOpen((v) => !v)}
         />
         <TopBar onRequestTick={() => setTickOpen(true)} />
-        {leftOpen ? (
-          <Toolbar />
-        ) : (
-          <button
-            type="button"
-            className="panel-rail panel-rail-left"
-            title="Показать инструменты ([)"
-            onClick={() => setLeftOpen(true)}
-          >
-            ⚙
-          </button>
-        )}
-        <main className="viewport">
-          <div className="viewport-glow" />
-          <MapCanvas mode="editor" />
-          <TurnStampHud />
-          <OrderTargetHint />
-          {!live && (
-            <div className="viewport-hint">
-              Ctrl+клик / рамка — мультивыбор · перенос флотов · ПКМ — меню ·
-              Del — удалить · СКМ — пан
-            </div>
-          )}
-          <div className="viewport-panel-toggles">
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => setLeftOpen((v) => !v)}
-              title="Левая панель ([)"
-            >
-              {leftOpen ? "⟨ Инстр." : "Инстр. ⟩"}
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => setRightOpen((v) => !v)}
-              title={live ? "Док стола (])" : "Инспектор (])"}
-            >
-              {rightOpen
-                ? live
-                  ? "Стол ⟩"
-                  : "Инсп. ⟩"
-                : live
-                  ? "⟨ Стол"
-                  : "⟨ Инсп."}
-            </button>
-          </div>
-        </main>
-        {rightOpen ? (
-          live ? (
-            <GmLiveDock onRequestTick={() => setTickOpen(true)} />
-          ) : (
-            <Inspector />
-          )
-        ) : (
-          <button
-            type="button"
-            className="panel-rail panel-rail-right"
-            title={live ? "Показать док стола (])" : "Показать инспектор (])"}
-            onClick={() => setRightOpen(true)}
-          >
-            ▣
-          </button>
-        )}
+        <EditorChrome />
+        <div className="app-shell-body">
+          <EditorShellLayout
+            mode={live ? "live" : "prep"}
+            leftOpen={leftOpen}
+            rightOpen={rightOpen}
+            onLeftOpenChange={setLeftOpen}
+            onRightOpenChange={setRightOpen}
+            leftRailTitle="Показать инструменты ([)"
+            rightRailTitle={
+              live ? "Показать док стола (])" : "Показать инспектор (])"
+            }
+            left={<Toolbar />}
+            right={
+              live ? (
+                <GmLiveDock onRequestTick={() => setTickOpen(true)} />
+              ) : (
+                <Inspector />
+              )
+            }
+            main={
+              <main className="viewport">
+                <div className="viewport-glow" />
+                <MapCanvas mode="editor" />
+                <TurnStampHud />
+                <OrderTargetHint />
+                {!live && (
+                  <div className="viewport-hint">
+                    Ctrl+клик / рамка — мультивыбор · перенос флотов · ПКМ — меню
+                    · Del — удалить · СКМ — пан · тяните края панелей
+                  </div>
+                )}
+                <div className="viewport-panel-toggles">
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => setLeftOpen((v) => !v)}
+                    title="Левая панель ([)"
+                  >
+                    {leftOpen ? "⟨ Инстр." : "Инстр. ⟩"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => setRightOpen((v) => !v)}
+                    title={live ? "Док стола (])" : "Инспектор (])"}
+                  >
+                    {rightOpen
+                      ? live
+                        ? "Стол ⟩"
+                        : "Инсп. ⟩"
+                      : live
+                        ? "⟨ Стол"
+                        : "⟨ Инсп."}
+                  </button>
+                </div>
+              </main>
+            }
+          />
+        </div>
         <DiplomacyPanel />
         <SystemDossier />
         <PolityDossier />

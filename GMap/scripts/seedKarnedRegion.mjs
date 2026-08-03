@@ -729,9 +729,21 @@ function main() {
     }
   }
 
-  // Systems
+  // Systems (match by current name, legacy SYS-56x, or loreId in gmNotes)
+  const NAME_BY_LORE = {
+    "SYS-0001": "Ауралис",
+    "SYS-0002": "Голоколь",
+    "SYS-0003": "Плазмир",
+    "SYS-0004": "Корнепеснь",
+    "SYS-0005": "Стрида",
+    "SYS-0006": "Абиссаль",
+    "SYS-0007": "Нанокарст",
+  };
   for (const [name, def] of Object.entries(SYSTEMS)) {
-    const sys = world.systems.find((s) => s.name === name);
+    const sys =
+      world.systems.find((s) => s.name === name) ||
+      world.systems.find((s) => s.name === NAME_BY_LORE[def.loreId]) ||
+      world.systems.find((s) => (s.gmNotes || "").includes(def.loreId));
     if (!sys) {
       console.warn("Missing system", name);
       continue;

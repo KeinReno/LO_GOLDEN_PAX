@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
 import { useWorldStore } from "../state/worldStore";
 import { SYSTEM_POI_LABELS } from "../state/defaults";
 import type { LinkType, SystemActivity, SystemPoiType } from "../state/types";
 import { SPACE_OBJECT_TYPES } from "../state/types";
+import { FloatingPopover } from "../ui/FloatingPopover";
 
 type MenuItem =
   | { type: "label"; text: string }
@@ -19,32 +19,6 @@ export function MapContextMenu() {
   const setContextMenu = useWorldStore((s) => s.setContextMenu);
   const world = useWorldStore((s) => s.world);
   const activeFactionId = useWorldStore((s) => s.activeFactionId);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menu) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setContextMenu(null);
-    };
-    // Defer so the opening right-click doesn't instantly dismiss the menu
-    let removeCloser: (() => void) | null = null;
-    const timer = window.setTimeout(() => {
-      const onDown = (e: MouseEvent) => {
-        if (ref.current && !ref.current.contains(e.target as Node)) {
-          setContextMenu(null);
-        }
-      };
-      window.addEventListener("pointerdown", onDown, true);
-      removeCloser = () =>
-        window.removeEventListener("pointerdown", onDown, true);
-    }, 0);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.clearTimeout(timer);
-      removeCloser?.();
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [menu, setContextMenu]);
 
   if (!menu) return null;
 
@@ -433,42 +407,42 @@ export function MapContextMenu() {
     });
   }
 
-  const maxH = typeof window !== "undefined" ? window.innerHeight - 16 : 600;
-  const top = Math.min(menu.screenY, maxH - 40);
-  const left = Math.min(menu.screenX, (typeof window !== "undefined" ? window.innerWidth : 800) - 220);
-
   return (
-    <div
-      ref={ref}
+    <FloatingPopover
+      open
+      onClose={close}
+      x={menu.screenX}
+      y={menu.screenY}
       className="ctx-menu"
-      style={{ left, top }}
       role="menu"
-      onContextMenu={(e) => e.preventDefault()}
     >
-      {items.map((item, i) => {
-        if (item.type === "sep") return <div key={`s${i}`} className="ctx-sep" />;
-        if (item.type === "label")
+      <div onContextMenu={(e) => e.preventDefault()}>
+        {items.map((item, i) => {
+          if (item.type === "sep")
+            return <div key={`s${i}`} className="ctx-sep" />;
+          if (item.type === "label")
+            return (
+              <div key={`l${i}`} className="ctx-label">
+                {item.text}
+              </div>
+            );
           return (
-            <div key={`l${i}`} className="ctx-label">
-              {item.text}
-            </div>
+            <button
+              key={`a${i}`}
+              type="button"
+              className={item.danger ? "ctx-item danger" : "ctx-item"}
+              role="menuitem"
+              onClick={() => {
+                item.run();
+                close();
+              }}
+            >
+              {item.label}
+            </button>
           );
-        return (
-          <button
-            key={`a${i}`}
-            type="button"
-            className={item.danger ? "ctx-item danger" : "ctx-item"}
-            role="menuitem"
-            onClick={() => {
-              item.run();
-              close();
-            }}
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
+        })}
+      </div>
+    </FloatingPopover>
   );
 }
 

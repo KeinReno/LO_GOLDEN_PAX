@@ -34,6 +34,11 @@ import {
 import {
   EDITOR_LAYER_GROUPS,
   LAYER_PRESET_BUTTONS,
+  MAP_MODE_PRESETS,
+  activeMapModePreset,
+  applyLayerPreset,
+  mapModePresetFromHotkey,
+  type LayerPresetId,
 } from "../ui/mapLayers";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
@@ -360,6 +365,8 @@ export function Toolbar() {
   const setBrushLinkDistance = useWorldStore((s) => s.setBrushLinkDistance);
   const setBrushCorridorChance = useWorldStore((s) => s.setBrushCorridorChance);
   const applyMapLayerFlags = useWorldStore((s) => s.applyMapLayerFlags);
+  const editorGraphics = useWorldStore((s) => s.editorGraphics);
+  const toggleEditorGraphic = useWorldStore((s) => s.toggleEditorGraphic);
   const layerFlags = useWorldStore(
     useShallow(
       (s): MapLayerFlags => ({
@@ -427,6 +434,56 @@ export function Toolbar() {
       setOpenSections((prev) => ({ ...prev, Ресурсы: true }));
     }
   }, [gmShellMode]);
+
+  const activeMapMode = activeMapModePreset(layerFlags);
+
+  const applyMapMode = (id: LayerPresetId) => {
+    applyMapLayerFlags(applyLayerPreset(layerFlags, id));
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      const id = mapModePresetFromHotkey(e.key);
+      if (!id) return;
+      e.preventDefault();
+      const flags = useWorldStore.getState();
+      applyMapLayerFlags(
+        applyLayerPreset(
+          {
+            showLinks: flags.showLinks,
+            showOwnership: flags.showOwnership,
+            showTerritory: flags.showTerritory,
+            showSectors: flags.showSectors,
+            showFactionLabels: flags.showFactionLabels,
+            showLabels: flags.showLabels,
+            showFleets: flags.showFleets,
+            showLegions: flags.showLegions,
+            showOrders: flags.showOrders,
+            showDiplomacy: flags.showDiplomacy,
+            showFogPreview: flags.showFogPreview,
+            gmOmniscientView: flags.gmOmniscientView,
+            showJumpRange: flags.showJumpRange,
+            showSupply: flags.showSupply,
+            showCaravans: flags.showCaravans,
+            showBlockades: flags.showBlockades,
+            showDeadZones: flags.showDeadZones,
+            showTraffic: flags.showTraffic,
+            showQuests: flags.showQuests,
+          },
+          id,
+        ),
+      );
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [applyMapLayerFlags]);
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -523,6 +580,22 @@ export function Toolbar() {
           </button>
         ))}
       </nav>
+
+      <div className="map-mode-bar" role="toolbar" aria-label="Режимы карты">
+        {MAP_MODE_PRESETS.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            className={`layer-chip map-mode-chip ${activeMapMode === mode.id ? "on" : ""}`}
+            aria-pressed={activeMapMode === mode.id}
+            title={`${mode.hint} · ${mode.hotkey}`}
+            onClick={() => applyMapMode(mode.id)}
+          >
+            <span>{mode.label}</span>
+            <kbd className="map-mode-kbd">{mode.hotkey}</kbd>
+          </button>
+        ))}
+      </div>
 
       <div className="tab-body">
         {tab === "tools" && (
@@ -780,7 +853,9 @@ export function Toolbar() {
         {tab === "layers" && (
           <section>
             <h3>Режимы обзора</h3>
-            <p className="hint">Быстрые пресеты слоёв — как в 4X-картах.</p>
+            <p className="hint">
+              F5–F9 — быстрые пресеты. Ниже — точечные слои.
+            </p>
             <div className="layer-preset-row">
               {LAYER_PRESET_BUTTONS.map((p) => (
                 <button
@@ -788,7 +863,7 @@ export function Toolbar() {
                   type="button"
                   className="btn ghost"
                   title={p.hint}
-                  onClick={() => applyMapLayerFlags(p.flags)}
+                  onClick={() => applyMapMode(p.id)}
                 >
                   {p.label}
                 </button>
@@ -820,6 +895,52 @@ export function Toolbar() {
                 </div>
               </div>
             ))}
+
+            <div className="layer-group">
+              <h4 className="layer-group-title">Графика</h4>
+              <p className="hint">
+                Анимация должна пульсировать системы ~12 раз/сек без пана.
+                Cinematic — доп. polish, тяжелее.
+              </p>
+              <div className="layer-chip-grid">
+                {(
+                  [
+                    "animations",
+                    "tableFx",
+                    "battleFx",
+                    "scarFx",
+                    "cinematic",
+                  ] as const
+                ).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`layer-chip ${editorGraphics[key] ? "on" : ""}`}
+                    aria-pressed={editorGraphics[key]}
+                    title={
+                      key === "animations"
+                        ? "Пульс систем / звёзд без перетаскивания карты"
+                        : key === "cinematic"
+                          ? "Доп. polish: больше звёзд, тени, пульс. Только ПК."
+                          : key
+                    }
+                    onClick={() => toggleEditorGraphic(key)}
+                  >
+                    <span>
+                      {key === "animations"
+                        ? "Анимация"
+                        : key === "tableFx"
+                          ? "Стол / фон"
+                          : key === "battleFx"
+                            ? "Бой FX"
+                            : key === "scarFx"
+                              ? "Шрамы"
+                              : "Cinematic"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
@@ -925,7 +1046,7 @@ export function Toolbar() {
                     })();
                   }}
                 >
-                  Плакат PNG (ход)
+                  Плакат PNG
                 </button>
                 <button
                   type="button"

@@ -5,22 +5,160 @@ import {
   SYSTEM_POI_LABELS as FALLBACK_POI,
 } from "./defaults";
 
+export type EconomyCategory = "A" | "B" | "C" | "D" | "E" | "F";
+
+export type EconomySchema = {
+  meta?: { version?: number; description?: string };
+  categories?: Record<string, { id: string; name: string; role: string; currencyId: string; color?: string }>;
+  tiers?: Record<string, { id: number; label: string; description: string }>;
+  properties?: Record<string, { id: string; label: string; description: string }>;
+  flow_key_format?: string;
+  rps_edges?: Array<{ edge: string; from: string; to: string; input1: string; input2: string; output: string; description: string }>;
+  rps_combat?: { slots?: string[]; matchups?: Array<{ attacker: string; defender: string; rule: string }> };
+  legacy_bridge?: { description?: string; mapping?: Record<string, string> };
+  market?: {
+    description?: string;
+    status?: string;
+    mode?: string;
+    placeholder_rates?: Array<{
+      pair: string;
+      buy?: number;
+      sell?: number;
+      note?: string;
+    }>;
+  };
+};
+
+export type MapResourceDef = {
+  id: string;
+  name: string;
+  category?: EconomyCategory;
+  tier?: number;
+  properties?: string[];
+  biome_tags?: string[];
+  spread?: { self_spreading?: boolean };
+  toxic?: boolean;
+  yield?: Record<string, number>;
+};
+
+export type TechnologyDef = {
+  id: string;
+  name: string;
+  category: EconomyCategory;
+  era: number;
+  cost?: Record<string, number>;
+  effects?: Array<{ effect: string; args: Record<string, unknown> }>;
+  prerequisites?: string[];
+};
+
 export type PublicContent = {
-  ships?: Record<string, { id: string; name: string }>;
-  map_resources?: Record<string, { id: string; name: string }>;
+  ships?: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      tier?: number;
+      faction?: string;
+      roles?: string[];
+      stats?: Record<string, number>;
+      slots?: Array<{ role: string; count?: number; require?: unknown }>;
+    }
+  >;
+  units?: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      tier?: number;
+      faction?: string;
+      roles?: string[];
+      stats?: Record<string, number>;
+      slots?: Array<{ role: string; count?: number; require?: unknown }>;
+    }
+  >;
+  map_resources?: Record<string, MapResourceDef>;
+  faction_currencies?: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      short?: string;
+      peg?: string | null;
+      pegLabel?: string;
+      strength?: string;
+      blurb?: string;
+      lastUc?: number;
+    }
+  >;
+  market_quote_seed?: {
+    meta?: {
+      turnStart?: number;
+      turns?: number;
+      turnEnd?: number;
+      quote?: string;
+      narrative?: string;
+    };
+    resources?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        category?: string | null;
+        tier?: number | null;
+        series?: number[];
+      }
+    >;
+    currencies?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        series?: number[];
+      }
+    >;
+  };
+  economy_schema?: EconomySchema;
+  technologies?: Record<string, TechnologyDef>;
   pois?: Record<string, { label?: string; name?: string }>;
-  rules?: { apPerTurn?: number };
+  rules?: {
+    apPerTurn?: number;
+    tax?: {
+      pressureThresholds?: Array<{
+        min: number;
+        effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+      }>;
+    };
+  };
   intents?: Record<string, { ap?: number }>;
   buildings?: Record<
     string,
     {
       id: string;
       kind: string;
-      zone: "surface" | "orbital";
+      zone: "surface" | "orbital" | "subsurface" | "deep";
       name: string;
       ap?: number;
       cost?: Record<string, number>;
       maxPerPlanet?: number;
+      category?: EconomyCategory;
+      tier?: number;
+      faction?: string;
+      signature?: string;
+      tradeoff?: string;
+      slots?: Array<{
+        role: string;
+        require: { category?: string; tier?: string; properties?: string[] };
+        count: number;
+      }>;
+      upkeep_slots?: Array<{
+        require: { category?: string; tier?: string; properties?: string[] };
+        count: number;
+        per?: string;
+      }>;
+      effects?: Array<{
+        effect: string;
+        args: Record<string, unknown>;
+      }>;
     }
   >;
   colonies?: Record<
@@ -35,6 +173,21 @@ export type PublicContent = {
       setTypeCost?: Record<string, number>;
     }
   >;
+  space_objects?: {
+    objects?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        kind: string;
+        description?: string;
+        effects?: Array<{
+          effect: string;
+          args: Record<string, unknown>;
+        }>;
+      }
+    >;
+  };
   loadedAt?: string;
 };
 
@@ -93,4 +246,8 @@ export function poiLabels(): Record<string, string> {
 
 export function apPerTurn(): number {
   return cached?.rules?.apPerTurn ?? 3;
+}
+
+export function intentApCost(defId: string): number {
+  return cached?.intents?.[defId]?.ap ?? 0;
 }

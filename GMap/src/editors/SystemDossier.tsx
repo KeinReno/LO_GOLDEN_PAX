@@ -16,13 +16,17 @@ export function SystemDossier({
   readOnly = false,
   playerActions,
   planetManage,
+  onClose,
 }: {
   readOnly?: boolean;
   playerActions?: PlayerSystemActions;
   planetManage?: PlayerPlanetManageProps;
+  /** When set, overrides store close (e.g. player help overlay). */
+  onClose?: () => void;
 }) {
   const dossierSystemId = useWorldStore((s) => s.dossierSystemId);
   const closeSystemView = useWorldStore((s) => s.closeSystemView);
+  const close = onClose ?? closeSystemView;
   const system = useWorldStore((s) =>
     s.world.systems.find((sys) => sys.id === s.dossierSystemId),
   );
@@ -39,7 +43,7 @@ export function SystemDossier({
       className="dossier-backdrop"
       role="dialog"
       aria-modal="true"
-      onClick={() => closeSystemView()}
+      onClick={() => close()}
     >
       <div
         className="dossier-panel dossier-panel-wide"
@@ -57,7 +61,7 @@ export function SystemDossier({
           <button
             type="button"
             className="btn ghost"
-            onClick={() => closeSystemView()}
+            onClick={() => close()}
           >
             На карту
           </button>
@@ -78,7 +82,7 @@ export function SystemDossier({
               type="button"
               className="btn ghost"
               onClick={() => {
-                closeSystemView();
+                close();
                 playerActions.onClaim(system.id);
               }}
             >
@@ -94,7 +98,7 @@ export function SystemDossier({
                   : "Нет чужого владельца"
               }
               onClick={() => {
-                closeSystemView();
+                close();
                 playerActions.onAttack(system.id);
               }}
             >
@@ -104,7 +108,7 @@ export function SystemDossier({
               type="button"
               className="btn primary"
               onClick={() => {
-                closeSystemView();
+                close();
                 playerActions.onOpenRp();
               }}
             >

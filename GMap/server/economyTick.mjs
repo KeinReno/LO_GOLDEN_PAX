@@ -1,5 +1,6 @@
 /**
- * Economy + population tick (P4).
+ * Economy + population tick.
+ * Authoritative path: 6×10 flow matrix → category stocks → legacy metal/supply bridge.
  */
 import { getContent } from "./contentLoader.mjs";
 import {
@@ -7,6 +8,7 @@ import {
   applyFlatThenMult,
   resolveApMax,
   collectRaceEffects,
+  resolvePlanetRaceComposition,
   explainStack,
 } from "./modifierStack.mjs";
 import {
@@ -21,12 +23,26 @@ import {
   ensureAllFactions,
   ensureFactionEco,
   adjustStock,
+  sanitizeEconomyExplain,
 } from "./ledger.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
+import { planetCapFromBuildings } from "./planetActions.mjs";
 import {
-  planetCapFromBuildings,
-  collectPlanetYields,
-} from "./planetActions.mjs";
+  emptyFlows,
+  addPlanetExtraction,
+  addBuildingFlows,
+  addUpkeepDemand,
+  applySpaceObjectEffects,
+  computeNets,
+  categoryTotals,
+  bottlenecks as flowBottlenecks,
+  biosLaborScale,
+  planetBuildingList,
+  resolveBuildingDef,
+  categoryToCurrency,
+  CATEGORIES,
+} from "./flowEngine.mjs";
+import { getEffectiveMarketRates } from "./marketRates.mjs";
 
 function floor(n) {
   return Math.floor(Number(n) || 0);
@@ -54,10 +70,26 @@ function habitabilityForPlanet(planet, racesContent, composition) {
   return h;
 }
 
+function applyProductionChannel(delta, channel) {
+  if (!channel) return delta;
+  if (delta > 0) return floor(applyFlatThenMult(delta, channel));
+  if (channel.flat) return delta + floor(applyFlatThenMult(0, channel));
+  return delta;
+}
+
+function applyUpkeepChannel(delta, channel) {
+  if (!channel) return delta;
+  let next = delta - floor(channel.flat || 0);
+  if (next < 0 && (channel.mult ?? 1) !== 1) {
+    next = -floor(applyFlatThenMult(-next, channel));
+  }
+  return next;
+}
+
 function collectFactionEffects(world, factionId, eco, content) {
   const effects = [];
+  const faction = world.factions?.find((f) => f.id === factionId) ?? null;
 
-  // Tax tier side-effects
   for (const [slot, tierId] of Object.entries(eco.taxes || {})) {
     const def = content.taxes?.[slot];
     const tier = def?.tiers?.find((t) => t.id === tierId);
@@ -69,18 +101,19 @@ function collectFactionEffects(world, factionId, eco, content) {
     }
   }
 
-  // Race traits on owned inhabited planets
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
     for (const p of sys.planets ?? []) {
       if ((p.population ?? 0) <= 0) continue;
       effects.push(
-        ...collectRaceEffects(content.races, p.raceComposition || []),
+        ...collectRaceEffects(
+          content.races,
+          resolvePlanetRaceComposition(p, faction),
+        ),
       );
     }
   }
 
-  // Deficit
   if (eco.deficit === "low" && content.rules?.deficit?.lowPenalty === "ap_minus_1") {
     effects.push({
       effect: "ap_add",
@@ -96,7 +129,6 @@ function collectFactionEffects(world, factionId, eco, content) {
     });
   }
 
-  // Pressure thresholds
   for (const th of content.rules?.tax?.pressureThresholds || []) {
     if ((eco.pressure ?? 0) >= (th.min ?? 99)) {
       for (const e of th.effects || []) {
@@ -112,10 +144,8 @@ function collectFactionEffects(world, factionId, eco, content) {
     }
   }
 
-  // Narrative POIs on owned systems
   effects.push(...collectPoiEffects(world, factionId, content));
 
-  // No front depot → supply upkeep penalty
   if (
     ownedDepotSystemIds(world, factionId).length === 0 &&
     content.rules?.depot?.noDepotUpkeepMult
@@ -133,11 +163,14 @@ function collectFactionEffects(world, factionId, eco, content) {
   return effects;
 }
 
-function mapResourceYield(sys, content) {
+/**
+ * Legacy map yields — only used as soft fallback for resources WITHOUT category/tier
+ * (e.g. trade_value). Category deposits go through flow extraction only.
+ */
+function mapResourceYieldLegacyOnly(sys, content) {
   const yields = { "currency.metal": 0, "currency.supply": 0 };
   for (const r of sys.resources ?? []) {
     const key = resolveAlias("resources", r);
-    // also try matching by name in map_resources
     let def = content.map_resources?.[key];
     if (!def) {
       def = Object.values(content.map_resources || {}).find(
@@ -145,18 +178,14 @@ function mapResourceYield(sys, content) {
       );
     }
     if (!def?.yield) continue;
+    // Skip categorized resources — handled by flow engine
+    if (def.category != null && def.tier != null) continue;
     for (const [cur, amt] of Object.entries(def.yield)) {
       yields[cur] = (yields[cur] || 0) + Number(amt || 0);
     }
   }
-  // inhabited bonus supply
   const pop = (sys.planets ?? []).reduce((s, p) => s + (p.population || 0), 0);
   if (pop > 0) yields["currency.supply"] += 1;
-  // Planet resources + buildings / colony posture
-  const fromPlanets = collectPlanetYields(sys, content);
-  for (const [cur, amt] of Object.entries(fromPlanets)) {
-    yields[cur] = (yields[cur] || 0) + Number(amt || 0);
-  }
   return yields;
 }
 
@@ -199,7 +228,6 @@ function applyPendingTaxes(eco) {
   eco.pendingPolicy.taxes = {};
 }
 
-/** Activate tax changes queued on previous day (next_tick semantics). */
 export function activatePendingPolicies(world) {
   const ledger = ensureAllFactions(readLedger(), world);
   for (const fac of world.factions ?? []) {
@@ -217,20 +245,116 @@ function taxRateFor(eco, content, slot) {
   return tier?.rate ?? 0;
 }
 
+/**
+ * Soft-deficit from critical category stocks + legacy bridge currencies.
+ * Critical: B Materia, D Energia, E Bios (+ metal/supply).
+ */
 function updateDeficit(eco, content) {
-  const metal = eco.stocks["currency.metal"] ?? 0;
-  const supply = eco.stocks["currency.supply"] ?? 0;
   const lowRatio = content.rules?.deficit?.lowRatio ?? 0.15;
-  // soft thresholds vs starting-ish 80
-  const ref = 80;
-  if (metal <= 0 || supply <= 0) eco.deficit = "empty";
-  else if (metal < ref * lowRatio || supply < ref * lowRatio) eco.deficit = "low";
+  const refs = {
+    "currency.metal": 80,
+    "currency.supply": 80,
+    "currency.materia": 40,
+    "currency.energia": 40,
+    "currency.bios": 40,
+  };
+  let anyEmpty = false;
+  let anyLow = false;
+  for (const [cur, ref] of Object.entries(refs)) {
+    const v = Number(eco.stocks[cur] ?? 0);
+    if (v <= 0) anyEmpty = true;
+    else if (v < ref * lowRatio) anyLow = true;
+  }
+  if (anyEmpty) eco.deficit = "empty";
+  else if (anyLow) eco.deficit = "low";
   else eco.deficit = "ok";
 }
 
 /**
- * Mutates world planets population; updates ledger stocks.
- * @returns {{ breakdowns: object, journal: object[] }}
+ * Build the 6-category flow matrix for a faction (exported for API + tick).
+ */
+export function computeFlowBreakdown(world, factionId, content, eco = null) {
+  const c = content || getContent();
+  const flows = emptyFlows();
+  const labor = biosLaborScale(eco || { stocks: {} });
+  const maxTiers = eco?.techTiers || null;
+
+  // Pass 1: extraction + ambient baselines (must exist before converters)
+  let inhabitedPlanets = 0;
+  let pop = 0;
+  for (const sys of world.systems ?? []) {
+    if (sys.ownerFactionId !== factionId) continue;
+    for (const p of sys.planets ?? []) {
+      addPlanetExtraction(flows, p.resources || [], c, { maxTiers });
+      pop += p.population || 0;
+      if ((p.population || 0) > 0 || p.colonyType) inhabitedPlanets += 1;
+    }
+    const objs = c.space_objects?.objects || {};
+    for (const poiType of sys.spaceObjects || []) {
+      const objDef = objs[poiType];
+      if (objDef) applySpaceObjectEffects(flows, objDef);
+    }
+  }
+  if (inhabitedPlanets > 0) {
+    flows.D[1].rate += inhabitedPlanets * 2; // ambient energy (sun/geo)
+    flows.E[1].rate += Math.max(1, inhabitedPlanets); // subsistence bios
+  }
+
+  // Pass 2: building yields / converts (after inputs exist)
+  for (const sys of world.systems ?? []) {
+    if (sys.ownerFactionId !== factionId) continue;
+    for (const p of sys.planets ?? []) {
+      for (const b of planetBuildingList(p)) {
+        if (b.disabled) continue;
+        const def = resolveBuildingDef(c, b);
+        if (!def) continue;
+        addBuildingFlows(flows, def, c, b, { biosScale: labor, maxTiers });
+      }
+    }
+  }
+
+  // Pass 3: upkeep demand (buildings + fleet + pop)
+  for (const sys of world.systems ?? []) {
+    if (sys.ownerFactionId !== factionId) continue;
+    for (const p of sys.planets ?? []) {
+      for (const b of planetBuildingList(p)) {
+        if (b.disabled) continue;
+        const def = resolveBuildingDef(c, b);
+        if (def) addUpkeepDemand(flows, def);
+      }
+    }
+  }
+
+  let fleetCount = 0;
+  let legionCount = 0;
+  for (const f of world.fleets ?? []) {
+    if (f.factionId === factionId)
+      fleetCount += (f.composition ?? []).reduce((s, g) => s + (g.count || 0), 0);
+  }
+  for (const l of world.legions ?? []) {
+    if (l.factionId === factionId) legionCount += l.strength || 1;
+  }
+  if (fleetCount > 0) {
+    flows.D[2].demand += Math.ceil(fleetCount * 0.3);
+    flows.E[3].demand += Math.ceil(fleetCount * 0.2);
+  }
+  if (legionCount > 0) {
+    flows.E[3].demand += Math.ceil(legionCount * 0.4);
+  }
+  if (pop > 0) flows.E[1].demand += Math.ceil(pop * 0.05);
+
+  const nets = computeNets(flows);
+  return {
+    flows: nets,
+    totals: categoryTotals(nets),
+    bottlenecks: flowBottlenecks(nets),
+    categories: CATEGORIES,
+    biosScale: labor,
+  };
+}
+
+/**
+ * Mutates world planets population; updates ledger stocks from flows + bridge.
  */
 export function runEconomyTick(world, turn) {
   const content = getContent();
@@ -240,88 +364,155 @@ export function runEconomyTick(world, turn) {
 
   for (const fac of world.factions ?? []) {
     const eco = ensureFactionEco(ledger, fac.id);
-    // pending taxes activated at start of processTurn (next_tick)
 
     const effects = collectFactionEffects(world, fac.id, eco, content);
     const stack = buildModifierStack(effects, {
       mergeOrder: content.rules?.economyMergeOrder,
     });
 
-    // Gross income
-    const gross = { "currency.metal": 0, "currency.supply": 2 }; // base supply
-    for (const sys of world.systems ?? []) {
-      if (sys.ownerFactionId !== fac.id) continue;
-      const y = mapResourceYield(sys, content);
-      for (const [k, v] of Object.entries(y)) {
-        gross[k] = (gross[k] || 0) + v;
-      }
-    }
-
+    // --- Authoritative flow economy ---
+    const flowBreak = computeFlowBreakdown(world, fac.id, content, eco);
+    const totals = flowBreak.totals;
+    const categoryNet = {};
     const channels = {};
-    const net = {};
-    let pressureAdd = 0;
 
-    for (const cur of Object.keys(content.currencies || {})) {
-      const base = gross[cur] || 0;
-      const ch = stack.channels[`production:${cur}`];
-      let afterProd = applyFlatThenMult(base, ch);
-
-      // Tax
-      let taxTaken = 0;
-      const slot =
-        cur === "currency.metal"
-          ? "tax.industry"
-          : cur === "currency.supply"
-            ? "tax.supply"
-            : null;
-      if (slot) {
-        const rate = taxRateFor(eco, content, slot);
-        taxTaken = floor(afterProd * rate);
-        // treasury mode: tax is accounting + side effects; stock gets net after "rate" display
-        // Spec: treasury — collected returns to same stock; meaning is side-effects.
-        // Practical: player stock changes by afterProd - upkeep; tax only for pressure/journal.
-        if (content.rules?.tax?.defaultMode === "sink") {
-          afterProd -= taxTaken;
-        }
-        // pressure from tier effects already in stack; also accumulate tax_pressure flats
-      }
-
-      const upkeepCh = stack.channels[`upkeep:${cur}`];
-      let upkeep = 0;
-      if (cur === "currency.metal") {
-        upkeep += fleetUpkeep(world, fac.id)["currency.metal"] || 0;
-      }
-      if (cur === "currency.supply") {
-        upkeep += fleetUpkeep(world, fac.id)["currency.supply"] || 0;
-        upkeep += popUpkeep(world, fac.id)["currency.supply"] || 0;
-      }
-      upkeep = applyFlatThenMult(upkeep, upkeepCh);
-
-      const delta = floor(afterProd - upkeep);
+    for (const cat of CATEGORIES) {
+      const cur = categoryToCurrency(cat);
+      let delta = floor(totals[cat]?.net || 0);
+      delta = applyProductionChannel(
+        delta,
+        stack.channels[`production:${cur}`],
+      );
+      delta = applyUpkeepChannel(delta, stack.channels[`upkeep:${cur}`]);
+      categoryNet[cur] = delta;
       channels[cur] = {
-        base,
-        afterProd: floor(afterProd),
-        taxRate: slot ? taxRateFor(eco, content, slot) : 0,
-        tax: taxTaken,
-        upkeep: floor(upkeep),
+        base: floor(totals[cat]?.rate || 0),
+        demand: floor(totals[cat]?.demand || 0),
+        afterProd: floor(totals[cat]?.rate || 0),
+        taxRate: 0,
+        tax: 0,
+        upkeep: floor(totals[cat]?.demand || 0),
         net: delta,
+        category: cat,
       };
-      net[cur] = delta;
       if (delta !== 0) {
         adjustStock(ledger, fac.id, cur, delta, {
           turn,
-          reason: delta >= 0 ? "income_net" : "upkeep_net",
+          reason: delta >= 0 ? "flow_income" : "flow_upkeep",
         });
       }
     }
 
+    // --- Legacy bridge: metal ≈ Materia net, supply ≈ Bios+Energia nets ---
+    // Plus tiny non-category leftovers + fleet/pop already counted in D/E demand;
+    // still apply metal fleet upkeep as metal spend for shipyard compatibility.
+    const materiaNet = categoryNet["currency.materia"] || 0;
+    const energiaNet = categoryNet["currency.energia"] || 0;
+    const biosNet = categoryNet["currency.bios"] || 0;
+
+    let legacyGross = { "currency.metal": 0, "currency.supply": 2 };
+    for (const sys of world.systems ?? []) {
+      if (sys.ownerFactionId !== fac.id) continue;
+      const y = mapResourceYieldLegacyOnly(sys, content);
+      for (const [k, v] of Object.entries(y)) {
+        legacyGross[k] = (legacyGross[k] || 0) + v;
+      }
+      // Do NOT call collectPlanetYields — buildings already in flows (avoids double count)
+    }
+
+    // Bridge income: mirror positive category nets into legacy stocks
+    const bridgeMetal = Math.max(0, materiaNet) + (legacyGross["currency.metal"] || 0);
+    const bridgeSupply =
+      Math.max(0, biosNet) + Math.max(0, energiaNet) + (legacyGross["currency.supply"] || 0);
+
+    let metalAfter = applyFlatThenMult(
+      bridgeMetal,
+      stack.channels["production:currency.metal"],
+    );
+    let supplyAfter = applyFlatThenMult(
+      bridgeSupply,
+      stack.channels["production:currency.supply"],
+    );
+
+    const taxInd = taxRateFor(eco, content, "tax.industry");
+    const taxSup = taxRateFor(eco, content, "tax.supply");
+    const taxMetal = floor(metalAfter * taxInd);
+    const taxSupply = floor(supplyAfter * taxSup);
+    if (content.rules?.tax?.defaultMode === "sink") {
+      metalAfter -= taxMetal;
+      supplyAfter -= taxSupply;
+    }
+
+    // Legacy fleet metal upkeep still on metal (ships cost metal to maintain)
+    // Supply fleet/pop already represented as D/E demand in flows — avoid full double.
+    // Keep a light metal fleet upkeep only.
+    let metalUpkeep = fleetUpkeep(world, fac.id)["currency.metal"] || 0;
+    metalUpkeep = applyFlatThenMult(metalUpkeep, stack.channels["upkeep:currency.metal"]);
+
+    // When category nets are negative, also drain legacy bridge stocks
+    const supplyUpkeepFlat = floor(
+      stack.channels["upkeep:currency.supply"]?.flat || 0,
+    );
+    const metalDelta = floor(metalAfter - metalUpkeep + Math.min(0, materiaNet));
+    const supplyDelta = floor(
+      supplyAfter +
+        Math.min(0, biosNet) +
+        Math.min(0, energiaNet) -
+        supplyUpkeepFlat,
+    );
+
+    channels["currency.metal"] = {
+      base: floor(bridgeMetal),
+      afterProd: floor(metalAfter),
+      taxRate: taxInd,
+      tax: taxMetal,
+      upkeep: floor(metalUpkeep),
+      net: metalDelta,
+      bridgedFrom: "B.materia",
+    };
+    channels["currency.supply"] = {
+      base: floor(bridgeSupply),
+      afterProd: floor(supplyAfter),
+      taxRate: taxSup,
+      tax: taxSupply,
+      upkeep: floor(supplyUpkeepFlat),
+      net: supplyDelta,
+      bridgedFrom: "E.bios+D.energia",
+    };
+
+    if (metalDelta !== 0) {
+      adjustStock(ledger, fac.id, "currency.metal", metalDelta, {
+        turn,
+        reason: metalDelta >= 0 ? "bridge_income" : "bridge_upkeep",
+      });
+    }
+    if (supplyDelta !== 0) {
+      adjustStock(ledger, fac.id, "currency.supply", supplyDelta, {
+        turn,
+        reason: supplyDelta >= 0 ? "bridge_income" : "bridge_upkeep",
+      });
+    }
+
     const pressureCh = stack.channels.tax_pressure;
-    pressureAdd = pressureCh?.flat ?? 0;
+    const pressureAdd = pressureCh?.flat ?? 0;
     eco.pressure = Math.max(0, floor((eco.pressure || 0) * 0.85 + pressureAdd));
 
     updateDeficit(eco, content);
+    eco.bottlenecks = flowBreak.bottlenecks || {};
 
     const apMax = resolveApMax(content.rules?.apPerTurn ?? 3, stack);
+
+    const net = {
+      ...categoryNet,
+      "currency.metal": metalDelta,
+      "currency.supply": supplyDelta,
+    };
+
+    const explainRaw = explainStack(stack);
+    eco.explain = sanitizeEconomyExplain(explainRaw, {
+      channels,
+      deficit: eco.deficit,
+    });
 
     breakdowns[fac.id] = {
       factionId: fac.id,
@@ -330,7 +521,10 @@ export function runEconomyTick(world, turn) {
       deficit: eco.deficit,
       taxes: { ...eco.taxes },
       apMax,
-      explain: explainStack(stack),
+      explain: explainRaw,
+      explainPublic: eco.explain,
+      flows: flowBreak,
+      bottlenecks: flowBreak.bottlenecks,
     };
 
     journal.push({
@@ -340,6 +534,7 @@ export function runEconomyTick(world, turn) {
       deficit: eco.deficit,
       pressure: eco.pressure,
       apMax,
+      bottlenecks: flowBreak.bottlenecks,
     });
   }
 
@@ -350,6 +545,7 @@ export function runEconomyTick(world, turn) {
   for (const sys of world.systems ?? []) {
     const owner = sys.ownerFactionId;
     const eco = owner ? ensureFactionEco(ledger, owner) : null;
+    const biosOk = !eco || (eco.stocks["currency.bios"] ?? 0) > 0;
     const supplyOk = !eco || (eco.stocks["currency.supply"] ?? 0) > 0;
     const supplyFactor = !eco
       ? 1
@@ -357,7 +553,7 @@ export function runEconomyTick(world, turn) {
         ? 0.4
         : eco.deficit === "low"
           ? 0.75
-          : supplyOk
+          : biosOk && supplyOk
             ? 1
             : 0.5;
 
@@ -366,10 +562,10 @@ export function runEconomyTick(world, turn) {
       let pop = p.population || 0;
       if (pop <= 0) continue;
 
-      const composition =
-        p.raceComposition?.length > 0
-          ? p.raceComposition
-          : [{ raceId: "race_human", percent: 100 }];
+      const fac = owner
+        ? world.factions?.find((f) => f.id === owner) ?? null
+        : null;
+      const composition = resolvePlanetRaceComposition(p, fac);
 
       let rate = 0;
       for (const share of composition) {
@@ -381,12 +577,15 @@ export function runEconomyTick(world, turn) {
       const cap = planetCap(p, content);
       const overcrowd = pop > cap ? Math.max(0.2, 1 - (pop - cap) / cap) : 1;
 
-      const sysEffects = collectSystemPoiEffects(sys, content);
-      const sysStack = buildModifierStack(sysEffects, {
+      const growthEffects = [
+        ...collectSystemPoiEffects(sys, content),
+        ...collectRaceEffects(content.races, composition),
+      ];
+      const growthStack = buildModifierStack(growthEffects, {
         mergeOrder: content.rules?.economyMergeOrder,
       });
       let natural = pop * rate * hab * supplyFactor * overcrowd;
-      natural = applyFlatThenMult(natural, sysStack.channels.pop_growth);
+      natural = applyFlatThenMult(natural, growthStack.channels.pop_growth);
 
       if (eco?.deficit === "empty") natural = Math.min(natural, -pop * 0.02);
 
@@ -435,6 +634,111 @@ export function queueTaxChange(factionId, taxSlot, tierId) {
   return { ok: true, eco };
 }
 
+/** Parse "currency.a → currency.b" from placeholder_rates pair string. */
+function parseRatePair(pairStr) {
+  const parts = String(pairStr || "")
+    .split(/→|->/)
+    .map((s) => s.trim());
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return { from: parts[0], to: parts[1] };
+}
+
+/**
+ * Resolve stub market rate for from→to. Forward uses sell; inverse uses buy.
+ * @returns {{ direction: "forward"|"inverse", sell?: number, buy?: number } | null}
+ */
+export function lookupMarketRate(fromCurrency, toCurrency, content) {
+  const rates = getEffectiveMarketRates(content);
+  for (const row of rates) {
+    const pair = parseRatePair(row.pair);
+    if (!pair) continue;
+    if (pair.from === fromCurrency && pair.to === toCurrency) {
+      const sell = Number(row.sell ?? row.buy);
+      if (!Number.isFinite(sell) || sell <= 0) return null;
+      return { direction: "forward", sell, buy: Number(row.buy) };
+    }
+    if (pair.from === toCurrency && pair.to === fromCurrency) {
+      const buy = Number(row.buy ?? row.sell);
+      if (!Number.isFinite(buy) || buy <= 0) return null;
+      return { direction: "inverse", buy, sell: Number(row.sell) };
+    }
+  }
+  return null;
+}
+
+function computeMarketAmounts(rateInfo, amountFrom, amountTo) {
+  if (rateInfo.direction === "forward") {
+    const sell = rateInfo.sell;
+    if (amountFrom != null && amountFrom > 0) {
+      const from = floor(amountFrom);
+      return { amountFrom: from, amountTo: floor(from * sell) };
+    }
+    if (amountTo != null && amountTo > 0) {
+      const to = floor(amountTo);
+      const from = Math.ceil(to / sell);
+      return { amountFrom: from, amountTo: to };
+    }
+  } else {
+    const buy = rateInfo.buy;
+    if (amountFrom != null && amountFrom > 0) {
+      const from = floor(amountFrom);
+      return { amountFrom: from, amountTo: floor(from / buy) };
+    }
+    if (amountTo != null && amountTo > 0) {
+      const to = floor(amountTo);
+      const from = floor(to * buy);
+      return { amountFrom: from, amountTo: to };
+    }
+  }
+  return null;
+}
+
+export function marketConvert(
+  factionId,
+  fromCurrency,
+  toCurrency,
+  amountFrom,
+  amountTo,
+  turn,
+  intentId,
+) {
+  if (!fromCurrency || !toCurrency) {
+    return { ok: false, error: "currencies required" };
+  }
+  if (fromCurrency === toCurrency) {
+    return { ok: false, error: "same currency" };
+  }
+
+  const content = getContent();
+  const rateInfo = lookupMarketRate(fromCurrency, toCurrency, content);
+  if (!rateInfo) return { ok: false, error: "rate_missing" };
+
+  const amounts = computeMarketAmounts(rateInfo, amountFrom, amountTo);
+  if (!amounts || amounts.amountFrom <= 0 || amounts.amountTo <= 0) {
+    return { ok: false, error: "amount too small" };
+  }
+
+  const ledger = readLedger();
+  ensureFactionEco(ledger, factionId);
+  const have = ledger.factions[factionId].stocks[fromCurrency] ?? 0;
+  if (have < amounts.amountFrom) {
+    return { ok: false, error: "insufficient funds" };
+  }
+
+  adjustStock(ledger, factionId, fromCurrency, -amounts.amountFrom, {
+    turn,
+    reason: "market_convert_out",
+    intentId,
+  });
+  adjustStock(ledger, factionId, toCurrency, amounts.amountTo, {
+    turn,
+    reason: "market_convert_in",
+    intentId,
+  });
+  writeLedger(ledger);
+  return { ok: true, ...amounts, rate: rateInfo };
+}
+
 export function transferResources(fromId, toId, currencyId, amount, turn, intentId) {
   const amt = floor(amount);
   if (amt <= 0) return { ok: false, error: "amount must be > 0" };
@@ -456,3 +760,4 @@ export function transferResources(fromId, toId, currencyId, amount, turn, intent
   writeLedger(ledger);
   return { ok: true };
 }
+

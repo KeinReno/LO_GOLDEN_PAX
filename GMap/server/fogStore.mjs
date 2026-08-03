@@ -5,6 +5,36 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DATA_DIR, ensureDataDir, readJson, writeJson } from "./tableStore.mjs";
+import { neighborIds } from "./pathfinding.mjs";
+
+/** Hop expansion from owned / presence / permanent-reveal cores. */
+export const VISION_SYSTEM_HOPS = 1;
+/** Hop expansion from own fleet / legion positions. */
+export const VISION_FLEET_HOPS = 1;
+
+function expandVisionHops(world, startIds, maxHops) {
+  const added = new Set();
+  if (maxHops <= 0) return added;
+  const dist = new Map();
+  const q = [];
+  for (const id of startIds) {
+    if (!id) continue;
+    dist.set(id, 0);
+    q.push(id);
+  }
+  while (q.length) {
+    const id = q.shift();
+    const d = dist.get(id) ?? 0;
+    if (d >= maxHops) continue;
+    for (const n of neighborIds(world, id)) {
+      if (dist.has(n)) continue;
+      dist.set(n, d + 1);
+      added.add(n);
+      q.push(n);
+    }
+  }
+  return added;
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const FOG_PATH = path.join(DATA_DIR, "fog-masks.json");
@@ -90,6 +120,34 @@ export function resolveVisibleWithFog(world, factionId, fogState) {
   // Permanent reveal
   for (const [sysId, facs] of Object.entries(fogState?.permanentReveal ?? {})) {
     if ((facs ?? []).includes(factionId)) visible.add(sysId);
+  }
+
+  const permReveal = fogState?.permanentReveal ?? {};
+  const fleetSystemIds = new Set();
+  const legionSystemIds = new Set();
+  for (const f of world.fleets ?? []) {
+    if (f.factionId === factionId && f.systemId) fleetSystemIds.add(f.systemId);
+  }
+  for (const l of world.legions ?? []) {
+    if (l.factionId === factionId && l.systemId) legionSystemIds.add(l.systemId);
+  }
+
+  const systemHopSeeds = new Set();
+  for (const s of world.systems ?? []) {
+    const id = s.id;
+    const owned = s.ownerFactionId === factionId;
+    const fleetHere = fleetSystemIds.has(id);
+    const legionHere = legionSystemIds.has(id);
+    const perm = (permReveal[id] ?? []).includes(factionId);
+    if (owned || fleetHere || legionHere || perm) systemHopSeeds.add(id);
+  }
+  for (const id of expandVisionHops(world, systemHopSeeds, VISION_SYSTEM_HOPS)) {
+    visible.add(id);
+  }
+
+  const fleetHopSeeds = new Set([...fleetSystemIds, ...legionSystemIds]);
+  for (const id of expandVisionHops(world, fleetHopSeeds, VISION_FLEET_HOPS)) {
+    visible.add(id);
   }
 
   // Mask hides unless currently revealed by presence/ownership/permanent

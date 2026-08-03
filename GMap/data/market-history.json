@@ -1,0 +1,8084 @@
+{
+  "ticks": [
+    {
+      "turn": 4,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3483,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.3895,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.4205,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7212,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3504,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.423,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 44.1551,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 91.77,
+      "volume": 4,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 5.6237,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.5275,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 2.7825,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.4298,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 2.8494,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.4367,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 2.821,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 5.7606,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.8319,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.442,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.6941,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.3895,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.362,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 2.9621,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.3446,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.603,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 10.9486,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.1936,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.4853,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 2.9165,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 2.6761,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 2.8365,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 10.5129,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.3896,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 21.835,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 21.9034,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 154.8655,
+      "volume": 4,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 42.1051,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 22.3133,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 21.3748,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 21.0525,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 22.1104,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.2106,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 21.7311,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 78.019,
+      "volume": 4,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 81.4478,
+      "volume": 4,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 42.6294,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 40.74,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 48.3604,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 42.2157,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.4268,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 13.058,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 6.06,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 12.2081,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 24.6437,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 11.7083,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 48.9705,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 46.7356,
+      "volume": 5,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 23.1233,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 22.5236,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 161.6,
+      "volume": 4,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 21.9175,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 21.4208,
+      "volume": 6,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.6689,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 11.0275,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3703,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.3543,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3492,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 5.8723,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3628,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3383,
+      "volume": 40,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.715,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 5.7533,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.7077,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7071,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 11.2948,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.691,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 2.807,
+      "volume": 10,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 11.0137,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.3277,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 10.7495,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.5117,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.6593,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.6792,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.5413,
+      "volume": 8,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 10.556,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.7461,
+      "volume": 20,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 11.2936,
+      "volume": 7,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 0.9789,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 1.7866,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.4736,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.1726,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.5433,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 3.3662,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.2237,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1253,
+      "volume": 13,
+      "at": "2026-07-20T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 48.36,
+      "volume": 97,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 44.7188,
+      "volume": 89,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 11.6865,
+      "volume": 23,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.0275,
+      "volume": 44,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 8.9289,
+      "volume": 18,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 6.0652,
+      "volume": 12,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 4,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 5.642,
+      "volume": 11,
+      "at": "2026-07-20T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3461,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.4193,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.4467,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7171,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3526,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4224,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 43.4341,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 93.7227,
+      "volume": 4,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 5.53,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.6105,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 2.8596,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.4587,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 2.8949,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.445,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 2.9266,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 5.8692,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.8278,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.4231,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.6804,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.4546,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3616,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 2.9838,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.4164,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.519,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 10.6776,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.1468,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.3304,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 2.9263,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 2.7834,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 2.7992,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 10.7129,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.1887,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 22.2998,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 21.3709,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 157.4731,
+      "volume": 4,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 42.8665,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 22.1219,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 21.6017,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 21.7244,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 22.8482,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 21.9479,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 21.6171,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 80.4727,
+      "volume": 4,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 81.8234,
+      "volume": 4,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 43.856,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 40.5968,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 50.3576,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 41.4805,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.7079,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 12.9216,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 6.4385,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 12.7291,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 26.3566,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 11.5505,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 50.5865,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 49.5105,
+      "volume": 5,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 24.005,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 23.0633,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 165.624,
+      "volume": 4,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 22.2998,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 21.5607,
+      "volume": 6,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.6873,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 11.3583,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3657,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.3663,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3507,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 5.7619,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3587,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.346,
+      "volume": 40,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.7258,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 5.8255,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.7423,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.6821,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 11.2537,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7183,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 2.7905,
+      "volume": 10,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 11.6017,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.4432,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 10.6635,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.5316,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.5593,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.6887,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.555,
+      "volume": 8,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 10.7894,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.7469,
+      "volume": 20,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 11.9068,
+      "volume": 7,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0091,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 1.7484,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.459,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.1803,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.5726,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 3.5079,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.2121,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1283,
+      "volume": 13,
+      "at": "2026-07-21T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 48.1164,
+      "volume": 96,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 45.1685,
+      "volume": 90,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 12.0103,
+      "volume": 24,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.2755,
+      "volume": 45,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 9.0973,
+      "volume": 18,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 6.2922,
+      "volume": 13,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 5,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 5.8532,
+      "volume": 12,
+      "at": "2026-07-21T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.346,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.4564,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.4732,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7119,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3574,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4431,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 44.2103,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 95.7548,
+      "volume": 4,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 5.5058,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.6521,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.0013,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.4741,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 2.8902,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.4702,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 3.0723,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 5.9631,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.8729,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.4035,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.7012,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.5007,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3624,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.0691,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.5013,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.5462,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 10.6192,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.0569,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.3369,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 2.9386,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 2.962,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 2.8226,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 11.073,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.0041,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 22.8979,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 21.6178,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 169.1808,
+      "volume": 4,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 44.9538,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 22.4409,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 22.2039,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 23.2905,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 23.2687,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.2474,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 22.1351,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 84.7436,
+      "volume": 4,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 82.5848,
+      "volume": 4,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 44.4716,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 42.8346,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 53.2628,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 41.8113,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 23.3426,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 13.2322,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 6.9056,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 13.6059,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 28.4033,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 11.6658,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 52.0201,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 53.9109,
+      "volume": 5,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 24.3483,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 24.0472,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 173.232,
+      "volume": 4,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 23.2325,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 22.0133,
+      "volume": 6,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7091,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 11.9097,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3625,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.39,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3544,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 5.8323,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3558,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3609,
+      "volume": 40,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.7739,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 5.9685,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.7848,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.6922,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 11.151,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7453,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 2.878,
+      "volume": 10,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 12.5709,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.7836,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 11.1808,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.5246,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.6097,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7253,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.6296,
+      "volume": 8,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.342,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.7387,
+      "volume": 20,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 12.5323,
+      "volume": 7,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0435,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 1.7867,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.4593,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.2322,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.6914,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 3.7633,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.2188,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1227,
+      "volume": 13,
+      "at": "2026-07-22T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 48.5316,
+      "volume": 97,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 45.0523,
+      "volume": 90,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 12.6055,
+      "volume": 25,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.5533,
+      "volume": 45,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 9.2428,
+      "volume": 18,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 6.6054,
+      "volume": 13,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 6,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 6.1446,
+      "volume": 12,
+      "at": "2026-07-22T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3429,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.4729,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.4838,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7228,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3622,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4366,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 46.7681,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 101.8325,
+      "volume": 4,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 5.5622,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.6914,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.2751,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.4794,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 2.9689,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.5667,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 3.3861,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.1244,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.9102,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.4039,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.7444,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.5621,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3674,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.1673,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.5602,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.4664,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 10.9737,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.1321,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.4644,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.1109,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.0932,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 2.8718,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 11.476,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 10.9641,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 24.3513,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 22.6148,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 178.5373,
+      "volume": 4,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 45.959,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 22.7713,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 23.9125,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 24.8249,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 23.9986,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.9162,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 23.6989,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 87.3683,
+      "volume": 4,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 81.5952,
+      "volume": 4,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 45.3875,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 45.492,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 57.6702,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 43.1329,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 23.5624,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 13.6296,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 7.4361,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 14.8985,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 29.8548,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 12.0883,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 54.4582,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 57.3621,
+      "volume": 5,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 25.2115,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 26.043,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 185.38,
+      "volume": 4,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 24.7324,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 23.3098,
+      "volume": 6,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7505,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 12.6643,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3707,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4219,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3686,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 6.0781,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3512,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3756,
+      "volume": 40,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.8228,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 6.2916,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.8254,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7261,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 11.3462,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7447,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 2.9912,
+      "volume": 10,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 14.2106,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 6.0502,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 11.8644,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.5783,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.5767,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7466,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.7822,
+      "volume": 8,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.8745,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.7631,
+      "volume": 20,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 13.1431,
+      "volume": 7,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0501,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 1.8849,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.4504,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.3654,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.8233,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 4.08,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.2196,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1603,
+      "volume": 13,
+      "at": "2026-07-23T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 49.7328,
+      "volume": 99,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 46.0721,
+      "volume": 92,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 13.7554,
+      "volume": 28,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.44,
+      "volume": 45,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 9.4928,
+      "volume": 19,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 7.2801,
+      "volume": 15,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 7,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 6.7722,
+      "volume": 14,
+      "at": "2026-07-23T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3377,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.5381,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.5263,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7444,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3637,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4396,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 49.8859,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 107.7458,
+      "volume": 4,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 5.7948,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.8373,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.6064,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.5297,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 2.9949,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.6854,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 3.7564,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.1902,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.972,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.4522,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.7527,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.5265,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3741,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.4106,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.5972,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.4659,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 11.296,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.0915,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.6216,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.396,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.2145,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 3.004,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 11.5633,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.1238,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 25.3924,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 23.4804,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 182.6049,
+      "volume": 4,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 45.1067,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 23.9831,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 25.2016,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 25.6274,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 24.4238,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.7838,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 24.1056,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 86.3402,
+      "volume": 4,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 81.5043,
+      "volume": 4,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 44.5867,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 47.7767,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 63.0255,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 45.1883,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.9653,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 14.5258,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 7.8956,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 16.0576,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 30.1038,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 13.0848,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 56.8832,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 59.3581,
+      "volume": 5,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 26.281,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 27.7435,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 195.688,
+      "volume": 4,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 26.0249,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 24.3479,
+      "volume": 6,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7707,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 13.6641,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3767,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4473,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3751,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 6.4674,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3518,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3791,
+      "volume": 40,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.875,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 6.567,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.8672,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7631,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 12.0077,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7277,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 3.0205,
+      "volume": 10,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 15.8503,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.9805,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 12.0221,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.6577,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.5178,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7546,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.8955,
+      "volume": 8,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.958,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.8172,
+      "volume": 20,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 13.4213,
+      "volume": 7,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0023,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 2.0402,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.4776,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.6045,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.8251,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 4.3624,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.2306,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1735,
+      "volume": 13,
+      "at": "2026-07-24T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 50.6892,
+      "volume": 101,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 46.0024,
+      "volume": 92,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 15.1469,
+      "volume": 30,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.4617,
+      "volume": 45,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 9.5948,
+      "volume": 19,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 8.0763,
+      "volume": 16,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 8,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 7.5128,
+      "volume": 15,
+      "at": "2026-07-24T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3308,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.6375,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.5423,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7611,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3606,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4208,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 55.125,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 118.496,
+      "volume": 4,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 6.063,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.9252,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.6683,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.5402,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 3.0643,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.836,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 4.1077,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.3922,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 3.0466,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.4835,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.7423,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.4933,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3792,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.8008,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.5435,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.5571,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 11.5912,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.058,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.8091,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.7357,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.1131,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 3.1133,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 11.4067,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.2057,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 26.565,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 24.4583,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 179.175,
+      "volume": 4,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 44.0963,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 24.9819,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 24.8309,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 25.1444,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 25.0143,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.8055,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 23.9109,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 83.4119,
+      "volume": 4,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 81.6154,
+      "volume": 4,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 43.7154,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 47.7871,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 67.789,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 47.1243,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.4419,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 15.6436,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 8.0697,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 16.8511,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 31.0099,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 14.2667,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 60.5287,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 60.3066,
+      "volume": 5,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 28.4714,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 29.6029,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 208,
+      "volume": 4,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 27.3625,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 24.9432,
+      "volume": 6,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7558,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 14.1749,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.383,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4577,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3817,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 7.0727,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3572,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3678,
+      "volume": 40,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.8986,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 7.0719,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.8754,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7895,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 12.4343,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7097,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 3.0508,
+      "volume": 10,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 17.1992,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.748,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 11.4882,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.8138,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.5684,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7423,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 6.0424,
+      "volume": 8,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.7483,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.8907,
+      "volume": 20,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 13.907,
+      "volume": 7,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 0.971,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 2.0842,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.5665,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.8081,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.7538,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 4.4172,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.2505,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1729,
+      "volume": 13,
+      "at": "2026-07-25T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 51.7752,
+      "volume": 104,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 46.7415,
+      "volume": 93,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 15.4069,
+      "volume": 31,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.6277,
+      "volume": 45,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 9.9079,
+      "volume": 20,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 8.8316,
+      "volume": 18,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 9,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 8.2154,
+      "volume": 16,
+      "at": "2026-07-25T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3381,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.7016,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.5143,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7693,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3583,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4412,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 61.6628,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 125.1315,
+      "volume": 4,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 6.0733,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.9365,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.6081,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.5364,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 3.0009,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.8664,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 3.976,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.4842,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 3.0557,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.5311,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.7219,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.4651,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3747,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.969,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.516,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.5473,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 11.6396,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.2221,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.9185,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.9704,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.0064,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 3.1027,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 11.0642,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.6223,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 26.7393,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 24.725,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 169.7137,
+      "volume": 4,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 43.5692,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 24.8682,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 23.9199,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 24.1829,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 24.6954,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.9268,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 23.4773,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 83.1952,
+      "volume": 4,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 83.103,
+      "volume": 4,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 42.4996,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 45.7741,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 69.5973,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 47.3286,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.0815,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 16.649,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 8.0724,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 16.8383,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 33.1345,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 15.345,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 62.8904,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 62.8386,
+      "volume": 5,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 29.7281,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 30.1575,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 220.8,
+      "volume": 4,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 28.5285,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 24.9501,
+      "volume": 6,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.736,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 13.992,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3969,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4692,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3794,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 7.5444,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3639,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3644,
+      "volume": 40,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.9101,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 7.4474,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.8982,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7838,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 12.6142,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7316,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 3.0335,
+      "volume": 10,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 16.4794,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.3971,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 10.9691,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.9175,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.6748,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7247,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 6.0549,
+      "volume": 8,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.4892,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.948,
+      "volume": 20,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 14.4938,
+      "volume": 7,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 0.9984,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 2.0582,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.594,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.9204,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.6531,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 4.4934,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.295,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1848,
+      "volume": 13,
+      "at": "2026-07-26T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 52.0584,
+      "volume": 104,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 47.3189,
+      "volume": 95,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 15.154,
+      "volume": 30,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.5184,
+      "volume": 45,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 10.0505,
+      "volume": 20,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 8.5484,
+      "volume": 17,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 10,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 7.952,
+      "volume": 16,
+      "at": "2026-07-26T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.342,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.6947,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.5068,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7597,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3578,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4192,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 67.9278,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 129.6602,
+      "volume": 4,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 6.0638,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.8591,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.5059,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.5171,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 2.9599,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.7775,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 3.8785,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.3782,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.983,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.5243,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.7077,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.4627,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3721,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.8662,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.53,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.6091,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 11.1405,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.1151,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.6552,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.8115,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.0085,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 3.1008,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 10.636,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.4293,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 26.3871,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 23.8626,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 170.1418,
+      "volume": 4,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 44.2659,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 25.097,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 22.7993,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 23.967,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 24.8598,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.813,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 22.6965,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 84.3126,
+      "volume": 4,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 82.0219,
+      "volume": 4,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 43.3338,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 44.2481,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 71.9972,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 46.4467,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.5332,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 17.4869,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 8.5926,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 17.441,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 35.8148,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 14.876,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 65.5565,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 67.1237,
+      "volume": 5,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 29.2704,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 29.1482,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 230.55,
+      "volume": 4,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 29.0763,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 23.7279,
+      "volume": 6,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7137,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 13.8827,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.39,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4638,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3794,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 7.3949,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3634,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3627,
+      "volume": 40,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.8857,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 7.2583,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.9081,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7612,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 12.6498,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7691,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 3.074,
+      "volume": 10,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 16.2189,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.3788,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 10.734,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.9232,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.7419,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7191,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.9252,
+      "volume": 8,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.5193,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.9377,
+      "volume": 20,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 14.8924,
+      "volume": 7,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0301,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 2.0189,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.5892,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.8159,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.6709,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 4.6471,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.3087,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1936,
+      "volume": 13,
+      "at": "2026-07-27T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 52.338,
+      "volume": 105,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 46.8956,
+      "volume": 94,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 14.7248,
+      "volume": 29,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.7473,
+      "volume": 45,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 9.8862,
+      "volume": 20,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 8.3388,
+      "volume": 17,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 11,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 7.757,
+      "volume": 16,
+      "at": "2026-07-27T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3464,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.6577,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.5187,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.776,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3635,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4016,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 66.7288,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 136.3302,
+      "volume": 4,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 6.0302,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.885,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.4416,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.5229,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 3.0051,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.7187,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 3.8906,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.5829,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.9876,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.5134,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.6953,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.4999,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.3797,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.8363,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.613,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.5813,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 10.9109,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.2621,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.6272,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.7093,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.1052,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 3.1085,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 10.8812,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.5417,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 27.0938,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 23.2992,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 177.4415,
+      "volume": 4,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 44.9996,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 25.0347,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 23.1406,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 25.0916,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 25.0006,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.8,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 22.575,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 88.3954,
+      "volume": 4,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 80.8764,
+      "volume": 4,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 43.4923,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 44.3577,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 74.7714,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 46.3901,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.5004,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 17.9923,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 9.3898,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 18.7402,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 39.2116,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 14.4633,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 67.1978,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 72.8977,
+      "volume": 5,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 28.6528,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 28.5193,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 240.9,
+      "volume": 4,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 29.6258,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 23.4092,
+      "volume": 6,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7274,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 14.1013,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3888,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4672,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.374,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 7.2081,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3615,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.373,
+      "volume": 40,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.8962,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 7.2639,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.9156,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.766,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 12.6997,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7937,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 3.0779,
+      "volume": 10,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 16.6573,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.4911,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 10.7601,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.9055,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.7946,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7334,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 5.9425,
+      "volume": 8,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 11.684,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.9202,
+      "volume": 20,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 15.4096,
+      "volume": 7,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0615,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 2.0136,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.5433,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.7389,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.7139,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 5.0343,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.3214,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.1976,
+      "volume": 13,
+      "at": "2026-07-28T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 53.3466,
+      "volume": 107,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 47.297,
+      "volume": 95,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 14.4547,
+      "volume": 29,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.8866,
+      "volume": 46,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 10.2035,
+      "volume": 20,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 8.3648,
+      "volume": 17,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 12,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 7.7812,
+      "volume": 16,
+      "at": "2026-07-28T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.iron->fx.universal_credit",
+      "price": 0.3395,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.titan->fx.universal_credit",
+      "price": 1.7046,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.crystals->fx.universal_credit",
+      "price": 1.5089,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.gas->fx.universal_credit",
+      "price": 0.7849,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.water->fx.universal_credit",
+      "price": 0.3628,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.rare_earth->fx.universal_credit",
+      "price": 1.4192,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.antimatter->fx.universal_credit",
+      "price": 65.9207,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.relics->fx.universal_credit",
+      "price": 141.887,
+      "volume": 4,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.silver->fx.universal_credit",
+      "price": 6.032,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.gold->fx.universal_credit",
+      "price": 5.888,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.glasssteel->fx.universal_credit",
+      "price": 3.5604,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.alloys->fx.universal_credit",
+      "price": 1.5302,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.cinnabar->fx.universal_credit",
+      "price": 3.0085,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.biofuel->fx.universal_credit",
+      "price": 1.7432,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.blumatid->fx.universal_credit",
+      "price": 4.0448,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.solari->fx.universal_credit",
+      "price": 6.608,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.krin->fx.universal_credit",
+      "price": 2.9397,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.buildplex->fx.universal_credit",
+      "price": 1.5342,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.biomass->fx.universal_credit",
+      "price": 0.6898,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.food->fx.universal_credit",
+      "price": 1.4729,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.minerals->fx.universal_credit",
+      "price": 0.38,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.energy->fx.universal_credit",
+      "price": 3.9395,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.trade_value->fx.universal_credit",
+      "price": 1.666,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.lazualin->fx.universal_credit",
+      "price": 5.6234,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.hyperium->fx.universal_credit",
+      "price": 10.7583,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.eradian->fx.universal_credit",
+      "price": 11.3826,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.talitin->fx.universal_credit",
+      "price": 5.5201,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.exotic_gases->fx.universal_credit",
+      "price": 3.7561,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.focusing_crystals->fx.universal_credit",
+      "price": 3.2243,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.volatile_motes->fx.universal_credit",
+      "price": 3.1084,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.elyrium->fx.universal_credit",
+      "price": 11.2082,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.titanium->fx.universal_credit",
+      "price": 11.6995,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.adamantian->fx.universal_credit",
+      "price": 27.5,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.skaashiz->fx.universal_credit",
+      "price": 23.5488,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.klax->fx.universal_credit",
+      "price": 183.6528,
+      "volume": 4,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.hydromel->fx.universal_credit",
+      "price": 43.8542,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.orchid->fx.universal_credit",
+      "price": 25.4066,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.dark_horn->fx.universal_credit",
+      "price": 24.0612,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.red_sang->fx.universal_credit",
+      "price": 26.1208,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.song_silk->fx.universal_credit",
+      "price": 25.0912,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.dragon_root->fx.universal_credit",
+      "price": 22.1063,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.crystal_cap->fx.universal_credit",
+      "price": 22.5893,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.leviathan_ichor->fx.universal_credit",
+      "price": 91.6542,
+      "volume": 4,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.golden_coral->fx.universal_credit",
+      "price": 80.9143,
+      "volume": 4,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.solar_water->fx.universal_credit",
+      "price": 43.4767,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.issridil->fx.universal_credit",
+      "price": 46.0401,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.dream_mist->fx.universal_credit",
+      "price": 76.9902,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.archite->fx.universal_credit",
+      "price": 46.2495,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.vicious_bark->fx.universal_credit",
+      "price": 22.095,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.lunar_veins->fx.universal_credit",
+      "price": 18.5762,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.minor_artifacts->fx.universal_credit",
+      "price": 10.0011,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.astral_threads->fx.universal_credit",
+      "price": 20.0071,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.grinid->fx.universal_credit",
+      "price": 39.8411,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.radid->fx.universal_credit",
+      "price": 14.5595,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.blakula->fx.universal_credit",
+      "price": 68.342,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.vaitid->fx.universal_credit",
+      "price": 77.3998,
+      "volume": 5,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.violid->fx.universal_credit",
+      "price": 28.5423,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.zro->fx.universal_credit",
+      "price": 29.8826,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.dark_matter->fx.universal_credit",
+      "price": 246.76,
+      "volume": 4,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.living_metal->fx.universal_credit",
+      "price": 30.1702,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.nanites->fx.universal_credit",
+      "price": 23.9172,
+      "volume": 6,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.refractory->fx.universal_credit",
+      "price": 0.7734,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.rare_crystals->fx.universal_credit",
+      "price": 14.4656,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.hydrogen->fx.universal_credit",
+      "price": 0.3896,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.ice->fx.universal_credit",
+      "price": 0.4956,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.ammonia->fx.universal_credit",
+      "price": 0.3645,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.isotopes->fx.universal_credit",
+      "price": 7.2002,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.nickel->fx.universal_credit",
+      "price": 0.3656,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.cobalt->fx.universal_credit",
+      "price": 0.3919,
+      "volume": 40,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.methane->fx.universal_credit",
+      "price": 0.9378,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.helium3->fx.universal_credit",
+      "price": 7.3709,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.toxic_gases->fx.universal_credit",
+      "price": 0.9645,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.catalysts->fx.universal_credit",
+      "price": 0.7592,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.plasma_crystals->fx.universal_credit",
+      "price": 12.7921,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.volcanic_minerals->fx.universal_credit",
+      "price": 0.7929,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.medicinals->fx.universal_credit",
+      "price": 2.9761,
+      "volume": 10,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.anomaly_crystals->fx.universal_credit",
+      "price": 17.3148,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.biocatalysts->fx.universal_credit",
+      "price": 5.5609,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.extremophile_enzymes->fx.universal_credit",
+      "price": 10.7469,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.frozen_fuels->fx.universal_credit",
+      "price": 1.9613,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.energy_minerals->fx.universal_credit",
+      "price": 5.8437,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.magnetite->fx.universal_credit",
+      "price": 0.7674,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.platinum->fx.universal_credit",
+      "price": 6.0668,
+      "volume": 8,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.cyber_minerals->fx.universal_credit",
+      "price": 12.2374,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.frozen_gases->fx.universal_credit",
+      "price": 0.9329,
+      "volume": 20,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "map.plasmoids->fx.universal_credit",
+      "price": 15.8498,
+      "volume": 7,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.extracta->fx.universal_credit",
+      "price": 1.0636,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.materia->fx.universal_credit",
+      "price": 2.0175,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.industria->fx.universal_credit",
+      "price": 2.5495,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.energia->fx.universal_credit",
+      "price": 2.7725,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.bios->fx.universal_credit",
+      "price": 1.751,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.cognitio->fx.universal_credit",
+      "price": 5.3497,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.metal->fx.universal_credit",
+      "price": 1.3267,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "currency.supply->fx.universal_credit",
+      "price": 1.196,
+      "volume": 13,
+      "at": "2026-07-29T12:00:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.damyl_doubloon->fx.universal_credit",
+      "price": 53.8944,
+      "volume": 108,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.terrial_credit->fx.universal_credit",
+      "price": 47.4019,
+      "volume": 95,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.turon_credit->fx.universal_credit",
+      "price": 14.9537,
+      "volume": 30,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.elan_doubloon->fx.universal_credit",
+      "price": 22.7084,
+      "volume": 45,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.belator_solarit->fx.universal_credit",
+      "price": 10.2424,
+      "volume": 20,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.karned_trill->fx.universal_credit",
+      "price": 8.6963,
+      "volume": 17,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    },
+    {
+      "turn": 13,
+      "pair": "fx.aphel_ilir->fx.universal_credit",
+      "price": 8.0896,
+      "volume": 16,
+      "at": "2026-07-29T12:05:00.000Z",
+      "seeded": true
+    }
+  ]
+}

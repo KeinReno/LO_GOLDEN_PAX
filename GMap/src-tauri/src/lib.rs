@@ -1,6 +1,7 @@
 //! GMap desktop launcher (P8.6) — starts Node host + embeds the table UI.
 
 use serde::Serialize;
+use std::fs::OpenOptions;
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -17,6 +18,8 @@ const DEV_PORT: u16 = 5173;
 
 struct HostState {
     child: Mutex<Option<Child>>,
+    last_error: Mutex<Option<String>>,
+    last_root: Mutex<Option<String>>,
 }
 
 #[derive(Serialize, Clone)]
@@ -29,6 +32,15 @@ struct HostStatus {
     root: String,
     pid: Option<u32>,
     desktop: bool,
+    last_error: Option<String>,
+}
+
+fn note_root(state: &HostState, root: &Path) {
+    *state.last_root.lock().unwrap() = Some(root.display().to_string());
+}
+
+fn set_host_error(state: &HostState, err: Option<String>) {
+    *state.last_error.lock().unwrap() = err;
 }
 
 fn port_open(port: u16) -> bool {
@@ -71,19 +83,64 @@ fn find_gmap_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
+fn check_node_available() -> Result<(), String> {
+    let mut cmd = Command::new("node");
+    cmd.arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let status = cmd
+        .status()
+        .map_err(|e| format!("Не удалось запустить node: {e}. Нужен Node.js в PATH."))?;
+    if !status.success() {
+        return Err("Node.js вернул ошибку при --version. Проверьте установку и PATH.".into());
+    }
+    Ok(())
+}
+
 fn spawn_host(root: &Path) -> Result<Child, String> {
     let serve = root.join("server").join("serve.mjs");
     if !serve.is_file() {
-        return Err(format!("serve.mjs not found at {}", serve.display()));
+        return Err(format!(
+            "serve.mjs не найден (корень: {})",
+            root.display()
+        ));
     }
+
+    if !port_open(DEV_PORT) && !root.join("dist").is_dir() {
+        return Err("Нет dist/ — сначала npm run build".into());
+    }
+
+    check_node_available()?;
+
+    let data_dir = root.join("data");
+    std::fs::create_dir_all(&data_dir).map_err(|e| format!("Не удалось создать data/: {e}"))?;
+    let log_path = data_dir.join("host.log");
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .map_err(|e| format!("Не удалось открыть host.log: {e}"))?;
+    let log_err = log_file
+        .try_clone()
+        .map_err(|e| format!("Не удалось дублировать host.log: {e}"))?;
+
     let mut cmd = Command::new("node");
     cmd.arg(&serve)
         .current_dir(root)
         .env("PORT", HOST_PORT.to_string())
         .env("HOST", "127.0.0.1")
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(Stdio::from(log_file))
+        .stderr(Stdio::from(log_err));
 
     #[cfg(windows)]
     {
@@ -130,6 +187,8 @@ fn open_url(url: &str) {
 
 fn build_status(state: &HostState) -> HostStatus {
     let root = find_gmap_root();
+    note_root(state, &root);
+    let last_error = state.last_error.lock().unwrap().clone();
     let mut guard = state.child.lock().unwrap();
     let mut pid = None;
     if let Some(child) = guard.as_mut() {
@@ -155,32 +214,54 @@ fn build_status(state: &HostState) -> HostStatus {
         port,
         url: url.clone(),
         view_url: format!("{url}/view"),
-        root: root.display().to_string(),
+        root: state
+            .last_root
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_else(|| root.display().to_string()),
         pid,
         desktop: true,
+        last_error,
     }
 }
 
 fn ensure_prod_host(state: &HostState) -> Result<HostStatus, String> {
+    let root = find_gmap_root();
+    note_root(state, &root);
+
     if port_open(DEV_PORT) || port_open(HOST_PORT) {
+        set_host_error(state, None);
         return Ok(build_status(state));
     }
-    let root = find_gmap_root();
     {
         let mut guard = state.child.lock().unwrap();
         if let Some(child) = guard.as_mut() {
             if child.try_wait().ok().flatten().is_none() {
                 drop(guard);
                 let _ = wait_port(HOST_PORT, 40);
+                if port_open(HOST_PORT) {
+                    set_host_error(state, None);
+                }
                 return Ok(build_status(state));
             }
         }
-        let child = spawn_host(&root)?;
-        *guard = Some(child);
+        match spawn_host(&root) {
+            Ok(child) => {
+                *guard = Some(child);
+            }
+            Err(e) => {
+                set_host_error(state, Some(e.clone()));
+                return Err(e);
+            }
+        }
     }
     if !wait_port(HOST_PORT, 40) {
-        return Err("Хост не ответил на порту 4173 за ~10с".into());
+        let err = "Хост не ответил на порту 4173 за ~10с (см. data/host.log)".to_string();
+        set_host_error(state, Some(err.clone()));
+        return Err(err);
     }
+    set_host_error(state, None);
     Ok(build_status(state))
 }
 
@@ -255,6 +336,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(HostState {
             child: Mutex::new(None),
+            last_error: Mutex::new(None),
+            last_root: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             is_desktop,
@@ -272,10 +355,13 @@ pub fn run() {
             let quit_i = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &view_i, &data_i, &quit_i])?;
 
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+            let mut tray_builder = TrayIconBuilder::new()
                 .menu(&menu)
-                .tooltip("GMap — стол кампании")
+                .tooltip("GMap — стол кампании");
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+            let _tray = tray_builder
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
@@ -329,7 +415,10 @@ pub fn run() {
                             ));
                         }
                     }
-                    Err(e) => eprintln!("[gmap] host start failed: {e}"),
+                    Err(e) => {
+                        eprintln!("[gmap] host start failed: {e}");
+                        // last_error already stored; badge polls host_status
+                    }
                 }
             }
 

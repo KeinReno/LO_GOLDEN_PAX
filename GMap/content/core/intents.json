@@ -40,11 +40,43 @@
     "ops": ["transfer"],
     "params": ["toFactionId", "currencyId", "amount"]
   },
+  "intent.market_convert": {
+    "id": "intent.market_convert",
+    "ap": 0,
+    "ops": ["market_convert"],
+    "params": ["fromCurrency", "toCurrency", "amountFrom", "amountTo"]
+  },
+  "intent.market_offer": {
+    "id": "intent.market_offer",
+    "ap": 1,
+    "ops": ["market_offer"],
+    "params": ["side", "giveCurrency", "giveAmount", "wantCurrency", "wantAmount"]
+  },
+  "intent.market_cancel": {
+    "id": "intent.market_cancel",
+    "ap": 0,
+    "ops": ["market_cancel"],
+    "params": ["offerId"]
+  },
   "intent.set_tax": {
     "id": "intent.set_tax",
     "ap": 1,
     "ops": ["set_tax"],
     "params": ["taxSlot", "tierId"]
+  },
+  "intent.blockade": {
+    "id": "intent.blockade",
+    "ap": 1,
+    "legacyOrderType": "blockade",
+    "ops": ["blockade"],
+    "params": ["fleetId", "toSystemId"]
+  },
+  "intent.fortify": {
+    "id": "intent.fortify",
+    "ap": 1,
+    "legacyOrderType": "fortify",
+    "ops": ["fortify"],
+    "params": ["fleetId", "toSystemId"]
   },
   "intent.scout_reveal": {
     "id": "intent.scout_reveal",

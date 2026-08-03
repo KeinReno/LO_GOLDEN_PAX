@@ -72,6 +72,12 @@ export function backupTurnSnapshot(turn, reason = "manual") {
   copyIf(TABLE_META_PATH, "table-meta.json");
   copyIf(path.join(DATA_DIR, "fog-masks.json"), "fog-masks.json");
   copyIf(path.join(DATA_DIR, "engagements.json"), "engagements.json");
+  copyIf(path.join(DATA_DIR, "market-rates.json"), "market-rates.json");
+  copyIf(path.join(DATA_DIR, "market-orders.json"), "market-orders.json");
+  copyIf(path.join(DATA_DIR, "faction-contacts.json"), "faction-contacts.json");
+  copyIf(path.join(DATA_DIR, "diplo-offers.json"), "diplo-offers.json");
+  copyIf(path.join(DATA_DIR, "market-membership.json"), "market-membership.json");
+  copyIf(path.join(DATA_DIR, "market-history.json"), "market-history.json");
   writeJson(path.join(dir, "backup-meta.json"), {
     turn: turn ?? null,
     reason,

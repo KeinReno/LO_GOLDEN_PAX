@@ -1,5 +1,6 @@
 /**
- * Password Archon + FoW: only SYS-561..570 visible for Карнед.
+ * Password Archon + FoW: core Karned cluster (+ fringe) visible.
+ * Matches legacy SYS-561..570 or renamed canon (Стрида, Ауралис, …).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -9,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const FACTION = "faction_karned";
 const VISIBLE = new Set([
+  // legacy ids
   "SYS-561",
   "SYS-562",
   "SYS-563",
@@ -19,6 +21,22 @@ const VISIBLE = new Set([
   "SYS-568",
   "SYS-569",
   "SYS-570",
+  // renamed canon
+  "Ауралис",
+  "Голоколь",
+  "Плазмир",
+  "Корнепеснь",
+  "Стрида",
+  "Абиссаль",
+  "Нанокарст",
+  // Damyl corridor from Голоколь
+  "SYS-765",
+  "SYS-540",
+  "SYS-763",
+  "SYS-192",
+  "Стык 8",
+  "Улей-Пепел",
+  "COR-776",
 ]);
 
 const files = [

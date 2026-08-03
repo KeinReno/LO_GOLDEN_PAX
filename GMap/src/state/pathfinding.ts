@@ -1,9 +1,30 @@
-import type { WorldState } from "./types";
+import type { LinkType, WorldState } from "./types";
+
+/** Who is trying to traverse hyperlane links. */
+export type TravelMode = "fleet" | "legion" | "any";
+
+/**
+ * Fleet: all link types except damyl_planet (infantry gates).
+ * Legion: all link types.
+ * any: unrestricted (fog / supply / generic graph walks).
+ */
+export function linkAllowsTravel(
+  type: LinkType | string | undefined,
+  mode: TravelMode = "any",
+): boolean {
+  if (mode === "any" || mode === "legion") return true;
+  return type !== "damyl_planet";
+}
 
 /** Adjacent system ids via hyperlane graph. */
-export function neighborIds(world: WorldState, systemId: string): string[] {
+export function neighborIds(
+  world: WorldState,
+  systemId: string,
+  mode: TravelMode = "any",
+): string[] {
   const out: string[] = [];
   for (const link of world.links ?? []) {
+    if (!linkAllowsTravel(link.type, mode)) continue;
     if (link.fromId === systemId) out.push(link.toId);
     else if (link.toId === systemId) out.push(link.fromId);
   }
@@ -15,8 +36,9 @@ export function hopDistance(
   world: WorldState,
   fromId: string | null | undefined,
   toId: string | null | undefined,
+  mode: TravelMode = "any",
 ): number {
-  const path = hopPath(world, fromId, toId);
+  const path = hopPath(world, fromId, toId, mode);
   if (!fromId || !toId) return Infinity;
   if (fromId === toId) return 0;
   if (path.length < 2) return Infinity;
@@ -31,6 +53,7 @@ export function hopPath(
   world: WorldState,
   fromId: string | null | undefined,
   toId: string | null | undefined,
+  mode: TravelMode = "any",
 ): string[] {
   if (!fromId || !toId) return [];
   if (fromId === toId) return [fromId];
@@ -38,7 +61,7 @@ export function hopPath(
   const parent = new Map<string, string | null>([[fromId, null]]);
   while (q.length) {
     const id = q.shift()!;
-    for (const n of neighborIds(world, id)) {
+    for (const n of neighborIds(world, id, mode)) {
       if (parent.has(n)) continue;
       parent.set(n, id);
       if (n === toId) {

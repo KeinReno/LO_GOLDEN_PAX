@@ -1,10 +1,15 @@
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useWorldStore } from "../state/worldStore";
 import type { DiplomacyRelation, Faction } from "../state/types";
 import { DIPLOMACY_LABELS } from "../state/defaults";
 import { resolvePolityKind, FACTION_NAME_FONT_OPTIONS } from "../state/territory";
 import { fileToEmblemDataUrl } from "../io/emblemIo";
-import { LAYER_PRESETS } from "../ui/mapLayers";
+import {
+  MAP_MODE_PRESETS,
+  applyLayerPreset,
+  type MapLayerFlags,
+} from "../ui/mapLayers";
 
 type PolityTab = "profile" | "territory" | "diplomacy" | "map";
 
@@ -370,6 +375,46 @@ function ProfileTab({ faction }: { faction: Faction }) {
         отрицательная — засады и отказы.
       </p>
       <label className="field">
+        <span>Доктрина / заметки (игроку)</span>
+        <textarea
+          rows={5}
+          value={faction.notes ?? ""}
+          onChange={(e) => updateFaction(faction.id, { notes: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>GM notes (скрыто от игрока)</span>
+        <textarea
+          rows={3}
+          value={faction.gmNotes ?? ""}
+          onChange={(e) =>
+            updateFaction(faction.id, { gmNotes: e.target.value })
+          }
+        />
+      </label>
+      {(faction.npcs?.length ?? 0) > 0 && (
+        <div className="field">
+          <span>Двор (NPC)</span>
+          <ul className="hq-npc-list">
+            {faction.npcs!.map((n) => (
+              <li key={n.id} className="hq-npc-item">
+                <strong>{n.name}</strong>
+                {n.title ? <span className="hint"> — {n.title}</span> : null}
+                {n.gmNotes ? (
+                  <p className="hint" style={{ margin: "0.2rem 0 0" }}>
+                    GM: {n.gmNotes}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <p className="hint">
+            Редактирование списка NPC — через JSON / скрипт сида (пока
+            read-only в UI).
+          </p>
+        </div>
+      )}
+      <label className="field">
         <span>Герб</span>
         <input
           type="file"
@@ -577,6 +622,31 @@ function DiplomacyTab({ faction }: { faction: Faction }) {
 function MapTab({ faction }: { faction: Faction }) {
   const world = useWorldStore((s) => s.world);
   const applyMapLayerFlags = useWorldStore((s) => s.applyMapLayerFlags);
+  const layerFlags = useWorldStore(
+    useShallow(
+      (s): MapLayerFlags => ({
+        showLinks: s.showLinks,
+        showOwnership: s.showOwnership,
+        showTerritory: s.showTerritory,
+        showSectors: s.showSectors,
+        showFactionLabels: s.showFactionLabels,
+        showLabels: s.showLabels,
+        showFleets: s.showFleets,
+        showLegions: s.showLegions,
+        showOrders: s.showOrders,
+        showDiplomacy: s.showDiplomacy,
+        showFogPreview: s.showFogPreview,
+        gmOmniscientView: s.gmOmniscientView,
+        showJumpRange: s.showJumpRange,
+        showSupply: s.showSupply,
+        showCaravans: s.showCaravans,
+        showBlockades: s.showBlockades,
+        showDeadZones: s.showDeadZones,
+        showTraffic: s.showTraffic,
+        showQuests: s.showQuests,
+      }),
+    ),
+  );
   const showFactionLabels = useWorldStore((s) => s.showFactionLabels);
   const toggleShowFactionLabels = useWorldStore(
     (s) => s.toggleShowFactionLabels,
@@ -597,17 +667,17 @@ function MapTab({ faction }: { faction: Faction }) {
     <div className="polity-map-tab">
       <h4>Пресеты слоёв</h4>
       <div className="layer-preset-row">
-        {LAYER_PRESETS.filter(
-          (p) => p.id === "politics" || p.id === "overview",
-        ).map((p) => (
+        {MAP_MODE_PRESETS.map((mode) => (
           <button
-            key={p.id}
+            key={mode.id}
             type="button"
             className="btn ghost"
-            title={p.hint}
-            onClick={() => applyMapLayerFlags(p.flags)}
+            title={`${mode.hint} · ${mode.hotkey}`}
+            onClick={() =>
+              applyMapLayerFlags(applyLayerPreset(layerFlags, mode.id))
+            }
           >
-            {p.label}
+            {mode.label}
           </button>
         ))}
       </div>

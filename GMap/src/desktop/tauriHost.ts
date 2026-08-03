@@ -12,6 +12,7 @@ export type HostStatus = {
   root: string;
   pid?: number | null;
   desktop: boolean;
+  lastError?: string | null;
 };
 
 type TauriInvoke = <T>(

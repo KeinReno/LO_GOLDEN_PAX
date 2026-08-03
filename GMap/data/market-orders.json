@@ -1,0 +1,18 @@
+{
+  "offers": [
+    {
+      "id": "mkt_1785609478013_20kku",
+      "factionId": "fac_a",
+      "side": "sell",
+      "giveCurrency": "currency.metal",
+      "giveAmount": 20,
+      "wantCurrency": "currency.supply",
+      "wantAmount": 10,
+      "createdTurn": 2,
+      "status": "cancelled",
+      "escrowGiveAmount": 20,
+      "cancelledTurn": 2,
+      "cancelledAt": "2026-08-01T18:37:58.030Z"
+    }
+  ]
+}

@@ -7,6 +7,12 @@ import {
   type HostStatus,
 } from "../desktop/tauriHost";
 
+function rootLooksWrong(root: string | undefined): boolean {
+  if (!root || root === "." || root.length < 3) return true;
+  const norm = root.replace(/\\/g, "/").toLowerCase();
+  return !norm.includes("gmap") && !norm.endsWith("/server");
+}
+
 /** Compact host status for TopBar when running inside Tauri. */
 export function DesktopHostBadge() {
   const [status, setStatus] = useState<HostStatus | null>(null);
@@ -28,6 +34,11 @@ export function DesktopHostBadge() {
 
   if (!desktop) return null;
 
+  const rootHint =
+    !status?.running && rootLooksWrong(status?.root)
+      ? "Корень GMap не найден — проверьте GMAP_ROOT"
+      : null;
+
   return (
     <div
       className="desktop-host-badge"
@@ -38,6 +49,7 @@ export function DesktopHostBadge() {
         gap: 6,
         fontSize: 12,
         opacity: 0.9,
+        flexWrap: "wrap",
       }}
     >
       <span
@@ -53,6 +65,26 @@ export function DesktopHostBadge() {
           ? `Хост :${status.port}`
           : "Хост выкл"}
       </span>
+      {!status?.running && status?.lastError && (
+        <span
+          className="hint"
+          title={status.lastError}
+          style={{
+            color: "#e08a7a",
+            maxWidth: 220,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {status.lastError}
+        </span>
+      )}
+      {!status?.running && rootHint && (
+        <span className="hint" title={status?.root} style={{ fontSize: 10, opacity: 0.75 }}>
+          {rootHint}
+        </span>
+      )}
       {!status?.running && (
         <button
           type="button"
@@ -71,6 +103,7 @@ export function DesktopHostBadge() {
                     ? "IPC ошибка — перезапустите tauri:dev"
                     : raw.slice(0, 80),
                 );
+                await refresh();
               }
             })();
           }}

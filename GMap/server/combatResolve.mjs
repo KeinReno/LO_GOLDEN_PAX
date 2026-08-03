@@ -29,6 +29,101 @@ function unitDef(content, typeOrId) {
   );
 }
 
+function mapResource(content, idOrName) {
+  if (!idOrName) return null;
+  return (
+    content.map_resources?.[idOrName] ||
+    Object.values(content.map_resources || {}).find(
+      (r) => r.id === idOrName || r.name === idOrName,
+    )
+  );
+}
+
+function groupHasSlotFills(group) {
+  if (Object.keys(group.filledSlots || {}).length > 0) return true;
+  for (const s of group.compSlots || []) {
+    if (s.resourceId || s.resource) return true;
+  }
+  return false;
+}
+
+/**
+ * Resolve a combat slot role to filled resource properties + bottleneck tier.
+ * @returns {{ properties: string[], effectiveTier: number|null } | null}
+ */
+function resolveRoleSlot(group, role, content) {
+  const resIds = [];
+  const fill = group.filledSlots?.[role];
+  if (fill) resIds.push(fill);
+  for (const s of group.compSlots || []) {
+    if (s.role === role && (s.resourceId || s.resource)) {
+      resIds.push(s.resourceId || s.resource);
+    }
+  }
+  if (resIds.length === 0) return null;
+  const resources = resIds.map((id) => mapResource(content, id)).filter(Boolean);
+  if (resources.length === 0) return null;
+  const tiers = resources
+    .map((r) => Number(r.tier))
+    .filter((t) => Number.isFinite(t));
+  const effectiveTier = tiers.length ? Math.min(...tiers) : null;
+  const properties = [
+    ...new Set(resources.flatMap((r) => r.properties || [])),
+  ];
+  return { properties, effectiveTier };
+}
+
+/**
+ * Property-layer damage multiplier (v1). No-op when attacker has no slot fills.
+ * @param {object} attackerGroup
+ * @param {object} defenderGroup
+ * @param {object} content
+ * @returns {number}
+ */
+export function propertyCombatMult(attackerGroup, defenderGroup, content) {
+  const cfg = content.combat_property_matchups;
+  if (!cfg || !groupHasSlotFills(attackerGroup)) return 1;
+
+  let mult = 1;
+  const weapon = resolveRoleSlot(attackerGroup, "weapon", content);
+  const shield = resolveRoleSlot(defenderGroup, "shield", content);
+  const hull = resolveRoleSlot(defenderGroup, "hull", content);
+
+  if (weapon) {
+    const wp = weapon.properties;
+    if (wp.includes("weapon_amp")) mult *= 1.2;
+    if (wp.includes("matter_destroy")) mult *= 1.5;
+  }
+
+  if (weapon && shield) {
+    const wProps = weapon.properties;
+    if (wProps.includes("psion_suppress") || wProps.includes("matter_destroy")) {
+      mult *= 1.4;
+    } else if (shield.properties.includes("shield")) {
+      mult *= 0.6;
+    }
+  }
+
+  if (weapon && hull) {
+    const wt = weapon.effectiveTier;
+    const ht = hull.effectiveTier;
+    if (wt != null && ht != null) {
+      mult *= wt > ht ? 1.5 : 0.7;
+    }
+  }
+
+  return mult;
+}
+
+function meanPropertyMultVsSample(attackers, defenderSample, content) {
+  if (!attackers.length || !defenderSample) return 1;
+  let sum = 0;
+  for (const a of attackers) {
+    sum += propertyCombatMult(a, defenderSample, content);
+  }
+  return sum / attackers.length;
+}
+
 /**
  * Flatten fleet/legion into fight groups.
  * @param {"space"|"ground"|"assault"} theater
@@ -57,6 +152,9 @@ export function gatherGroups(world, side, theater, content) {
         shields: def.stats?.shields ?? 0,
         accuracy: def.stats?.accuracy ?? 50,
         targeting: def.targeting || "line_first",
+        slotDefs: def.slots || [],
+        filledSlots: { ...(g.filledSlots || g.slotFills || {}) },
+        compSlots: g.slots || [],
         ref: g,
       });
     }
@@ -93,6 +191,9 @@ export function gatherGroups(world, side, theater, content) {
         shields: 0,
         accuracy: 55,
         targeting: def.targeting || "infantry_first",
+        slotDefs: def.slots || [],
+        filledSlots: { ...(g.filledSlots || g.slotFills || {}) },
+        compSlots: g.slots || [],
         ref: g,
         legion,
       });
@@ -240,6 +341,9 @@ export function resolveEngagementFight(world, engagement) {
   const rolesB = rolePower(groupsB);
   let powerA = totalPower(rolesA, matchups, rolesB) * (stA.powerMult ?? 1);
   let powerB = totalPower(rolesB, matchups, rolesA) * (stB.powerMult ?? 1);
+
+  powerA *= meanPropertyMultVsSample(groupsA, groupsB[0], content);
+  powerB *= meanPropertyMultVsSample(groupsB, groupsA[0], content);
 
   // Retreat: mostly escape
   if ((sideA.stance || "hold") === "retreat" && powerA < powerB * 0.8) {

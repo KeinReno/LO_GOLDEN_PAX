@@ -15,7 +15,13 @@ import {
   activatePendingPolicies,
   queueTaxChange,
   transferResources,
+  marketConvert,
 } from "./economyTick.mjs";
+import {
+  placeMarketOffer,
+  cancelMarketOffer,
+  matchMarketOffers,
+} from "./marketOrders.mjs";
 import {
   collectContactsAndAttacks,
   resolveOpenEngagements,
@@ -25,9 +31,166 @@ import {
   processSystemTimers,
   applyRefugeeConvoy,
 } from "./narrative.mjs";
+import { hopPath, linkAllowsTravel } from "./pathfinding.mjs";
+import {
+  getKnownFactionIds,
+  getTradePartnerIds,
+  refreshAllFactionContacts,
+} from "./factionIntel.mjs";
+import { resolveVisibleWithFog, readFog } from "./fogStore.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
+}
+
+/**
+ * Start or complete travel along hyperlanes.
+ * One hop this tick; remaining systems stay in fleet.route (incl. destination).
+ * @param {"move"|"blockade"|"fortify"} arriveStance stance when route empties
+ */
+function beginFleetTravel(world, fleet, toId, arriveStance, journal, meta) {
+  const fromId = fleet.systemId;
+  if (fromId === toId) {
+    fleet.route = [];
+    fleet.stance = arriveStance;
+    return { ok: true, fromId, toId, arrived: true, hopsLeft: 0 };
+  }
+  const path = hopPath(world, fromId, toId, "fleet");
+  if (path.length < 2) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: meta.intentId,
+      reason: "no_path",
+      fleetId: fleet.id,
+      fromId,
+      toId,
+    });
+    return { ok: false };
+  }
+  // path[0]=from, path[1]=next, … path[n]=dest
+  const nextId = path[1];
+  const remaining = path.slice(2); // may be empty if 1-hop
+  fleet.systemId = nextId;
+  fleet.route = remaining.length ? [...remaining] : [];
+  if (fleet.route.length === 0) {
+    fleet.stance = arriveStance;
+    delete fleet.pendingArrival;
+  } else {
+    fleet.stance = "move";
+    fleet.pendingArrival = { stance: arriveStance, systemId: toId };
+  }
+  journalPush(journal, {
+    type: meta.type,
+    intentId: meta.intentId,
+    fleetId: fleet.id,
+    fromId,
+    stepTo: nextId,
+    toId,
+    hopsLeft: fleet.route.length,
+    arrived: fleet.route.length === 0,
+    factionId: meta.factionId,
+  });
+  return {
+    ok: true,
+    fromId,
+    toId,
+    arrived: fleet.route.length === 0,
+    hopsLeft: fleet.route.length,
+  };
+}
+
+/** Advance fleets/legions with pending routes by one hop each tick. */
+function advanceUnitRoutes(world, journal) {
+  for (const fleet of world.fleets ?? []) {
+    // Migrate legacy underscore fields from earlier builds.
+    if (fleet._arriveStance && !fleet.pendingArrival) {
+      fleet.pendingArrival = {
+        stance: fleet._arriveStance,
+        systemId: fleet._arriveSystemId || fleet.systemId,
+      };
+    }
+    delete fleet._arriveStance;
+    delete fleet._arriveSystemId;
+
+    const route = fleet.route ?? [];
+    if (!route.length) {
+      delete fleet.pendingArrival;
+      continue;
+    }
+    const fromId = fleet.systemId;
+    const nextId = route[0];
+    const rest = route.slice(1);
+    if (!(world.systems ?? []).some((s) => s.id === nextId)) {
+      fleet.route = [];
+      delete fleet.pendingArrival;
+      continue;
+    }
+    const hopLink = (world.links ?? []).find(
+      (l) =>
+        (l.fromId === fromId && l.toId === nextId) ||
+        (l.fromId === nextId && l.toId === fromId),
+    );
+    if (hopLink && !linkAllowsTravel(hopLink.type, "fleet")) {
+      fleet.route = [];
+      delete fleet.pendingArrival;
+      journalPush(journal, {
+        type: "reject",
+        reason: "fleet_blocked_link",
+        fleetId: fleet.id,
+        fromId,
+        toId: nextId,
+        linkType: hopLink.type,
+        factionId: fleet.factionId,
+      });
+      continue;
+    }
+    fleet.systemId = nextId;
+    fleet.route = rest;
+    const arrived = rest.length === 0;
+    if (arrived) {
+      const stance = fleet.pendingArrival?.stance || "idle";
+      fleet.stance = stance;
+      if (stance === "blockade") {
+        const sys = (world.systems ?? []).find((s) => s.id === nextId);
+        if (sys) sys.blockaded = true;
+      }
+      delete fleet.pendingArrival;
+    } else {
+      fleet.stance = "move";
+    }
+    journalPush(journal, {
+      type: "route_step",
+      fleetId: fleet.id,
+      fromId,
+      toId: nextId,
+      hopsLeft: rest.length,
+      arrived,
+      factionId: fleet.factionId,
+    });
+  }
+  for (const legion of world.legions ?? []) {
+    const route = legion.route ?? [];
+    if (!route.length) continue;
+    const fromId = legion.systemId;
+    const nextId = route[0];
+    const rest = route.slice(1);
+    if (!(world.systems ?? []).some((s) => s.id === nextId)) {
+      legion.route = [];
+      continue;
+    }
+    legion.systemId = nextId;
+    legion.route = rest;
+    legion.status = rest.length ? "move" : "idle";
+    journalPush(journal, {
+      type: "route_step_legion",
+      legionId: legion.id,
+      fromId,
+      toId: nextId,
+      hopsLeft: rest.length,
+      arrived: rest.length === 0,
+      factionId: legion.factionId,
+    });
+  }
 }
 
 function applyMoveFleet(world, intent, journal) {
@@ -59,19 +222,12 @@ function applyMoveFleet(world, intent, journal) {
     });
     return false;
   }
-  const fromId = fleet.systemId;
-  fleet.systemId = toId;
-  fleet.route = [];
-  fleet.stance = "move";
-  journalPush(journal, {
+  const travel = beginFleetTravel(world, fleet, toId, "idle", journal, {
     type: "move_fleet",
     intentId: intent.id,
-    fleetId,
-    fromId,
-    toId,
     factionId: intent.factionId,
   });
-  return true;
+  return travel.ok;
 }
 
 function applyMoveLegion(world, intent, journal) {
@@ -95,15 +251,43 @@ function applyMoveLegion(world, intent, journal) {
     return false;
   }
   const fromId = legion.systemId;
-  legion.systemId = toId;
-  legion.route = [];
-  legion.status = "move";
+  if (fromId === toId) {
+    legion.route = [];
+    legion.status = "idle";
+    journalPush(journal, {
+      type: "move_legion",
+      intentId: intent.id,
+      legionId,
+      fromId,
+      toId,
+      arrived: true,
+      factionId: intent.factionId,
+    });
+    return true;
+  }
+  const path = hopPath(world, fromId, toId, "legion");
+  if (path.length < 2) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "no_path",
+    });
+    return false;
+  }
+  const nextId = path[1];
+  const remaining = path.slice(2);
+  legion.systemId = nextId;
+  legion.route = remaining;
+  legion.status = remaining.length ? "move" : "idle";
   journalPush(journal, {
     type: "move_legion",
     intentId: intent.id,
     legionId,
     fromId,
+    stepTo: nextId,
     toId,
+    hopsLeft: remaining.length,
+    arrived: remaining.length === 0,
     factionId: intent.factionId,
   });
   return true;
@@ -206,6 +390,92 @@ function applyCombatStance(world, intent, journal) {
   return true;
 }
 
+function applyBlockade(world, intent, journal) {
+  const fleetId = intent.payload?.fleetId;
+  const toId = intent.payload?.toSystemId;
+  const fleet = (world.fleets ?? []).find((f) => f.id === fleetId);
+  if (!fleet) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "fleet_missing",
+    });
+    return false;
+  }
+  if (fleet.factionId !== intent.factionId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "fleet_not_owned",
+    });
+    return false;
+  }
+  const sys = (world.systems ?? []).find((s) => s.id === toId);
+  if (!sys) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "system_missing",
+    });
+    return false;
+  }
+  const travel = beginFleetTravel(world, fleet, toId, "blockade", journal, {
+    type: "blockade",
+    intentId: intent.id,
+    factionId: intent.factionId,
+  });
+  if (!travel.ok) return false;
+  if (travel.arrived) {
+    sys.blockaded = true;
+    fleet.stance = "blockade";
+  }
+  return true;
+}
+
+function applyFortify(world, intent, journal) {
+  const fleetId = intent.payload?.fleetId;
+  const toId = intent.payload?.toSystemId;
+  const fleet = (world.fleets ?? []).find((f) => f.id === fleetId);
+  if (!fleet) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "fleet_missing",
+    });
+    return false;
+  }
+  if (fleet.factionId !== intent.factionId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "fleet_not_owned",
+    });
+    return false;
+  }
+  if (toId && !(world.systems ?? []).some((s) => s.id === toId)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "system_missing",
+    });
+    return false;
+  }
+  const holdSystemId = toId || fleet.systemId;
+  const travel = beginFleetTravel(
+    world,
+    fleet,
+    holdSystemId,
+    "fortify",
+    journal,
+    {
+      type: "fortify",
+      intentId: intent.id,
+      factionId: intent.factionId,
+    },
+  );
+  return travel.ok;
+}
+
 function applyScoutReveal(world, intent, journal) {
   const systemId = intent.payload?.systemId || intent.payload?.toSystemId;
   if (!systemId || !(world.systems ?? []).some((s) => s.id === systemId)) {
@@ -250,9 +520,20 @@ function applySetTax(world, intent, journal) {
 }
 
 function applyTransfer(world, intent, journal) {
+  const toId = intent.payload?.toFactionId;
+  const visible = resolveVisibleWithFog(world, intent.factionId, readFog());
+  const known = getKnownFactionIds(world, intent.factionId, [...visible]);
+  if (!toId || !known.has(toId)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "получатель неизвестен (нет контакта)",
+    });
+    return false;
+  }
   const result = transferResources(
     intent.factionId,
-    intent.payload?.toFactionId,
+    toId,
     intent.payload?.currencyId || "currency.metal",
     intent.payload?.amount,
     world.meta?.turn,
@@ -277,6 +558,109 @@ function applyTransfer(world, intent, journal) {
   return true;
 }
 
+function applyMarketOffer(world, intent, journal) {
+  const venue =
+    intent.payload?.venue === "common" ? "common" : "contacts";
+  if (venue === "contacts") {
+    const visible = resolveVisibleWithFog(world, intent.factionId, readFog());
+    const known = getKnownFactionIds(world, intent.factionId, [...visible]);
+    const partners = getTradePartnerIds(world, intent.factionId, known);
+    if (partners.length === 0) {
+      journalPush(journal, {
+        type: "reject",
+        intentId: intent.id,
+        reason: "нет торговых партнёров (нужен договор trade/alliance)",
+      });
+      return false;
+    }
+  }
+  const result = placeMarketOffer(
+    intent.factionId,
+    intent.payload?.side,
+    intent.payload?.giveCurrency,
+    intent.payload?.giveAmount,
+    intent.payload?.wantCurrency,
+    intent.payload?.wantAmount,
+    world.meta?.turn,
+    intent.id,
+    venue,
+  );
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "market_offer",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    offerId: result.offer.id,
+    side: result.offer.side,
+    giveCurrency: result.offer.giveCurrency,
+    giveAmount: result.offer.giveAmount,
+    wantCurrency: result.offer.wantCurrency,
+    wantAmount: result.offer.wantAmount,
+  });
+  return true;
+}
+
+function applyMarketCancel(world, intent, journal) {
+  const result = cancelMarketOffer(
+    intent.payload?.offerId,
+    intent.factionId,
+    world.meta?.turn,
+    intent.id,
+  );
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "market_cancel",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    offerId: result.offer.id,
+  });
+  return true;
+}
+
+function applyMarketConvert(world, intent, journal) {
+  const result = marketConvert(
+    intent.factionId,
+    intent.payload?.fromCurrency,
+    intent.payload?.toCurrency,
+    intent.payload?.amountFrom,
+    intent.payload?.amountTo,
+    world.meta?.turn,
+    intent.id,
+  );
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "market_convert",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    fromCurrency: intent.payload?.fromCurrency,
+    toCurrency: intent.payload?.toCurrency,
+    amountFrom: result.amountFrom,
+    amountTo: result.amountTo,
+  });
+  return true;
+}
+
 function applyRefugeeConvoyIntent(world, intent, journal) {
   return applyRefugeeConvoy(world, intent, journal);
 }
@@ -286,10 +670,15 @@ const APPLIERS = {
   "intent.move_legion": applyMoveLegion,
   "intent.claim_system": applyClaim,
   "intent.attack_system": applyAttackMarker,
+  "intent.blockade": applyBlockade,
+  "intent.fortify": applyFortify,
   "intent.combat_stance": applyCombatStance,
   "intent.scout_reveal": applyScoutReveal,
   "intent.set_tax": applySetTax,
   "intent.transfer": applyTransfer,
+  "intent.market_convert": applyMarketConvert,
+  "intent.market_offer": applyMarketOffer,
+  "intent.market_cancel": applyMarketCancel,
   "intent.refugee_convoy": applyRefugeeConvoyIntent,
 };
 
@@ -326,12 +715,22 @@ export function processTurn(opts = {}) {
   const journal = [];
   processSystemTimers(world, turn, journal);
 
+  // Continue multi-hop routes from previous ticks (one hop each).
+  advanceUnitRoutes(world, journal);
+
   const intents = readIntents()
     .filter((i) => i.status === "pending" && i.turn === turn)
     .sort((a, b) => {
       // transfers first, then rest by time
       const rank = (d) =>
-        d === "intent.transfer" ? 0 : d === "intent.set_tax" ? 1 : 2;
+        d === "intent.transfer" ||
+        d === "intent.market_convert" ||
+        d === "intent.market_offer" ||
+        d === "intent.market_cancel"
+          ? 0
+          : d === "intent.set_tax"
+            ? 1
+            : 2;
       const r = rank(a.defId) - rank(b.defId);
       if (r !== 0) return r;
       return String(a.submittedAt).localeCompare(String(b.submittedAt));
@@ -367,6 +766,13 @@ export function processTurn(opts = {}) {
       };
     }
   }
+
+  const matchResult = matchMarketOffers(turn, world);
+  for (const e of matchResult.journal) journalPush(journal, e);
+
+  refreshAllFactionContacts(world, (w, fid) =>
+    resolveVisibleWithFog(w, fid, readFog()),
+  );
 
   // P5: engagements from attacks + auto war contacts
   const attackApplied = nextIntents.filter(

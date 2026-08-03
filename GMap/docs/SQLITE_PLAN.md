@@ -1,6 +1,6 @@
 # SQLite — подготовка почвы (P8.7)
 
-> Статус: **groundwork only**. Канон пока JSON (`GMAP_STORE=file`).
+> Статус: **readiness landed** (ping + JSON sizes в OpsHealthPanel). Канон пока JSON (`GMAP_STORE=file`). Полная миграция — опционально.
 
 ## Когда переключать
 
@@ -57,4 +57,6 @@ set GMAP_STORE=sqlite
 
 ## API проверки
 
-`GET /api/store/ping` → `{ ok, driver }`.
+`GET /api/store/ping` → `{ ok, driver, path?, betterSqlite3 }`.
+
+`GET /api/ops/health` (master) также включает `store` и `dataSizes` (published/ledger/intents bytes).

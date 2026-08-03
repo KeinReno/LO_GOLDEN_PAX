@@ -199,6 +199,13 @@ export function processSystemTimers(world, turn, journal) {
     const keep = [];
     for (const t of sys.timers) {
       if ((t.expiresTurn ?? 0) <= turn) {
+        journal.push({
+          type: "timer_fired",
+          systemId: sys.id,
+          systemName: sys.name,
+          label: t.label || null,
+          action: t.action?.kind || "noop",
+        });
         applyTimerAction(world, sys, t.action, journal);
         n++;
       } else {

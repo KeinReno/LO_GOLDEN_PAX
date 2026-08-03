@@ -13,6 +13,7 @@ const FILE_KEYS = [
   "rules",
   "effects",
   "currencies",
+  "economy_schema",
   "id-aliases",
   "intents",
   "ships",
@@ -23,10 +24,16 @@ const FILE_KEYS = [
   "pois",
   "combat_matchups",
   "combat_stances",
+  "combat_property_matchups",
   "consequences",
   "system_presets",
   "buildings",
   "colonies",
+  "technologies",
+  "space_objects",
+  "superpower_market",
+  "faction_currencies",
+  "market_quote_seed",
 ];
 
 let cache = null;
@@ -84,6 +91,7 @@ function loadContentPacks(packIds = ["core"]) {
   let rules = {};
   let effects = { meta: {}, effects: {} };
   let currencies = {};
+  let economy_schema = {};
   let intents = {};
   let ships = {};
   let units = {};
@@ -93,10 +101,16 @@ function loadContentPacks(packIds = ["core"]) {
   let pois = {};
   let combat_matchups = {};
   let combat_stances = {};
+  let combat_property_matchups = {};
   let consequences = {};
   let system_presets = {};
   let buildings = {};
   let colonies = {};
+  let technologies = {};
+  let space_objects = {};
+  let superpower_market = {};
+  let faction_currencies = {};
+  let market_quote_seed = {};
   let id_aliases = { version: 1, ships: {}, resources: {}, units: {} };
 
   for (const id of packIds) {
@@ -112,6 +126,7 @@ function loadContentPacks(packIds = ["core"]) {
       effects.meta = pack.effects.meta || effects.meta;
     }
     currencies = mergeDicts(currencies, pack.currencies);
+    economy_schema = mergeDicts(economy_schema, pack.economy_schema);
     intents = mergeDicts(intents, pack.intents);
     ships = mergeDicts(ships, pack.ships);
     units = mergeDicts(units, pack.units);
@@ -121,10 +136,39 @@ function loadContentPacks(packIds = ["core"]) {
     pois = mergeDicts(pois, pack.pois);
     combat_matchups = mergeDicts(combat_matchups, pack.combat_matchups);
     combat_stances = mergeDicts(combat_stances, pack.combat_stances);
+    combat_property_matchups = mergeDicts(combat_property_matchups, pack.combat_property_matchups);
     consequences = mergeDicts(consequences, pack.consequences);
     system_presets = mergeDicts(system_presets, pack.system_presets);
     buildings = mergeDicts(buildings, pack.buildings);
     colonies = mergeDicts(colonies, pack.colonies);
+    technologies = mergeDicts(technologies, pack.technologies);
+    space_objects = mergeDicts(space_objects, pack.space_objects);
+    if (pack.superpower_market) {
+      // Deep-ish merge: keep relationRank, merge superpowers dict.
+      superpower_market = {
+        ...superpower_market,
+        ...pack.superpower_market,
+        relationRank: {
+          ...(superpower_market.relationRank || {}),
+          ...(pack.superpower_market.relationRank || {}),
+        },
+        superpowers: {
+          ...(superpower_market.superpowers || {}),
+          ...(pack.superpower_market.superpowers || {}),
+        },
+      };
+    }
+    faction_currencies = mergeDicts(
+      faction_currencies,
+      pack.faction_currencies,
+    );
+    if (
+      pack.market_quote_seed &&
+      typeof pack.market_quote_seed === "object" &&
+      (pack.market_quote_seed.resources || pack.market_quote_seed.currencies)
+    ) {
+      market_quote_seed = pack.market_quote_seed;
+    }
     if (pack.id_aliases) {
       id_aliases = {
         version: pack.id_aliases.version ?? id_aliases.version,
@@ -144,6 +188,7 @@ function loadContentPacks(packIds = ["core"]) {
     rules,
     effects,
     currencies,
+    economy_schema,
     intents,
     ships,
     units,
@@ -153,10 +198,16 @@ function loadContentPacks(packIds = ["core"]) {
     pois,
     combat_matchups,
     combat_stances,
+    combat_property_matchups,
     consequences,
     system_presets,
     buildings,
     colonies,
+    technologies,
+    space_objects,
+    superpower_market,
+    faction_currencies,
+    market_quote_seed,
     id_aliases,
     loadedAt: new Date().toISOString(),
   };
@@ -184,6 +235,7 @@ export function getPublicContent() {
       fog: c.rules.fog,
     },
     currencies: c.currencies,
+    economy_schema: c.economy_schema,
     intents: c.intents,
     ships: c.ships,
     units: c.units,
@@ -195,7 +247,12 @@ export function getPublicContent() {
     system_presets: c.system_presets,
     buildings: c.buildings,
     colonies: c.colonies,
+    technologies: c.technologies,
+    space_objects: c.space_objects,
     combat_stances: c.combat_stances,
+    combat_property_matchups: c.combat_property_matchups,
+    faction_currencies: c.faction_currencies,
+    market_quote_seed: c.market_quote_seed,
     effects: Object.keys(c.effects.effects || {}),
     loadedAt: c.loadedAt,
   };

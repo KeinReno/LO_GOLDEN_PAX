@@ -99,7 +99,7 @@ export const LINK_TYPE_LABELS: Record<string, string> = {
   corridor: "Коридор",
   gate: "Врата",
   unstable: "Нестабильный",
-  damyl_space: "Дамильские космические (флот)",
+  damyl_space: "Дамильские космические (флот и легионы)",
   damyl_planet: "Дамильские межпланетные (пехота)",
 };
 

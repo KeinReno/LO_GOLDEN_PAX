@@ -86,19 +86,27 @@ export function drawTableFloor(g: Graphics, anim: TableAnim, lite = false): void
   g.fill({ color: TABLE.gold, alpha: 0.2 + anim.pulse * 0.08 });
 }
 
-export function drawStarfield(g: Graphics, anim: TableAnim, lite = false): void {
+export type StarfieldOpts = { lite?: boolean; cinematic?: boolean };
+
+export function drawStarfield(
+  g: Graphics,
+  anim: TableAnim,
+  opts: boolean | StarfieldOpts = false,
+): void {
   g.clear();
-  const n = lite ? 50 : 120;
+  const lite = typeof opts === "boolean" ? opts : (opts.lite ?? false);
+  const cinematic = typeof opts === "object" && !!opts.cinematic;
+  const n = lite ? 50 : cinematic ? 180 : 120;
   for (let i = 0; i < n; i++) {
     const seed = i * 97.13;
     const x = ((Math.sin(seed) * 0.5 + 0.5) * 2800) - 1400;
     const y = ((Math.cos(seed * 1.3) * 0.5 + 0.5) * 1800) - 900;
-    const tw = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(anim.t * 1.1 + seed));
+    const tw = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(anim.t * 1.35 + seed));
     const big = i % 17 === 0;
-    g.circle(x, y, big ? 1.4 : 0.6 + (i % 3) * 0.25);
+    g.circle(x, y, big ? 1.5 : 0.65 + (i % 3) * 0.25);
     g.fill({
       color: big ? TABLE.goldSoft : 0xb8c8e0,
-      alpha: (big ? 0.35 : 0.1) + tw * (big ? 0.35 : 0.2),
+      alpha: (big ? 0.28 : 0.08) + tw * (big ? 0.5 : 0.32),
     });
   }
 }

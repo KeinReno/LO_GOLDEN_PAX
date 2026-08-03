@@ -15,6 +15,21 @@ import {
   collectPoiEffects,
 } from "./narrative.mjs";
 import { readLedger, ensureFactionEco } from "./ledger.mjs";
+import { resolveVisibleWithFog, readFog } from "./fogStore.mjs";
+import {
+  getKnownFactionIds,
+  getTradePartnerIds,
+} from "./factionIntel.mjs";
+import { isCommonMarketMember } from "./marketMembership.mjs";
+
+const VISION_GATED_INTENTS = new Set([
+  "intent.move_fleet",
+  "intent.move_legion",
+  "intent.attack_system",
+  "intent.blockade",
+  "intent.fortify",
+  "intent.claim_system",
+]);
 
 function legacyTypeToDefId(type) {
   const intents = getContent().intents || {};
@@ -118,7 +133,9 @@ function validateIntentGates(world, factionId, defId, payload) {
       if (
         (defId === "intent.move_fleet" ||
           defId === "intent.move_legion" ||
-          defId === "intent.attack_system") &&
+          defId === "intent.attack_system" ||
+          defId === "intent.blockade" ||
+          defId === "intent.fortify") &&
         isIntentForbiddenByEffects(sysEffects, "intent.move_fleet")
       ) {
         return {
@@ -139,6 +156,47 @@ function validateIntentGates(world, factionId, defId, payload) {
       payload.toSystemId,
     );
     if (!depot.ok) return depot;
+  }
+
+  if (VISION_GATED_INTENTS.has(defId)) {
+    const toSystemId = payload.toSystemId || payload.systemId;
+    if (toSystemId) {
+      const visible = resolveVisibleWithFog(world, factionId, readFog());
+      if (!visible.has(toSystemId)) {
+        return { ok: false, error: "Цель вне радиуса обзора" };
+      }
+    }
+  }
+
+  if (defId === "intent.transfer") {
+    const toId = payload.toFactionId;
+    const visible = resolveVisibleWithFog(world, factionId, readFog());
+    const known = getKnownFactionIds(world, factionId, [...visible]);
+    if (!toId || !known.has(toId)) {
+      return { ok: false, error: "Получатель неизвестен — нет контакта" };
+    }
+  }
+
+  if (defId === "intent.market_offer") {
+    const venue = payload.venue === "common" ? "common" : "contacts";
+    if (venue === "common") {
+      if (!isCommonMarketMember(factionId)) {
+        return {
+          ok: false,
+          error: "Сначала вступите в общий рынок",
+        };
+      }
+    } else {
+      const visible = resolveVisibleWithFog(world, factionId, readFog());
+      const known = getKnownFactionIds(world, factionId, [...visible]);
+      const partners = getTradePartnerIds(world, factionId, known);
+      if (partners.length === 0) {
+        return {
+          ok: false,
+          error: "Нет торговых партнёров — нужен договор торговли или союз",
+        };
+      }
+    }
   }
 
   return { ok: true };

@@ -172,6 +172,12 @@ export function getMapIconTexture(id: MapIconId): Texture | null {
   }
 }
 
+/** Public URL for DOM/SVG (same assets as the galaxy map). */
+export function mapIconUrl(id: MapIconId | string | null | undefined): string | null {
+  if (!id) return null;
+  return ICON_PATHS[id] ?? null;
+}
+
 export function activityIconId(activity: string): MapIconId | null {
   switch (activity) {
     case "battle":

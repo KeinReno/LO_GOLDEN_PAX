@@ -75,6 +75,56 @@
     "tax_pressure": {
       "id": "tax_pressure",
       "format": { "amount": "number" }
+    },
+    "slot_require": {
+      "id": "slot_require",
+      "format": { "role": "string", "require": "object", "count": "number" },
+      "description": "Потребитель (здание/юнит/тех) требует слот ресурсов по свойствам/категории/tier"
+    },
+    "tier_bonus": {
+      "id": "tier_bonus",
+      "format": { "category": "string", "delta_tier": "number" },
+      "description": "Поднимает эффективный tier потока категории на delta_tier (закон узкого места: не выше min входов)"
+    },
+    "unlock_tech_tier": {
+      "id": "unlock_tech_tier",
+      "format": { "category": "string", "to": "number" },
+      "description": "Открывает доступ к tier категории (без этого tier-ы выше to недоступны)"
+    },
+    "unlock_property": {
+      "id": "unlock_property",
+      "format": { "property": "string" },
+      "description": "Открывает использование свойства в слотах (например, psion_store)"
+    },
+    "combat_stat_from_slot": {
+      "id": "combat_stat_from_slot",
+      "format": { "stat": "string", "from_slot": "string", "scale": "string" },
+      "description": "Боевая стат вычисляется из tier-а ресурсов, вложенных в слот"
+    },
+    "flow_convert": {
+      "id": "flow_convert",
+      "format": { "from": "object", "to": "object", "rate": "number" },
+      "description": "Трансформация потока: входные категории/tier-ы → выходной поток (ребро RPS-цикла)"
+    },
+    "capacity_add": {
+      "id": "capacity_add",
+      "format": { "category": "string", "tier": "number", "amount": "number" },
+      "description": "Поднимает capacity трубы (макс. пропускная способность потока)"
+    },
+    "upkeep_slot": {
+      "id": "upkeep_slot",
+      "format": { "require": "object", "count": "number", "per": "string" },
+      "description": "Upkeep в виде слота: требует ресурсы по свойствам каждый ход"
+    },
+    "rate_mod": {
+      "id": "rate_mod",
+      "format": { "category": "string", "tier": "number", "amount": "number" },
+      "description": "Модификатор rate потока (добываемой/производимой). Применяется космическими объектами и событиями."
+    },
+    "demand_mod": {
+      "id": "demand_mod",
+      "format": { "category": "string", "tier": "number", "amount": "number" },
+      "description": "Модификатор demand потока (потребления). Отрицательное значение = снижение спроса."
     }
   }
 }

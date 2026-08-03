@@ -9,6 +9,8 @@ import type {
   PlanetBuildingZone,
   PlanetType,
   StarSystem,
+  StationKind,
+  SystemPoiType,
 } from "../state/types";
 import {
   classifyPlanet,
@@ -23,8 +25,13 @@ import {
   PLANET_TYPE_LABELS,
   RESOURCE_POOL,
   SYSTEM_ACTIVITY_LABELS,
+  SYSTEM_POI_LABELS,
 } from "../state/defaults";
-import { SystemSchematic } from "./SystemSchematic";
+import {
+  SystemSchematic,
+  type SchematicContextEvent,
+  type SchematicFeature,
+} from "./SystemSchematic";
 import { SystemEditor } from "./SystemEditor";
 import { v4 as uuid } from "uuid";
 import {
@@ -33,6 +40,30 @@ import {
   type ColonyDef,
   type PlanetActionRequest,
 } from "../viewer/PlayerPlanetManage";
+import { SystemStatusStrip } from "../viewer/SystemStatusStrip";
+import { SystemDiveDock } from "../viewer/SystemDiveDock";
+import { resolvePoiIntel } from "../viewer/poiIntel";
+import { InlineRename } from "../ui/InlineRename";
+import {
+  SystemCommandPanel,
+  type SystemActionRequest,
+} from "../viewer/SystemCommandPanel";
+import {
+  systemMineInfo,
+  systemMineLabel,
+} from "../viewer/depositMining";
+import { planetContributionChips } from "../viewer/planetContributions";
+import { ActionRing, type ActionRingItem } from "../ui/ActionRing";
+import type { TechEcoSlice } from "../state/techGate";
+import { Pickaxe, Eye, Wrench, Trash2, Rocket } from "lucide-react";
+
+/** Override galaxy/system/planet navigation (player map layer vs GM dossier). */
+export type SystemViewNav = {
+  onGalaxyBack: () => void;
+  onOpenSystem: (systemId: string) => void;
+  onOpenPlanet: (systemId: string, planetId: string) => void;
+  selectedPlanetId?: string | null;
+};
 
 export type PlayerPlanetManageProps = {
   factionId: string;
@@ -41,9 +72,24 @@ export type PlayerPlanetManageProps = {
   apMax: number;
   buildings: Record<string, BuildingDef>;
   colonies: Record<string, ColonyDef>;
+  mapResources?: Record<string, import("../state/contentCatalog").MapResourceDef>;
+  techEco?: TechEcoSlice;
   busy?: boolean;
   message?: string | null;
   onAction: (req: PlanetActionRequest) => void;
+};
+
+export type PlayerSystemManageProps = {
+  factionId: string;
+  stocks: Record<string, number>;
+  reservedAp: number;
+  apMax: number;
+  ships: Record<string, { id: string; name: string; tier?: number; faction?: string }>;
+  units: Record<string, { id: string; name: string; tier?: number; faction?: string }>;
+  mapResourceNames?: Record<string, string>;
+  busy?: boolean;
+  message?: string | null;
+  onAction: (req: SystemActionRequest) => void;
 };
 
 /** Full drill-down: Galaxy → System schematic → Planet card. */
@@ -54,6 +100,8 @@ export function SystemView({
   onSelectOwnFleet,
   onSelectOwnLegion,
   planetManage,
+  systemManage,
+  nav,
 }: {
   system: StarSystem;
   /** Player /view — look only, no GM edit tools. */
@@ -63,9 +111,15 @@ export function SystemView({
   onSelectOwnLegion?: (legionId: string) => void;
   /** When set, owned/empty planets open player construction UI. */
   planetManage?: PlayerPlanetManageProps;
+  /** System stations + ship/unit production (player dive). */
+  systemManage?: PlayerSystemManageProps;
+  /** Player map overlay — avoid GM dossier store hooks. */
+  nav?: SystemViewNav;
 }) {
   const world = useWorldStore((s) => s.world);
   const mapFocus = useWorldStore((s) => s.mapFocus);
+  const selectedFleetIdState = useWorldStore((s) => s.selectedFleetId);
+  const selectedLegionIdState = useWorldStore((s) => s.selectedLegionId);
   const openPlanetView = useWorldStore((s) => s.openPlanetView);
   const openSystemView = useWorldStore((s) => s.openSystemView);
   const closeSystemView = useWorldStore((s) => s.closeSystemView);
@@ -106,10 +160,16 @@ export function SystemView({
     return false;
   };
 
+  const goGalaxy = nav?.onGalaxyBack ?? closeSystemView;
+  const goSystem = nav?.onOpenSystem ?? openSystemView;
+  const goPlanet = nav?.onOpenPlanet ?? openPlanetView;
+
   const selectedPlanetId =
-    mapFocus.level === "planet" && mapFocus.systemId === system.id
-      ? mapFocus.planetId
-      : null;
+    nav?.selectedPlanetId !== undefined
+      ? nav.selectedPlanetId
+      : mapFocus.level === "planet" && mapFocus.systemId === system.id
+        ? mapFocus.planetId
+        : null;
 
   const planet = useMemo(
     () => system.planets.find((p) => p.id === selectedPlanetId) ?? null,
@@ -120,27 +180,288 @@ export function SystemView({
   const fleetsHere = world.fleets.filter((f) => f.systemId === system.id);
   const legionsHere = world.legions.filter((l) => l.systemId === system.id);
   const owner = world.factions.find((f) => f.id === system.ownerFactionId);
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(
+    null,
+  );
+  const [selectedFeature, setSelectedFeature] =
+    useState<SchematicFeature | null>(null);
+  /** Soft planet focus (tap) — not full manage drill. */
+  const [previewPlanetId, setPreviewPlanetId] = useState<string | null>(null);
+  /** Spatial place-on-belt. */
+  const [placeMode, setPlaceMode] = useState(false);
+  const [placingKind, setPlacingKind] = useState<StationKind | null>(null);
+  const [pendingBeltAngle, setPendingBeltAngle] = useState<number | null>(
+    null,
+  );
+  const [forceDeck, setForceDeck] = useState<"stations" | "produce" | null>(
+    null,
+  );
+  const [ctxRing, setCtxRing] = useState<{
+    x: number;
+    y: number;
+    items: ActionRingItem[];
+  } | null>(null);
+
+  const playerDive = !!(readOnly && systemManage);
+  const canBuildBelt =
+    playerDive &&
+    !!systemManage &&
+    system.ownerFactionId === systemManage.factionId;
+  const drilledPlanet = planet;
+  const previewPlanet = useMemo(
+    () =>
+      previewPlanetId
+        ? (system.planets.find((p) => p.id === previewPlanetId) ?? null)
+        : null,
+    [system.planets, previewPlanetId],
+  );
+  const mineInfo = systemMineInfo(system, systemManage?.factionId);
+  const showBeltDock =
+    playerDive &&
+    (placeMode ||
+      !!selectedFeature ||
+      !!selectedStationId ||
+      forceDeck === "stations" ||
+      forceDeck === "produce");
+
+  const clearPlace = () => {
+    setPlaceMode(false);
+    setPlacingKind(null);
+    setPendingBeltAngle(null);
+    setForceDeck(null);
+  };
+
+  const clearSoft = () => {
+    setSelectedFeature(null);
+    setSelectedStationId(null);
+    setPreviewPlanetId(null);
+    clearPlace();
+  };
+
+  const commitStation = (kind: StationKind, angle: number) => {
+    if (!systemManage) return;
+    systemManage.onAction({
+      action: "build_station",
+      systemId: system.id,
+      stationKind: kind,
+      beltAngle: angle,
+    });
+    clearPlace();
+    setSelectedFeature(null);
+  };
+
+  const armPlace = (kind?: StationKind | null) => {
+    if (drilledPlanet) goSystem(system.id);
+    setPreviewPlanetId(null);
+    setSelectedStationId(null);
+    setPlaceMode(true);
+    setPlacingKind(kind ?? null);
+    setForceDeck("stations");
+  };
+
+  const handleSchematicContext = (ev: SchematicContextEvent) => {
+    if (!playerDive || !systemManage) return;
+    const items: ActionRingItem[] = [];
+    const t = ev.target;
+
+    if (t.kind === "planet") {
+      const pl = system.planets.find((p) => p.id === t.planetId);
+      items.push({
+        id: "preview",
+        label: "Осмотр",
+        icon: <Eye size={14} />,
+        onSelect: () => {
+          setPreviewPlanetId(t.planetId);
+          if (drilledPlanet) goSystem(system.id);
+        },
+      });
+      items.push({
+        id: "manage",
+        label: "Управлять",
+        icon: <Wrench size={14} />,
+        onSelect: () => goPlanet(system.id, t.planetId),
+      });
+      const empty =
+        pl &&
+        (pl.population ?? 0) <= 0 &&
+        (!pl.colonyType || pl.colonyType === "none");
+      if (
+        empty &&
+        system.ownerFactionId === systemManage.factionId &&
+        pl?.colonizable !== false
+      ) {
+        items.push({
+          id: "colonize",
+          label: "Колонизировать",
+          icon: <Rocket size={14} />,
+          onSelect: () => goPlanet(system.id, t.planetId),
+        });
+      }
+    } else if (t.kind === "deposit") {
+      items.push({
+        id: "inspect",
+        label: "Осмотр",
+        icon: <Eye size={14} />,
+        onSelect: () => {
+          setSelectedFeature({ kind: "deposit", resourceId: t.resourceId });
+          setPreviewPlanetId(null);
+        },
+      });
+      if (canBuildBelt && mineInfo.status === "none") {
+        items.push({
+          id: "mine-here",
+          label: "Mining здесь",
+          icon: <Pickaxe size={14} />,
+          onSelect: () => {
+            commitStation("mining", t.beltAngle);
+            setSelectedFeature({ kind: "deposit", resourceId: t.resourceId });
+          },
+        });
+        items.push({
+          id: "mine-aim",
+          label: "Выбрать точку",
+          icon: <Pickaxe size={14} />,
+          onSelect: () => {
+            setSelectedFeature({ kind: "deposit", resourceId: t.resourceId });
+            armPlace("mining");
+            setPendingBeltAngle(t.beltAngle);
+          },
+        });
+      }
+    } else if (t.kind === "station") {
+      const st = (system.stations ?? []).find((s) => s.id === t.stationId);
+      items.push({
+        id: "st-select",
+        label: "Выбрать",
+        icon: <Eye size={14} />,
+        onSelect: () => {
+          setSelectedStationId(t.stationId);
+          setPlaceMode(false);
+          setPreviewPlanetId(null);
+        },
+      });
+      if (st && st.factionId === systemManage.factionId) {
+        items.push({
+          id: "st-demo",
+          label: "Снести",
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onSelect: () => {
+            systemManage.onAction({
+              action: "demolish_station",
+              systemId: system.id,
+              stationId: t.stationId,
+            });
+          },
+        });
+      }
+    } else if (t.kind === "belt") {
+      if (canBuildBelt) {
+        items.push({
+          id: "belt-mine",
+          label: "Mining",
+          icon: <Pickaxe size={14} />,
+          disabled: mineInfo.status === "own",
+          onSelect: () => commitStation("mining", t.beltAngle),
+        });
+        items.push({
+          id: "belt-place",
+          label: "Другая станция",
+          icon: <Wrench size={14} />,
+          onSelect: () => {
+            armPlace(null);
+            setPendingBeltAngle(t.beltAngle);
+          },
+        });
+      }
+    } else if (t.kind === "poi") {
+      items.push({
+        id: "poi",
+        label: "Осмотр",
+        icon: <Eye size={14} />,
+        onSelect: () => {
+          setSelectedFeature({
+            kind: "poi",
+            tag: t.tag,
+            index: t.index,
+          });
+          setPreviewPlanetId(null);
+        },
+      });
+    }
+
+    if (items.length === 0) return;
+    setCtxRing({ x: ev.clientX, y: ev.clientY, items });
+  };
 
   return (
-    <div className="system-view">
+    <div className={`system-view${playerDive ? " system-view--dive" : ""}`}>
       <nav className="sys-crumb" aria-label="Иерархия">
-        <button type="button" className="crumb-link" onClick={closeSystemView}>
+        <button type="button" className="crumb-link" onClick={goGalaxy}>
           {readOnly ? "К карте" : "Галактика"}
         </button>
         <span className="crumb-sep">›</span>
         <button
           type="button"
           className={
-            mapFocus.level === "system" ? "crumb-link active" : "crumb-link"
+            !drilledPlanet && !previewPlanet ? "crumb-link active" : "crumb-link"
           }
-          onClick={() => openSystemView(system.id)}
+          onClick={() => {
+            clearSoft();
+            goSystem(system.id);
+          }}
         >
           {system.name}
         </button>
-        {planet && (
+        {playerDive && canBuildBelt && systemManage && (
+          <InlineRename
+            value={system.name}
+            affordanceOnly
+            title="Переименовать систему"
+            onCommit={(name) => {
+              systemManage.onAction({
+                action: "rename_system",
+                systemId: system.id,
+                name,
+              });
+            }}
+          />
+        )}
+        {(drilledPlanet || previewPlanet) && (
           <>
             <span className="crumb-sep">›</span>
-            <span className="crumb-current">{planet.name}</span>
+            <span className="crumb-current">
+              {(() => {
+                const p = drilledPlanet ?? previewPlanet!;
+                const canRename =
+                  !!playerDive &&
+                  !!planetManage &&
+                  (p.ownerFactionId || system.ownerFactionId) ===
+                    planetManage.factionId;
+                if (!canRename) return p.name;
+                return (
+                  <InlineRename
+                    value={p.name}
+                    title="Переименовать планету"
+                    onCommit={(name) => {
+                      planetManage.onAction({
+                        action: "rename",
+                        systemId: system.id,
+                        planetId: p.id,
+                        name,
+                      });
+                    }}
+                  />
+                );
+              })()}
+              {previewPlanet && !drilledPlanet ? " · осмотр" : ""}
+            </span>
+          </>
+        )}
+        {placeMode && !drilledPlanet && (
+          <>
+            <span className="crumb-sep">›</span>
+            <span className="crumb-current">Стройка на поясе</span>
           </>
         )}
       </nav>
@@ -151,11 +472,102 @@ export function SystemView({
             <SystemSchematic
               system={system}
               selectedPlanetId={selectedPlanetId}
+              previewPlanetId={previewPlanetId}
               onSelectPlanet={(id) => {
                 if (id && applyPlanetTool(id)) return;
-                if (id) openPlanetView(system.id, id);
-                else openSystemView(system.id);
+                if (!playerDive) {
+                  if (id) goPlanet(system.id, id);
+                  else goSystem(system.id);
+                  return;
+                }
+                if (!id) {
+                  clearSoft();
+                  goSystem(system.id);
+                }
               }}
+              onPlanetPreview={
+                playerDive
+                  ? (id) => {
+                      if (applyPlanetTool(id)) return;
+                      clearPlace();
+                      setSelectedFeature(null);
+                      setSelectedStationId(null);
+                      setPreviewPlanetId(id);
+                      if (drilledPlanet) goSystem(system.id);
+                    }
+                  : undefined
+              }
+              onPlanetDrill={
+                playerDive
+                  ? (id) => {
+                      if (applyPlanetTool(id)) return;
+                      clearPlace();
+                      setSelectedFeature(null);
+                      setPreviewPlanetId(null);
+                      goPlanet(system.id, id);
+                    }
+                  : undefined
+              }
+              fleets={fleetsHere}
+              legions={legionsHere}
+              factions={world.factions}
+              playerFactionId={readOnly ? playerFactionId : null}
+              selectedFleetId={readOnly ? selectedFleetIdState : null}
+              selectedLegionId={readOnly ? selectedLegionIdState : null}
+              onSelectFleet={onSelectOwnFleet}
+              onSelectLegion={onSelectOwnLegion}
+              selectedStationId={selectedStationId}
+              onSelectStation={
+                playerDive
+                  ? (id) => {
+                      setSelectedFeature(null);
+                      setPreviewPlanetId(null);
+                      setSelectedStationId(id);
+                      setPlaceMode(false);
+                    }
+                  : undefined
+              }
+              selectedFeature={selectedFeature}
+              onSelectFeature={(f) => {
+                setSelectedStationId(null);
+                setPreviewPlanetId(null);
+                setSelectedFeature(f);
+                if (drilledPlanet) goSystem(system.id);
+              }}
+              mapResourceNames={systemManage?.mapResourceNames}
+              systemBeltHot={placeMode}
+              canBuildBelt={canBuildBelt}
+              pendingBeltAngle={pendingBeltAngle}
+              placingKind={placingKind}
+              onBeltTap={
+                canBuildBelt
+                  ? (angle) => {
+                      setPreviewPlanetId(null);
+                      setSelectedFeature(null);
+                      if (placingKind) {
+                        commitStation(placingKind, angle);
+                        return;
+                      }
+                      setPlaceMode(true);
+                      setPendingBeltAngle(angle);
+                      setForceDeck("stations");
+                    }
+                  : undefined
+              }
+              onDepositBuildMining={
+                canBuildBelt && mineInfo.status === "none"
+                  ? (resourceId) => {
+                      setSelectedFeature({
+                        kind: "deposit",
+                        resourceId,
+                      });
+                      armPlace("mining");
+                    }
+                  : undefined
+              }
+              onSchematicContext={
+                playerDive ? handleSchematicContext : undefined
+              }
             />
           ) : (
             <div className="sys-corridor-note">
@@ -166,230 +578,360 @@ export function SystemView({
         </div>
 
         <div className="system-view-side">
-          <div className="sys-meta">
-            <div className="sys-meta-row">
-              <span>Владелец</span>
-              <strong className="sys-owner-line" style={{ color: owner?.color }}>
-                {owner?.emblemPath && (
-                  <img
-                    className="faction-emblem-thumb"
-                    src={owner.emblemPath}
-                    alt=""
-                  />
-                )}
-                {owner?.name ?? "—"}
-              </strong>
-            </div>
-            <div className="sys-meta-row">
-              <span>Ситуация</span>
-              <strong>
-                {SYSTEM_ACTIVITY_LABELS[system.activity ?? "none"]}
-              </strong>
-            </div>
-            <div className="sys-meta-row">
-              <span>Флоты / легионы</span>
-              <strong>
-                {fleetsHere.length} / {legionsHere.length}
-              </strong>
-            </div>
-            {paintingRes && (
-              <div className="sys-paint-res">
-                <p className="hint">
-                  Режим ресурсов
-                  {activeResource ? `: «${activeResource}»` : ""}. Клик по
-                  планете — на неё; кнопка — в систему вне планет.
-                </p>
-                <button
-                  type="button"
-                  className="btn primary block"
-                  onClick={() => paintResourceOnSystem(system.id)}
-                >
-                  Сыпать в систему
-                </button>
-              </div>
+          {playerDive &&
+            systemManage &&
+            (drilledPlanet || previewPlanet || showBeltDock) && (
+              <SystemStatusStrip
+                system={system}
+                focusPlanet={drilledPlanet ?? previewPlanet}
+                races={world.races ?? []}
+                mapResourceNames={systemManage.mapResourceNames}
+                reservedAp={systemManage.reservedAp}
+                apMax={systemManage.apMax}
+                metal={systemManage.stocks["currency.metal"] ?? 0}
+                supply={systemManage.stocks["currency.supply"] ?? 0}
+                factionId={systemManage.factionId}
+              />
             )}
-            {(paintingOwner || paintingCo || paintingContest) && (
-              <div className="sys-paint-res">
-                <p className="hint">
-                  {paintingOwner &&
-                    "Владение: клик по планете — назначить активную державу владельцем."}
-                  {paintingCo &&
-                    "Совладелец: клик — добавить/снять активную державу как совладельца планеты."}
-                  {paintingContest &&
-                    "Спорная: клик — переключить спорный статус планеты."}
-                </p>
-              </div>
-            )}
-            {(fleetsHere.length > 0 || legionsHere.length > 0) && (
-              <ul className="sys-force-list">
-                {fleetsHere.map((f) => {
-                  const own =
-                    readOnly &&
-                    !!playerFactionId &&
-                    f.factionId === playerFactionId &&
-                    !!onSelectOwnFleet;
-                  const label = (
-                    <>
-                      ✦ {f.name}{" "}
-                      <span className="hint">
-                        (
-                        {world.factions.find((x) => x.id === f.factionId)
-                          ?.name ?? "?"}
-                        )
-                      </span>
-                    </>
-                  );
-                  return (
-                    <li key={f.id}>
-                      {own ? (
-                        <button
-                          type="button"
-                          className="sys-force-btn"
-                          onClick={() => onSelectOwnFleet(f.id)}
-                        >
-                          {label}
-                          <span className="hint"> · на карту</span>
-                        </button>
-                      ) : (
-                        label
-                      )}
-                    </li>
-                  );
-                })}
-                {legionsHere.map((l) => {
-                  const own =
-                    readOnly &&
-                    !!playerFactionId &&
-                    l.factionId === playerFactionId &&
-                    !!onSelectOwnLegion;
-                  const label = (
-                    <>
-                      ⚑ {l.name}{" "}
-                      <span className="hint">
-                        (
-                        {world.factions.find((x) => x.id === l.factionId)
-                          ?.name ?? "?"}
-                        )
-                      </span>
-                    </>
-                  );
-                  return (
-                    <li key={l.id}>
-                      {own ? (
-                        <button
-                          type="button"
-                          className="sys-force-btn"
-                          onClick={() => onSelectOwnLegion(l.id)}
-                        >
-                          {label}
-                          <span className="hint"> · на карту</span>
-                        </button>
-                      ) : (
-                        label
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
 
-          {planet ? (
-            readOnly && planetManage ? (
+          {drilledPlanet &&
+            (readOnly && planetManage ? (
               <PlayerPlanetManage
                 system={system}
-                planet={planet}
+                planet={drilledPlanet}
                 factionId={planetManage.factionId}
                 stocks={planetManage.stocks}
                 reservedAp={planetManage.reservedAp}
                 apMax={planetManage.apMax}
                 buildings={planetManage.buildings}
                 colonies={planetManage.colonies}
+                mapResources={planetManage.mapResources}
+                techEco={planetManage.techEco}
                 busy={planetManage.busy}
                 message={planetManage.message}
                 onAction={planetManage.onAction}
-                onBack={() => openSystemView(system.id)}
+                onBack={() => {
+                  setPreviewPlanetId(drilledPlanet.id);
+                  goSystem(system.id);
+                }}
               />
             ) : (
-            <PlanetDetail
-              planet={planet}
-              readOnly={readOnly}
-              onBack={() => openSystemView(system.id)}
-              onChange={(patch) => {
-                if (!readOnly) updatePlanet(planet.id, patch);
-              }}
-              onRemove={() => {
-                if (readOnly) return;
-                removePlanet(planet.id);
-                openSystemView(system.id);
-              }}
-              races={world.races}
-            />
-            )
-          ) : (
+              <PlanetDetail
+                planet={drilledPlanet}
+                readOnly={readOnly}
+                onBack={() => goSystem(system.id)}
+                onChange={(patch) => {
+                  if (!readOnly) updatePlanet(drilledPlanet.id, patch);
+                }}
+                onRemove={() => {
+                  if (readOnly) return;
+                  removePlanet(drilledPlanet.id);
+                  goSystem(system.id);
+                }}
+                races={world.races}
+              />
+            ))}
+
+          {!drilledPlanet && previewPlanet && playerDive && (
+            <div className="sys-planet-preview">
+              <div className="sys-feature-card__head">
+                <strong>
+                  {planetManage &&
+                  (previewPlanet.ownerFactionId || system.ownerFactionId) ===
+                    planetManage.factionId ? (
+                    <InlineRename
+                      value={previewPlanet.name}
+                      title="Переименовать планету"
+                      onCommit={(name) =>
+                        planetManage.onAction({
+                          action: "rename",
+                          systemId: system.id,
+                          planetId: previewPlanet.id,
+                          name,
+                        })
+                      }
+                    />
+                  ) : (
+                    previewPlanet.name
+                  )}
+                </strong>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => setPreviewPlanetId(null)}
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="hint">
+                {PLANET_TYPE_LABELS[previewPlanet.type]} ·{" "}
+                {CLIMATE_LABELS[previewPlanet.climate]} ·{" "}
+                {HABIT_LABELS[classifyPlanet(previewPlanet)]}
+              </p>
+              <div className="system-status-strip__yields">
+                {planetContributionChips(
+                  previewPlanet,
+                  system,
+                  systemManage?.factionId,
+                ).map((c) => (
+                  <span
+                    key={c.id}
+                    className={`system-yield-chip system-yield-chip--${c.tone ?? "muted"}`}
+                    title={c.title ?? c.label}
+                  >
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn primary block"
+                onClick={() => goPlanet(system.id, previewPlanet.id)}
+              >
+                Управлять миром
+              </button>
+              <p className="hint" style={{ marginTop: 6 }}>
+                Двойной тап / ПКМ → Управлять
+              </p>
+            </div>
+          )}
+
+          {!drilledPlanet && showBeltDock && systemManage && (
             <>
-              <div className="block-title">
-                Планеты ({ordered.length})
-                {!readOnly && (
+              {placeMode && (
+                <p className="sys-place-tip">
+                  {placingKind && pendingBeltAngle != null
+                    ? "Готово — зажми карту или тапни пояс ещё раз"
+                    : placingKind
+                      ? `Тип «${placingKind}» — тапни пояс`
+                      : pendingBeltAngle != null
+                        ? "Точка выбрана — выбери тип станции"
+                        : "Выбери тип и точку на поясе"}
                   <button
                     type="button"
                     className="btn ghost"
-                    style={{ marginLeft: "auto" }}
-                    onClick={() => addPlanet()}
-                    disabled={isCorridorSystem(system)}
+                    style={{ marginLeft: 8 }}
+                    onClick={clearPlace}
                   >
-                    + Планета
+                    Отмена
                   </button>
+                </p>
+              )}
+              {selectedFeature && (
+                <div className="sys-feature-card">
+                  <div className="sys-feature-card__head">
+                    <strong>
+                      {selectedFeature.kind === "poi"
+                        ? (SYSTEM_POI_LABELS[selectedFeature.tag] ??
+                          selectedFeature.tag)
+                        : selectedFeature.kind === "deposit"
+                          ? (systemManage.mapResourceNames?.[
+                              selectedFeature.resourceId
+                            ] ?? selectedFeature.resourceId)
+                          : "Объект"}
+                    </strong>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => setSelectedFeature(null)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {selectedFeature.kind === "poi" && (
+                    <>
+                      <p className="hint">
+                        Объект пояса · <code>{selectedFeature.tag}</code>
+                      </p>
+                      <p>{poiPlayerBlurb(selectedFeature.tag)}</p>
+                    </>
+                  )}
+                  {selectedFeature.kind === "deposit" && (
+                    <>
+                      <p
+                        className={`sys-mine-status sys-mine-status--${mineInfo.status}`}
+                      >
+                        {systemMineLabel(mineInfo.status)}
+                      </p>
+                      <p className="hint">
+                        Ресурс пояса. Добыча — общая для системы
+                        (mining-станция).
+                      </p>
+                      {mineInfo.status === "none" && canBuildBelt && (
+                        <button
+                          type="button"
+                          className="btn primary block"
+                          onClick={() => armPlace("mining")}
+                        >
+                          Mining → тапни пояс · или ПКМ на депозите
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              <SystemCommandPanel
+                system={system}
+                factionId={systemManage.factionId}
+                stocks={systemManage.stocks}
+                reservedAp={systemManage.reservedAp}
+                apMax={systemManage.apMax}
+                selectedPlanetId={null}
+                selectedStationId={selectedStationId}
+                ships={systemManage.ships}
+                units={systemManage.units}
+                busy={systemManage.busy}
+                message={systemManage.message}
+                onAction={(req) => {
+                  systemManage.onAction(req);
+                  if (req.action === "build_station") clearPlace();
+                }}
+                onSelectStation={setSelectedStationId}
+                preferKind={placingKind}
+                placingKind={placingKind}
+                pendingBeltAngle={pendingBeltAngle}
+                onArmKind={(kind) => {
+                  setPlaceMode(true);
+                  setPlacingKind(kind);
+                }}
+                docked
+                forceStationsOpen={
+                  placeMode || forceDeck === "stations" ? true : undefined
+                }
+                forceProduceOpen={
+                  forceDeck === "produce" ? true : undefined
+                }
+                onDeckChange={setForceDeck}
+              />
+            </>
+          )}
+
+          {!drilledPlanet && !previewPlanet && !showBeltDock && playerDive && systemManage && (
+            <SystemDiveDock
+              system={system}
+              factionId={systemManage.factionId}
+              owner={owner}
+              mapResourceNames={systemManage.mapResourceNames}
+              reservedAp={systemManage.reservedAp}
+              apMax={systemManage.apMax}
+              metal={systemManage.stocks["currency.metal"] ?? 0}
+              supply={systemManage.stocks["currency.supply"] ?? 0}
+              fleetsCount={fleetsHere.length}
+              legionsCount={legionsHere.length}
+              canBuildBelt={canBuildBelt}
+              previewPlanetId={previewPlanetId}
+              onPreviewPlanet={(id) => {
+                if (applyPlanetTool(id)) return;
+                setPreviewPlanetId(id);
+              }}
+              onDrillPlanet={(id) => {
+                if (applyPlanetTool(id)) return;
+                goPlanet(system.id, id);
+              }}
+              onArmBelt={() => armPlace(null)}
+              onQuickMine={() => {
+                // Open station deck so success/error message is visible —
+                // silent commit left feedback on a hidden panel.
+                armPlace("mining");
+                if (mineInfo.status !== "none" || systemManage.busy) return;
+                const n = Math.max((system.resources ?? []).length, 1);
+                const angle = -Math.PI / 2 + (0.5 / n) * Math.PI * 2;
+                setPendingBeltAngle(angle);
+                systemManage.onAction({
+                  action: "build_station",
+                  systemId: system.id,
+                  stationKind: "mining",
+                  beltAngle: angle,
+                });
+              }}
+              message={systemManage.message}
+              busy={systemManage.busy}
+              onRenameSystem={(name) => {
+                systemManage.onAction({
+                  action: "rename_system",
+                  systemId: system.id,
+                  name,
+                });
+              }}
+              onRenamePlanet={(planetId, name) => {
+                planetManage?.onAction({
+                  action: "rename",
+                  systemId: system.id,
+                  planetId,
+                  name,
+                });
+              }}
+              onOpenProduce={() => {
+                setForceDeck("produce");
+                setPlaceMode(true);
+              }}
+            />
+          )}
+
+          {/* GM / non-dive fallback overview */}
+          {!drilledPlanet && !previewPlanet && !showBeltDock && !playerDive && (
+            <>
+              <div className="sys-meta">
+                <div className="sys-meta-row">
+                  <span>Владелец</span>
+                  <strong
+                    className="sys-owner-line"
+                    style={{ color: owner?.color }}
+                  >
+                    {owner?.name ?? "—"}
+                  </strong>
+                </div>
+                <div className="sys-meta-row">
+                  <span>Ситуация</span>
+                  <strong>
+                    {SYSTEM_ACTIVITY_LABELS[system.activity ?? "none"]}
+                  </strong>
+                </div>
+                {paintingRes && (
+                  <div className="sys-paint-res">
+                    <p className="hint">
+                      Режим ресурсов
+                      {activeResource ? `: «${activeResource}»` : ""}.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn primary block"
+                      onClick={() => paintResourceOnSystem(system.id)}
+                    >
+                      Сыпать в систему
+                    </button>
+                  </div>
                 )}
               </div>
-              <div className="planet-card-grid">
-                {ordered.length === 0 && (
-                  <p className="hint">
-                    {readOnly
-                      ? "В видимых данных нет планет."
-                      : "Нет планет — добавьте или сгенерируйте."}
-                  </p>
-                )}
+              <div className="block-title sys-orbit-strip-title">
+                Планеты ({ordered.length})
+                <button
+                  type="button"
+                  className="btn ghost"
+                  style={{ marginLeft: "auto" }}
+                  onClick={() => addPlanet()}
+                  disabled={isCorridorSystem(system)}
+                >
+                  + Планета
+                </button>
+              </div>
+              <div className="sys-orbit-strip" role="list">
                 {ordered.map((p) => (
                   <button
                     key={p.id}
                     type="button"
-                    className={`planet-tile ${classifyPlanet(p)}${
+                    className={`sys-orbit-chip ${classifyPlanet(p)}${
                       paintingClaim ? " paint-target" : ""
-                    }${p.contested ? " contested" : ""}${
-                      (p.coOwnerFactionIds?.length ?? 0) > 0 ? " co-owned" : ""
                     }`}
                     onClick={() => {
                       if (applyPlanetTool(p.id)) return;
-                      openPlanetView(system.id, p.id);
+                      goPlanet(system.id, p.id);
                     }}
                   >
-                    <span className="planet-tile-orbit">
-                      Орбита {p.orbitIndex ?? "—"}
-                      {p.contested ? " · спор" : ""}
+                    <span className="sys-orbit-chip__orbit">
+                      {p.orbitIndex ?? "—"}
                     </span>
-                    <strong>{p.name}</strong>
-                    <span className="hint">
-                      {PLANET_TYPE_LABELS[p.type]} ·{" "}
-                      {HABIT_LABELS[classifyPlanet(p)]}
-                      {p.ownerFactionId
-                        ? ` · ${
-                            world.factions.find((f) => f.id === p.ownerFactionId)
-                              ?.name ?? "?"
-                          }`
-                        : ""}
-                    </span>
-                    <span className="planet-tile-pop">
-                      {p.population > 0
-                        ? `нас. ${formatPop(p.population)}`
-                        : COLONY_TYPE_LABELS[p.colonyType ?? "none"]}
-                    </span>
-                    <span className="planet-tile-build">
-                      пов. {(p.surfaceBuildings ?? []).length}/
-                      {p.surfaceSlots ?? 8} · орб.{" "}
-                      {(p.orbitalBuildings ?? []).length}/
-                      {p.orbitalSlots ?? 4}
-                    </span>
+                    <span className="sys-orbit-chip__name">{p.name}</span>
                   </button>
                 ))}
               </div>
@@ -403,6 +945,16 @@ export function SystemView({
           <summary>Полная правка системы (звёзды, станции, владение…)</summary>
           <SystemEditor system={system} />
         </details>
+      )}
+
+      {ctxRing && (
+        <ActionRing
+          open
+          x={ctxRing.x}
+          y={ctxRing.y}
+          items={ctxRing.items}
+          onClose={() => setCtxRing(null)}
+        />
       )}
     </div>
   );
@@ -914,4 +1466,9 @@ function BuildingZoneEditor({
       </button>
     </div>
   );
+}
+
+function poiPlayerBlurb(tag: SystemPoiType): string {
+  const intel = resolvePoiIntel(tag);
+  return [intel.description, intel.actionTip].filter(Boolean).join(" ");
 }

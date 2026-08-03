@@ -11,6 +11,9 @@ import {
 import { reservedAp, readIntents, writeIntents } from "./intents.mjs";
 import { writeLiveBoard } from "./tableStore.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
+import { canBuild as canBuildSlots, resolveSlots, resourceMatchesRequire } from "./slotResolver.mjs";
+import { canBuildWithTech, factionHasProperty } from "./techActions.mjs";
+import { canFactionBuildDef, raceIdsFromComposition } from "./buildingAccess.mjs";
 
 function normalizeColonyType(type) {
   if (!type || type === "none") return "none";
@@ -156,6 +159,14 @@ function checkBuildForbidden(factionId) {
 /**
  * @returns {{ ok: true, intent, world, planet } | { ok: false, error: string }}
  */
+function sanitizeName(raw, fallback = "Безымянный") {
+  const name = String(raw ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 48);
+  return name || fallback;
+}
+
 export function applyPlanetAction({
   world,
   factionId,
@@ -167,6 +178,10 @@ export function applyPlanetAction({
   colonyType,
   note,
   apMax,
+  // New economy model: fill_slot params
+  slotRole,
+  slotResourceId,
+  name,
 }) {
   const content = getContent();
   const turn = world.meta?.turn ?? 0;
@@ -185,11 +200,25 @@ export function applyPlanetAction({
     }
     const def = buildingDefs(content)[buildingId];
     if (!def) return { ok: false, error: "Неизвестное здание" };
-    const zone = def.zone === "orbital" ? "orbital" : "surface";
-    const listKey = zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
+    if (
+      !canFactionBuildDef(def, factionId, {
+        raceIds: raceIdsFromComposition(planet.raceComposition),
+      })
+    ) {
+      return { ok: false, error: "Это здание недоступно вашей фракции" };
+    }
+    const ledgerPre = readLedger();
+    const ecoPre = ensureFactionEco(ledgerPre, factionId);
+    const techGate = canBuildWithTech(ecoPre, def);
+    if (!techGate.ok) return techGate;
+    // orbital → orbital list; surface/subsurface/deep → surface list (zone preserved on instance)
+    const listKey = def.zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
+    const zone = def.zone || "surface";
     const list = [...(planet[listKey] ?? [])];
     const max =
-      zone === "orbital" ? (planet.orbitalSlots ?? 4) : (planet.surfaceSlots ?? 8);
+      listKey === "orbitalBuildings"
+        ? (planet.orbitalSlots ?? 4)
+        : (planet.surfaceSlots ?? 8);
     if (list.length >= max) {
       return { ok: false, error: `Нет свободных слотов (${zone})` };
     }
@@ -198,7 +227,10 @@ export function applyPlanetAction({
         ...(planet.surfaceBuildings ?? []),
         ...(planet.orbitalBuildings ?? []),
       ];
-      const same = all.filter((b) => b.kind === def.kind && !b.disabled).length;
+      const same = all.filter(
+        (b) =>
+          (b.buildingId === buildingId || b.kind === def.kind) && !b.disabled,
+      ).length;
       if (same >= def.maxPerPlanet) {
         return { ok: false, error: `Лимит «${def.name}» на планете` };
       }
@@ -214,9 +246,11 @@ export function applyPlanetAction({
 
     const building = {
       id: `bld_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      buildingId,
       name: def.name,
       kind: def.kind,
       zone,
+      slotFills: {},
     };
     list.push(building);
     planet[listKey] = list;
@@ -233,7 +267,21 @@ export function applyPlanetAction({
     spendCost(ledger, factionId, cost, turn, intent.id, "build");
     writeLedger(ledger);
     writeLiveBoard(world, { backup: false, reason: "planet_build" });
-    return { ok: true, intent, world, planet, cost, building };
+    // New economy model: surface slot requirements (advisory, non-blocking)
+    let slotInfo = null;
+    try {
+      const slotCheck = canBuildSlots(def);
+      slotInfo = {
+        hasSlots: !!(def.slots && def.slots.length > 0),
+        slots: def.slots || [],
+        canBuild: slotCheck.ok,
+        missing: slotCheck.missing,
+        bottlenecks: slotCheck.bottlenecks,
+      };
+    } catch (_e) {
+      slotInfo = null;
+    }
+    return { ok: true, intent, world, planet, cost, building, slotInfo };
   }
 
   if (action === "demolish") {
@@ -358,6 +406,128 @@ export function applyPlanetAction({
     writeLedger(ledger);
     writeLiveBoard(world, { backup: false, reason: "planet_set_type" });
     return { ok: true, intent, world, planet, cost };
+  }
+
+  if (action === "rename") {
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    const next = sanitizeName(name ?? note, planet.name);
+    if (next === planet.name) {
+      return { ok: true, planet };
+    }
+    planet.name = next;
+    writeLiveBoard(world, { backup: false, reason: "planet_rename" });
+    const intent = recordAppliedIntent({
+      factionId,
+      defId: "intent.rename_planet",
+      payload: { systemId, planetId, name: next },
+      note,
+      turn,
+      apCost: 0,
+    });
+    return { ok: true, intent, planet };
+  }
+
+  if (action === "fill_slot") {
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    const inst = instanceId;
+    const role = slotRole;
+    const resourceId = slotResourceId;
+    if (!inst || !role) {
+      return { ok: false, error: "Нужны instanceId и slotRole" };
+    }
+    let target = null;
+    let listKey = null;
+    for (const key of ["surfaceBuildings", "orbitalBuildings"]) {
+      const list = planet[key] ?? [];
+      const idx = list.findIndex((b) => b.id === inst);
+      if (idx >= 0) {
+        target = list[idx];
+        listKey = key;
+        break;
+      }
+    }
+    if (!target) return { ok: false, error: "Постройка не найдена" };
+    const def =
+      (target.buildingId && buildingDefs(content)[target.buildingId]) ||
+      defForKindZone(content, target.kind, target.zone || "surface");
+    if (!def?.slots) return { ok: false, error: "У здания нет слотов" };
+    const slot = def.slots.find((s) => s.role === role);
+    if (!slot) return { ok: false, error: `Слот '${role}' не найден` };
+
+    if (!target.slotFills) target.slotFills = {};
+
+    // Unfill when resourceId empty / null / "__clear__"
+    const clearing =
+      resourceId == null ||
+      resourceId === "" ||
+      resourceId === "__clear__";
+    let filledId = null;
+    if (clearing) {
+      delete target.slotFills[role];
+    } else {
+      const resDef = Object.values(content.map_resources || {}).find(
+        (r) => r.id === resourceId || r.name === resourceId,
+      );
+      if (!resDef) return { ok: false, error: "Ресурс не найден" };
+      if (!resourceMatchesRequire(resDef, slot.require)) {
+        return { ok: false, error: "Ресурс не подходит под требования слота" };
+      }
+      const ledgerGate = readLedger();
+      const ecoGate = ensureFactionEco(ledgerGate, factionId);
+      const slotProps = slot.require?.properties || [];
+      for (const p of slotProps) {
+        if (!(resDef.properties || []).includes(p)) continue;
+        if (!factionHasProperty(ecoGate, p)) {
+          const label =
+            content.economy_schema?.properties?.[p]?.label || p;
+          return { ok: false, error: `Нужно свойство: ${label}` };
+        }
+      }
+      // Prefer planet-local deposits when planet has resources listed
+      const local = planet.resources || [];
+      if (local.length > 0) {
+        const onPlanet = local.some(
+          (n) => n === resDef.name || n === resDef.id,
+        );
+        if (!onPlanet) {
+          return {
+            ok: false,
+            error: "Ресурс должен быть на этой планете",
+          };
+        }
+      }
+      target.slotFills[role] = resDef.id;
+      filledId = resDef.id;
+    }
+
+    const list = planet[listKey];
+    const idx = list.findIndex((b) => b.id === inst);
+    list[idx] = target;
+    planet[listKey] = list;
+    const intent = recordAppliedIntent({
+      factionId,
+      defId: "intent.fill_slot",
+      payload: {
+        systemId,
+        planetId,
+        instanceId,
+        role,
+        resourceId: filledId,
+        cleared: clearing,
+      },
+      note,
+      turn,
+      apCost: 0,
+    });
+    writeLiveBoard(world, {
+      backup: false,
+      reason: clearing ? "planet_unfill_slot" : "planet_fill_slot",
+    });
+    return { ok: true, intent, world, planet, building: target };
   }
 
   return { ok: false, error: `Неизвестное действие: ${action}` };

@@ -1,10 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useDrag } from "@use-gesture/react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Minus, Square, X } from "lucide-react";
 import { RpChat, type RpChatProps } from "./RpChat";
@@ -53,7 +48,7 @@ export type FloatingRpWindowProps = RpChatProps & {
   zIndex?: number;
 };
 
-/** Draggable + resizable floating RP chat window. */
+/** Draggable + resizable floating RP chat — @use-gesture. */
 export function FloatingRpWindow({
   open,
   onOpenChange,
@@ -66,15 +61,6 @@ export function FloatingRpWindow({
   const [geom, setGeom] = useState<Geom>(() => readGeom(storageKey));
   const [minimized, setMinimized] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{
-    kind: "move" | "resize";
-    ox: number;
-    oy: number;
-    sx: number;
-    sy: number;
-    sw: number;
-    sh: number;
-  } | null>(null);
   const geomRef = useRef(geom);
   geomRef.current = geom;
 
@@ -91,68 +77,48 @@ export function FloatingRpWindow({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onOpenChange]);
 
-  const onPointerMove = useCallback((e: PointerEvent) => {
-    const d = dragRef.current;
-    if (!d) return;
-    if (d.kind === "move") {
+  const bindMove = useDrag(
+    ({ first, last, movement: [mx, my], memo, event }) => {
+      if ((event?.target as HTMLElement | null)?.closest?.("button")) {
+        return memo;
+      }
+      if (first) {
+        setDragging(true);
+        return { x: geomRef.current.x, y: geomRef.current.y };
+      }
+      const origin = memo as { x: number; y: number };
       setGeom(
         clampGeom({
           ...geomRef.current,
-          x: d.sx + (e.clientX - d.ox),
-          y: d.sy + (e.clientY - d.oy),
+          x: origin.x + mx,
+          y: origin.y + my,
         }),
       );
-    } else {
+      if (last) setDragging(false);
+      return origin;
+    },
+    { filterTaps: true, pointer: { touch: true } },
+  );
+
+  const bindResize = useDrag(
+    ({ first, last, movement: [mx, my], memo }) => {
+      if (first) {
+        setDragging(true);
+        return { w: geomRef.current.w, h: geomRef.current.h };
+      }
+      const origin = memo as { w: number; h: number };
       setGeom(
         clampGeom({
           ...geomRef.current,
-          w: d.sw + (e.clientX - d.ox),
-          h: d.sh + (e.clientY - d.oy),
+          w: origin.w + mx,
+          h: origin.h + my,
         }),
       );
-    }
-  }, []);
-
-  const endDrag = useCallback(() => {
-    dragRef.current = null;
-    setDragging(false);
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("pointerup", endDrag);
-  }, [onPointerMove]);
-
-  const startMove = (e: ReactPointerEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    e.preventDefault();
-    dragRef.current = {
-      kind: "move",
-      ox: e.clientX,
-      oy: e.clientY,
-      sx: geom.x,
-      sy: geom.y,
-      sw: geom.w,
-      sh: geom.h,
-    };
-    setDragging(true);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", endDrag);
-  };
-
-  const startResize = (e: ReactPointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragRef.current = {
-      kind: "resize",
-      ox: e.clientX,
-      oy: e.clientY,
-      sx: geom.x,
-      sy: geom.y,
-      sw: geom.w,
-      sh: geom.h,
-    };
-    setDragging(true);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", endDrag);
-  };
+      if (last) setDragging(false);
+      return origin;
+    },
+    { filterTaps: true, pointer: { touch: true } },
+  );
 
   if (!open || typeof document === "undefined") return null;
 
@@ -169,7 +135,7 @@ export function FloatingRpWindow({
       role="dialog"
       aria-label={title}
     >
-      <header className="rp-float-title" onPointerDown={startMove}>
+      <header className="rp-float-title" {...bindMove()}>
         <span className="rp-float-title-text">
           {title}
           {unread > 0 && !minimized && (
@@ -206,8 +172,8 @@ export function FloatingRpWindow({
           </div>
           <div
             className="rp-float-resize"
-            onPointerDown={startResize}
             title="Потяни за угол"
+            {...bindResize()}
           />
         </>
       )}

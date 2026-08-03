@@ -1,0 +1,229 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Космические объекты GMap: аномалии, туманности, левиафаны, структуры, поля. Content-слой поверх spaceObjects систем. Каждый объект имеет effects (capacity_add / flow_convert / demand_mod / unlock_property), применяемые к потокам фракции-владельца системы."
+  },
+  "objects": {
+    "anomaly": {
+      "id": "anomaly",
+      "name": "Аномалия",
+      "kind": "anomaly",
+      "description": "Пространственный разлом. Поднимает capacity Cognitio (F) высоких тиров, но создаёт спрос D.",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 7, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 8, "amount": 1 } },
+        { "effect": "demand_mod", "args": { "category": "D", "tier": 5, "amount": 1 } }
+      ]
+    },
+    "asteroid": {
+      "id": "asteroid",
+      "name": "Астероидный пояс",
+      "kind": "field",
+      "description": "Богатая руда. +rate Extracta (A) T2-4.",
+      "effects": [
+        { "effect": "rate_mod", "args": { "category": "A", "tier": 2, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "A", "tier": 3, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "A", "tier": 4, "amount": 1 } }
+      ]
+    },
+    "nebula": {
+      "id": "nebula",
+      "name": "Туманность",
+      "kind": "nebula",
+      "description": "Газовое облако. +rate Materia (B) T3-5, но -capacity D (экранирование энергии).",
+      "effects": [
+        { "effect": "rate_mod", "args": { "category": "B", "tier": 3, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "B", "tier": 4, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "B", "tier": 5, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 3, "amount": -1 } }
+      ]
+    },
+    "debris": {
+      "id": "debris",
+      "name": "Поля обломков",
+      "kind": "field",
+      "description": "Останки флота. +rate Industria (C) T2 (переплавка), спрос E T2 (сапёр).",
+      "effects": [
+        { "effect": "rate_mod", "args": { "category": "C", "tier": 2, "amount": 1 } },
+        { "effect": "demand_mod", "args": { "category": "E", "tier": 2, "amount": 1 } }
+      ]
+    },
+    "pirate": {
+      "id": "pirate",
+      "name": "Пиратское гнездо",
+      "kind": "threat",
+      "description": "Угроза торговле. +demand E T3 (патруль), +demand C T3 (ремонт).",
+      "effects": [
+        { "effect": "demand_mod", "args": { "category": "E", "tier": 3, "amount": 1 } },
+        { "effect": "demand_mod", "args": { "category": "C", "tier": 3, "amount": 1 } }
+      ]
+    },
+    "hub": {
+      "id": "hub",
+      "name": "Торговый узел",
+      "kind": "structure",
+      "description": "Концентрация торговли. +capacity C T4-6 (логистика), +rate F T3 (информация).",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "C", "tier": 4, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "C", "tier": 5, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "C", "tier": 6, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "F", "tier": 3, "amount": 1 } }
+      ]
+    },
+    "ruin": {
+      "id": "ruin",
+      "name": "Руины древних",
+      "kind": "anomaly",
+      "description": "Артефакты прошлого. +capacity F T6-8, шанс unlock_property (psion_store).",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 6, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 7, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 8, "amount": 1 } },
+        { "effect": "unlock_property", "args": { "property": "psion_store", "chance": 0.3 } }
+      ]
+    },
+    "dead_zone": {
+      "id": "dead_zone",
+      "name": "Мёртвая зона",
+      "kind": "field",
+      "description": "Выжженная пустошь. -rate E T1-3, -capacity E T4.",
+      "effects": [
+        { "effect": "rate_mod", "args": { "category": "E", "tier": 1, "amount": -1 } },
+        { "effect": "rate_mod", "args": { "category": "E", "tier": 2, "amount": -1 } },
+        { "effect": "rate_mod", "args": { "category": "E", "tier": 3, "amount": -1 } },
+        { "effect": "capacity_add", "args": { "category": "E", "tier": 4, "amount": -1 } }
+      ]
+    },
+    "wormhole": {
+      "id": "wormhole",
+      "name": "Червоточина",
+      "kind": "anomaly",
+      "description": "Складка пространства. +capacity D T9-10 (аномальная энергия), -demand D T5 (обход топлива).",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 9, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 10, "amount": 1 } },
+        { "effect": "demand_mod", "args": { "category": "D", "tier": 5, "amount": -1 } }
+      ]
+    },
+    "black_hole": {
+      "id": "black_hole",
+      "name": "Чёрная дыра",
+      "kind": "leviathan",
+      "description": "Гравитационный колосс. +capacity D T10, +demand A T8 (затягивание материи), unlock_property: matter_destroy.",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 10, "amount": 2 } },
+        { "effect": "demand_mod", "args": { "category": "A", "tier": 8, "amount": 1 } },
+        { "effect": "unlock_property", "args": { "property": "matter_destroy", "chance": 0.5 } }
+      ]
+    },
+    "pulsar": {
+      "id": "pulsar",
+      "name": "Пульсар",
+      "kind": "anomaly",
+      "description": "Регулярные импульсы энергии. +rate D T7-9, -capacity E T5 (радиация).",
+      "effects": [
+        { "effect": "rate_mod", "args": { "category": "D", "tier": 7, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "D", "tier": 8, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "D", "tier": 9, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "E", "tier": 5, "amount": -1 } }
+      ]
+    },
+    "storm": {
+      "id": "storm",
+      "name": "Ионный шторм",
+      "kind": "field",
+      "description": "Электромагнитная буря. -capacity D T4-6, +rate D T6 (индуцированный ток).",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 4, "amount": -1 } },
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 5, "amount": -1 } },
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 6, "amount": -1 } },
+        { "effect": "rate_mod", "args": { "category": "D", "tier": 6, "amount": 1 } }
+      ]
+    },
+    "comet": {
+      "id": "comet",
+      "name": "Комета",
+      "kind": "field",
+      "description": "Ледяное тело с примесями. +rate B T2, +rate E T2 (вода/органика).",
+      "effects": [
+        { "effect": "rate_mod", "args": { "category": "B", "tier": 2, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "E", "tier": 2, "amount": 1 } }
+      ]
+    },
+    "relay": {
+      "id": "relay",
+      "name": "Ретранслятор",
+      "kind": "structure",
+      "description": "Сеть связи. +capacity F T4-6, +rate F T4.",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 4, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 5, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 6, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "F", "tier": 4, "amount": 1 } }
+      ]
+    },
+    "minefield": {
+      "id": "minefield",
+      "name": "Минное поле",
+      "kind": "threat",
+      "description": "Заграждение. +demand C T4 (подрывники), -capacity D T3 (нарушение навигации).",
+      "effects": [
+        { "effect": "demand_mod", "args": { "category": "C", "tier": 4, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "D", "tier": 3, "amount": -1 } }
+      ]
+    },
+    "forge": {
+      "id": "forge",
+      "name": "Кузня",
+      "kind": "structure",
+      "description": "Промышленный комплекс. +capacity C T5-7, +demand B T5 (сырьё).",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "C", "tier": 5, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "C", "tier": 6, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "C", "tier": 7, "amount": 1 } },
+        { "effect": "demand_mod", "args": { "category": "B", "tier": 5, "amount": 1 } }
+      ]
+    },
+    "science_arch": {
+      "id": "science_arch",
+      "name": "Научный архив",
+      "kind": "structure",
+      "description": "Хранилище знаний. +capacity F T7-9, +rate F T6.",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 7, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 8, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 9, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "F", "tier": 6, "amount": 1 } }
+      ]
+    },
+    "grav_field": {
+      "id": "grav_field",
+      "name": "Гравитационное поле",
+      "kind": "anomaly",
+      "description": "Искажение гравитации. +capacity A T6-8 (глубокая добыча), -rate D T5.",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "A", "tier": 6, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "A", "tier": 7, "amount": 1 } },
+        { "effect": "capacity_add", "args": { "category": "A", "tier": 8, "amount": 1 } },
+        { "effect": "rate_mod", "args": { "category": "D", "tier": 5, "amount": -1 } }
+      ]
+    },
+    "leviathan": {
+      "id": "leviathan",
+      "name": "Левиафан",
+      "kind": "leviathan",
+      "description": "Древний космический левиафан. +capacity F T10, +demand E T7 (корм), unlock_property: psion_store, matter_destroy.",
+      "effects": [
+        { "effect": "capacity_add", "args": { "category": "F", "tier": 10, "amount": 1 } },
+        { "effect": "demand_mod", "args": { "category": "E", "tier": 7, "amount": 1 } },
+        { "effect": "unlock_property", "args": { "property": "psion_store", "chance": 0.4 } },
+        { "effect": "unlock_property", "args": { "property": "matter_destroy", "chance": 0.2 } }
+      ]
+    }
+  },
+  "extensibility": {
+    "add_new": "Добавьте новый ключ в objects с id/name/kind/effects. Системы ссылаются на него через spaceObjects[].",
+    "effect_types": ["capacity_add", "rate_mod", "demand_mod", "flow_convert", "unlock_property"],
+    "kind_values": ["anomaly", "nebula", "leviathan", "structure", "field", "threat"]
+  }
+}

@@ -110,7 +110,16 @@ export function getTurnHealth(opts = {}) {
   const missedDaily =
     !!meta.lastTickAt && !sameMoscowDay(meta.lastTickAt, nowIso);
   const alerts = Array.isArray(meta.tickAlerts) ? meta.tickAlerts : [];
-  const backups = listBackupDirs().slice(0, 5);
+  const allBackups = listBackupDirs();
+  const backups = allBackups.slice(0, 5);
+
+  let lastBackupAt = meta.lastBackupAt ?? null;
+  let lastBackupReason = meta.lastBackupReason ?? null;
+  if (!lastBackupAt && allBackups.length > 0) {
+    lastBackupAt = new Date(allBackups[0].mtime).toISOString();
+    const reasonMatch = allBackups[0].name.match(/_([^_]+)$/);
+    if (reasonMatch) lastBackupReason = reasonMatch[1];
+  }
 
   return {
     ok: true,
@@ -123,8 +132,8 @@ export function getTurnHealth(opts = {}) {
     tickFrozen: !!meta.tickFrozen,
     missedDailyTick: missedDaily,
     catchUpPending: missedDaily && !meta.tickFrozen,
-    lastBackupAt: meta.lastBackupAt ?? null,
-    lastBackupReason: meta.lastBackupReason ?? null,
+    lastBackupAt,
+    lastBackupReason,
     lastBackupDir: meta.lastBackupDir ?? null,
     backupCount: listBackupDirs().length,
     recentBackups: backups.map((b) => b.name),

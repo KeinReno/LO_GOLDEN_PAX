@@ -37,6 +37,12 @@ import {
 import { advanceCaravans, clampRep, driftAnomalies } from "./mapFeatures";
 import { toggleSpaceObject, withSpaceObjects } from "./spaceObjects";
 import { RESOURCE_POOL } from "./defaults";
+import {
+  readStoredEditorGraphics,
+  writeStoredEditorGraphics,
+  type GraphicsPrefKey,
+  type ViewerGraphicsPrefs,
+} from "../ui/viewerGraphics";
 
 const GM_SHELL_KEY = "gmap-gm-shell-mode";
 
@@ -96,6 +102,8 @@ interface WorldStore extends UiState {
   toggleShowDeadZones: () => void;
   toggleShowTraffic: () => void;
   toggleShowQuests: () => void;
+  editorGraphics: ViewerGraphicsPrefs;
+  toggleEditorGraphic: (key: GraphicsPrefKey) => void;
   applyMapLayerFlags: (flags: Partial<{
     showLinks: boolean;
     showOwnership: boolean;
@@ -395,6 +403,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showTraffic: true,
   showQuests: true,
   openQuestId: null,
+  editorGraphics: readStoredEditorGraphics(),
   diplomacyPanelOpen: false,
   rpFloatOpen: false,
   rpFocusFactionId: null,
@@ -481,6 +490,12 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     set((s) => ({ showDeadZones: !s.showDeadZones })),
   toggleShowTraffic: () => set((s) => ({ showTraffic: !s.showTraffic })),
   toggleShowQuests: () => set((s) => ({ showQuests: !s.showQuests })),
+  toggleEditorGraphic: (key) =>
+    set((s) => {
+      const next = { ...s.editorGraphics, [key]: !s.editorGraphics[key] };
+      writeStoredEditorGraphics(next);
+      return { editorGraphics: next };
+    }),
   applyMapLayerFlags: (flags) => set((s) => ({ ...s, ...flags })),
   setDiplomacyPanelOpen: (open) => set({ diplomacyPanelOpen: open }),
   setRpFloatOpen: (open) =>

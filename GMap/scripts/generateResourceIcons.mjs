@@ -99,12 +99,38 @@ const mapPath = path.join(ROOT, "content/core/resource-icon-slugs.json");
 fs.writeFileSync(mapPath, JSON.stringify(mapping, null, 2) + "\n");
 
 const poolPath = path.join(ROOT, "src/state/resourcePool.generated.ts");
+const metaExport = {};
+for (const [id, def] of Object.entries(RESOURCES)) {
+  metaExport[def.name] = {
+    id: def.id,
+    name: def.name,
+    category: def.category ?? null,
+    tier: def.tier ?? null,
+    properties: def.properties ?? [],
+    biome_tags: def.biome_tags ?? [],
+    spread: def.spread ?? { self_spreading: false },
+    toxic: !!def.toxic,
+  };
+}
 const poolBody = `/** Auto-generated from content/core/map_resources.json — do not edit by hand. */
 export const RESOURCE_POOL: string[] = ${JSON.stringify(names, null, 2)};
 
 export type ResourceName = string;
 
 export const RESOURCE_ICON_SLUGS: Record<string, string> = ${JSON.stringify(mapping, null, 2)};
+
+export type ResourceMeta = {
+  id: string;
+  name: string;
+  category: "A" | "B" | "C" | "D" | "E" | "F" | null;
+  tier: number | null;
+  properties: string[];
+  biome_tags: string[];
+  spread: { self_spreading: boolean };
+  toxic: boolean;
+};
+
+export const RESOURCE_META: Record<string, ResourceMeta> = ${JSON.stringify(metaExport, null, 2)};
 `;
 fs.writeFileSync(poolPath, poolBody);
 

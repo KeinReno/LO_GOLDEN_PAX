@@ -37,7 +37,12 @@ import {
   reservedAp,
 } from "./intents.mjs";
 import { applyPlanetAction } from "./planetActions.mjs";
+import {
+  applySystemAction,
+  listStationCatalog,
+} from "./systemActions.mjs";
 import { processTurn, getLastJournal } from "./processTurn.mjs";
+import { getFactionBriefing } from "./briefingFilter.mjs";
 import { startTickScheduler, getSchedulerStatus } from "./tickScheduler.mjs";
 import {
   requireMasterHeader,
@@ -60,11 +65,40 @@ import {
 } from "./fogStore.mjs";
 import {
   getFactionPublicEco,
+  publicEconomyPayload,
   readLedger,
   ensureAllFactions,
   writeLedger,
 } from "./ledger.mjs";
 import { queueTaxChange } from "./economyTick.mjs";
+import {
+  getMarketRatesPayload,
+  writeMarketRates,
+} from "./marketRates.mjs";
+import {
+  getOpenMarketBook,
+  getOpenMarketBookForFaction,
+  getMarketHistory,
+} from "./marketOrders.mjs";
+import {
+  getKnownFactionIds,
+  getTradePartnerIds,
+  getDiplomacyRelation,
+} from "./factionIntel.mjs";
+import {
+  getDiploOffersForFaction,
+  createDiploOffer,
+  respondDiploOffer,
+} from "./diploOffers.mjs";
+import {
+  isCommonMarketMember,
+  listCommonMembers,
+  setCommonMarketMembership,
+} from "./marketMembership.mjs";
+import {
+  getSuperpowerCatalog,
+  purchaseSuperpowerListing,
+} from "./superpowerMarket.mjs";
 import {
   readEngagements,
   setEngagementStance,
@@ -89,7 +123,7 @@ import {
   patchMessageIntentId,
   DEFAULT_CAMPAIGN,
 } from "./rpStore.mjs";
-import { storePing } from "./db/storeAdapter.mjs";
+import { storePing, getDataFileSizes } from "./db/storeAdapter.mjs";
 
 export {
   DATA_DIR,
@@ -112,8 +146,38 @@ function getVisibleSystemIds(world, factionId) {
   return resolveVisibleWithFog(world, factionId, readFog());
 }
 
+function authenticatePlayerFaction(body, world) {
+  const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+  if (!faction || faction.password !== body.password) {
+    return { ok: false, error: "Неверный пароль государства" };
+  }
+  return { ok: true, faction };
+}
+
+function playerSessionPayload(world, faction) {
+  const filtered = filterWorldForFaction(world, faction.id);
+  const eco = getFactionPublicEco(faction.id);
+  const apMax = eco.rules?.apPerTurn
+    ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
+    : resolveApMax(getContent().rules?.apPerTurn ?? 3, buildModifierStack([]));
+  const diploOffers = getDiploOffersForFaction(faction.id);
+  return {
+    factionId: faction.id,
+    updatedAt: world.meta?.updatedAt ?? null,
+    tableRevision: world.meta?.tableRevision ?? 0,
+    apMax,
+    reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+    economy: publicEconomyPayload(eco),
+    briefing: getFactionBriefing(faction.id, world),
+    diploOffers,
+    ...filtered,
+  };
+}
+
 function filterWorldForFaction(world, factionId) {
   const visible = getVisibleSystemIds(world, factionId);
+  const knownIds = getKnownFactionIds(world, factionId, [...visible]);
+  const tradePartnerIds = getTradePartnerIds(world, factionId, knownIds);
   const systems = (world.systems ?? []).filter((s) => visible.has(s.id));
   const systemSet = new Set(systems.map((s) => s.id));
   const links = (world.links ?? []).filter(
@@ -128,13 +192,34 @@ function filterWorldForFaction(world, factionId) {
   const playerOrders = readJson(ORDERS_PATH, []).filter(
     (o) => o.factionId === factionId,
   );
-  const factions = (world.factions ?? []).map((f) => ({
-    ...f,
-    password: f.id === factionId ? f.password : "••••",
-  }));
+  const factions = (world.factions ?? [])
+    .filter((f) => knownIds.has(f.id))
+    .map((f) => {
+      const { gmNotes: _fgm, ...rest } = f;
+      const npcs = (f.npcs ?? []).map((n) => {
+        const { gmNotes: _ngm, ...nRest } = n;
+        if (f.id !== factionId && n.status === "hidden") return null;
+        return nRest;
+      }).filter(Boolean);
+      return {
+        ...rest,
+        password: f.id === factionId ? f.password : "••••",
+        // Other polities: hide court details; own faction keeps public court.
+        notes: f.id === factionId ? f.notes : undefined,
+        npcs: f.id === factionId ? npcs : undefined,
+      };
+    });
+  const diplomacy = (world.diplomacy ?? []).filter((d) => {
+    const touchesSelf = d.aId === factionId || d.bId === factionId;
+    if (!touchesSelf) return false;
+    const other = d.aId === factionId ? d.bId : d.aId;
+    return knownIds.has(other);
+  });
 
   return {
     visibleSystemIds: [...visible],
+    knownFactionIds: [...knownIds],
+    tradePartnerIds,
     world: {
       ...world,
       systems: systems.map((s) => {
@@ -146,6 +231,7 @@ function filterWorldForFaction(world, factionId) {
       legions,
       orders: playerOrders,
       factions,
+      diplomacy,
     },
   };
 }
@@ -170,6 +256,24 @@ function readBody(req) {
     });
     req.on("error", reject);
   });
+}
+
+function buildOpsHealthResponse() {
+  const auth = masterTokenInfo();
+  const health = getTurnHealth({
+    cron: getContent().rules?.tickCron || "1 0 * * *",
+    timezone: getContent().rules?.tickTimezone || "Europe/Moscow",
+  });
+  const storeRaw = storePing();
+  const { betterSqlite3, ...storeRest } = storeRaw;
+  return {
+    ...health,
+    tokenIsDefault: auth.isDefault,
+    auth,
+    scheduler: getSchedulerStatus(),
+    store: { ...storeRest, betterSqlite3 },
+    dataSizes: getDataFileSizes(),
+  };
 }
 
 /**
@@ -243,6 +347,253 @@ export function createApiMiddleware() {
           apMax: resolveApMax(getContent().rules?.apPerTurn ?? 3, stack),
           explain: explainStack(stack),
           channels: stack.channels,
+        });
+        return;
+      }
+
+      // ===== New economy model: slot resolver + flow matrix =====
+      if (url.pathname === "/api/economy/resource-index" && req.method === "GET") {
+        const { buildResourceIndex } = await import("./slotResolver.mjs");
+        sendJson(res, 200, buildResourceIndex(getContent()));
+        return;
+      }
+
+      if (url.pathname === "/api/economy/resolve-slots" && req.method === "POST") {
+        const body = await readBody(req);
+        const c = getContent();
+        const { resolveVariant, resolveSlots, buildResourceIndex } = await import(
+          "./slotResolver.mjs"
+        );
+        const idx = buildResourceIndex(c);
+        let consumer = null;
+        const coll = body.collection === "ship" ? c.ships : body.collection === "unit" ? c.units : c.buildings;
+        if (body.id && coll?.[body.id]) consumer = coll[body.id];
+        else if (body.id) consumer = resolveVariant(body.id, c);
+        if (!consumer) {
+          sendJson(res, 404, { error: "consumer not found" });
+          return;
+        }
+        sendJson(res, 200, {
+          consumer,
+          slots: resolveSlots(consumer, idx),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/flows" && req.method === "GET") {
+        const fid = url.searchParams.get("factionId");
+        if (!fid) {
+          sendJson(res, 400, { error: "factionId required" });
+          return;
+        }
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 503, { error: "live board not loaded" });
+          return;
+        }
+        const { computeFlowBreakdown } = await import("./economyTick.mjs");
+        const ledger = ensureAllFactions(readLedger(), world);
+        const eco = ledger.factions[fid] || null;
+        sendJson(res, 200, computeFlowBreakdown(world, fid, getContent(), eco));
+        return;
+      }
+
+      if (url.pathname === "/api/market/book" && req.method === "GET") {
+        // Unfiltered book — master tools / diagnostics.
+        sendJson(res, 200, { offers: getOpenMarketBook() });
+        return;
+      }
+
+      if (url.pathname === "/api/diplo/offers" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
+          return;
+        }
+        const visible = getVisibleSystemIds(world, auth.faction.id);
+        const known = getKnownFactionIds(world, auth.faction.id, [...visible]);
+        const action = body.action || "create";
+
+        if (action === "list") {
+          sendJson(res, 200, {
+            ok: true,
+            ...getDiploOffersForFaction(auth.faction.id),
+            economy: publicEconomyPayload(getFactionPublicEco(auth.faction.id)),
+          });
+          return;
+        }
+
+        if (action === "create") {
+          const result = createDiploOffer({
+            fromFactionId: auth.faction.id,
+            toFactionId: body.toFactionId,
+            give: body.give,
+            want: body.want,
+            note: body.note,
+            turn: world.meta?.turn ?? 0,
+            knownOk: known.has(body.toFactionId),
+          });
+          if (!result.ok) {
+            sendJson(res, 400, result);
+            return;
+          }
+          sendJson(res, 200, {
+            ok: true,
+            offer: result.offer,
+            ...getDiploOffersForFaction(auth.faction.id),
+            economy: publicEconomyPayload(getFactionPublicEco(auth.faction.id)),
+            ...playerSessionPayload(world, auth.faction),
+          });
+          return;
+        }
+
+        if (action === "accept" || action === "reject" || action === "cancel") {
+          const result = respondDiploOffer({
+            offerId: body.offerId,
+            factionId: auth.faction.id,
+            accept: action === "accept",
+            turn: world.meta?.turn ?? 0,
+          });
+          if (!result.ok) {
+            sendJson(res, 400, result);
+            return;
+          }
+          const fresh = readLiveBoard() || world;
+          sendJson(res, 200, {
+            ok: true,
+            offer: result.offer,
+            ...getDiploOffersForFaction(auth.faction.id),
+            economy: publicEconomyPayload(getFactionPublicEco(auth.faction.id)),
+            ...playerSessionPayload(fresh, auth.faction),
+          });
+          return;
+        }
+
+        sendJson(res, 400, { error: "unknown action" });
+        return;
+      }
+
+      if (url.pathname === "/api/market/book" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
+          return;
+        }
+        const visible = getVisibleSystemIds(world, auth.faction.id);
+        const known = getKnownFactionIds(world, auth.faction.id, [...visible]);
+        const partners = getTradePartnerIds(world, auth.faction.id, known);
+        const venue =
+          body.venue === "common" || body.venue === "contacts"
+            ? body.venue
+            : "all";
+        const joinedCommon = isCommonMarketMember(auth.faction.id);
+        const memberIds = listCommonMembers();
+        sendJson(res, 200, {
+          offers: getOpenMarketBookForFaction(
+            auth.faction.id,
+            world,
+            partners,
+            venue,
+          ),
+          tradePartnerIds: partners,
+          partners: partners.map((id) => {
+            const f = (world.factions ?? []).find((x) => x.id === id);
+            return {
+              id,
+              name: f?.name ?? id,
+              color: f?.color ?? null,
+              relation: getDiplomacyRelation(world, auth.faction.id, id),
+            };
+          }),
+          commonMarket: {
+            joined: joinedCommon,
+            memberCount: memberIds.length,
+            members: memberIds.map((id) => {
+              const f = (world.factions ?? []).find((x) => x.id === id);
+              return {
+                id,
+                name: f?.name ?? id,
+                color: f?.color ?? null,
+              };
+            }),
+          },
+          history: getMarketHistory(24),
+          factionCurrencies: getContent().faction_currencies ?? {},
+          quoteSeedMeta: getContent().market_quote_seed?.meta ?? null,
+          superpowers: getSuperpowerCatalog(world, auth.faction.id),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/market/membership" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
+          return;
+        }
+        const result = setCommonMarketMembership(
+          auth.faction.id,
+          body.join !== false,
+        );
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          joined: result.joined,
+          memberCount: result.members.length,
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/market/superpower" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
+          return;
+        }
+        const result = purchaseSuperpowerListing({
+          world,
+          factionId: auth.faction.id,
+          listingId: body.listingId,
+          systemId: body.systemId,
+          turn: world.meta?.turn ?? 0,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const fresh = readLiveBoard() || world;
+        sendJson(res, 200, {
+          ok: true,
+          ...result.result,
+          superpowers: getSuperpowerCatalog(fresh, auth.faction.id),
+          ...playerSessionPayload(fresh, auth.faction),
         });
         return;
       }
@@ -439,19 +790,34 @@ export function createApiMiddleware() {
           sendJson(res, 404, { error: "Нет board" });
           return;
         }
-        const sys = (world.systems ?? []).find((s) => s.id === body.systemId);
-        if (!sys) {
+        const ids = body.systemIds || (body.systemId ? [body.systemId] : []);
+        if (!ids.length) {
+          sendJson(res, 400, { error: "systemId(s) required" });
+          return;
+        }
+        const turns = Math.max(
+          1,
+          Math.floor(body.turns ?? body.turnsRemaining ?? 2),
+        );
+        const turn = world.meta?.turn ?? 0;
+        let touched = 0;
+        const updated = [];
+        for (const sys of world.systems ?? []) {
+          if (!ids.includes(sys.id)) continue;
+          scheduleTimer(sys, {
+            expiresTurn: turn + turns,
+            action: body.action || { kind: "clear_activity" },
+            label: body.label || null,
+          });
+          updated.push({ id: sys.id, timers: sys.timers });
+          touched++;
+        }
+        if (!touched) {
           sendJson(res, 404, { error: "system missing" });
           return;
         }
-        const turns = Math.max(1, Math.floor(body.turns || 2));
-        scheduleTimer(sys, {
-          expiresTurn: (world.meta?.turn ?? 0) + turns,
-          action: body.action || { kind: "clear_activity" },
-          label: body.label || null,
-        });
         writeLiveBoard(world, { backup: false, reason: "timer" });
-        sendJson(res, 200, { ok: true, timers: sys.timers });
+        sendJson(res, 200, { ok: true, count: touched, systems: updated });
         return;
       }
 
@@ -695,6 +1061,41 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/economy/research" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!body.techId) {
+          sendJson(res, 400, { error: "techId required" });
+          return;
+        }
+        const { researchTech } = await import("./techActions.mjs");
+        const result = researchTech(body.factionId, body.techId, {
+          turn: world.meta?.turn ?? null,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          tech: result.tech,
+          economy: getFactionPublicEco(body.factionId),
+        });
+        return;
+      }
+
       if (url.pathname === "/api/economy/set-tax" && req.method === "POST") {
         const body = await readBody(req);
         const world = readLiveBoard();
@@ -738,6 +1139,22 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/market/rates" && req.method === "GET") {
+        sendJson(res, 200, getMarketRatesPayload(getContent()));
+        return;
+      }
+
+      if (url.pathname === "/api/market/rates" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = writeMarketRates(body?.rates);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
       if (url.pathname === "/api/turn/tick" && req.method === "POST") {
         if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
@@ -746,6 +1163,28 @@ export function createApiMiddleware() {
         const body = await readBody(req);
         const result = processTurn({ force: !!body?.force, master: true });
         sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/player/briefing" && req.method === "GET") {
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const factionId =
+          url.searchParams.get("factionId") || req.headers["x-faction-id"];
+        const password =
+          url.searchParams.get("password") || req.headers["x-faction-password"];
+        const fac = (world.factions ?? []).find((f) => f.id === factionId);
+        if (!fac || fac.password !== password) {
+          sendJson(res, 401, { error: "Неверный пароль государства" });
+          return;
+        }
+        sendJson(res, 200, {
+          briefing: getFactionBriefing(factionId, world),
+          turn: world.meta?.turn ?? null,
+        });
         return;
       }
 
@@ -765,20 +1204,16 @@ export function createApiMiddleware() {
         return;
       }
 
-      if (url.pathname === "/api/turn/health" && req.method === "GET") {
+      if (
+        (url.pathname === "/api/turn/health" ||
+          url.pathname === "/api/ops/health") &&
+        req.method === "GET"
+      ) {
         if (!requireMaster(req)) {
           sendJson(res, 401, { error: "Неверный мастер-токен" });
           return;
         }
-        const health = getTurnHealth({
-          cron: getContent().rules?.tickCron || "1 0 * * *",
-          timezone: getContent().rules?.tickTimezone || "Europe/Moscow",
-        });
-        sendJson(res, 200, {
-          ...health,
-          scheduler: getSchedulerStatus(),
-          auth: masterTokenInfo(),
-        });
+        sendJson(res, 200, buildOpsHealthResponse());
         return;
       }
 
@@ -1075,34 +1510,12 @@ export function createApiMiddleware() {
           sendJson(res, 404, { error: "Карта ещё не опубликована" });
           return;
         }
-        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
-        if (!faction || faction.password !== body.password) {
-          sendJson(res, 401, { error: "Неверный пароль государства" });
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
           return;
         }
-        const filtered = filterWorldForFaction(world, faction.id);
-        const eco = getFactionPublicEco(faction.id);
-        const apMax = eco.rules?.apPerTurn
-          ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
-          : resolveApMax(
-              getContent().rules?.apPerTurn ?? 3,
-              buildModifierStack([]),
-            );
-        sendJson(res, 200, {
-          factionId: faction.id,
-          updatedAt: world.meta?.updatedAt ?? null,
-          tableRevision: world.meta?.tableRevision ?? 0,
-          apMax,
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-          economy: {
-            stocks: eco.stocks,
-            taxes: eco.taxes,
-            pendingPolicy: eco.pendingPolicy,
-            pressure: eco.pressure,
-            deficit: eco.deficit,
-          },
-          ...filtered,
-        });
+        sendJson(res, 200, playerSessionPayload(world, auth.faction));
         return;
       }
 
@@ -1113,36 +1526,12 @@ export function createApiMiddleware() {
           sendJson(res, 404, { error: "Карта ещё не опубликована" });
           return;
         }
-        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
-        if (!faction || faction.password !== body.password) {
-          sendJson(res, 401, { error: "Неверный пароль государства" });
+        const auth = authenticatePlayerFaction(body, world);
+        if (!auth.ok) {
+          sendJson(res, 401, { error: auth.error });
           return;
         }
-        const filtered = filterWorldForFaction(world, faction.id);
-        const eco = getFactionPublicEco(faction.id);
-        sendJson(res, 200, {
-          factionId: faction.id,
-          updatedAt: world.meta?.updatedAt ?? null,
-          tableRevision: world.meta?.tableRevision ?? 0,
-          apMax: eco.rules?.apPerTurn
-            ? resolveApMax(
-                eco.rules.apPerTurn,
-                buildModifierStack([]),
-              )
-            : resolveApMax(
-                getContent().rules?.apPerTurn ?? 3,
-                buildModifierStack([]),
-              ),
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-          economy: {
-            stocks: eco.stocks,
-            taxes: eco.taxes,
-            pendingPolicy: eco.pendingPolicy,
-            pressure: eco.pressure,
-            deficit: eco.deficit,
-          },
-          ...filtered,
-        });
+        sendJson(res, 200, playerSessionPayload(world, auth.faction));
         return;
       }
 
@@ -1177,6 +1566,9 @@ export function createApiMiddleware() {
           colonyType: body.colonyType,
           note: body.note,
           apMax,
+          slotRole: body.slotRole,
+          slotResourceId: body.slotResourceId,
+          name: body.name,
         });
         if (!result.ok) {
           sendJson(res, 400, result);
@@ -1191,13 +1583,66 @@ export function createApiMiddleware() {
           building: result.building ?? null,
           apMax,
           reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-          economy: {
-            stocks: ecoAfter.stocks,
-            taxes: ecoAfter.taxes,
-            pendingPolicy: ecoAfter.pendingPolicy,
-            pressure: ecoAfter.pressure,
-            deficit: ecoAfter.deficit,
-          },
+          economy: publicEconomyPayload(ecoAfter),
+          ...filtered,
+        });
+        return;
+      }
+
+      /** System stations + ship/unit production. */
+      if (url.pathname === "/api/system/action" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!faction || faction.password !== body.password) {
+          sendJson(res, 401, { error: "Неверный пароль" });
+          return;
+        }
+        const eco = getFactionPublicEco(faction.id);
+        const apMax = eco.rules?.apPerTurn
+          ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
+          : resolveApMax(
+              getContent().rules?.apPerTurn ?? 3,
+              buildModifierStack([]),
+            );
+        const result = applySystemAction({
+          world,
+          factionId: faction.id,
+          action: body.action,
+          systemId: body.systemId,
+          stationKind: body.stationKind,
+          stationId: body.stationId,
+          shipId: body.shipId,
+          unitId: body.unitId,
+          count: body.count,
+          fleetId: body.fleetId,
+          legionId: body.legionId,
+          planetId: body.planetId,
+          beltAngle: body.beltAngle,
+          name: body.name,
+          note: body.note,
+          apMax,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const filtered = filterWorldForFaction(world, faction.id);
+        const ecoAfter = getFactionPublicEco(faction.id);
+        sendJson(res, 200, {
+          ok: true,
+          intent: result.intent,
+          station: result.station ?? null,
+          fleet: result.fleet ?? null,
+          legion: result.legion ?? null,
+          stationsCatalog: listStationCatalog(),
+          apMax,
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          economy: publicEconomyPayload(ecoAfter),
           ...filtered,
         });
         return;

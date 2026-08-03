@@ -1,4 +1,38 @@
 import type { Faction, WorldState } from "./types";
+import { neighborIds } from "./pathfinding";
+
+/** Hop expansion from owned / presence / permanent-reveal cores (editor preview). */
+export const VISION_SYSTEM_HOPS = 1;
+/** Hop expansion from own fleet / legion positions (editor preview). */
+export const VISION_FLEET_HOPS = 1;
+
+function expandVisionHops(
+  world: WorldState,
+  startIds: Iterable<string>,
+  maxHops: number,
+): Set<string> {
+  const added = new Set<string>();
+  if (maxHops <= 0) return added;
+  const dist = new Map<string, number>();
+  const q: string[] = [];
+  for (const id of startIds) {
+    if (!id) continue;
+    dist.set(id, 0);
+    q.push(id);
+  }
+  while (q.length) {
+    const id = q.shift()!;
+    const d = dist.get(id) ?? 0;
+    if (d >= maxHops) continue;
+    for (const n of neighborIds(world, id)) {
+      if (dist.has(n)) continue;
+      dist.set(n, d + 1);
+      added.add(n);
+      q.push(n);
+    }
+  }
+  return added;
+}
 
 /** Faction flagged with fullMapVision sees the whole star map. */
 export function factionHasFullMapVision(faction: Faction | undefined): boolean {
@@ -41,6 +75,33 @@ export function getVisibleSystemIds(
   for (const l of world.legions ?? []) {
     if (l.factionId === factionId) visible.add(l.systemId);
   }
+
+  const fleetSystemIds = new Set<string>();
+  const legionSystemIds = new Set<string>();
+  for (const f of world.fleets) {
+    if (f.factionId === factionId && f.systemId) fleetSystemIds.add(f.systemId);
+  }
+  for (const l of world.legions ?? []) {
+    if (l.factionId === factionId && l.systemId) legionSystemIds.add(l.systemId);
+  }
+
+  const systemHopSeeds = new Set<string>();
+  for (const s of world.systems) {
+    const id = s.id;
+    const owned = s.ownerFactionId === factionId;
+    const fleetHere = fleetSystemIds.has(id);
+    const legionHere = legionSystemIds.has(id);
+    if (owned || fleetHere || legionHere) systemHopSeeds.add(id);
+  }
+  for (const id of expandVisionHops(world, systemHopSeeds, VISION_SYSTEM_HOPS)) {
+    visible.add(id);
+  }
+
+  const fleetHopSeeds = new Set([...fleetSystemIds, ...legionSystemIds]);
+  for (const id of expandVisionHops(world, fleetHopSeeds, VISION_FLEET_HOPS)) {
+    visible.add(id);
+  }
+
   return visible;
 }
 

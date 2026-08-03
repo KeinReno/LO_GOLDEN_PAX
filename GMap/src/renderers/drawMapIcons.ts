@@ -31,9 +31,9 @@ export interface AnimClock {
 export type MapLod = "far" | "mid" | "near";
 
 /**
- * far  — overview: only polity names
- * mid  — inhabited / capitals named; quest pins
- * near — all system names
+ * far  — overview: battle markers only; polity labels gated
+ * mid  — silhouette + name for inhabited/capitals; 1 quiet signal; no resource billboards
+ * near — habit pips + quiet resource glyph; dense stats live in hover tip
  */
 export function resolveMapLod(scale: number): MapLod {
   if (scale < 0.62) return "far";
@@ -147,22 +147,41 @@ function drawSystemToken(
     ellipse(g, cx, cy, rx, ry);
     g.fill({ color: neutral ? 0x1a1c20 : 0x10161f, alpha: 0.95 });
 
+    // Outer dark bevel + faction rim for metal token depth
     ellipse(g, cx, cy, rx, ry);
     g.stroke({
-      width: capital ? 3.2 : 2.4,
+      width: capital ? 3.6 : 2.8,
+      color: 0x05070c,
+      alpha: 0.55,
+    });
+    ellipse(g, cx, cy, rx, ry);
+    g.stroke({
+      width: capital ? 2.6 : 2,
       color: rimColor,
-      alpha: neutral ? 0.55 : 0.92,
+      alpha: neutral ? 0.55 : 0.94,
     });
 
     ellipse(g, cx, cy, rx * 0.72, ry * 0.72);
     g.stroke({
       width: 1,
       color: 0xffffff,
-      alpha: 0.12 + anim.pulse * 0.05,
+      alpha: 0.14 + anim.pulse * 0.06,
+    });
+    // Specular rim highlight (top-left of ellipse)
+    ellipse(g, cx - rx * 0.12, cy - ry * 0.18, rx * 0.55, ry * 0.35);
+    g.stroke({
+      width: 1.1,
+      color: 0xffffff,
+      alpha: 0.1 + anim.pulse * 0.04,
     });
   }
 
   if (selected) {
+    // Soft pin-light halo (readable select, not 3D tilt)
+    ellipse(g, cx, cy, rx + 11 + anim.pulse * 2, ry + 5.5 + anim.pulse);
+    g.stroke({ width: 1, color: 0xe8c547, alpha: 0.22 + anim.pulse * 0.1 });
+    ellipse(g, cx, cy, rx + 7 + anim.pulse * 1.6, ry + 3.5 + anim.pulse);
+    g.stroke({ width: 1.35, color: 0xffe08a, alpha: 0.45 + anim.pulse2 * 0.12 });
     ellipse(g, cx, cy, rx + 5 + anim.pulse * 1.5, ry + 2.5 + anim.pulse);
     g.stroke({ width: 1.8, color: 0xe8c547, alpha: 0.85 });
   }
@@ -174,11 +193,14 @@ export function drawOwnershipAura(
   color: number,
   anim: AnimClock,
   shareColors?: number[],
+  opts?: { dim?: number; emphasize?: boolean },
 ): void {
   const p = toIso(s.x, s.y);
-  const breathe = 1 + anim.pulse * 0.05;
-  const rx = 24 * breathe;
-  const ry = 12 * breathe;
+  const dim = opts?.dim ?? 1;
+  const emph = !!opts?.emphasize;
+  const breathe = 1 + anim.pulse * (emph ? 0.05 : 0.02);
+  const rx = (emph ? 24 : 20) * breathe;
+  const ry = (emph ? 12 : 10) * breathe;
   const shares = (shareColors ?? []).filter((c) => Number.isFinite(c));
 
   if (shares.length >= 2) {
@@ -188,23 +210,33 @@ export function drawOwnershipAura(
       const a0 = start + (i / n) * Math.PI * 2;
       const a1 = start + ((i + 1) / n) * Math.PI * 2;
       ellipseWedge(g, p.x, p.y + 2, rx, ry, a0, a1);
-      g.fill({ color: shares[i]!, alpha: 0.14 + anim.pulse * 0.04 });
+      g.fill({
+        color: shares[i]!,
+        alpha: (0.1 + anim.pulse * 0.03) * dim,
+      });
     }
     ellipse(g, p.x, p.y + 2, rx, ry);
     g.stroke({
-      width: 1.4,
+      width: 1.2,
       color: 0xe8d5a0,
-      alpha: 0.35 + anim.pulse * 0.1,
+      alpha: (0.28 + anim.pulse * 0.08) * dim,
     });
     return;
   }
 
   ellipse(g, p.x, p.y + 2, rx, ry);
-  g.fill({ color, alpha: 0.1 + anim.pulse * 0.04 });
+  g.fill({ color, alpha: (0.07 + anim.pulse * 0.03) * dim });
   ellipse(g, p.x, p.y + 2, rx, ry);
-  g.stroke({ width: 1.4, color, alpha: 0.35 + anim.pulse * 0.15 });
-  ellipse(g, p.x, p.y + 2, 28 * breathe, 14 * breathe);
-  g.stroke({ width: 0.8, color: 0xc9a227, alpha: 0.2 + anim.pulse * 0.08 });
+  g.stroke({ width: 1.15, color, alpha: (0.28 + anim.pulse * 0.1) * dim });
+  // Outer ring only when focused — cuts mid-map concentric noise
+  if (emph) {
+    ellipse(g, p.x, p.y + 2, 28 * breathe, 14 * breathe);
+    g.stroke({
+      width: 0.8,
+      color: 0xc9a227,
+      alpha: (0.18 + anim.pulse * 0.06) * dim,
+    });
+  }
 }
 
 export function drawIntelRing(
@@ -226,6 +258,23 @@ export function drawIntelRing(
     g.lineTo(x1, y1);
     g.stroke({ width: 1.2, color: 0xe8c547, alpha: 0.55 });
   }
+}
+
+/** Soft pin-light preview when pointer hovers a system (not selected). */
+export function drawHoverRing(
+  g: Graphics,
+  s: StarSystem,
+  anim: AnimClock,
+): void {
+  const p = toIso(s.x, s.y);
+  const rx = 20 + anim.pulse * 1.2;
+  const ry = 10 + anim.pulse * 0.6;
+  ellipse(g, p.x, p.y, rx + 8, ry + 4);
+  g.fill({ color: 0xe8c547, alpha: 0.04 + anim.pulse * 0.02 });
+  ellipse(g, p.x, p.y, rx + 4, ry + 2);
+  g.stroke({ width: 1, color: 0xe8c547, alpha: 0.22 + anim.pulse * 0.08 });
+  ellipse(g, p.x, p.y, rx, ry);
+  g.stroke({ width: 1.35, color: 0xffe08a, alpha: 0.42 + anim.pulse2 * 0.1 });
 }
 
 /** Gold corner brackets for selected system. */
@@ -257,15 +306,28 @@ export function drawSelectionBrackets(
 
 export function drawFogVeil(g: Graphics, s: StarSystem): void {
   const p = toIso(s.x, s.y);
+  // Soft outer veil — unexplored as unresolved canvas
+  ellipse(g, p.x, p.y, 22, 11);
+  g.fill({ color: 0x05070c, alpha: 0.28 });
   ellipse(g, p.x, p.y, 18, 9);
-  g.fill({ color: 0x05070c, alpha: 0.55 });
+  g.fill({ color: 0x05070c, alpha: 0.52 });
   ellipse(g, p.x, p.y, 18, 9);
-  g.stroke({ width: 1, color: 0x3a4250, alpha: 0.45 });
+  g.stroke({ width: 1, color: 0x3a4250, alpha: 0.42 });
+  ellipse(g, p.x, p.y, 14, 7);
+  g.stroke({ width: 0.8, color: 0x5a6578, alpha: 0.2 });
+  const seed = s.id.charCodeAt(0) * 0.37 + s.id.charCodeAt(s.id.length - 1);
+  for (let i = 0; i < 10; i++) {
+    const a = seed + i * 0.73;
+    const dx = Math.cos(a) * (3.5 + (i % 4) * 2.8);
+    const dy = Math.sin(a * 1.3) * (1.8 + (i % 3) * 2.1);
+    g.circle(p.x + dx, p.y + dy, i % 3 === 0 ? 1.4 : 0.85);
+    g.fill({ color: 0x7a9bb8, alpha: 0.14 + (i % 5) * 0.035 });
+  }
   g.moveTo(p.x - 10, p.y - 2);
   g.lineTo(p.x + 8, p.y + 4);
   g.moveTo(p.x - 6, p.y - 5);
   g.lineTo(p.x + 10, p.y + 1);
-  g.stroke({ width: 1, color: 0x6b6358, alpha: 0.35 });
+  g.stroke({ width: 1, color: 0x6b6358, alpha: 0.32 });
 }
 
 export function drawContestedRing(
@@ -419,10 +481,14 @@ export function drawSystemGlyph(
   selected: boolean,
   anim: AnimClock,
   ownerColor?: number,
-  _lod: MapLod = "near",
+  lod: MapLod = "near",
   shareColors?: number[],
+  opts?: { dim?: number; emphasize?: boolean },
 ): void {
   const p = toIso(s.x, s.y);
+  const dim = opts?.dim ?? 1;
+  const emphasize = !!opts?.emphasize || selected;
+  const near = lod === "near" || emphasize;
   const corridor = isCorridorSystem(s);
   const phase = s.id.charCodeAt(0) * 0.17;
   const isCapital = !!s.isCapital;
@@ -439,22 +505,27 @@ export function drawSystemGlyph(
   const shares =
     shareColors && shareColors.length >= 2 ? shareColors : undefined;
 
-  // Habitation halo — inhabited worlds glow teal; empty systems stay cool/hollow
+  // Habitation: one quiet rim mid; soft fill only near/focus
   if (!corridor && inhabited) {
-    ellipse(g, p.x, p.y + 1, 22, 11);
-    g.fill({ color: 0x3dcea8, alpha: 0.1 + anim.pulse * 0.05 });
-    ellipse(g, p.x, p.y + 1, 20, 10);
+    if (near) {
+      ellipse(g, p.x, p.y + 1, 24, 12);
+      g.fill({
+        color: 0x3dcea8,
+        alpha: (0.06 + anim.pulse * 0.03) * dim,
+      });
+    }
+    ellipse(g, p.x, p.y + 1, near ? 20 : 16, near ? 10 : 8);
     g.stroke({
-      width: 1.6,
+      width: near ? 1.5 : 1.15,
       color: 0x5cdb95,
-      alpha: 0.55 + anim.pulse * 0.2,
+      alpha: (near ? 0.5 + anim.pulse * 0.15 : 0.32) * dim,
     });
   } else if (unsettled) {
-    ellipse(g, p.x, p.y + 1, 18, 9);
+    ellipse(g, p.x, p.y + 1, near ? 17 : 14, near ? 8.5 : 7);
     g.stroke({
-      width: 1.1,
+      width: 1,
       color: 0x6b7280,
-      alpha: 0.35 + anim.pulse * 0.1,
+      alpha: (near ? 0.32 + anim.pulse * 0.08 : 0.22) * dim,
     });
   }
 
@@ -470,49 +541,56 @@ export function drawSystemGlyph(
       else g.lineTo(x, y);
     }
     g.closePath();
-    g.stroke({ width: 1.6, color: 0xc9a227, alpha: 0.85 });
-    const beamH = 10 + anim.pulse * 4;
-    g.moveTo(p.x, p.y - 4);
-    g.lineTo(p.x, p.y - 4 - beamH);
-    g.stroke({
-      width: 2,
-      color: 0xe8c547,
-      alpha: 0.3 + anim.pulse * 0.35,
-    });
+    g.stroke({ width: 1.6, color: 0xc9a227, alpha: 0.85 * dim });
+    if (near) {
+      const beamH = 10 + anim.pulse * 4;
+      g.moveTo(p.x, p.y - 4);
+      g.lineTo(p.x, p.y - 4 - beamH);
+      g.stroke({
+        width: 2,
+        color: 0xe8c547,
+        alpha: (0.3 + anim.pulse * 0.35) * dim,
+      });
+    }
   } else if (isCapital) {
     const accent = rim ?? 0xc9a227;
     const cx = p.x;
     const cy = p.y - 9;
-    const breathe = 1 + anim.pulse * 0.06;
+    const breathe = 1 + anim.pulse * (near ? 0.06 : 0.03);
     drawSystemToken(g, p.x, p.y, accent, selected, anim, {
       capital: true,
       neutral,
       shareColors: shares,
     });
-    ellipse(g, p.x, p.y + 1, 20 * breathe, 10 * breathe);
-    g.stroke({
-      width: 1.6,
-      color: 0xc9a227,
-      alpha: 0.55 + anim.pulse * 0.2,
-    });
-    g.circle(cx, cy, 12 * breathe);
-    g.fill({ color: accent, alpha: 0.12 + anim.pulse * 0.06 });
+    // Capital star is the silhouette; skip extra gold ellipse on mid
+    if (near) {
+      ellipse(g, p.x, p.y + 1, 20 * breathe, 10 * breathe);
+      g.stroke({
+        width: 1.4,
+        color: 0xc9a227,
+        alpha: (0.45 + anim.pulse * 0.15) * dim,
+      });
+    }
+    g.circle(cx, cy, (near ? 12 : 10) * breathe);
+    g.fill({ color: accent, alpha: (0.1 + anim.pulse * 0.04) * dim });
     drawStarPolygon(g, cx, cy, 5, 8.5 * breathe, 3.8 * breathe, -Math.PI / 2);
-    g.fill({ color: accent, alpha: 0.95 });
+    g.fill({ color: accent, alpha: 0.95 * dim });
     drawStarPolygon(g, cx, cy, 5, 8.5 * breathe, 3.8 * breathe, -Math.PI / 2);
-    g.stroke({ width: 1.4, color: 0xfff4d0, alpha: 0.9 });
+    g.stroke({ width: 1.4, color: 0xfff4d0, alpha: 0.9 * dim });
     g.circle(cx, cy, 2);
-    g.fill({ color: 0xffffff, alpha: 0.95 });
-    for (const ox of [-5, 0, 5]) {
-      g.moveTo(cx + ox, cy - 12 * breathe);
-      g.lineTo(cx + ox, cy - 15.5 * breathe);
-      g.stroke({ width: 1.3, color: 0xe8c547, alpha: 0.85 });
+    g.fill({ color: 0xffffff, alpha: 0.95 * dim });
+    if (near) {
+      for (const ox of [-5, 0, 5]) {
+        g.moveTo(cx + ox, cy - 12 * breathe);
+        g.lineTo(cx + ox, cy - 15.5 * breathe);
+        g.stroke({ width: 1.3, color: 0xe8c547, alpha: 0.85 * dim });
+      }
     }
   } else {
     const primary = s.stars[0]?.class ?? "G";
     const color = rim ?? starColor(primary);
     const lum = s.stars[0]?.luminosity ?? 1;
-    const breathe = 1 + anim.pulse * 0.1;
+    const breathe = 1 + anim.pulse * (near ? 0.1 : 0.04);
     const cx = p.x;
     const cy = p.y - 8;
 
@@ -521,40 +599,58 @@ export function drawSystemGlyph(
       shareColors: shares,
     });
 
-    const glowR = (4 + lum * 1.8) * breathe * (inhabited ? 1.15 : unsettled ? 0.85 : 1);
-    g.circle(cx, cy, glowR + 4);
+    const glowR =
+      (4 + lum * 1.8) *
+      breathe *
+      (inhabited ? 1.15 : unsettled ? 0.85 : 1) *
+      (near ? 1 : 0.85);
+    if (near) {
+      g.circle(cx, cy, glowR + 8);
+      g.fill({
+        color: inhabited ? 0x5cdb95 : color,
+        alpha:
+          (inhabited ? 0.05 + anim.pulse * 0.02 : 0.04 + anim.pulse * 0.02) *
+          dim,
+      });
+    }
+    g.circle(cx, cy, glowR + (near ? 4 : 2));
     g.fill({
       color: inhabited ? 0x5cdb95 : color,
-      alpha: inhabited ? 0.12 + anim.pulse * 0.05 : 0.1 + anim.pulse * 0.05,
+      alpha:
+        (inhabited ? 0.1 + anim.pulse * 0.04 : 0.08 + anim.pulse * 0.03) * dim,
     });
     g.circle(cx, cy, glowR);
     g.fill({
       color,
-      alpha: unsettled ? 0.16 + anim.pulse * 0.05 : 0.28 + anim.pulse * 0.08,
+      alpha:
+        (unsettled ? 0.16 + anim.pulse * 0.05 : 0.28 + anim.pulse * 0.08) * dim,
     });
 
-    if ((s.stars?.length ?? 0) > 1) {
+    if (near && (s.stars?.length ?? 0) > 1) {
       const a = anim.t * 0.9 + phase;
       g.circle(cx + Math.cos(a) * 7, cy + Math.sin(a) * 2.5, 2.2);
-      g.fill({ color: starColor(s.stars[1]!.class), alpha: 0.95 });
+      g.fill({ color: starColor(s.stars[1]!.class), alpha: 0.95 * dim });
     }
 
-    // Hollow core for uninhabited; filled for settled systems
+    // Hollow core for uninhabited; filled for settled — silhouette read
     if (unsettled) {
       g.circle(cx, cy, selected ? 4.2 : 3.4);
-      g.stroke({ width: 1.4, color, alpha: 0.85 });
+      g.stroke({ width: 1.4, color, alpha: 0.85 * dim });
       g.circle(cx, cy, 1.2);
-      g.fill({ color, alpha: 0.55 });
+      g.fill({ color, alpha: 0.55 * dim });
     } else {
       g.circle(cx, cy, selected ? 4.6 : 3.6);
-      g.fill({ color });
+      g.fill({ color, alpha: dim });
       g.circle(cx - 1, cy - 1.2, 1.1);
-      g.fill({ color: 0xffffff, alpha: inhabited ? 0.7 : 0.5 });
+      g.fill({
+        color: 0xffffff,
+        alpha: (inhabited ? 0.7 : 0.5) * dim,
+      });
     }
   }
 
   const census = censusEarly;
-  if (census.total > 0) {
+  if (near && census.total > 0) {
     const pip = 2.2;
     const gap = 1.4;
     const totalW =
@@ -569,45 +665,37 @@ export function drawSystemGlyph(
     for (const key of order) {
       for (let i = 0; i < census[key]; i++) {
         ellipse(g, x, y, pip, pip * 0.55);
-        g.fill({ color: HABIT_COLORS[key], alpha: 0.95 });
+        g.fill({ color: HABIT_COLORS[key], alpha: 0.9 * dim });
+        ellipse(g, x, y, pip, pip * 0.55);
+        g.stroke({ width: 0.7, color: 0xffffff, alpha: 0.18 * dim });
         x += pip * 2 + gap;
       }
     }
   }
 
-  // Fallback diamonds if sprite icons not loaded yet
-  if ((s.resources?.length ?? 0) > 0 && !mapIconsReady()) {
-    const n = Math.min(s.resources!.length, 3);
+  // Fallback mining glyph only near/focus when sprites missing
+  if (near && (s.resources?.length ?? 0) > 0 && !mapIconsReady()) {
     const bx = p.x - 22;
-    const by = p.y + 12;
-    g.rect(bx - 6, by - 6, 12, 12);
-    g.fill({ color: 0x1a1408, alpha: 0.88 });
-    g.rect(bx - 6, by - 6, 12, 12);
-    g.stroke({ width: 1.3, color: 0xc9a227, alpha: 0.95 });
-    for (let i = 0; i < n; i++) {
-      const ox = bx - 2.5 + i * 2.8;
-      g.moveTo(ox, by - 2.5);
-      g.lineTo(ox + 1.8, by);
-      g.lineTo(ox, by + 2.5);
-      g.lineTo(ox - 1.8, by);
-      g.closePath();
-      g.fill({ color: 0xffe08a, alpha: 0.95 });
-    }
+    const by = p.y - 18;
+    g.circle(bx, by, 7);
+    g.fill({ color: 0x1a1408, alpha: 0.55 * dim });
+    g.circle(bx, by, 7);
+    g.stroke({ width: 1.1, color: 0xc9a227, alpha: 0.65 * dim });
   }
 
   const stations = s.stations ?? [];
-  if (stations.length > 0) {
+  if (near && stations.length > 0) {
     const n = Math.min(stations.length, 3);
     for (let i = 0; i < n; i++) {
       const a = Math.PI * 0.55 + i * 0.45;
       const sx = p.x + Math.cos(a) * 26;
       const sy = p.y + Math.sin(a) * 13;
       g.circle(sx, sy, 2.8);
-      g.fill({ color: 0x1a2233, alpha: 0.92 });
+      g.fill({ color: 0x1a2233, alpha: 0.92 * dim });
       g.circle(sx, sy, 2.8);
-      g.stroke({ width: 1.2, color: 0xa8c0e0, alpha: 0.95 });
+      g.stroke({ width: 1.2, color: 0xa8c0e0, alpha: 0.95 * dim });
       g.circle(sx, sy, 1);
-      g.fill({ color: 0xffffff, alpha: 0.85 });
+      g.fill({ color: 0xffffff, alpha: 0.85 * dim });
     }
   }
 }
@@ -984,18 +1072,22 @@ const ACTIVITY_COLOR: Record<SystemActivity, number> = {
   transit: 0x7b6cff,
 };
 
-/** Soft influence glow under systems (MapCanvas applies BlurFilter). */
+/** Soft influence glow under systems — baked concentric bloom, no filter. */
 export function drawTerritoryGlow(
   g: Graphics,
   world: WorldState,
   fillColors: Map<string, number>,
+  opts?: { rich?: boolean; cinematic?: boolean },
 ): void {
+  const rich = opts?.rich ?? true;
+  const cinematic = opts?.cinematic ?? false;
   g.clear();
   const blobs = getFactionBlobs(systemsForStateTerritory(world));
 
   for (const blob of blobs) {
     const color = fillColors.get(blob.factionId) ?? 0x888888;
     const r = blob.radius;
+    const coreRy = 0.58 / 1.2;
 
     const poly = blob.outline;
     if (poly.length >= 3) {
@@ -1004,12 +1096,42 @@ export function drawTerritoryGlow(
         g.lineTo(poly[i]!.x, poly[i]!.y);
       }
       g.closePath();
-      g.fill({ color, alpha: 0.22 });
+      g.fill({ color, alpha: rich ? 0.17 : 0.22 });
+    }
+
+    if (!rich) {
+      for (const c of blob.cores) {
+        ellipse(g, c.x, c.y, r * 1.2, r * 0.58);
+        g.fill({ color, alpha: 0.14 });
+      }
+      for (const [a, b] of blob.bridges) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const steps = Math.max(1, Math.ceil(len / 70));
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          ellipse(g, a.x + dx * t, a.y + dy * t, r * 0.85, r * 0.42);
+          g.fill({ color, alpha: 0.1 });
+        }
+      }
+      continue;
     }
 
     for (const c of blob.cores) {
-      ellipse(g, c.x, c.y, r * 1.2, r * 0.58);
-      g.fill({ color, alpha: 0.14 });
+      const rings = [
+        { rx: r * 1.9, alpha: 0.04 },
+        { rx: r * 1.55, alpha: 0.07 },
+        { rx: r * 1.25, alpha: 0.11 },
+        { rx: r * 1.05, alpha: 0.14 },
+      ];
+      if (cinematic) {
+        rings.unshift({ rx: r * 2.15, alpha: 0.025 });
+      }
+      for (const { rx, alpha } of rings) {
+        ellipse(g, c.x, c.y, rx, rx * coreRy);
+        g.fill({ color, alpha });
+      }
     }
 
     for (const [a, b] of blob.bridges) {
@@ -1017,10 +1139,18 @@ export function drawTerritoryGlow(
       const dy = b.y - a.y;
       const len = Math.hypot(dx, dy) || 1;
       const steps = Math.max(1, Math.ceil(len / 70));
+      const bridgeRy = 0.42 / 0.85;
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
-        ellipse(g, a.x + dx * t, a.y + dy * t, r * 0.85, r * 0.42);
-        g.fill({ color, alpha: 0.1 });
+        const x = a.x + dx * t;
+        const y = a.y + dy * t;
+        for (const { rx, alpha } of [
+          { rx: r * 1.05, alpha: 0.05 },
+          { rx: r * 0.85, alpha: 0.1 },
+        ]) {
+          ellipse(g, x, y, rx, rx * bridgeRy);
+          g.fill({ color, alpha });
+        }
       }
     }
   }
@@ -1127,6 +1257,8 @@ export function drawFactionLabels(
   emblemCache: Map<string, Sprite>,
   emblemLoading: Set<string>,
   labelScale = 1,
+  /** When set, only this faction's polity label is drawn (progressive density). */
+  onlyFactionId?: string | null,
 ): void {
   const blobs = getFactionBlobs(systemsForStateTerritory(world));
   const seen = new Set<string>();
@@ -1134,6 +1266,7 @@ export function drawFactionLabels(
   for (const blob of blobs) {
     const faction = world.factions.find((f) => f.id === blob.factionId);
     if (!faction) continue;
+    if (onlyFactionId && faction.id !== onlyFactionId) continue;
     seen.add(faction.id);
     const c = centroid(blob.outline);
     const hasEmblem = !!(faction.emblemPath && faction.emblemPath.length > 8);

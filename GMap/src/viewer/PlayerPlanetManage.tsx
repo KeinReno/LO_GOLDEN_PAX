@@ -1,24 +1,64 @@
-import { useMemo, useState } from "react";
-import type { Planet, StarSystem } from "../state/types";
-import {
-  COLONY_TYPE_LABELS,
-  PLANET_BUILDING_KIND_LABELS,
-} from "../state/defaults";
+import { useEffect, useMemo, useState } from "react";
+import type {
+  Planet,
+  PlanetBuilding,
+  PlanetBuildingZone,
+  StarSystem,
+} from "../state/types";
+import { COLONY_TYPE_LABELS } from "../state/defaults";
 import { HABIT_LABELS, classifyPlanet } from "../state/planets";
 import {
   CLIMATE_LABELS,
   PLANET_TYPE_LABELS,
 } from "../state/defaults";
+import {
+  PlanetRadialSlots,
+  type PlanetRadialInspect,
+} from "./PlanetRadialSlots";
+import { raceIdsFromComposition } from "../state/buildingAccess";
+import { BuildingSlotsPanel } from "./BuildingSlotsPanel";
+import { BuildingKindIcon } from "./BuildingKindIcon";
+import { FloatingPanel } from "../ui/FloatingPanel";
+import { HoldRevealButton } from "../ui/HoldRevealButton";
+import type { MapResourceDef } from "../state/contentCatalog";
+import type { TechEcoSlice } from "../state/techGate";
+import { InlineRename } from "../ui/InlineRename";
+
+export type BuildingSlotDef = {
+  role: string;
+  require: { category?: string; tier?: string; properties?: string[] };
+  count: number;
+};
 
 export type BuildingDef = {
   id: string;
   kind: string;
-  zone: "surface" | "orbital";
+  zone: PlanetBuildingZone;
   name: string;
   ap?: number;
   cost?: Record<string, number>;
   maxPerPlanet?: number;
+  category?: string;
+  tier?: number;
+  faction?: string;
+  prerequisites?: { race?: string };
+  slots?: BuildingSlotDef[];
+  upkeep_slots?: BuildingSlotDef[];
+  effects?: Array<{ effect: string; args: Record<string, unknown> }>;
 };
+
+/** Resolve catalog def for a planet building instance (id is runtime, not def id). */
+function resolveBuildingDef(
+  buildings: Record<string, BuildingDef>,
+  b: PlanetBuilding,
+): BuildingDef | undefined {
+  if (buildings[b.id]) return buildings[b.id];
+  const byName = Object.values(buildings).find((d) => d.name === b.name);
+  if (byName) return byName;
+  return Object.values(buildings).find(
+    (d) => d.kind === b.kind && (d.zone === b.zone || b.zone === "surface"),
+  );
+}
 
 export type ColonyDef = {
   id: string;
@@ -31,12 +71,21 @@ export type ColonyDef = {
 };
 
 export type PlanetActionRequest = {
-  action: "build" | "demolish" | "colonize" | "set_colony_type";
+  action:
+    | "build"
+    | "demolish"
+    | "colonize"
+    | "set_colony_type"
+    | "fill_slot"
+    | "rename";
   systemId: string;
   planetId: string;
   buildingId?: string;
   instanceId?: string;
   colonyType?: string;
+  slotRole?: string;
+  slotResourceId?: string;
+  name?: string;
 };
 
 function formatCost(cost?: Record<string, number>): string {
@@ -62,6 +111,8 @@ export function PlayerPlanetManage({
   apMax,
   buildings,
   colonies,
+  mapResources,
+  techEco,
   busy,
   message,
   onAction,
@@ -75,12 +126,13 @@ export function PlayerPlanetManage({
   apMax: number;
   buildings: Record<string, BuildingDef>;
   colonies: Record<string, ColonyDef>;
+  mapResources?: Record<string, MapResourceDef>;
+  techEco?: TechEcoSlice;
   busy?: boolean;
   message?: string | null;
   onAction: (req: PlanetActionRequest) => void;
   onBack: () => void;
 }) {
-  const [zone, setZone] = useState<"surface" | "orbital">("surface");
   const habit = classifyPlanet(planet);
   const ownerId = planet.ownerFactionId || system.ownerFactionId || null;
   const managed = ownerId === factionId;
@@ -97,14 +149,6 @@ export function PlayerPlanetManage({
   const orbital = planet.orbitalBuildings ?? [];
   const surfaceMax = planet.surfaceSlots ?? 8;
   const orbitalMax = planet.orbitalSlots ?? 4;
-  const list = zone === "surface" ? surface : orbital;
-  const max = zone === "surface" ? surfaceMax : orbitalMax;
-
-  const catalog = useMemo(
-    () =>
-      Object.values(buildings).filter((b) => b.zone === zone),
-    [buildings, zone],
-  );
 
   const colonyOptions = useMemo(
     () => Object.values(colonies),
@@ -112,8 +156,20 @@ export function PlayerPlanetManage({
   );
 
   const apLeft = Math.max(0, apMax - reservedAp);
-  const metal = stocks["currency.metal"] ?? 0;
-  const supply = stocks["currency.supply"] ?? 0;
+  const [inspect, setInspect] = useState<PlanetRadialInspect | null>(null);
+
+  useEffect(() => {
+    setInspect(null);
+  }, [planet.id]);
+
+  const inspectBuilding = useMemo(() => {
+    if (!inspect) return null;
+    const all = [...surface, ...orbital];
+    const inst = all.find((b) => b.id === inspect.instanceId);
+    if (!inst) return null;
+    const def = resolveBuildingDef(buildings, inst);
+    return { inst, def };
+  }, [inspect, surface, orbital, buildings]);
 
   return (
     <div className="planet-detail planet-detail--manage">
@@ -123,33 +179,43 @@ export function PlayerPlanetManage({
         </button>
         <span className={`habit-badge ${habit}`}>{HABIT_LABELS[habit]}</span>
       </div>
-      <h3 className="planet-detail-title">{planet.name}</h3>
+      <h3 className="planet-detail-title">
+        {managed ? (
+          <InlineRename
+            value={planet.name}
+            title="Переименовать планету"
+            onCommit={(name) =>
+              onAction({
+                action: "rename",
+                systemId: system.id,
+                planetId: planet.id,
+                name,
+              })
+            }
+          />
+        ) : (
+          planet.name
+        )}
+      </h3>
 
-      <div className="sys-meta">
-        <div className="sys-meta-row">
-          <span>Тип / климат</span>
+      <div className="planet-manage-metrics planet-manage-metrics--slim" aria-label="Сводка планеты">
+        <div className="planet-manage-metric">
+          <span className="hint">Тип</span>
           <strong>
             {PLANET_TYPE_LABELS[planet.type]} · {CLIMATE_LABELS[planet.climate]}
           </strong>
         </div>
-        <div className="sys-meta-row">
-          <span>Колония</span>
+        <div className="planet-manage-metric">
+          <span className="hint">Колония</span>
           <strong>
             {COLONY_TYPE_LABELS[normalizeColonyType(planet.colonyType)] ??
               planet.colonyType ??
               "—"}
-            {planet.population > 0 ? ` · нас. ${planet.population}` : ""}
+            {planet.population > 0 ? ` · ${planet.population}` : ""}
           </strong>
         </div>
-        <div className="sys-meta-row">
-          <span>Казна / AP</span>
-          <strong>
-            M{metal} · S{supply} · AP {reservedAp}/{apMax}
-            {apLeft === 0 ? " · нет AP" : ""}
-          </strong>
-        </div>
-        <div className="sys-meta-row">
-          <span>Слоты</span>
+        <div className="planet-manage-metric">
+          <span className="hint">Слоты</span>
           <strong>
             пов. {surface.length}/{surfaceMax} · орб. {orbital.length}/
             {orbitalMax}
@@ -162,15 +228,18 @@ export function PlayerPlanetManage({
       {canColonize && (
         <section className="planet-manage-block">
           <h4>Колонизация</h4>
-          <p className="hint">Мгновенно: списывает ресурсы и AP, колония появляется сразу.</p>
+          <p className="hint">
+            Зажми карту: списывает ресурсы и AP, колония появляется сразу.
+          </p>
           <div className="planet-manage-grid">
             {colonyOptions.map((c) => (
-              <button
+              <HoldRevealButton
                 key={c.id}
-                type="button"
                 className="btn ghost planet-manage-card"
                 disabled={busy || apLeft < (c.colonizeAp ?? 1)}
-                onClick={() =>
+                holdMs={800}
+                title={`${c.name} — зажми, чтобы колонизировать`}
+                onHoldComplete={() =>
                   onAction({
                     action: "colonize",
                     systemId: system.id,
@@ -181,9 +250,9 @@ export function PlayerPlanetManage({
               >
                 <strong>{c.name}</strong>
                 <span className="hint">
-                  {formatCost(c.colonizeCost)} · {c.colonizeAp ?? 1} AP
+                  {formatCost(c.colonizeCost)} · {c.colonizeAp ?? 1} AP · зажми
                 </span>
-              </button>
+              </HoldRevealButton>
             ))}
           </div>
         </section>
@@ -227,89 +296,87 @@ export function PlayerPlanetManage({
           <section className="planet-manage-block">
             <div className="planet-detail-head" style={{ marginBottom: 8 }}>
               <h4 style={{ margin: 0 }}>Строительство</h4>
-              <div className="order-type-chips">
-                <button
-                  type="button"
-                  className={`order-type-chip ${zone === "surface" ? "on" : ""}`}
-                  onClick={() => setZone("surface")}
-                >
-                  Поверхность {surface.length}/{surfaceMax}
-                </button>
-                <button
-                  type="button"
-                  className={`order-type-chip ${zone === "orbital" ? "on" : ""}`}
-                  onClick={() => setZone("orbital")}
-                >
-                  Орбита {orbital.length}/{orbitalMax}
-                </button>
+              <div className="planet-radial-stats">
+                <span className="hint">AP {reservedAp}/{apMax}{apLeft === 0 ? " · нет AP" : ""}</span>
+                <span className="hint">пов. {surface.length}/{surfaceMax} · орб. {orbital.length}/{orbitalMax}</span>
               </div>
             </div>
 
-            <ul className="hq-list hq-list-compact">
-              {list.length === 0 && (
-                <li>
-                  <p className="hint">Пусто</p>
-                </li>
-              )}
-              {list.map((b) => (
-                <li key={b.id} className="hq-order-row">
-                  <span>
-                    <strong>
-                      {b.name || PLANET_BUILDING_KIND_LABELS[b.kind] || b.kind}
-                    </strong>
-                    {b.disabled && <span className="hint"> · откл.</span>}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    disabled={busy}
-                    onClick={() =>
-                      onAction({
-                        action: "demolish",
-                        systemId: system.id,
-                        planetId: planet.id,
-                        instanceId: b.id,
-                      })
-                    }
-                  >
-                    Снести
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            <div className="planet-manage-grid" style={{ marginTop: 10 }}>
-              {catalog.map((def) => {
-                const full = list.length >= max;
-                const needAp = def.ap ?? 1;
-                const needM = def.cost?.["currency.metal"] ?? 0;
-                const needS = def.cost?.["currency.supply"] ?? 0;
-                const blocked =
-                  busy || full || apLeft < needAp || metal < needM || supply < needS;
-                return (
-                  <button
-                    key={def.id}
-                    type="button"
-                    className="btn ghost planet-manage-card"
-                    disabled={blocked}
-                    onClick={() =>
-                      onAction({
-                        action: "build",
-                        systemId: system.id,
-                        planetId: planet.id,
-                        buildingId: def.id,
-                      })
-                    }
-                  >
-                    <strong>{def.name}</strong>
-                    <span className="hint">
-                      {formatCost(def.cost)} · {needAp} AP
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <PlanetRadialSlots
+              planet={planet}
+              systemId={system.id}
+              planetId={planet.id}
+              factionId={factionId}
+              raceIds={raceIdsFromComposition(planet.raceComposition)}
+              buildings={buildings}
+              stocks={stocks}
+              reservedAp={reservedAp}
+              apMax={apMax}
+              techEco={techEco}
+              busy={busy}
+              onAction={onAction}
+              onInspect={setInspect}
+            />
           </section>
+
+          {inspectBuilding?.def && inspectBuilding.inst && (
+            <FloatingPanel
+              open={!!inspect}
+              onClose={() => setInspect(null)}
+              title={inspectBuilding.def.name}
+              storageKey="gmap-planet-inspect"
+              defaultGeom={{ x: 320, y: 100, w: 340, h: 460 }}
+              minW={260}
+              minH={220}
+              zIndex={372}
+              className="gmap-float-panel--inspect"
+            >
+              <div className="planet-manage-inspect-head">
+                <BuildingKindIcon kind={inspect!.kind} size={18} />
+                <div>
+                  <strong>{inspectBuilding.def.name}</strong>
+                  <div className="hint" style={{ fontSize: 10 }}>
+                    {inspectBuilding.def.zone} · {inspectBuilding.def.kind}
+                    {inspectBuilding.def.tier != null
+                      ? ` · T${inspectBuilding.def.tier}`
+                      : ""}
+                  </div>
+                </div>
+              </div>
+              <p className="hint">
+                Слоты ресурсов: tier режет узкое место. Тап по кольцу выбирает
+                постройку.
+              </p>
+              <BuildingSlotsPanel
+                building={inspectBuilding.inst}
+                buildingDef={inspectBuilding.def}
+                mapResources={mapResources}
+                localResourceNames={planet.resources}
+                techEco={techEco}
+                busy={busy}
+                onFill={(role, resourceId) =>
+                  onAction({
+                    action: "fill_slot",
+                    systemId: system.id,
+                    planetId: planet.id,
+                    instanceId: inspectBuilding.inst.id,
+                    slotRole: role,
+                    slotResourceId: resourceId,
+                  })
+                }
+                onUnfill={(role) =>
+                  onAction({
+                    action: "fill_slot",
+                    systemId: system.id,
+                    planetId: planet.id,
+                    instanceId: inspectBuilding.inst.id,
+                    slotRole: role,
+                    slotResourceId: "",
+                  })
+                }
+              />
+            </FloatingPanel>
+          )}
         </>
       )}
     </div>

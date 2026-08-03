@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MapContextPick } from "../renderers/MapCanvas";
 import type { ViewerPayload } from "../state/types";
 import { formatHopTurns, hopDistance } from "../state/pathfinding";
+import { FloatingPopover } from "../ui/FloatingPopover";
 
 type MenuItem =
   | { type: "label"; text: string }
@@ -34,9 +34,13 @@ type Props = {
   ) => void;
   onOpenOrders: () => void;
   onOpenRp: () => void;
+  onScoutReveal?: (systemId: string) => void;
+  scoutApCost?: number;
+  reservedAp?: number;
+  apMax?: number;
 };
 
-/** Player-facing RMB menu — actions with GM/other players stay out. */
+/** Player-facing RMB menu — Floating UI flip/shift, action-at-source. */
 export function ViewerContextMenu({
   menu,
   payload,
@@ -49,57 +53,15 @@ export function ViewerContextMenu({
   onOrderType,
   onOpenOrders,
   onOpenRp,
+  onScoutReveal,
+  scoutApCost = 1,
+  reservedAp = 0,
+  apMax = 3,
 }: Props) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ left: 0, top: 0 });
+  if (!menu) return null;
+
   const world = payload.world;
   const factionId = payload.factionId;
-
-  useEffect(() => {
-    if (!menu) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    let removeCloser: (() => void) | null = null;
-    const timer = window.setTimeout(() => {
-      const onDown = (e: MouseEvent) => {
-        if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-      };
-      window.addEventListener("pointerdown", onDown, true);
-      removeCloser = () =>
-        window.removeEventListener("pointerdown", onDown, true);
-    }, 0);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.clearTimeout(timer);
-      removeCloser?.();
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [menu, onClose]);
-
-  useLayoutEffect(() => {
-    if (!menu) return;
-    setPos({ left: menu.screenX, top: menu.screenY });
-    const id = requestAnimationFrame(() => {
-      const el = ref.current;
-      if (!el) return;
-      const pad = 8;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const mw = el.offsetWidth;
-      const mh = el.offsetHeight;
-      let left = menu.screenX;
-      let top = menu.screenY;
-      if (left + mw > vw - pad) left = Math.max(pad, vw - mw - pad);
-      if (top + mh > vh - pad) top = Math.max(pad, vh - mh - pad);
-      if (left < pad) left = pad;
-      if (top < pad) top = pad;
-      setPos({ left, top });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [menu]);
-
-  if (!menu) return null;
 
   const fleet = menu.fleetId
     ? world.fleets.find((f) => f.id === menu.fleetId)
@@ -112,6 +74,7 @@ export function ViewerContextMenu({
     : null;
   const ownFleet = fleet?.factionId === factionId ? fleet : null;
   const ownLegion = legion?.factionId === factionId ? legion : null;
+  const visibleSet = new Set(payload.visibleSystemIds);
 
   const items: MenuItem[] = [];
 
@@ -128,26 +91,33 @@ export function ViewerContextMenu({
       text: "Перетащите на систему или…",
     });
     if (system && system.id !== ownFleet.systemId) {
-      const hops = hopDistance(world, ownFleet.systemId, system.id);
-      const ok = Number.isFinite(hops) && hops > 0;
+      const hops = hopDistance(world, ownFleet.systemId, system.id, "fleet");
+      const pathOk = Number.isFinite(hops) && hops > 0;
+      const inVision = visibleSet.has(system.id);
       items.push({
         type: "action",
-        label: ok
-          ? `Идти сюда (${formatHopTurns(hops)})`
-          : "Идти сюда (нет пути)",
-        disabled: !ok,
+        label: !inVision
+          ? "вне обзора"
+          : pathOk
+            ? `Идти сюда (${formatHopTurns(hops)})`
+            : "Идти сюда (нет пути)",
+        disabled: !inVision || !pathOk,
         run: () => {
-          if (ok) onMoveUnit("fleet", ownFleet.id, system.id, hops);
+          if (pathOk && inVision) onMoveUnit("fleet", ownFleet.id, system.id, hops);
         },
       });
       items.push({
         type: "action",
-        label: "Атаковать систему",
-        run: () =>
-          onOrderType("attack_system", {
-            fleetId: ownFleet.id,
-            systemId: system.id,
-          }),
+        label: inVision ? "Атаковать систему" : "вне обзора",
+        disabled: !inVision,
+        run: () => {
+          if (inVision) {
+            onOrderType("attack_system", {
+              fleetId: ownFleet.id,
+              systemId: system.id,
+            });
+          }
+        },
       });
     }
     items.push({
@@ -168,16 +138,19 @@ export function ViewerContextMenu({
       text: "Перетащите на систему или…",
     });
     if (system && system.id !== ownLegion.systemId) {
-      const hops = hopDistance(world, ownLegion.systemId, system.id);
-      const ok = Number.isFinite(hops) && hops > 0;
+      const hops = hopDistance(world, ownLegion.systemId, system.id, "legion");
+      const pathOk = Number.isFinite(hops) && hops > 0;
+      const inVision = visibleSet.has(system.id);
       items.push({
         type: "action",
-        label: ok
-          ? `Марш сюда (${formatHopTurns(hops)})`
-          : "Марш сюда (нет пути)",
-        disabled: !ok,
+        label: !inVision
+          ? "вне обзора"
+          : pathOk
+            ? `Марш сюда (${formatHopTurns(hops)})`
+            : "Марш сюда (нет пути)",
+        disabled: !inVision || !pathOk,
         run: () => {
-          if (ok) onMoveUnit("legion", ownLegion.id, system.id, hops);
+          if (pathOk && inVision) onMoveUnit("legion", ownLegion.id, system.id, hops);
         },
       });
     }
@@ -212,12 +185,26 @@ export function ViewerContextMenu({
       label: "Выбрать на карте",
       run: () => onSelectSystem(system.id),
     });
-    if (system.ownerFactionId !== factionId) {
+    if (onScoutReveal) {
+      const scoutBlocked = reservedAp + scoutApCost > apMax;
       items.push({
         type: "action",
-        label: "Захватить (приказ)",
-        run: () =>
-          onOrderType("claim_system", { systemId: system.id }),
+        label: scoutBlocked
+          ? `Разведка (${scoutApCost} AP — нет AP)`
+          : `Разведка · открыть (${scoutApCost} AP)`,
+        disabled: scoutBlocked,
+        run: () => onScoutReveal(system.id),
+      });
+    }
+    if (system.ownerFactionId !== factionId) {
+      const inVision = visibleSet.has(system.id);
+      items.push({
+        type: "action",
+        label: inVision ? "Захватить (приказ)" : "вне обзора",
+        disabled: !inVision,
+        run: () => {
+          if (inVision) onOrderType("claim_system", { systemId: system.id });
+        },
       });
     }
     items.push({
@@ -235,38 +222,41 @@ export function ViewerContextMenu({
   }
 
   return (
-    <div
-      ref={ref}
+    <FloatingPopover
+      open
+      onClose={onClose}
+      x={menu.screenX}
+      y={menu.screenY}
       className="ctx-menu"
-      style={{ left: pos.left, top: pos.top }}
       role="menu"
-      onContextMenu={(e) => e.preventDefault()}
     >
-      {items.map((it, i) => {
-        if (it.type === "sep") return <div key={`s${i}`} className="ctx-sep" />;
-        if (it.type === "label")
+      <div onContextMenu={(e) => e.preventDefault()}>
+        {items.map((it, i) => {
+          if (it.type === "sep") return <div key={`s${i}`} className="ctx-sep" />;
+          if (it.type === "label")
+            return (
+              <div key={`l${i}`} className="ctx-label">
+                {it.text}
+              </div>
+            );
           return (
-            <div key={`l${i}`} className="ctx-label">
-              {it.text}
-            </div>
+            <button
+              key={`a${i}`}
+              type="button"
+              className={it.danger ? "ctx-item danger" : "ctx-item"}
+              role="menuitem"
+              disabled={it.disabled}
+              onClick={() => {
+                if (it.disabled) return;
+                it.run();
+                onClose();
+              }}
+            >
+              {it.label}
+            </button>
           );
-        return (
-          <button
-            key={`a${i}`}
-            type="button"
-            className={it.danger ? "ctx-item danger" : "ctx-item"}
-            role="menuitem"
-            disabled={it.disabled}
-            onClick={() => {
-              if (it.disabled) return;
-              it.run();
-              onClose();
-            }}
-          >
-            {it.label}
-          </button>
-        );
-      })}
-    </div>
+        })}
+      </div>
+    </FloatingPopover>
   );
 }

@@ -1,7 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import {
   Application,
-  BlurFilter,
   Container,
   Graphics,
   Text,
@@ -23,6 +22,7 @@ import {
   drawFleetGlyph,
   drawFleetStanceBadge,
   drawFogVeil,
+  drawHoverRing,
   drawIntelRing,
   drawLegionGlyph,
   drawLegionStanceBadge,
@@ -51,6 +51,7 @@ import {
   TABLE,
 } from "./drawTableFx";
 import { fromIso, toIso } from "./iso";
+import { isoInBounds, isoViewportBounds } from "./viewportCull";
 import { isCorridorSystem, censusPlanets } from "../state/planets";
 import {
   getVisibleSystemIds,
@@ -63,19 +64,22 @@ import {
   resolveFactionSystemColor,
 } from "../state/territory";
 import { ensureMapIconsLoaded, mapIconsReady } from "./mapIconAssets";
-import { MapIconOverlay, fleetSlotIcon, legionSlotIcon } from "./mapIconSprites";
+import { MapIconOverlay, fleetSlotIcon, legionSlotIcon, type SystemSignalFlags } from "./mapIconSprites";
 import type { UnitSpriteSlot } from "./mapIconSprites";
 import { BattleParticleField } from "./battleParticles";
+import { MapFxOverlay, type MapFxSite } from "./mapFxOverlay";
 import {
   drawAnomalyField,
   drawBlockadeRing,
   drawCaravans,
   drawContestedClaim,
   drawDeadZone,
+  drawEconomyBottleneckBadge,
   drawJumpRange,
   drawQuestMarker,
   drawSpecialLink,
   drawSupplyChains,
+  drawTimerBadge,
   drawTrafficDensity,
   questMarkerHit,
 } from "./drawMapFeatures";
@@ -85,6 +89,7 @@ import { POI_PAINT_TOOLS } from "../state/types";
 import { hasSpaceObject } from "../state/spaceObjects";
 import { formatHopTurns, hopDistance, hopPath } from "../state/pathfinding";
 import { registerMapPngExporter } from "../io/mapExportBridge";
+import { GESTURE } from "../ui/gestureMap";
 
 const SYSTEM_HIT_R = 20;
 const SYSTEM_DROP_R = 72;
@@ -93,7 +98,7 @@ const LEGION_HIT_R = 60;
 /** Minimum on-screen hit size (px) so finger targets stay usable when zoomed out. */
 const MIN_TOUCH_HIT_PX = 48;
 const DRAG_START_PX = 14;
-const LONG_PRESS_MS = 450;
+const LONG_PRESS_MS = GESTURE.longPressMs;
 const LINK_HIT_PX = 10;
 const FLEET_ICON_SIZE = 36;
 const FLEET_ICON_SIZE_SEL = 44;
@@ -130,6 +135,10 @@ export interface MapViewModel {
   showDeadZones?: boolean;
   showTraffic?: boolean;
   showQuests?: boolean;
+  /** Signal icons: fan arc vs priority stack +N */
+  showSignalFan?: boolean;
+  /** Viewer: systems with severe economy bottlenecks (badge). */
+  economyBottleneckSystemIds?: string[];
   activeFactionId?: string | null;
   /** ultralight(bare) | mobile(lite) | quality_mobile(soft) | quality(full) | cinematic(full+) | auto */
   perfMode?:
@@ -160,7 +169,7 @@ export interface MapCanvasApi {
 }
 
 /**
- * full — desktop FX + continuous redraw (animations)
+ * full — desktop FX, dirty-only redraw (battle FX tick separately)
  * soft — quality on phone: rich look, dirty-only
  * lite — reduced FX, dirty-only
  * bare — minimal, dirty-only
@@ -354,13 +363,35 @@ function territoryFingerprint(world: WorldState): string {
   return `${sys}||${fac}`;
 }
 
+export type UnitDropIntent = "move" | "attack" | "claim";
+
 export type MapUnitDropPayload = {
   kind: "fleet" | "legion";
   unitId: string;
   fromSystemId: string;
   toSystemId: string;
   hops: number;
+  /** Resolved from target ownership: own→move, enemy/contested→attack, unowned→claim. */
+  intent?: UnitDropIntent;
 };
+
+/**
+ * Gesture intent from target ownership. Drives one gesture → one order:
+ * own / co-owned system → move, enemy or contested → attack, unowned → claim.
+ */
+export function resolveDropIntent(
+  target: StarSystem,
+  playerFactionId: string | null,
+): UnitDropIntent {
+  if (!playerFactionId) return "move";
+  if (target.contested) return "attack";
+  const owner = target.ownerFactionId;
+  if (!owner) return "claim";
+  if (owner === playerFactionId) return "move";
+  const co = target.coOwnerFactionIds ?? [];
+  if (co.includes(playerFactionId)) return "move";
+  return "attack";
+}
 
 export type MapContextPick = {
   screenX: number;
@@ -371,6 +402,8 @@ export type MapContextPick = {
   fleetId: string | null;
   legionId: string | null;
   linkId: string | null;
+  /** True when fleetId came from findFleetAt at the pointer (glyph hit). */
+  fromFleetHit?: boolean;
 };
 
 interface MapCanvasProps {
@@ -388,10 +421,53 @@ interface MapCanvasProps {
   onUnitDragStart?: (kind: "fleet" | "legion", unitId: string) => void;
   /** Viewer RMB menu (editor uses worldStore contextMenu). */
   onViewerContextMenu?: (pick: MapContextPick) => void;
+  /**
+   * Viewer: long-press completed on a system. Return true to skip context menu
+   * (e.g. parent opens FleetOrderRing).
+   */
+  onSystemHold?: (
+    systemId: string,
+    screenX: number,
+    screenY: number,
+  ) => boolean | void;
+  /** Viewer: 0..1 hold progress during touch long-press (null = cleared). */
+  onHoldProgress?: (
+    pick: { x: number; y: number; progress: number } | null,
+  ) => void;
   /** Viewer: double-click system → dive into system view. */
   onSystemOpen?: (systemId: string) => void;
   interactive?: boolean;
+  hostClassName?: string;
   apiRef?: MutableRefObject<MapCanvasApi | null>;
+}
+
+export type SystemHoverTip = {
+  systemId: string;
+  name: string;
+  screenX: number;
+  screenY: number;
+  lines: string[];
+};
+
+function buildSystemHoverLines(s: StarSystem): string[] {
+  const lines: string[] = [];
+  if (s.isCapital) lines.push("Столица");
+  if (isCorridorSystem(s)) lines.push("Коридор");
+  const census = censusPlanets(s.planets ?? []);
+  if (census.total > 0) {
+    const bits: string[] = [];
+    if (census.inhabited) bits.push(`${census.inhabited} нас.`);
+    if (census.habitable) bits.push(`${census.habitable} приг.`);
+    if (census.uninhabitable) bits.push(`${census.uninhabitable} пуст.`);
+    if (bits.length) lines.push(bits.join(" · "));
+  }
+  const nRes = s.resources?.length ?? 0;
+  if (nRes > 0) lines.push(`Ресурсы: ${nRes}`);
+  const nSt = s.stations?.length ?? 0;
+  if (nSt > 0) lines.push(`Станции: ${nSt}`);
+  if (s.activity && s.activity !== "none") lines.push(`Активность: ${s.activity}`);
+  if (s.blockaded) lines.push("Блокада");
+  return lines.slice(0, 5);
 }
 
 export function MapCanvas({
@@ -405,14 +481,63 @@ export function MapCanvas({
   onUnitDrop,
   onUnitDragStart,
   onViewerContextMenu,
+  onSystemHold,
+  onHoldProgress,
   onSystemOpen,
   interactive = true,
+  hostClassName,
   apiRef,
 }: MapCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  /** Imperative tip — never setState from Pixi redraw (avoids remount/crash). */
+  const tipElRef = useRef<HTMLDivElement>(null);
+  const lastHoverTipRef = useRef<SystemHoverTip | null>(null);
+
+  const applyHoverTipRef = useRef<(tip: SystemHoverTip | null) => void>(
+    () => {},
+  );
+  applyHoverTipRef.current = (tip: SystemHoverTip | null) => {
+    const el = tipElRef.current;
+    if (!el) return;
+    if (!tip) {
+      el.hidden = true;
+      el.replaceChildren();
+      lastHoverTipRef.current = null;
+      return;
+    }
+    const prev = lastHoverTipRef.current;
+    const sameBody =
+      prev &&
+      prev.systemId === tip.systemId &&
+      prev.name === tip.name &&
+      prev.lines.length === tip.lines.length &&
+      prev.lines.every((l, i) => l === tip.lines[i]);
+    if (!sameBody) {
+      el.replaceChildren();
+      const name = document.createElement("div");
+      name.className = "map-system-tip__name";
+      name.textContent = tip.name;
+      el.appendChild(name);
+      for (const line of tip.lines) {
+        const row = document.createElement("div");
+        row.className = "map-system-tip__line";
+        row.textContent = line;
+        el.appendChild(row);
+      }
+    }
+    el.style.left = `${tip.screenX}px`;
+    el.style.top = `${tip.screenY}px`;
+    el.hidden = false;
+    lastHoverTipRef.current = tip;
+  };
   const worldLayerRef = useRef<Container | null>(null);
   const tableFloorGRef = useRef<Graphics | null>(null);
   const ambientGRef = useRef<Graphics | null>(null);
+  /** Per-frame soft pulse under systems (idle life without full redraw). */
+  const breathGRef = useRef<Graphics | null>(null);
+  const breathSitesRef = useRef<
+    { ix: number; iy: number; color: number }[]
+  >([]);
   const territoryGRef = useRef<Graphics | null>(null);
   const territoryBorderGRef = useRef<Graphics | null>(null);
   const sectorsGRef = useRef<Graphics | null>(null);
@@ -424,6 +549,7 @@ export function MapCanvas({
   const legionsGRef = useRef<Graphics | null>(null);
   const ordersGRef = useRef<Graphics | null>(null);
   const labelsRef = useRef<Container | null>(null);
+  const labelPlatesGRef = useRef<Graphics | null>(null);
   const brushGRef = useRef<Graphics | null>(null);
   const dirtyRef = useRef(true);
   const perfTierRef = useRef<PerfTier>("full");
@@ -455,9 +581,15 @@ export function MapCanvas({
   } | null>(null);
   const longPressRef = useRef<{
     timer: number;
+    progressRaf?: number;
     sx: number;
     sy: number;
+    screenX: number;
+    screenY: number;
     fired: boolean;
+    systemId?: string | null;
+    worldPos?: Point;
+    pointerEvent?: FederatedPointerEvent;
   } | null>(null);
   const multiDragRef = useRef<{
     ids: string[];
@@ -490,6 +622,13 @@ export function MapCanvas({
   const lastDtRef = useRef(0);
   const iconOverlayRef = useRef<MapIconOverlay | null>(null);
   const battleFxRef = useRef<BattleParticleField | null>(null);
+  const mapFxRef = useRef<MapFxOverlay | null>(null);
+  /** Last battle sites for per-frame particle tick without full redraw. */
+  const battleSitesRef = useRef<{ id: string; x: number; y: number }[]>([]);
+  /** Throttle cull-rebuild while panning when zoomed in. */
+  const panCullAtRef = useRef(0);
+  /** Soft hover preview on galaxy systems (pointer, not touch-drag). */
+  const hoveredSystemIdRef = useRef<string | null>(null);
   const dragHintLabelRef = useRef<Text | null>(null);
   const readModelRef = useRef(readModel);
   const onSystemClickRef = useRef(onSystemClick);
@@ -498,6 +637,8 @@ export function MapCanvas({
   const onUnitDropRef = useRef(onUnitDrop);
   const onUnitDragStartRef = useRef(onUnitDragStart);
   const onViewerContextMenuRef = useRef(onViewerContextMenu);
+  const onSystemHoldRef = useRef(onSystemHold);
+  const onHoldProgressRef = useRef(onHoldProgress);
   const onSystemOpenRef = useRef(onSystemOpen);
   const playerFactionIdRef = useRef(playerFactionId);
   const onModelSubscribeRef = useRef(onModelSubscribe);
@@ -509,6 +650,8 @@ export function MapCanvas({
   onUnitDropRef.current = onUnitDrop;
   onUnitDragStartRef.current = onUnitDragStart;
   onViewerContextMenuRef.current = onViewerContextMenu;
+  onSystemHoldRef.current = onSystemHold;
+  onHoldProgressRef.current = onHoldProgress;
   onSystemOpenRef.current = onSystemOpen;
   playerFactionIdRef.current = playerFactionId;
   onModelSubscribeRef.current = onModelSubscribe;
@@ -555,6 +698,8 @@ export function MapCanvas({
       showTraffic: s.showTraffic,
       showQuests: s.showQuests,
       activeFactionId: s.activeFactionId,
+      graphics: s.editorGraphics,
+      perfMode: s.editorGraphics.cinematic ? "cinematic" : "quality",
     };
   };
 
@@ -563,6 +708,7 @@ export function MapCanvas({
     if (!host) return;
     let cancelled = false;
     let ready = false;
+    let onTick: ((ticker: { deltaMS: number }) => void) | null = null;
     const app = new Application();
     const getModel = () => readModelRef.current?.() ?? defaultRead();
 
@@ -572,8 +718,16 @@ export function MapCanvas({
         zoomSettleTimerRef.current = null;
       }
       zoomGestureRef.current = false;
+      ready = false;
       try {
-        if (ready && app.renderer) {
+        if (onTick) app.ticker.remove(onTick);
+        app.ticker.stop();
+      } catch {
+        /* ignore */
+      }
+      onTick = null;
+      try {
+        if (app.renderer) {
           app.destroy(true, { children: true });
         }
       } catch {
@@ -594,6 +748,7 @@ export function MapCanvas({
       legionsGRef.current = null;
       ordersGRef.current = null;
       labelsRef.current = null;
+      labelPlatesGRef.current = null;
       brushGRef.current = null;
       try {
         iconOverlayRef.current?.destroy();
@@ -605,8 +760,14 @@ export function MapCanvas({
       } catch {
         /* ignore */
       }
+      try {
+        mapFxRef.current?.destroy();
+      } catch {
+        /* ignore */
+      }
       iconOverlayRef.current = null;
       battleFxRef.current = null;
+      mapFxRef.current = null;
     };
 
     const markDirty = () => {
@@ -710,6 +871,10 @@ export function MapCanvas({
       if (bare) app.ticker.maxFPS = 15;
       else if (tier === "lite") app.ticker.maxFPS = 30;
       else if (tier === "soft") app.ticker.maxFPS = 45;
+      else app.ticker.maxFPS = 60;
+      // Keep rAF alive while idle — otherwise some GPUs skip presents until the layer moves.
+      app.ticker.minFPS = bare ? 8 : 24;
+      if (!app.ticker.started) app.ticker.start();
 
       const worldLayer = new Container();
       worldLayerRef.current = worldLayer;
@@ -738,17 +903,13 @@ export function MapCanvas({
 
       const tableFloorG = new Graphics();
       const ambientG = new Graphics();
+      const breathG = new Graphics();
+      breathG.eventMode = "none";
       const territoryLayer = new Container();
       territoryLayerRef.current = territoryLayer;
       const territoryG = new Graphics();
       territoryLayer.addChild(territoryG);
       const bootGfx = resolveGraphics(bootModel, tier);
-      // Soft blur when glow enabled (quality / quality_mobile)
-      if (bootGfx.territoryGlow && (tier === "full" || tier === "soft")) {
-        territoryLayer.filters = [
-          new BlurFilter({ strength: tier === "full" ? 10 : 6, quality: 2 }),
-        ];
-      }
       const territoryBorderG = new Graphics();
       const sectorsG = new Graphics();
       const diplomacyG = new Graphics();
@@ -758,6 +919,8 @@ export function MapCanvas({
       const legionsG = new Graphics();
       const ordersG = new Graphics();
       const labels = new Container();
+      const labelPlatesG = new Graphics();
+      labelPlatesG.eventMode = "none";
       const brushG = new Graphics();
 
       if (!bare) {
@@ -770,14 +933,18 @@ export function MapCanvas({
 
       const iconOverlay = bare ? null : new MapIconOverlay();
       const battleFx = bare ? null : new BattleParticleField(Texture.WHITE);
+      const mapFx = bare ? null : new MapFxOverlay();
       battleFx?.setEnabled(
         (tier === "full" || tier === "soft") && bootGfx.battleFx,
       );
+      mapFx?.setEnabled(tier === "full" || tier === "soft");
       iconOverlayRef.current = iconOverlay;
       battleFxRef.current = battleFx;
+      mapFxRef.current = mapFx;
 
       tableFloorGRef.current = tableFloorG;
       ambientGRef.current = ambientG;
+      breathGRef.current = breathG;
       territoryGRef.current = territoryG;
       territoryBorderGRef.current = territoryBorderG;
       sectorsGRef.current = sectorsG;
@@ -788,6 +955,7 @@ export function MapCanvas({
       legionsGRef.current = legionsG;
       ordersGRef.current = ordersG;
       labelsRef.current = labels;
+      labelPlatesGRef.current = labelPlatesG;
       brushGRef.current = brushG;
 
       worldLayer.addChild(
@@ -800,10 +968,12 @@ export function MapCanvas({
         diplomacyG,
         ordersG,
         systemsG,
+        breathG,
       );
       if (iconOverlay) worldLayer.addChild(iconOverlay.root);
+      if (mapFx) worldLayer.addChild(mapFx.root);
       if (battleFx) worldLayer.addChild(battleFx.container);
-      worldLayer.addChild(fleetsG, legionsG, labels, brushG);
+      worldLayer.addChild(fleetsG, legionsG, labelPlatesG, labels, brushG);
       app.stage.addChild(worldLayer);
 
       applyFit();
@@ -866,7 +1036,9 @@ export function MapCanvas({
       const clearLongPress = () => {
         const lp = longPressRef.current;
         if (lp?.timer) window.clearTimeout(lp.timer);
+        if (lp?.progressRaf != null) window.cancelAnimationFrame(lp.progressRaf);
         longPressRef.current = null;
+        onHoldProgressRef.current?.(null);
       };
 
       const releaseUnitPointer = () => {
@@ -912,25 +1084,60 @@ export function MapCanvas({
           fleetId: fleetHit,
           legionId: legionHit,
           linkId: null,
+          fromFleetHit: !!fleetHit,
         };
       };
 
-      const armLongPress = (e: FederatedPointerEvent, worldPos: Point) => {
+      const armLongPress = (
+        e: FederatedPointerEvent,
+        worldPos: Point,
+        systemId?: string | null,
+      ) => {
         clearLongPress();
         if (mode !== "viewer") return;
         if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
         const sx = e.global.x;
         const sy = e.global.y;
+        const rect = app.canvas.getBoundingClientRect();
+        const screenX = rect.left + sx;
+        const screenY = rect.top + sy;
+        const holdStart = performance.now();
+        const tickHoldProgress = () => {
+          const lp = longPressRef.current;
+          if (!lp || lp.fired) return;
+          const progress = Math.min(
+            1,
+            (performance.now() - holdStart) / LONG_PRESS_MS,
+          );
+          onHoldProgressRef.current?.({ x: screenX, y: screenY, progress });
+          if (progress < 1) {
+            lp.progressRaf = window.requestAnimationFrame(tickHoldProgress);
+          }
+        };
+        const progressRaf = window.requestAnimationFrame(tickHoldProgress);
         const timer = window.setTimeout(() => {
           const lp = longPressRef.current;
           if (!lp || lp.fired) return;
           lp.fired = true;
+          if (lp.progressRaf != null) {
+            window.cancelAnimationFrame(lp.progressRaf);
+          }
+          onHoldProgressRef.current?.(null);
           releaseUnitPointer();
           unitDragRef.current = null;
           panRef.current.active = false;
-          onViewerContextMenuRef.current?.(
-            buildViewerPick(e, worldPos, getModel()),
+          const pick = buildViewerPick(
+            lp.pointerEvent ?? e,
+            lp.worldPos ?? worldPos,
+            getModel(),
           );
+          const heldSystem = lp.systemId ?? pick.systemId;
+          const handled =
+            heldSystem &&
+            onSystemHoldRef.current?.(heldSystem, screenX, screenY);
+          if (!handled) {
+            onViewerContextMenuRef.current?.(pick);
+          }
           try {
             navigator.vibrate?.(10);
           } catch {
@@ -938,7 +1145,18 @@ export function MapCanvas({
           }
           dirtyRef.current = true;
         }, LONG_PRESS_MS);
-        longPressRef.current = { timer, sx, sy, fired: false };
+        longPressRef.current = {
+          timer,
+          progressRaf,
+          sx,
+          sy,
+          screenX,
+          screenY,
+          fired: false,
+          systemId: systemId ?? null,
+          worldPos,
+          pointerEvent: e,
+        };
       };
 
       const findSystemAt = (
@@ -1101,7 +1319,7 @@ export function MapCanvas({
             }
             const hit = findSystemAt(worldPos, model.world.systems);
             if (hit) {
-              armLongPress(e, worldPos);
+              armLongPress(e, worldPos, hit.id);
               const now = performance.now();
               const last = lastClickRef.current;
               // Double-tap open — only for mouse; touch uses long-press menu / explicit dive.
@@ -1572,7 +1790,33 @@ export function MapCanvas({
             }
             worldLayerRef.current.x += dx;
             worldLayerRef.current.y += dy;
+            // Zoomed-in cull leaves empty edges unless we rebuild while panning.
+            const sc = worldLayerRef.current.scale.x || 1;
+            if (sc >= 0.62) {
+              const now = performance.now();
+              if (now - panCullAtRef.current > 90) {
+                panCullAtRef.current = now;
+                dirtyRef.current = true;
+              }
+            }
+            if (hoveredSystemIdRef.current) {
+              hoveredSystemIdRef.current = null;
+              dirtyRef.current = true;
+              applyHoverTipRef.current(null);
+            }
             return;
+          }
+
+          // Soft hover ring (mouse); skip while pointer is coarse/touching
+          if (e.pointerType === "mouse" || e.pointerType === "pen") {
+            const worldPos = toWorld(e);
+            const hit = findSystemAt(worldPos, getModel().world.systems);
+            const nextId = hit?.id ?? null;
+            if (nextId !== hoveredSystemIdRef.current) {
+              hoveredSystemIdRef.current = nextId;
+              dirtyRef.current = true;
+              if (!nextId) applyHoverTipRef.current(null);
+            }
           }
 
           if (mode !== "editor") return;
@@ -1648,12 +1892,17 @@ export function MapCanvas({
                     fromSystemId !== target.id &&
                     Number.isFinite(hops)
                   ) {
+                    const intent = resolveDropIntent(
+                      target,
+                      playerFactionIdRef.current,
+                    );
                     onUnitDropRef.current?.({
                       kind: drag.kind,
                       unitId: drag.id,
                       fromSystemId,
                       toSystemId: target.id,
                       hops,
+                      intent,
                     });
                   }
                 } else {
@@ -1768,6 +2017,7 @@ export function MapCanvas({
             legionId: legionHit,
             linkId:
               !fleetHit && !legionHit && !hit ? (linkHit?.id ?? null) : null,
+            fromFleetHit: !!fleetHit,
           };
           if (mode === "viewer") {
             onViewerContextMenuRef.current?.(pick);
@@ -1803,7 +2053,11 @@ export function MapCanvas({
         (
           host as HTMLDivElement & { __gmapCtxCleanup?: () => void }
         ).__gmapCtxCleanup = () => {
-          app.canvas.removeEventListener("contextmenu", openContextMenu);
+          try {
+            app.canvas?.removeEventListener("contextmenu", openContextMenu);
+          } catch {
+            /* canvas already detached */
+          }
         };
       } else {
         app.stage.on("pointerdown", (e: FederatedPointerEvent) => {
@@ -1898,42 +2152,126 @@ export function MapCanvas({
       app.canvas.addEventListener("touchend", onTouchEnd);
       app.canvas.addEventListener("touchcancel", onTouchEnd);
 
-      app.ticker.add((ticker) => {
+      let fxFrame = 0;
+      const tickFxLayers = (
+        dt: number,
+        gfx: ReturnType<typeof resolveGraphics>,
+        tierNow: PerfTier,
+      ) => {
+        if (!gfx.animations || tierNow === "bare") {
+          const breath = breathGRef.current;
+          if (breath) breath.clear();
+          return;
+        }
+        const anim = animRef.current;
+        const lite = tierNow === "lite";
+        const cinematicBoost = gfx.cinematic && tierNow === "full";
+        fxFrame += 1;
+
+        // Whole-map "alive" feel: ambient only (~120 stars + table), not 777 systems.
+        if (gfx.tableFx) {
+          const ambient = ambientGRef.current;
+          if (ambient) {
+            drawStarfield(ambient, anim, { lite, cinematic: cinematicBoost });
+            // Nudge transform so WebGL presents even when the camera is still.
+            ambient.rotation = (fxFrame & 1) * 1e-6;
+          }
+          // Floor is heavier — pulse every other frame.
+          const floor = tableFloorGRef.current;
+          if (floor && (fxFrame & 1) === 0) {
+            drawTableFloor(floor, anim, lite);
+          }
+        }
+
+        // Soft system halos — visible idle motion without rebaking glyphs.
+        const breath = breathGRef.current;
+        if (breath) {
+          breath.clear();
+          const sites = breathSitesRef.current;
+          const cap = cinematicBoost ? 220 : 140;
+          const n = Math.min(sites.length, cap);
+          for (let i = 0; i < n; i++) {
+            const s = sites[i]!;
+            const rx = 15 + anim.pulse * 2.2;
+            const ry = 7.5 + anim.pulse * 1.1;
+            breath.ellipse(s.ix, s.iy, rx, ry);
+            breath.stroke({
+              width: 1.15,
+              color: s.color,
+              alpha: 0.1 + anim.pulse * 0.14,
+            });
+          }
+        }
+
+        mapFxRef.current?.tick(anim);
+
+        const borderG = territoryBorderGRef.current;
+        if (borderG?.visible) {
+          borderG.alpha = 0.88 + anim.pulse * 0.12;
+        }
+        const labels = labelsRef.current;
+        if (labels) {
+          const breatheAmp = cinematicBoost ? 0.14 : 0.08;
+          const breathe = 0.92 + anim.pulse * breatheAmp;
+          for (const child of labels.children) {
+            if (!child.visible) continue;
+            const base = (child as { __baseAlpha?: number }).__baseAlpha;
+            if (base != null) child.alpha = base * breathe;
+          }
+        }
+        if ((gfx.battleFx || gfx.scarFx) && battleFxRef.current) {
+          battleFxRef.current.sync(battleSitesRef.current, dt);
+        }
+        // Unit/battle sprite bob — pool transforms only, no systemsG clear.
+        if (gfx.animations) {
+          iconOverlayRef.current?.tickBob(anim);
+        }
+      };
+
+      onTick = (ticker: { deltaMS: number }) => {
+        if (cancelled || !ready || !app.renderer) return;
         const tier = perfTierRef.current;
-        const dt = ticker.deltaMS / 1000;
+        const dt = Math.min(0.05, ticker.deltaMS / 1000);
         lastDtRef.current = dt;
         const gfx = resolveGraphics(getModel(), tier);
 
-        // During pinch/wheel zoom: only container scale moves — no full rebuild.
-        if (zoomGestureRef.current && !gfx.liveZoomRebuild) {
-          if (gfx.animations && tier !== "bare") {
-            animRef.current = makeAnim(animRef.current.t + dt);
-          }
-          return;
+        if (tier === "bare" || !gfx.animations) {
+          animRef.current = STATIC_ANIM;
+        } else {
+          animRef.current = makeAnim(animRef.current.t + dt);
         }
 
-        // Mobile / quality_mobile: pan moves container; rebuild only when dirty.
-        if (tier === "bare" || tier === "lite" || tier === "soft") {
-          if (tier === "bare" || !gfx.animations) {
-            animRef.current = STATIC_ANIM;
-          } else {
-            animRef.current = makeAnim(animRef.current.t + dt);
-          }
-          if (!dirtyRef.current) return;
+        // Geometry only when dirty (pan/zoom/store). Idle life = breath + sprite bob.
+        if (
+          dirtyRef.current &&
+          !(zoomGestureRef.current && !gfx.liveZoomRebuild)
+        ) {
           dirtyRef.current = false;
           lastRedrawMsRef.current = performance.now();
-          redrawAll();
-          return;
+          try {
+            redrawAll(false);
+          } catch {
+            /* mid-teardown */
+          }
         }
 
-        // Desktop quality: continuous redraw for FX, but still skip while zooming.
-        if (gfx.animations) {
-          animRef.current = makeAnim(animRef.current.t + dt);
-        } else {
-          animRef.current = STATIC_ANIM;
+        // Ambient + marker pulse every frame — works with a still camera.
+        try {
+          tickFxLayers(dt, gfx, tier);
+        } catch {
+          /* mid-teardown */
         }
-        redrawAll();
-      });
+
+        if (gfx.animations && tier !== "bare" && app.renderer) {
+          // Explicit present: some GPUs skip frames until a layer moves.
+          try {
+            app.renderer.render(app.stage);
+          } catch {
+            /* renderer torn down mid-tick */
+          }
+        }
+      };
+      app.ticker.add(onTick);
 
       redrawAll();
 
@@ -1941,10 +2279,14 @@ export function MapCanvas({
         __gmapTouchCleanup?: () => void;
       }).__gmapTouchCleanup = () => {
           ro.disconnect();
-          app.canvas.removeEventListener("touchstart", onTouchStart);
-          app.canvas.removeEventListener("touchmove", onTouchMove);
-          app.canvas.removeEventListener("touchend", onTouchEnd);
-          app.canvas.removeEventListener("touchcancel", onTouchEnd);
+          try {
+            app.canvas?.removeEventListener("touchstart", onTouchStart);
+            app.canvas?.removeEventListener("touchmove", onTouchMove);
+            app.canvas?.removeEventListener("touchend", onTouchEnd);
+            app.canvas?.removeEventListener("touchcancel", onTouchEnd);
+          } catch {
+            /* canvas already detached */
+          }
           (
             host as HTMLDivElement & { __gmapCtxCleanup?: () => void }
           ).__gmapCtxCleanup?.();
@@ -1984,20 +2326,23 @@ export function MapCanvas({
       g.stroke({ width: 2, color: 0x7bdff2, alpha: 0.75 });
     }
 
-    function redrawAll() {
-      const stFocus = useWorldStore.getState();
-      const focusId = stFocus.cameraFocusSystemId;
-      if (focusId && worldLayerRef.current && app.renderer) {
-        const sys = stFocus.world.systems.find((s) => s.id === focusId);
-        useWorldStore.setState({ cameraFocusSystemId: null });
-        if (sys) {
-          const layer = worldLayerRef.current;
-          const iso = toIso(sys.x, sys.y);
-          const scale = layer.scale.x;
-          layer.position.set(
-            app.screen.width / 2 - iso.x * scale,
-            app.screen.height / 2 - iso.y * scale,
-          );
+    /** @param pulseOnly skip territory/links/floor — idle glyph breathe only */
+    function redrawAll(pulseOnly = false) {
+      if (!pulseOnly) {
+        const stFocus = useWorldStore.getState();
+        const focusId = stFocus.cameraFocusSystemId;
+        if (focusId && worldLayerRef.current && app.renderer) {
+          const sys = stFocus.world.systems.find((s) => s.id === focusId);
+          useWorldStore.setState({ cameraFocusSystemId: null });
+          if (sys) {
+            const layer = worldLayerRef.current;
+            const iso = toIso(sys.x, sys.y);
+            const scale = layer.scale.x;
+            layer.position.set(
+              app.screen.width / 2 - iso.x * scale,
+              app.screen.height / 2 - iso.y * scale,
+            );
+          }
         }
       }
 
@@ -2030,7 +2375,7 @@ export function MapCanvas({
       )
         return;
 
-      dirtyRef.current = false;
+      if (!pulseOnly) dirtyRef.current = false;
 
       const {
         world,
@@ -2061,6 +2406,7 @@ export function MapCanvas({
         showDeadZones,
         showTraffic,
         showQuests,
+        showSignalFan = false,
         activeFactionId,
         perfMode,
       } = model;
@@ -2072,29 +2418,24 @@ export function MapCanvas({
       const anim =
         bare || !gfx.animations ? STATIC_ANIM : animRef.current;
 
-      const tLayer = territoryLayerRef.current;
-      if (tLayer) {
-        const wantGlow =
-          gfx.territoryGlow && (tier === "full" || tier === "soft");
-        const hasBlur = !!(tLayer.filters && tLayer.filters.length > 0);
-        if (wantGlow && !hasBlur) {
-          tLayer.filters = [
-            new BlurFilter({
-              strength: tier === "full" ? 10 : 6,
-              quality: 2,
-            }),
-          ];
-        } else if (!wantGlow && hasBlur) {
-          tLayer.filters = [];
-        }
+      // Territory glow is baked in drawTerritoryGlow (no live BlurFilter).
+      if (!pulseOnly && territoryLayerRef.current?.filters?.length) {
+        territoryLayerRef.current.filters = [];
       }
 
-      if (bare || !gfx.tableFx) {
-        tableFloorG.clear();
-        ambientG.clear();
-      } else {
-        drawTableFloor(tableFloorG, anim, tier === "lite");
-        drawStarfield(ambientG, anim, tier === "lite");
+      if (!pulseOnly) {
+        if (bare || !gfx.tableFx) {
+          tableFloorG.clear();
+          ambientG.clear();
+        } else {
+          const starLite = tier === "lite";
+          const cinematicBoost = gfx.cinematic && tier === "full";
+          drawTableFloor(tableFloorG, anim, starLite);
+          drawStarfield(ambientG, anim, {
+            lite: starLite,
+            cinematic: cinematicBoost,
+          });
+        }
       }
 
       const factionFill = new Map(
@@ -2134,6 +2475,22 @@ export function MapCanvas({
       const lod = resolveMapLod(worldScale);
       const labelScale = resolveLabelScale(worldScale, lod);
 
+      const layerForCull = worldLayerRef.current;
+      const viewBounds =
+        layerForCull && app.renderer
+          ? isoViewportBounds(
+              layerForCull.x,
+              layerForCull.y,
+              layerForCull.scale.x || 1,
+              app.screen.width,
+              app.screen.height,
+              lod === "near" ? 120 : lod === "mid" ? 160 : 0,
+            )
+          : null;
+      /** Far overview: draw all. Mid/near: frustum cull in iso space. */
+      const useCull = lod !== "far" && viewBounds != null;
+
+      if (!pulseOnly) {
       if (showTerritory) {
         const fp =
           territoryFingerprint(world) +
@@ -2144,7 +2501,10 @@ export function MapCanvas({
           if (bare) {
             territoryG.clear();
           } else {
-            drawTerritoryGlow(territoryG, world, factionFill);
+            drawTerritoryGlow(territoryG, world, factionFill, {
+              rich: gfx.territoryGlow,
+              cinematic: gfx.cinematic && tier === "full",
+            });
           }
           drawTerritoryBorders(territoryBorderG, world, factionBorder, anim);
         }
@@ -2175,6 +2535,16 @@ export function MapCanvas({
           const a = byId.get(link.fromId);
           const b = byId.get(link.toId);
           if (!a || !b) continue;
+          if (useCull && viewBounds) {
+            const ia = toIso(a.x, a.y);
+            const ib = toIso(b.x, b.y);
+            if (
+              !isoInBounds(ia.x, ia.y, viewBounds) &&
+              !isoInBounds(ib.x, ib.y, viewBounds)
+            ) {
+              continue;
+            }
+          }
           const selected = link.id === selectedLinkId;
           if (
             !drawSpecialLink(
@@ -2231,6 +2601,7 @@ export function MapCanvas({
       } else {
         diplomacyG.clear();
       }
+      } // !pulseOnly — skip heavy layers on idle glyph breathe
 
       ordersG.clear();
 
@@ -2366,19 +2737,44 @@ export function MapCanvas({
       }
 
       systemsG.clear();
+      labelPlatesGRef.current?.clear();
       const seen = new Set<string>();
       // fleetsBySystem / legionsBySystem already built above
+
+      const systemsInView = useCull
+        ? world.systems.filter((s) => {
+            const ip = toIso(s.x, s.y);
+            return isoInBounds(ip.x, ip.y, viewBounds!);
+          })
+        : world.systems;
 
       // Y-sort is expensive on phones — skip for lite/bare
       const sorted =
         bare || tier === "lite"
-          ? world.systems
-          : [...world.systems].sort((a, b) => {
+          ? systemsInView
+          : [...systemsInView].sort((a, b) => {
               return toIso(a.x, a.y).y - toIso(b.x, b.y).y;
             });
 
       const battleMarkerIds = new Set<string>();
+      const signalFlags = new Map<string, SystemSignalFlags>();
+      const useMapSprites = mapIconsReady();
+      // Hover wins for focus-dim / badge density; selection still draws brackets
+      const focusId =
+        hoveredSystemIdRef.current || selectedSystemId || null;
+      const hasMapFocus = !!focusId;
       const battleSites: { id: string; x: number; y: number }[] = [];
+      const fxSites: MapFxSite[] = [];
+      const breathSites: { ix: number; iy: number; color: number }[] = [];
+      const useLiveFx =
+        !!mapFxRef.current &&
+        gfx.animations &&
+        (tier === "full" || tier === "soft");
+      /**
+       * Live pulse on glyphs when animations on. Dirty rebuild is throttled
+       * (~12fps) so idle map breathes without a 60fps full clear.
+       */
+      const geomAnim = gfx.animations && !bare ? anim : STATIC_ANIM;
       const selectedIds =
         model.selectedSystemIds ??
         (selectedSystemId ? [selectedSystemId] : []);
@@ -2396,7 +2792,24 @@ export function MapCanvas({
           (maskSet && maskSet.has(s.id))
         );
 
-        if (showOwnership && s.ownerFactionId) {
+        if (!fogged && gfx.animations && !bare) {
+          const col = s.ownerFactionId
+            ? (factionSystem.get(s.ownerFactionId) ?? 0x8a93a5)
+            : 0x6b7358;
+          breathSites.push({ ix: ip.x, iy: ip.y, color: col });
+        }
+
+        const emphasize =
+          s.id === selectedSystemId ||
+          s.id === hoveredSystemIdRef.current;
+        const dimMul = hasMapFocus && !emphasize ? 0.38 : 1;
+
+        // Ownership rings only near or focused — cuts concentric noise on mid
+        if (
+          showOwnership &&
+          s.ownerFactionId &&
+          (lod === "near" || emphasize)
+        ) {
           const owner = world.factions.find((f) => f.id === s.ownerFactionId);
           const coIds = s.coOwnerFactionIds ?? [];
           const shareColors =
@@ -2411,31 +2824,54 @@ export function MapCanvas({
               systemsG,
               s,
               factionSystem.get(s.ownerFactionId) ?? 0x888888,
-              anim,
+              geomAnim,
               shareColors,
+              { dim: dimMul, emphasize },
             );
           }
         }
 
         if (
+          emphasize &&
           activeFactionId &&
           (s.visibleToFactionIds ?? []).includes(activeFactionId)
         ) {
-          drawIntelRing(systemsG, s, anim);
+          if (useLiveFx) {
+            fxSites.push({ id: s.id, kind: "intel", x: s.x, y: s.y });
+          } else {
+            drawIntelRing(systemsG, s, anim);
+          }
         }
 
         if (contested && showFleets) {
-          drawContestedRing(systemsG, s, anim);
+          if (useLiveFx) {
+            fxSites.push({ id: s.id, kind: "contested", x: s.x, y: s.y });
+          } else {
+            drawContestedRing(systemsG, s, anim);
+          }
         } else if (s.activity === "battle" && !mapIconsReady()) {
           const bp = toIso(s.x, s.y);
-          drawCrossedSwords(systemsG, bp.x, bp.y - 34 - anim.pulse * 0.6, 0.75, anim);
+          drawCrossedSwords(
+            systemsG,
+            bp.x,
+            bp.y - 34 - geomAnim.pulse * 0.6,
+            0.75,
+            geomAnim,
+          );
         }
 
         const inBattle = s.activity === "battle" || contested;
         if (inBattle && gfx.battleFx && tier === "full") {
-          drawBattleFx(systemsG, s, anim);
+          if (useLiveFx) {
+            fxSites.push({ id: s.id, kind: "battle", x: s.x, y: s.y });
+          } else {
+            drawBattleFx(systemsG, s, anim);
+          }
           battleSites.push({ id: s.id, x: s.x, y: s.y });
         } else if (inBattle && gfx.battleFx && (tier === "soft" || tier === "lite")) {
+          if (useLiveFx && tier === "soft") {
+            fxSites.push({ id: s.id, kind: "battle", x: s.x, y: s.y });
+          }
           battleSites.push({ id: s.id, x: s.x, y: s.y });
         }
         const objs = s.spaceObjects || (s.poiType && s.poiType !== "none" ? [s.poiType] : []);
@@ -2452,12 +2888,12 @@ export function MapCanvas({
         }
 
         if (showDeadZones && (s.scannerDeadZone || hasSpaceObject(s, "dead_zone"))) {
-          drawDeadZone(systemsG, s, anim);
+          drawDeadZone(systemsG, s, geomAnim);
         }
         if (s.anomalyMotion || hasSpaceObject(s, "anomaly")) {
-          drawAnomalyField(systemsG, s, anim);
+          drawAnomalyField(systemsG, s, geomAnim);
         }
-        drawContestedClaim(systemsG, s, anim);
+        drawContestedClaim(systemsG, s, geomAnim);
 
         {
           const coIds = s.coOwnerFactionIds ?? [];
@@ -2472,24 +2908,48 @@ export function MapCanvas({
             systemsG,
             s,
             selected,
-            anim,
+            geomAnim,
             s.ownerFactionId
               ? factionSystem.get(s.ownerFactionId)
               : undefined,
-            undefined,
+            lod,
             shareColors,
+            { dim: dimMul, emphasize },
           );
         }
-        drawActivityBadge(systemsG, s, anim);
+        if (!useMapSprites && emphasize) {
+          drawActivityBadge(systemsG, s, geomAnim);
+        }
+        if (mode === "editor" && s.timers?.length && emphasize) {
+          drawTimerBadge(systemsG, s, world.meta?.turn ?? 0, geomAnim);
+        }
 
-        if (showBlockades && s.blockaded) {
-          drawBlockadeRing(systemsG, s, anim);
+        if (showBlockades && s.blockaded && lod === "near" && !useMapSprites) {
+          drawBlockadeRing(systemsG, s, geomAnim);
         }
         const systemQuests = showQuests
           ? questsAtSystem(world, s.id)
           : [];
-        if (showQuests && lod !== "far") {
-          drawQuestMarker(systemsG, s, systemQuests, anim);
+        const hasActiveQuest =
+          systemQuests.some((q) => q.status === "active") ||
+          s.poiType === "quest" ||
+          !!s.questId;
+        // Quest = pin (Aceternity-style), not a crowded signal badge
+        if (showQuests && lod !== "far" && hasActiveQuest) {
+          drawQuestMarker(systemsG, s, systemQuests, geomAnim);
+        }
+        const economyBn =
+          !!model.economyBottleneckSystemIds?.includes(s.id);
+        if (lod !== "far" && economyBn && !useMapSprites && emphasize) {
+          drawEconomyBottleneckBadge(systemsG, s, geomAnim);
+        }
+
+        if (useMapSprites && lod !== "far") {
+          signalFlags.set(s.id, {
+            blockaded: !!(showBlockades && s.blockaded),
+            hasQuest: showQuests && hasActiveQuest,
+            economyBottleneck: economyBn,
+          });
         }
 
         if (fogged) {
@@ -2497,10 +2957,20 @@ export function MapCanvas({
         }
 
         if (selected) {
-          drawSelectionBrackets(systemsG, s, anim);
+          if (useLiveFx) {
+            fxSites.push({ id: s.id, kind: "selection", x: s.x, y: s.y });
+          } else {
+            drawSelectionBrackets(systemsG, s, anim);
+          }
+        } else if (
+          !fogged &&
+          hoveredSystemIdRef.current === s.id &&
+          !bare
+        ) {
+          drawHoverRing(systemsG, s, geomAnim);
         }
 
-        const hasQuest = systemQuests.length > 0;
+        const hasQuest = hasActiveQuest;
         const inhabited =
           s.isCapital || censusPlanets(s.planets ?? []).inhabited > 0;
         const showSystemLabel =
@@ -2521,6 +2991,10 @@ export function MapCanvas({
                 : 0xb8c2d0;
           const fontSize = lod === "mid" ? 12 : 11;
           const weight = inhabited || s.isCapital ? "700" : "600";
+          const useLabelShadows =
+            !bare &&
+            tier !== "lite" &&
+            (gfx.labelShadows || (gfx.cinematic && tier === "full"));
           if (!label) {
             label = new Text({
               text: tag + s.name,
@@ -2531,19 +3005,20 @@ export function MapCanvas({
                 fontWeight: weight,
                 letterSpacing: 0.4,
                 stroke: { color: 0x05070c, width: 3.5, join: "round" },
-                ...(bare || tier === "lite" || !gfx.labelShadows
-                  ? {}
-                  : {
+                ...(useLabelShadows
+                  ? {
                       dropShadow: {
                         color: 0x000000,
-                        alpha: 0.35,
-                        blur: 2,
+                        alpha: gfx.cinematic && tier === "full" ? 0.48 : 0.35,
+                        blur: gfx.cinematic && tier === "full" ? 3 : 2,
                         distance: 1,
                         angle: Math.PI / 2,
                       },
-                    }),
+                    }
+                  : {}),
               },
             });
+            label.anchor.set(0.5, 0);
             labelMapRef.current.set(s.id, label);
             labels.addChild(label);
           }
@@ -2553,15 +3028,51 @@ export function MapCanvas({
           label.style.fontWeight = weight;
           label.visible = true;
           label.scale.set(labelScale);
-          label.position.set(ip.x + 18 * labelScale, ip.y - 28 * labelScale);
-          label.alpha = fogged
-            ? 0.22
-            : lod === "mid"
-              ? 0.78 + anim.pulse * 0.04
-              : 0.88 + anim.pulse * 0.04;
+          const labelY = ip.y + 24 * labelScale;
+          label.position.set(ip.x, labelY);
+          const baseA =
+            (fogged ? 0.22 : lod === "mid" ? 0.8 : 0.9) * dimMul;
+          label.alpha = baseA;
+          (
+            label as Text & { __baseAlpha?: number }
+          ).__baseAlpha = baseA;
+
+          const plateG = labelPlatesGRef.current;
+          if (plateG) {
+            const padX = 7 * labelScale;
+            const padY = 3 * labelScale;
+            const tw = label.width + padX * 2;
+            const th = label.height + padY * 2;
+            plateG.roundRect(
+              ip.x - tw / 2,
+              labelY - padY,
+              tw,
+              th,
+              5 * labelScale,
+            );
+            plateG.fill({ color: 0x05070c, alpha: fogged ? 0.4 : 0.55 });
+            plateG.roundRect(
+              ip.x - tw / 2,
+              labelY - padY,
+              tw,
+              th,
+              5 * labelScale,
+            );
+            plateG.stroke({
+              width: 1 * labelScale,
+              color: 0x6b7a90,
+              alpha: fogged ? 0.18 : 0.28,
+            });
+          }
         } else {
           const label = labelMapRef.current.get(s.id);
           if (label) label.visible = false;
+        }
+      }
+
+      if (useCull) {
+        for (const [id, label] of labelMapRef.current) {
+          if (!seen.has(id)) label.visible = false;
         }
       }
 
@@ -2574,7 +3085,7 @@ export function MapCanvas({
               )
             : null) ??
           (selectedSystemId ? byId.get(selectedSystemId) : null);
-        if (jumpSys) drawJumpRange(systemsG, jumpSys, undefined, anim);
+        if (jumpSys) drawJumpRange(systemsG, jumpSys, undefined, geomAnim);
       }
 
       // System markers synced after unit slots are collected below
@@ -2582,13 +3093,28 @@ export function MapCanvas({
         const enableBattle =
           (gfx.battleFx || gfx.scarFx) && (tier === "full" || tier === "soft");
         battleFxRef.current?.setEnabled(enableBattle);
+        battleSitesRef.current = enableBattle ? battleSites : [];
         battleFxRef.current?.sync(
-          enableBattle ? battleSites : [],
+          battleSitesRef.current,
           lastDtRef.current,
         );
+        mapFxRef.current?.setEnabled(useLiveFx);
+        mapFxRef.current?.sync(useLiveFx ? fxSites : []);
+        if (useLiveFx) mapFxRef.current?.tick(anim);
+        breathSitesRef.current = breathSites;
+      } else {
+        battleSitesRef.current = [];
+        breathSitesRef.current = [];
+        mapFxRef.current?.sync([]);
       }
 
-      if (showFactionLabels) {
+      const selectedFacId = selectedSystemId
+        ? byId.get(selectedSystemId)?.ownerFactionId ?? null
+        : null;
+      const showPolityLabels =
+        showFactionLabels && (lod === "near" || !!selectedFacId);
+
+      if (showPolityLabels) {
         drawFactionLabels(
           labels,
           world,
@@ -2597,6 +3123,7 @@ export function MapCanvas({
           emblemMapRef.current,
           emblemLoadingRef.current,
           labelScale * (lod === "far" ? 1.0 : lod === "mid" ? 0.92 : 0.85),
+          lod === "near" ? undefined : selectedFacId ?? undefined,
         );
         if (lod !== "far") {
           drawCapitalEmblems(
@@ -2652,8 +3179,27 @@ export function MapCanvas({
         const path = hopPath(world, unit?.systemId, dropTarget.id);
         const reachable = Number.isFinite(hops) && hops > 0;
         const same = hops === 0;
-        const ring = reachable ? 0xc9a227 : same ? 0x7a8899 : 0xe85d4c;
-        const ringSoft = reachable ? 0xffe08a : same ? 0x9aa8b8 : 0xff8a7a;
+        // Intent color: gold=move, red=attack, cyan=claim. Reachability dims it.
+        const intent =
+          mode === "viewer"
+            ? resolveDropIntent(dropTarget, playerFactionIdRef.current)
+            : "move";
+        const intentColor =
+          intent === "attack"
+            ? 0xe85d4c
+            : intent === "claim"
+              ? 0x5fd0e6
+              : 0xc9a227;
+        const intentSoft =
+          intent === "attack"
+            ? 0xff8a7a
+            : intent === "claim"
+              ? 0x9be8f6
+              : 0xffe08a;
+        const unreachable = !reachable && !same;
+        const ring = unreachable ? 0xe85d4c : intentColor;
+        const ringSoft = unreachable ? 0xff8a7a : intentSoft;
+        const ringAlpha = reachable ? 0.92 : same ? 0.6 : 0.5;
         if (path.length >= 2) {
           for (let pass = 0; pass < 2; pass++) {
             for (let i = 0; i < path.length - 1; i++) {
@@ -2671,7 +3217,7 @@ export function MapCanvas({
                 : {
                     width: 2.4,
                     color: ring,
-                    alpha: reachable ? 0.92 : 0.55,
+                    alpha: ringAlpha,
                   },
             );
           }
@@ -2689,10 +3235,12 @@ export function MapCanvas({
           color: ringSoft,
           alpha: 0.45,
         });
+        const intentLabel =
+          intent === "attack" ? "атака" : intent === "claim" ? "захват" : "";
         const hint = same
           ? "уже здесь"
           : reachable
-            ? formatHopTurns(hops)
+            ? `${intentLabel ? `${intentLabel} · ` : ""}${formatHopTurns(hops)}`
             : "нет пути";
         let tip = dragHintLabelRef.current;
         if (!tip) {
@@ -2711,7 +3259,13 @@ export function MapCanvas({
           labels.addChild(tip);
         }
         tip.text = hint;
-        tip.style.fill = reachable ? 0xffe8a8 : same ? 0xc8d0dc : 0xffb0a4;
+        tip.style.fill = unreachable
+          ? 0xffb0a4
+          : intent === "attack"
+            ? 0xffb0a4
+            : intent === "claim"
+              ? 0x9be8f6
+              : 0xffe8a8;
         tip.visible = true;
         tip.position.set(dp.x, dp.y - 32);
       } else if (dragHintLabelRef.current) {
@@ -2924,7 +3478,40 @@ export function MapCanvas({
         iconOverlayRef.current?.sync(sorted, anim, {
           battleMarkerIds,
           unitSlots,
+          lod,
+          signalFlags,
+          signalFan: showSignalFan,
+          emphasisId: focusId,
+          questAsPin: true,
         });
+      }
+
+      // DOM hover tip — dense stats off the map billboards (imperative, no React setState)
+      {
+        const hid = hoveredSystemIdRef.current;
+        const wl = worldLayerRef.current;
+        if (
+          hid &&
+          wl &&
+          !panRef.current.active &&
+          (lod === "mid" || lod === "near")
+        ) {
+          const hs = byId.get(hid);
+          if (hs) {
+            const tipP = toIso(hs.x, hs.y);
+            const sx = tipP.x * wl.scale.x + wl.x;
+            const sy = tipP.y * wl.scale.y + wl.y - 36 * wl.scale.y;
+            applyHoverTipRef.current({
+              systemId: hs.id,
+              name: hs.name,
+              screenX: sx,
+              screenY: sy,
+              lines: buildSystemHoverLines(hs),
+            });
+          }
+        } else if (lastHoverTipRef.current) {
+          applyHoverTipRef.current(null);
+        }
       }
 
       for (const [id, label] of labelMapRef.current) {
@@ -2955,6 +3542,8 @@ export function MapCanvas({
 
     return () => {
       cancelled = true;
+      ready = false;
+      applyHoverTipRef.current(null);
       unsub();
       registerMapPngExporter(null);
       const cleanup = (
@@ -2986,5 +3575,17 @@ export function MapCanvas({
     };
   }, [mode, interactive]);
 
-  return <div className="map-host" ref={hostRef} />;
+  return (
+    <div
+      className={hostClassName ? `map-host ${hostClassName}` : "map-host"}
+      ref={hostRef}
+    >
+      <div
+        ref={tipElRef}
+        className="map-system-tip"
+        role="tooltip"
+        hidden
+      />
+    </div>
+  );
 }

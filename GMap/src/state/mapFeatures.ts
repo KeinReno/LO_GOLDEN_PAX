@@ -13,7 +13,7 @@ export const DEFAULT_JUMP_RANGE = 160;
 export function linkCargoMode(
   type: SystemLink["type"],
 ): "fleet" | "legion" | "any" {
-  if (type === "damyl_space") return "fleet";
+  // damyl_planet: infantry/legions only. All other links (incl. damyl_space): both.
   if (type === "damyl_planet") return "legion";
   return "any";
 }
@@ -27,7 +27,7 @@ export function linkTypeLabel(type: SystemLink["type"]): string {
     case "unstable":
       return "Нестабильный";
     case "damyl_space":
-      return "Дамильские космические врата (флот)";
+      return "Дамильские космические врата (флот и легионы)";
     case "damyl_planet":
       return "Дамильские межпланетные врата (пехота)";
     default:

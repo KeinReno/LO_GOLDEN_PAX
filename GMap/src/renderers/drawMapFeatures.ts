@@ -210,7 +210,20 @@ export function drawQuestMarker(
   const active = quests.filter((q) => q.status === "active");
   if (active.length === 0 && s.poiType !== "quest" && !s.questId) return;
   const p = toIso(s.x, s.y);
-  const y = p.y - 26 + Math.sin(anim.t * 3) * 2;
+  const bob = Math.sin(anim.t * 3) * 2;
+  const y = p.y - 28 + bob;
+  // Soft pin-light halo (flat 3D-pin read, no perspective)
+  g.ellipse(p.x, y + 2, 14 + anim.pulse * 1.8, 7 + anim.pulse * 0.7);
+  g.fill({ color: 0xe8c547, alpha: 0.05 + anim.pulse * 0.03 });
+  g.ellipse(p.x, y + 2, 11 + anim.pulse * 1.5, 5.5 + anim.pulse * 0.6);
+  g.stroke({ width: 1, color: 0xe8c547, alpha: 0.22 + anim.pulse * 0.1 });
+  g.ellipse(p.x, y + 2, 7.5, 3.8);
+  g.fill({ color: 0xe8c547, alpha: 0.1 + anim.pulse2 * 0.06 });
+  // Stem
+  g.moveTo(p.x, y + 6);
+  g.lineTo(p.x, p.y - 8);
+  g.stroke({ width: 1.4, color: 0xe8c547, alpha: 0.55 });
+  // Pin head diamond
   g.moveTo(p.x, y - 10);
   g.lineTo(p.x + 8, y);
   g.lineTo(p.x, y + 4);
@@ -218,6 +231,11 @@ export function drawQuestMarker(
   g.closePath();
   g.fill({ color: 0xe8c547, alpha: 0.95 });
   g.stroke({ width: 1.2, color: 0x0a1018, alpha: 0.9 });
+  // Specular edge on pin head
+  g.moveTo(p.x - 3, y - 6);
+  g.lineTo(p.x, y - 9);
+  g.lineTo(p.x + 3, y - 6);
+  g.stroke({ width: 1, color: 0xfff4d0, alpha: 0.55 });
   g.circle(p.x, y - 2, 2);
   g.fill({ color: 0x0a1018, alpha: 0.9 });
 }
@@ -240,6 +258,43 @@ export function drawAnomalyField(
       alpha: 0.25 + Math.sin(spin + i) * 0.1,
     });
   }
+}
+
+/** GM-only: small badge when a narrative timer is scheduled on the system. */
+export function drawTimerBadge(
+  g: Graphics,
+  s: StarSystem,
+  currentTurn: number,
+  anim: AnimClock,
+): void {
+  if (!s.timers?.length) return;
+  const p = toIso(s.x, s.y);
+  const cx = p.x + 20;
+  const cy = p.y - 28 + Math.sin(anim.t * 2.5) * 1;
+  g.circle(cx, cy, 5);
+  g.fill({ color: 0xe8a54c, alpha: 0.92 });
+  g.stroke({ width: 1, color: 0x0a1018, alpha: 0.85 });
+  const urgent = s.timers.some((t) => (t.expiresTurn ?? 0) <= currentTurn + 1);
+  if (urgent) {
+    g.circle(cx, cy, 8 + anim.pulse * 1.5);
+    g.stroke({ width: 1, color: 0xe8a54c, alpha: 0.35 + anim.pulse * 0.2 });
+  }
+}
+
+/** Viewer: small badge when system contributes to a severe economy bottleneck. */
+export function drawEconomyBottleneckBadge(
+  g: Graphics,
+  s: StarSystem,
+  anim: AnimClock,
+): void {
+  const p = toIso(s.x, s.y);
+  const cx = p.x + 18;
+  const cy = p.y - 18 + Math.sin(anim.t * 2.8 + s.x * 0.01) * 1;
+  g.circle(cx, cy, 4.5);
+  g.fill({ color: 0xe85d5d, alpha: 0.95 });
+  g.stroke({ width: 1, color: 0x0a1018, alpha: 0.85 });
+  g.circle(cx, cy, 7 + anim.pulse * 1.2);
+  g.stroke({ width: 1, color: 0xe85d5d, alpha: 0.25 + anim.pulse * 0.15 });
 }
 
 /** Hit-test quest diamond above system (iso space). */

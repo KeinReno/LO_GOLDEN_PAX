@@ -11,6 +11,22 @@ import {
   RpFloatLauncher,
 } from "./FloatingRpWindow";
 import { usePendingIntents } from "./IntentsInbox";
+import { exportMapPosterPng } from "../io/exportExtras";
+import type { WorldState } from "../state/types";
+
+function posterFilename(name: string, turn: number): string {
+  const slug = (name || "campaign").replace(/\s+/g, "_");
+  return `${slug}_ход${turn}.png`;
+}
+
+async function downloadPoster(world: WorldState): Promise<void> {
+  const ok = await exportMapPosterPng(world, {
+    filename: posterFilename(world.meta.name, world.meta.turn),
+  });
+  if (!ok) {
+    alert("Карта ещё не готова — подождите кадр и повторите");
+  }
+}
 
 export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const {
@@ -425,25 +441,35 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               >
                 Дипломатия…
               </button>
-              <button
-                type="button"
-                className="btn ghost block"
-                onClick={() => {
-                  onDownloadMap();
-                  setMenuOpen(false);
-                }}
-              >
-                Скачать JSON
-              </button>
-              <Link
-                className="btn ghost block"
-                to="/view"
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => setMenuOpen(false)}
-              >
-                Превью /view
-              </Link>
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
+                void downloadPoster(world);
+                setMenuOpen(false);
+              }}
+            >
+              Плакат PNG
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
+                onDownloadMap();
+                setMenuOpen(false);
+              }}
+            >
+              Скачать JSON
+            </button>
+            <Link
+              className="btn ghost block"
+              to="/view"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setMenuOpen(false)}
+            >
+              Превью /view
+            </Link>
             </div>
             <p className="hint">
               Ресурсы: слева «Инструменты» (кнопка ⟨ Инстр.).
@@ -453,11 +479,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
 
         {sharePopover}
 
-        {syncMsg && (
-          <p className="top-bar-status top-bar-status--live" title={syncMsg}>
-            {syncMsg}
-          </p>
-        )}
+        {/* syncMsg → StatusStrip in App shell (no absolute hang over panels) */}
 
         {rpWindow}
       </header>
@@ -529,6 +551,14 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
           onClick={onRequestTick}
         >
           Тик
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
+          title="PNG-плакат с названием кампании и ходом"
+          onClick={() => void downloadPoster(world)}
+        >
+          Плакат PNG
         </button>
       </div>
 
@@ -677,6 +707,16 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               }}
             >
               Дипломатия…
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
+                void downloadPoster(world);
+                setMenuOpen(false);
+              }}
+            >
+              Плакат PNG
             </button>
             <button
               type="button"

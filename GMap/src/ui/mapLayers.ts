@@ -20,6 +20,12 @@ export interface MapLayerFlags {
   showDeadZones: boolean;
   showTraffic: boolean;
   showQuests: boolean;
+  /**
+   * Signal icon layout on systems:
+   * false/undefined = priority stack (1–2 icons + "+N")
+   * true = fan (up to 4 icons, no overflow chip)
+   */
+  showSignalFan?: boolean;
 }
 
 export type MapLayerKey = keyof MapLayerFlags;
@@ -64,6 +70,7 @@ export const DEFAULT_MAP_LAYERS: MapLayerFlags = {
   showDeadZones: true,
   showTraffic: true,
   showQuests: true,
+  showSignalFan: false,
 };
 
 /** Light defaults for phone / ultralight — fewer overlays = higher FPS. */
@@ -87,6 +94,7 @@ export const MOBILE_LIGHT_LAYERS: MapLayerFlags = {
   showDeadZones: false,
   showTraffic: false,
   showQuests: false,
+  showSignalFan: false,
 };
 
 export const ULTRALIGHT_LAYERS: MapLayerFlags = {
@@ -109,6 +117,7 @@ export const ULTRALIGHT_LAYERS: MapLayerFlags = {
   showDeadZones: false,
   showTraffic: false,
   showQuests: false,
+  showSignalFan: false,
 };
 
 export type ViewerPerfChoice =
@@ -161,6 +170,12 @@ export const VIEWER_LAYER_CHIPS: {
   { key: "showOrders", label: "Приказы", title: "Приказы и маршруты", icon: "navigation" },
   { key: "showLabels", label: "Имена", title: "Подписи систем", icon: "type" },
   { key: "showQuests", label: "Квесты", title: "Квесты", icon: "help-circle" },
+  {
+    key: "showSignalFan",
+    label: "Веер",
+    title: "Сигналы: веер иконок вместо +N",
+    icon: "activity",
+  },
 ];
 
 export const EDITOR_LAYER_GROUPS: {
@@ -411,8 +426,104 @@ export const LAYER_PRESETS: {
   },
 ];
 
-/** Presets shown in UI (hide duplicate war alias). */
-export const LAYER_PRESET_BUTTONS = LAYER_PRESETS.filter((p) => p.id !== "war");
+/** Primary map modes — toolbar chips + on-map strip (F5–F9). */
+export const MAP_MODE_PRESETS: {
+  id: LayerPresetId;
+  label: string;
+  hint: string;
+  hotkey: string;
+}[] = [
+  {
+    id: "politics",
+    label: "Политика",
+    hint: "Владение и дипломатия без военной суеты",
+    hotkey: "F5",
+  },
+  {
+    id: "military",
+    label: "Война",
+    hint: "Флоты, легионы, приказы, блокады, прыжок",
+    hotkey: "F6",
+  },
+  {
+    id: "econ",
+    label: "Экономика",
+    hint: "Снабжение, караваны, хабы, владение",
+    hotkey: "F7",
+  },
+  {
+    id: "quest",
+    label: "Квест",
+    hint: "Квесты и подписи, минимум войны",
+    hotkey: "F8",
+  },
+  {
+    id: "gm",
+    label: "GM",
+    hint: "Туман-превью, дипломатия, владение, всё видно",
+    hotkey: "F9",
+  },
+];
+
+const MAP_MODE_PRESET_IDS = new Set<LayerPresetId>([
+  "politics",
+  "military",
+  "war",
+  "econ",
+  "quest",
+  "gm",
+]);
+
+/** Extra presets in settings (overview / minimal). */
+export const LAYER_PRESET_BUTTONS = LAYER_PRESETS.filter(
+  (p) => p.id === "overview" || p.id === "minimal",
+);
+
+/** Keys compared when highlighting an active map mode. */
+const MODE_MATCH_KEYS: MapLayerKey[] = [
+  "showTerritory",
+  "showOwnership",
+  "showSectors",
+  "showFactionLabels",
+  "showLabels",
+  "showLinks",
+  "showFleets",
+  "showLegions",
+  "showOrders",
+  "showDiplomacy",
+  "showJumpRange",
+  "showBlockades",
+  "showSupply",
+  "showCaravans",
+  "showTraffic",
+  "showQuests",
+  "showFogPreview",
+  "showDeadZones",
+];
+
+function presetFlagsMatch(
+  current: MapLayerFlags,
+  partial: Partial<MapLayerFlags>,
+): boolean {
+  for (const key of MODE_MATCH_KEYS) {
+    if (key in partial && current[key] !== partial[key]) return false;
+  }
+  return true;
+}
+
+export function activeMapModePreset(
+  flags: MapLayerFlags,
+): LayerPresetId | null {
+  for (const mode of MAP_MODE_PRESETS) {
+    const preset = LAYER_PRESETS.find((p) => p.id === mode.id);
+    if (preset && presetFlagsMatch(flags, preset.flags)) return mode.id;
+  }
+  return null;
+}
+
+export function mapModePresetFromHotkey(key: string): LayerPresetId | null {
+  return MAP_MODE_PRESETS.find((p) => p.hotkey === key)?.id ?? null;
+}
 
 const STORAGE_KEY = "gmap-viewer-layers";
 /** One-shot: turn off capital→systems spokes that used to default on. */
@@ -450,5 +561,8 @@ export function applyLayerPreset(
   const resolved = id === "war" ? "military" : id;
   const preset = LAYER_PRESETS.find((p) => p.id === resolved);
   if (!preset) return current;
-  return { ...current, ...preset.flags };
+  const base = MAP_MODE_PRESET_IDS.has(resolved)
+    ? { ...DEFAULT_MAP_LAYERS, gmOmniscientView: current.gmOmniscientView }
+    : { ...current };
+  return { ...base, ...preset.flags };
 }

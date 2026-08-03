@@ -147,6 +147,24 @@ export function explainStack(stack) {
 }
 
 /**
+ * Resolve planet population race mix for trait / habitability modifiers.
+ * @param {{ raceComposition?: { raceId: string, percent: number }[] }} planet
+ * @param {{ primaryRaceId?: string, primaryRace?: string, dominantRaceId?: string, dominantRace?: string } | null} [faction]
+ */
+export function resolvePlanetRaceComposition(planet, faction = null) {
+  if (planet?.raceComposition?.length > 0) {
+    return planet.raceComposition;
+  }
+  const raceId =
+    faction?.primaryRaceId ||
+    faction?.primaryRace ||
+    faction?.dominantRaceId ||
+    faction?.dominantRace ||
+    "race_human";
+  return [{ raceId, percent: 100 }];
+}
+
+/**
  * Collect race trait effects weighted by percent (0-100).
  * @param {object} racesContent
  * @param {{ raceId: string, percent: number }[]} composition

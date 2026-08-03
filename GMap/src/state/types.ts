@@ -301,7 +301,9 @@ export type OrderType =
   | "move_fleet"
   | "claim_system"
   | "attack_system"
-  | "move_legion";
+  | "move_legion"
+  | "blockade"
+  | "fortify";
 
 export type OrderStatus = "pending" | "accepted" | "rejected";
 
@@ -347,14 +349,22 @@ export type PlanetBuildingKind =
   | "habitat"
   | "custom";
 
-export type PlanetBuildingZone = "surface" | "orbital";
+export type PlanetBuildingZone = "surface" | "orbital" | "subsurface" | "deep";
 
 export interface PlanetBuilding {
   id: string;
   name: string;
   kind: PlanetBuildingKind;
   zone: PlanetBuildingZone;
+  /** Content id from buildings.json (e.g. materia.smelter); preferred over kind lookup. */
+  buildingId?: string;
   disabled?: boolean;
+  /**
+   * New economy model: per-role resource fills (resourceId → map.<key>).
+   * Keyed by slot `role` (hull, weapon, shield, structure, crew, tactic, ...).
+   * Empty/missing = unfilled slot (building still functions at legacy yield, but no flow bonus).
+   */
+  slotFills?: Record<string, string>;
 }
 
 export interface Planet {
@@ -401,6 +411,12 @@ export interface OrbitalStation {
   name: string;
   kind: StationKind;
   factionId: string | null;
+  /** Optional planet-axis anchor (Stellaris-style mining station on body). */
+  anchorPlanetId?: string;
+  /** Prefer planet orbitIndex when anchored; else free system belt. */
+  orbitIndex?: number;
+  /** Angle on system belt in orbital-plane radians (place-on-belt gesture). */
+  beltAngle?: number;
 }
 
 export interface StarSystem {
@@ -484,6 +500,32 @@ export interface Sector {
   color?: string;
 }
 
+/** Court / RP actor attached to a polity (player HQ + GM dossier). */
+export interface FactionNpc {
+  id: string;
+  name: string;
+  title?: string;
+  role?:
+    | "ruler"
+    | "priest"
+    | "strategist"
+    | "architect"
+    | "agent"
+    | "other";
+  status?: "active" | "hidden" | "dead" | "away";
+  /** Soft location labels (resolved against renamed systems). */
+  locationSystemName?: string;
+  locationPlanetName?: string;
+  locationSystemId?: string;
+  locationPlanetId?: string;
+  avatarUrl?: string | null;
+  /** Visible to owning faction in HQ. */
+  publicNotes?: string;
+  /** GM-only. */
+  gmNotes?: string;
+  tags?: string[];
+}
+
 export interface Faction {
   id: string;
   name: string;
@@ -534,6 +576,12 @@ export interface Faction {
    * Влияет на RP и отображается в досье державы.
    */
   neutralReputation?: number;
+  /** Player-visible doctrine / polity notes. */
+  notes?: string;
+  /** GM-only sticky notes for this polity. */
+  gmNotes?: string;
+  /** Court / key NPCs for HQ «Двор» panel. */
+  npcs?: FactionNpc[];
 }
 
 export type PolityKind = "state" | "faction";
@@ -575,6 +623,8 @@ export interface Fleet {
   composition: ShipGroup[];
   stance: FleetStance;
   route: string[];
+  /** Set while multi-hop en route; applied when route empties. */
+  pendingArrival?: { stance: FleetStance; systemId: string };
 }
 
 /** Ground force / legion attached to a system. */
@@ -734,10 +784,82 @@ export interface ContextMenuState {
   linkId: string | null;
 }
 
+export interface TurnBriefingEvent {
+  type: string;
+  at?: string;
+  factionId?: string;
+  toFactionId?: string;
+  systemId?: string;
+  fromId?: string;
+  toId?: string;
+  attacker?: string;
+  defender?: string;
+  sides?: string[];
+  outcome?: string;
+  theater?: string;
+  currencyId?: string;
+  amount?: number;
+  net?: Record<string, number>;
+  deficit?: string;
+  delta?: number;
+  stance?: string;
+  taxSlot?: string;
+  tierId?: string;
+  toSystemId?: string;
+  giveCurrency?: string;
+  giveAmount?: number;
+  wantAmount?: number;
+  sellerFactionId?: string;
+  buyerFactionId?: string;
+  offerId?: string;
+  [key: string]: unknown;
+}
+
+export interface TurnBriefing {
+  turnFrom: number;
+  turnTo: number;
+  economy?: {
+    net?: Record<string, number>;
+    deficit?: string;
+    pressure?: number;
+    apMax?: number;
+  } | null;
+  events: TurnBriefingEvent[];
+}
+
 export interface ViewerPayload {
   world: WorldState;
   factionId: string;
   visibleSystemIds: string[];
+  /** Polities this faction has met (sensors / diplo / memory), incl. self. */
+  knownFactionIds?: string[];
+  /** Known polities with trade or alliance corridor. */
+  tradePartnerIds?: string[];
+  /** Pending diplomatic deals (inbox). */
+  diploOffers?: {
+    incoming: Array<{
+      id: string;
+      fromFactionId: string;
+      toFactionId: string;
+      status: string;
+      give: Array<Record<string, unknown>>;
+      want: Array<Record<string, unknown>>;
+      note?: string;
+      createdTurn?: number;
+      createdAt?: string;
+    }>;
+    outgoing: Array<{
+      id: string;
+      fromFactionId: string;
+      toFactionId: string;
+      status: string;
+      give: Array<Record<string, unknown>>;
+      want: Array<Record<string, unknown>>;
+      note?: string;
+      createdTurn?: number;
+      createdAt?: string;
+    }>;
+  };
   /** From published map — used for live refresh polling. */
   updatedAt?: string | null;
   tableRevision?: number;
@@ -749,5 +871,33 @@ export interface ViewerPayload {
     pendingPolicy?: { taxes?: Record<string, string> };
     pressure?: number;
     deficit?: string;
+    /** Optional flow matrix snapshot from economy tick / flows API. */
+    flows?: Record<string, unknown>;
+    /** Optional bottleneck map keyed by category (A–F). */
+    bottlenecks?: Record<string, { tier?: number; deficit?: number } | number>;
+    unlockedTechs?: string[];
+    techTiers?: Record<string, number>;
+    unlockedProperties?: string[];
+    /** Recent ledger entries (delta/reason/turn) for breakdown + deltas. */
+    recent?: {
+      factionId: string;
+      currencyId: string;
+      delta: number;
+      turn: number | null;
+      reason: string;
+      intentId?: string | null;
+    }[];
+    /** Sanitized modifier breakdown from last economy tick. */
+    explain?: {
+      lines: {
+        category: string;
+        label: string;
+        modifier: string;
+        sources?: string[];
+      }[];
+      raceTraits?: { label: string; summary: string }[];
+    };
   };
+  /** Faction-filtered summary of the last processed turn (P2.5). */
+  briefing?: TurnBriefing | null;
 }

@@ -486,7 +486,7 @@ function LinkPanel({
         </>
       )}
       {link.type === "damyl_space" && (
-        <p className="hint">Дамильские космические врата — только флот.</p>
+        <p className="hint">Дамильские космические врата — флот и легионы.</p>
       )}
       <button
         type="button"

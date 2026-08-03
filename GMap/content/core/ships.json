@@ -2,57 +2,866 @@
   "ship.corvette": {
     "id": "ship.corvette",
     "name": "Корвет",
-    "roles": ["screen"],
-    "stats": { "damage": 8, "armor": 10, "shields": 5, "hp": 40, "accuracy": 60 },
+    "faction": "generic",
+    "tier": 3,
+    "roles": [
+      "screen"
+    ],
+    "stats": {
+      "damage": 8,
+      "armor": 10,
+      "shields": 5,
+      "hp": 40,
+      "accuracy": 60
+    },
     "targeting": "screen_first",
-    "theaterMult": { "space": 1, "assault": 0.3, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.3,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=2"
+        },
+        "count": 3
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=2"
+        },
+        "count": 2
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=2"
+        },
+        "count": 1
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=2"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=2"
+        },
+        "count": 2
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=2"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ]
   },
   "ship.frigate": {
     "id": "ship.frigate",
     "name": "Фрегат",
-    "roles": ["screen", "line"],
-    "stats": { "damage": 14, "armor": 18, "shields": 12, "hp": 70, "accuracy": 55 },
+    "faction": "generic",
+    "tier": 4,
+    "roles": [
+      "screen",
+      "line"
+    ],
+    "stats": {
+      "damage": 14,
+      "armor": 18,
+      "shields": 12,
+      "hp": 70,
+      "accuracy": 55
+    },
     "targeting": "screen_first",
-    "theaterMult": { "space": 1, "assault": 0.4, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.4,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 5
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=3"
+        },
+        "count": 3
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=3"
+        },
+        "count": 2
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=3"
+        },
+        "count": 2
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=3"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ]
   },
   "ship.cruiser": {
     "id": "ship.cruiser",
     "name": "Крейсер",
-    "roles": ["line"],
-    "stats": { "damage": 28, "armor": 35, "shields": 30, "hp": 120, "accuracy": 50 },
+    "faction": "generic",
+    "tier": 6,
+    "roles": [
+      "line"
+    ],
+    "stats": {
+      "damage": 28,
+      "armor": 35,
+      "shields": 30,
+      "hp": 120,
+      "accuracy": 50
+    },
     "targeting": "line_first",
-    "theaterMult": { "space": 1, "assault": 0.6, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.6,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=5"
+        },
+        "count": 8
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=4"
+        },
+        "count": 4
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=5"
+        },
+        "count": 4
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=4"
+        },
+        "count": 3
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=4"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=4"
+        },
+        "count": 5
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=4"
+        },
+        "count": 1
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=4"
+        },
+        "count": 1,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ]
   },
   "ship.battleship": {
     "id": "ship.battleship",
     "name": "Линкор",
-    "roles": ["capital"],
-    "stats": { "damage": 55, "armor": 60, "shields": 45, "hp": 220, "accuracy": 45 },
+    "faction": "generic",
+    "tier": 7,
+    "roles": [
+      "capital"
+    ],
+    "stats": {
+      "damage": 55,
+      "armor": 60,
+      "shields": 45,
+      "hp": 220,
+      "accuracy": 45
+    },
     "targeting": "capital_first",
-    "theaterMult": { "space": 1, "assault": 0.8, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.8,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=6"
+        },
+        "count": 12
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=5"
+        },
+        "count": 6
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=6"
+        },
+        "count": 6
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=5"
+        },
+        "count": 4
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=6"
+        },
+        "count": 3
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 8
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=5"
+        },
+        "count": 2
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=4"
+        },
+        "count": 3,
+        "per": "turn"
+      }
+    ]
   },
   "ship.carrier": {
     "id": "ship.carrier",
     "name": "Носитель",
-    "roles": ["carrier"],
-    "stats": { "damage": 20, "armor": 25, "shields": 35, "hp": 180, "accuracy": 40 },
+    "faction": "generic",
+    "tier": 7,
+    "roles": [
+      "carrier"
+    ],
+    "stats": {
+      "damage": 20,
+      "armor": 25,
+      "shields": 35,
+      "hp": 180,
+      "accuracy": 40
+    },
     "targeting": "screen_first",
-    "theaterMult": { "space": 1, "assault": 0.5, "ground": 0 }
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.5,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=5"
+        },
+        "count": 10
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=5"
+        },
+        "count": 5
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=5"
+        },
+        "count": 3
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 10
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=5"
+        },
+        "count": 2
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=4"
+        },
+        "count": 4,
+        "per": "turn"
+      }
+    ]
   },
-  "ship.transport": {
-    "id": "ship.transport",
-    "name": "Транспорт",
-    "roles": ["support"],
-    "stats": { "damage": 2, "armor": 8, "shields": 5, "hp": 90, "accuracy": 20 },
-    "targeting": "flee",
-    "theaterMult": { "space": 0.2, "assault": 0.1, "ground": 0 }
+  "ship.dreadnought": {
+    "id": "ship.dreadnought",
+    "name": "Дредноут",
+    "faction": "generic",
+    "tier": 8,
+    "roles": [
+      "capital",
+      "bombard"
+    ],
+    "stats": {
+      "damage": 90,
+      "armor": 95,
+      "shields": 70,
+      "hp": 380,
+      "accuracy": 40
+    },
+    "targeting": "capital_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 1,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=7"
+        },
+        "count": 18
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=6"
+        },
+        "count": 10
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=7"
+        },
+        "count": 10
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=6"
+        },
+        "count": 6
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=7"
+        },
+        "count": 5
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=6"
+        },
+        "count": 3
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=6"
+        },
+        "count": 12
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=6"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=6"
+        },
+        "count": 3,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 4,
+        "per": "turn"
+      }
+    ],
+    "signature": "T8 столп флота; требует антиматерия-реактор",
+    "tradeoff": "огромный upkeep"
   },
-  "ship.bombard": {
-    "id": "ship.bombard",
-    "name": "Орбитальная платформа",
-    "roles": ["bombard", "capital"],
-    "stats": { "damage": 40, "armor": 40, "shields": 25, "hp": 160, "accuracy": 40 },
-    "targeting": "garrison_first",
-    "theaterMult": { "space": 0.7, "assault": 1.2, "ground": 0 }
+  "ship.psi_cruiser": {
+    "id": "ship.psi_cruiser",
+    "name": "Пси-крейсер",
+    "faction": "generic",
+    "tier": 7,
+    "roles": [
+      "line",
+      "psi"
+    ],
+    "stats": {
+      "damage": 40,
+      "armor": 30,
+      "shields": 60,
+      "hp": 150,
+      "accuracy": 55
+    },
+    "targeting": "line_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.7,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=5"
+        },
+        "count": 8
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=5"
+        },
+        "count": 3
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "psion_emit"
+          ],
+          "tier": ">=6"
+        },
+        "count": 4
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "properties": [
+            "psion_store"
+          ],
+          "tier": ">=6"
+        },
+        "count": 2
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 5
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=4"
+        },
+        "count": 1,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "properties": [
+            "psion_emit"
+          ],
+          "tier": ">=6"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Псион-щиты и тактика на гриниде/зро",
+    "tradeoff": "требует псион-расу"
+  },
+  "ship.black_iron": {
+    "id": "ship.black_iron",
+    "name": "Чёрное Железо",
+    "faction": "generic",
+    "tier": 9,
+    "roles": [
+      "capital"
+    ],
+    "stats": {
+      "damage": 120,
+      "armor": 120,
+      "shields": 80,
+      "hp": 500,
+      "accuracy": 38
+    },
+    "targeting": "capital_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 1,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=8"
+        },
+        "count": 24
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=7"
+        },
+        "count": 14
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "matter_destroy"
+          ],
+          "tier": ">=8"
+        },
+        "count": 8
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=7"
+        },
+        "count": 8
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=8"
+        },
+        "count": 6
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=7"
+        },
+        "count": 4
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=7"
+        },
+        "count": 16
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=7"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=7"
+        },
+        "count": 4,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=6"
+        },
+        "count": 5,
+        "per": "turn"
+      }
+    ],
+    "signature": "T9 флагман на блакуле; разрушение материи",
+    "tradeoff": "требует блакула T8+"
   }
 }

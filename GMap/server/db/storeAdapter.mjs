@@ -10,10 +10,44 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, "../../data");
+
+/** @returns {boolean} */
+export function isBetterSqlite3Available() {
+  try {
+    require.resolve("better-sqlite3");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const DATA_SIZE_FILES = [
+  { key: "published.json", path: path.join(DATA_DIR, "published.json") },
+  { key: "ledger.json", path: path.join(DATA_DIR, "ledger.json") },
+  { key: "intents.json", path: path.join(DATA_DIR, "intents.json") },
+];
+
+/** Approximate byte sizes for key JSON blobs (fs.stat). */
+export function getDataFileSizes() {
+  /** @type {Record<string, number>} */
+  const sizes = {};
+  for (const { key, path: filePath } of DATA_SIZE_FILES) {
+    try {
+      if (fs.existsSync(filePath)) {
+        sizes[key] = fs.statSync(filePath).size;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return sizes;
+}
 
 export function getStoreDriver() {
   const d = (process.env.GMAP_STORE || "file").toLowerCase();
@@ -57,7 +91,7 @@ function fileBackend() {
 function sqliteBackend() {
   let Database;
   try {
-    // Optional dependency — not installed by default
+    // Optional dependency — not installed by default (ESM-safe via createRequire)
     Database = require("better-sqlite3");
   } catch {
     console.warn(
@@ -158,5 +192,10 @@ export function resetStoreBackend() {
 }
 
 export function storePing() {
-  return getStoreBackend().ping();
+  const backend = getStoreBackend();
+  const ping = backend.ping();
+  return {
+    ...ping,
+    betterSqlite3: isBetterSqlite3Available(),
+  };
 }
