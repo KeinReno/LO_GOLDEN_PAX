@@ -5,6 +5,7 @@
  */
 import { useMemo, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
+import { npcRoleLabel } from "../state/displayLabels";
 import { getCachedContent } from "../state/contentCatalog";
 import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS } from "../state/defaults";
 import { useSpotlight } from "../ui/aceternityFx";
@@ -458,7 +459,7 @@ function NpcTab() {
                   {npc.title && <span>{npc.title}</span>}
                   {npc.role && (
                     <span className="gmsys-badge gmsys-badge--muted">
-                      {npc.role}
+                      {npcRoleLabel(npc.role)}
                     </span>
                   )}
                 </p>

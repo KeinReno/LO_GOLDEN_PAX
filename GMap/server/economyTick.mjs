@@ -47,6 +47,13 @@ import { getEffectiveMarketRates } from "./marketRates.mjs";
 import { collectLoyaltyTierEffects } from "./loyalty.mjs";
 import { collectTechModifierEffects } from "./techActions.mjs";
 import {
+  collectCultureEffects,
+  collectFaithEffects,
+  resolvePlanetCultureId,
+  resolvePlanetFaithShares,
+  primaryRaceFromComposition,
+} from "./cultureFaith.mjs";
+import {
   applyLogisticsEffects,
   logisticsProductionMult,
   logisticsUpkeepMult,
@@ -162,6 +169,19 @@ function collectFactionEffects(world, factionId, eco, content, turn = 0) {
           content.races,
           resolvePlanetRaceComposition(p, faction),
           raceOpts,
+        ),
+      );
+      const composition = resolvePlanetRaceComposition(p, faction);
+      const cultureId = resolvePlanetCultureId(p, faction);
+      const primaryRace = primaryRaceFromComposition(composition);
+      effects.push(
+        ...collectCultureEffects(content, cultureId, { raceId: primaryRace }),
+      );
+      effects.push(
+        ...collectFaithEffects(
+          content,
+          resolvePlanetFaithShares(p, faction),
+          eco,
         ),
       );
     }

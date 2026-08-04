@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  backupReasonLabel,
+  opsTickAlertKindLabel,
+} from "../state/displayLabels";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 
 
@@ -576,7 +580,7 @@ export function OpsHealthPanel() {
 
               {backupWhen
 
-                ? ` · последний ${backupWhen}${health.lastBackupReason ? ` (${health.lastBackupReason})` : ""}`
+                ? ` · последний ${backupWhen}${health.lastBackupReason ? ` (${backupReasonLabel(health.lastBackupReason)})` : ""}`
 
                 : " · снимков пока нет"}
 
@@ -692,7 +696,7 @@ export function OpsHealthPanel() {
 
                 <div key={a.id} className="hint">
 
-                  [{a.kind}] {a.message}
+                  [{opsTickAlertKindLabel(a.kind)}] {a.message}
 
                 </div>
 

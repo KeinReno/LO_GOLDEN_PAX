@@ -45,6 +45,16 @@ export const STANCE_LABELS: Record<string, string> = {
   recovering: "Восстановление",
 };
 
+/** Ship combat roles from content (roles[]). */
+export const COMBAT_ROLE_LABELS: Record<string, string> = {
+  screen: "Экран",
+  line: "Линия",
+  capital: "Флагман",
+  carrier: "Авианосец",
+  bombard: "Обстрел",
+  psi: "Пси",
+};
+
 export const SLOT_ROLE_LABELS: Record<string, string> = {
   hull: "Корпус",
   weapon: "Орудие",

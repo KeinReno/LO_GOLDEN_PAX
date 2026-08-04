@@ -125,7 +125,10 @@ export const useForcesState = create<ForcesState>((set, get) => ({
   endDrag: () =>
     set({ isDragging: false, draggedCardIndex: null, hoveredZone: null }),
 
-  setHoveredZone: (zone) => set({ hoveredZone: zone }),
+  setHoveredZone: (zone) => {
+    if (get().hoveredZone === zone) return;
+    set({ hoveredZone: zone });
+  },
 
   setToast: (msg) => set({ toast: msg }),
 

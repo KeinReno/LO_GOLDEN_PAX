@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useDrag } from "@use-gesture/react";
+import { explainCategoryLabel } from "../../state/displayLabels";
 import type { ViewerPayload } from "../../state/types";
 import { computeMetrics } from "./economyMath";
 import {
@@ -190,7 +191,9 @@ export function BudgetSection({ payload }: Props) {
             <ul className="eco-explain__lines">
               {explain.lines.map((line, i) => (
                 <li key={`${line.category}-${line.modifier}-${i}`}>
-                  <span className="eco-explain__cat">{line.category}</span>
+                  <span className="eco-explain__cat">
+                    {explainCategoryLabel(line.category)}
+                  </span>
                   <span>{line.label}</span>
                   <strong className="tabular-nums">{line.modifier}</strong>
                 </li>

@@ -16,6 +16,7 @@ import {
   type IndexedResource,
 } from "../../state/resourceIndex";
 import type { MapResourceDef } from "../../state/contentCatalog";
+import { formatSlotRequire } from "../../state/displayLabels";
 import {
   FORGE_METAL_COST,
   SLOT_ROLE_LABELS,
@@ -24,6 +25,7 @@ import {
 } from "./constants";
 import type { UnitCardModel } from "./UnitCard";
 import { canOutfitUnit } from "./outfitRules";
+import { effectiveUnitStats, formatMultHint } from "./veterancy";
 
 type CardDetailStripProps = {
   group: UnitCardModel | ShipGroup;
@@ -51,11 +53,7 @@ function formatRequire(req?: {
   properties?: string[];
 }): string {
   if (!req) return "любой";
-  const parts: string[] = [];
-  if (req.category) parts.push(req.category);
-  if (req.tier) parts.push(`T${req.tier}`);
-  if (req.properties?.length) parts.push(req.properties.join("/"));
-  return parts.join(" · ") || "любой";
+  return formatSlotRequire(req);
 }
 
 function stockOf(stocks: Record<string, number>, id: string): number {
@@ -88,6 +86,11 @@ export function CardDetailStrip({
   const fills = group.filledSlots ?? {};
   const [openRole, setOpenRole] = useState<string | null>(null);
   const showOutfit = canOutfitUnit(catalogItem, deckKind);
+  const eff = effectiveUnitStats(catalogItem?.stats, level);
+  const nextEff =
+    level < 5 ? effectiveUnitStats(catalogItem?.stats, level + 1) : null;
+  const dmgHint = formatMultHint(eff.mult.damage);
+  const defHint = formatMultHint(eff.mult.defense);
 
   const index = useMemo(
     () => buildResourceIndex(mapResources),
@@ -129,10 +132,10 @@ export function CardDetailStrip({
             ? `Подтверждение списания: ${name}`
             : `Детали: ${name}`
       }
-      initial={reduce ? false : { y: 48, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={reduce ? undefined : { y: 48, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 360, damping: 32 }}
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={reduce ? undefined : { opacity: 0 }}
+      transition={{ duration: 0.18 }}
     >
       <button
         type="button"
@@ -272,9 +275,10 @@ export function CardDetailStrip({
               {name} <span className="forces-detail-mul">×{group.count}</span>
             </h4>
             <p className="forces-detail-stats">
-              Урон: {catalogItem?.stats?.damage ?? "—"} · Броня:{" "}
-              {catalogItem?.stats?.armor ?? "—"} · HP: {group.hp ?? "—"}/
-              {catalogItem?.stats?.hp ?? "—"}
+              Урон: {eff.damage || "—"}
+              {dmgHint ? ` (${dmgHint})` : ""} · Броня: {eff.armor || "—"}
+              {defHint ? ` (${defHint})` : ""} · HP: {group.hp ?? "—"}/
+              {eff.hp || catalogItem?.stats?.hp || "—"}
             </p>
             <p className="forces-detail-vet">
               Ветеран: {"★".repeat(level)}
@@ -283,6 +287,15 @@ export function CardDetailStrip({
                 ? ` · слоты ${Object.keys(fills).length}/${slots.length}`
                 : ""}
             </p>
+            {level < 5 && nextEff && (
+              <p className="hint forces-detail-upgrade-hint">
+                Модернизация (−{FORGE_METAL_COST} мет.): ранг {level}→{level + 1}
+                {" · "}
+                урон {eff.damage || "—"}→{nextEff.damage || "—"}
+                {" · "}
+                броня {eff.armor || "—"}→{nextEff.armor || "—"}
+              </p>
+            )}
           </div>
           <div className="forces-detail-actions">
             <button
@@ -295,7 +308,7 @@ export function CardDetailStrip({
                   ? "Максимальный ранг"
                   : metalStock < FORGE_METAL_COST
                     ? `Нужно ${FORGE_METAL_COST} металла`
-                    : `−${FORGE_METAL_COST} металла`
+                    : `Ветеранский ранг +1 (−${FORGE_METAL_COST} мет.). Усиливает урон/броню в бою.`
               }
             >
               <Flame size={14} aria-hidden /> Модернизировать

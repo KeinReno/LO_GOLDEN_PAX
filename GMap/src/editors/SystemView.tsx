@@ -27,6 +27,7 @@ import {
   SYSTEM_ACTIVITY_LABELS,
   SYSTEM_POI_LABELS,
 } from "../state/defaults";
+import { buildingZoneLabel } from "../state/displayLabels";
 import {
   SystemSchematic,
   type SchematicContextEvent,
@@ -43,6 +44,7 @@ import {
 import { SystemStatusStrip } from "../viewer/SystemStatusStrip";
 import { SystemDiveDock } from "../viewer/SystemDiveDock";
 import { resolvePoiIntel } from "../viewer/poiIntel";
+import { GmPlanetSocietyFields } from "./GmPlanetSocietyFields";
 import { InlineRename } from "../ui/InlineRename";
 import {
   SystemCommandPanel,
@@ -87,6 +89,10 @@ export type PlayerPlanetManageProps = {
   ) => Promise<import("../viewer/system").BuildPreviewResult | null>;
   highlightCategory?: string | null;
   onShowInEconomy?: (category: string) => void;
+  defaultCultureId?: string;
+  primaryFaith?: string;
+  unlockedLineages?: string[];
+  onFoundHybrid?: (raceA: string, raceB: string) => void;
 };
 
 export type PlayerSystemManageProps = {
@@ -630,6 +636,10 @@ export function SystemView({
                 onPreviewBuild={planetManage.onPreviewBuild}
                 highlightCategory={planetManage.highlightCategory}
                 onShowInEconomy={planetManage.onShowInEconomy}
+                defaultCultureId={planetManage.defaultCultureId}
+                primaryFaith={planetManage.primaryFaith}
+                unlockedLineages={planetManage.unlockedLineages}
+                onFoundHybrid={planetManage.onFoundHybrid}
                 onBack={() => {
                   setPreviewPlanetId(drilledPlanet.id);
                   goSystem(system.id);
@@ -1099,7 +1109,7 @@ function PlanetDetail({
             {[...surface, ...orbital].map((b) => (
               <li key={b.id}>
                 {b.name || PLANET_BUILDING_KIND_LABELS[b.kind]}{" "}
-                <span className="hint">({b.zone})</span>
+                <span className="hint">({buildingZoneLabel(b.zone)})</span>
               </li>
             ))}
           </ul>
@@ -1341,6 +1351,8 @@ function PlanetDetail({
         onChange={(list) => setBuildings(zone, list)}
         onAdd={() => addBuilding(zone)}
       />
+
+      <GmPlanetSocietyFields planet={planet} onChange={onChange} />
 
       <div className="block-title">Ресурсы</div>
       <div className="tag-row">

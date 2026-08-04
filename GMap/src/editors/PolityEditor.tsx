@@ -10,6 +10,9 @@ import {
   getCachedContent,
   type PublicContent,
 } from "../state/contentCatalog";
+import { IDEOLOGY_LABELS, ideologyLabel } from "../state/displayLabels";
+import { listCultures, listFaiths } from "../state/societyRegistry";
+import { traitLabel } from "../viewer/codex/codexResolve";
 import {
   MAP_MODE_PRESETS,
   applyLayerPreset,
@@ -26,17 +29,6 @@ const TABS: { id: PolityTab; label: string }[] = [
   { id: "diplomacy", label: "Дипломатия" },
   { id: "map", label: "На карте" },
 ];
-
-const IDEOLOGY_LABELS: Record<string, string> = {
-  militarist: "Милитаризм",
-  technocrat: "Технократия",
-  trader: "Торговля",
-  puritan: "Пуританизм",
-  expansionist: "Экспансия",
-  isolationist: "Изоляционизм",
-  cosmopolitan: "Космополитизм",
-  swarm: "Рой",
-};
 
 const MAX_FACTION_TRAITS = 3;
 const BUDGET_MIN = -2;
@@ -353,9 +345,7 @@ function ProfileTab({ faction }: { faction: Faction }) {
                     <span className="polity-trait-body">
                       <span className="polity-trait-name">{def.name}</span>
                       <span className="hint">
-                        {IDEOLOGY_LABELS[def.ideology || ""] ||
-                          def.ideology ||
-                          "—"}{" "}
+                        {ideologyLabel(def.ideology)}{" "}
                         · бюджет {budget > 0 ? `+${budget}` : budget}
                       </span>
                     </span>
@@ -386,6 +376,59 @@ function ProfileTab({ faction }: { faction: Faction }) {
         </select>
       </label>
 
+      <label className="field">
+        <span>Культура колоний по умолчанию</span>
+        <select
+          value={faction.defaultCultureId ?? "culture.baseline"}
+          onChange={(e) =>
+            updateFaction(faction.id, {
+              defaultCultureId: e.target.value || "culture.baseline",
+            })
+          }
+        >
+          {listCultures().map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Государственная вера</span>
+        <select
+          value={faction.primaryFaith ?? "faith.secular"}
+          onChange={(e) =>
+            updateFaction(faction.id, {
+              primaryFaith: e.target.value || "faith.secular",
+            })
+          }
+        >
+          {listFaiths().map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Доминирующая идеология</span>
+        <select
+          value={faction.dominantIdeology ?? ""}
+          onChange={(e) =>
+            updateFaction(faction.id, {
+              dominantIdeology: e.target.value || undefined,
+            })
+          }
+        >
+          <option value="">— не задана —</option>
+          {Object.keys(IDEOLOGY_LABELS).map((id) => (
+            <option key={id} value={id}>
+              {ideologyLabel(id)}
+            </option>
+          ))}
+        </select>
+      </label>
+
       {faction.primaryRaceId && catalog?.races?.[faction.primaryRaceId] ? (
         <fieldset className="polity-traits polity-race-traits">
           <legend>
@@ -405,7 +448,7 @@ function ProfileTab({ faction }: { faction: Faction }) {
               <li key={t.id}>
                 <div className="polity-trait-row">
                   <span className="polity-trait-body">
-                    <span className="polity-trait-name">{t.id}</span>
+                    <span className="polity-trait-name">{traitLabel(t.id, catalog)}</span>
                     <span className="hint">
                       бюджет{" "}
                       {(t.balanceBudget ?? 0) > 0

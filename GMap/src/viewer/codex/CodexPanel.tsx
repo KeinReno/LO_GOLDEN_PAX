@@ -5,6 +5,11 @@ import {
   knowledgeLabel,
   type CodexSection,
 } from "./codexData";
+import {
+  intelEntityTypeLabel,
+  intelSourceLabel,
+  resolveIntelEntityName,
+} from "./codexResolve";
 import { CodexEntry } from "./CodexEntry";
 
 const SECTIONS: { id: CodexSection; label: string }[] = [
@@ -111,16 +116,24 @@ export function CodexPanel({ payload }: { payload: ViewerPayload }) {
             <p className="codex-empty">Журнал разведки пуст.</p>
           ) : (
             <ol className="codex-timeline">
-              {history.map((h, i) => (
+              {history.map((h, i) => {
+                const entityName = resolveIntelEntityName(
+                  payload,
+                  h.entityType,
+                  h.entityId,
+                );
+                return (
                 <li key={`${h.entityId}-${h.turn}-${i}`}>
                   <span className="codex-timeline-turn">Ход {h.turn}</span>
                   <span className="codex-timeline-body">
-                    {h.entityType} <code>{h.entityId}</code>: L{h.oldLevel}→L
+                    {intelEntityTypeLabel(h.entityType)}{" "}
+                    <strong>{entityName}</strong>: L{h.oldLevel}→L
                     {h.newLevel}{" "}
-                    <em>({h.source})</em>
+                    <em>({intelSourceLabel(h.source)})</em>
                   </span>
                 </li>
-              ))}
+              );
+              })}
             </ol>
           )}
         </div>

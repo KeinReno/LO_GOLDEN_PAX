@@ -124,6 +124,10 @@ import type { EconomyFlowBreakdown } from "./economyFlowTypes";
 import { ViewerAlertFab, type AlertFocusAnchor } from "./ViewerAlertFab";
 import { EngagementStanceRing } from "./EngagementStanceRing";
 import {
+  economyCategoryLabel,
+  resolveResourceOrCurrencyLabel,
+} from "../state/displayLabels";
+import {
   fetchContent,
   getCachedContent,
   intentApCost,
@@ -170,9 +174,9 @@ function dockViewFromDigit(key: string, isMobile: boolean): PlayerView | null {
       "1": "map",
       "2": "hq",
       "3": "research",
-      "4": "market",
-      "5": "diplomacy",
-      "6": "rp",
+      "4": "economy",
+      "5": "market",
+      "6": "diplomacy",
     };
     return mobileMap[key] ?? null;
   }
@@ -180,11 +184,11 @@ function dockViewFromDigit(key: string, isMobile: boolean): PlayerView | null {
     "1": "map",
     "2": "hq",
     "3": "research",
-    "4": "market",
-    "5": "diplomacy",
-    "6": "forces",
-    "7": "quests",
-    "8": "rp",
+    "4": "economy",
+    "5": "market",
+    "6": "diplomacy",
+    "7": "forces",
+    "8": "quests",
     "9": "codex",
   };
   return desktopMap[key] ?? null;
@@ -1548,6 +1552,64 @@ export function ViewerPage() {
     [payload],
   );
 
+  const runFoundHybridLineage = async (raceA: string, raceB: string) => {
+    if (!payload) return;
+    const systemId =
+      mapFocus.level === "planet"
+        ? mapFocus.systemId
+        : systemFocusId ?? undefined;
+    const planetId =
+      mapFocus.level === "planet" ? mapFocus.planetId : undefined;
+    if (!systemId || !planetId) {
+      setPlanetMsg("Откройте планету на схеме системы");
+      return;
+    }
+    setPlanetBusy(true);
+    setPlanetMsg(null);
+    try {
+      const res = await fetch("/api/society/found-lineage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          systemId,
+          planetId,
+          raceA,
+          raceB,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.world) {
+        setPayload({
+          ...payload,
+          world: data.world,
+          visibleSystemIds: data.visibleSystemIds ?? payload.visibleSystemIds,
+          economy: data.economy
+            ? { ...payload.economy, ...data.economy }
+            : payload.economy,
+          reservedAp: data.reservedAp ?? payload.reservedAp,
+          apMax: data.apMax ?? payload.apMax,
+        });
+        loadWorld(data.world);
+      }
+      if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      setPlanetMsg(
+        `Линейдж основан: ${
+          getCachedContent()?.races?.[data.lineageId]?.name ??
+          data.lineageId ??
+          ""
+        }`,
+      );
+      bump();
+    } catch (e) {
+      setPlanetMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPlanetBusy(false);
+    }
+  };
+
   const runPlanetAction = async (req: PlanetActionRequest) => {
     if (!payload) return;
     setPlanetBusy(true);
@@ -2853,7 +2915,7 @@ export function ViewerPage() {
           goView("economy");
           setOrderMsg(
             target.category
-              ? `Производство · фильтр ${target.category}`
+              ? `Производство · фильтр ${economyCategoryLabel(target.category)}`
               : "Производство",
           );
         } else if (target.kind === "forces") {
@@ -4418,7 +4480,10 @@ export function ViewerPage() {
                     ).length;
                     return `Колоний: ${inhab} · ресурсы: ${
                       selectedSystem.resources.length
-                        ? selectedSystem.resources.slice(0, 4).join(", ")
+                        ? selectedSystem.resources
+                            .slice(0, 4)
+                            .map((id) => resolveResourceOrCurrencyLabel(id))
+                            .join(", ")
                         : "—"
                     }`;
                   })()}
@@ -4743,24 +4808,25 @@ export function ViewerPage() {
           type="button"
           className={`viewer-dock-btn ${viewMode === "economy" ? "active" : ""}`}
           onClick={() => goView("economy")}
-          title="Экономика"
+          title="Экономика · 4"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <Coins size={18} strokeWidth={2} />
           </span>
           Эконом
+          <kbd className="viewer-dock-kbd">4</kbd>
         </button>
         <button
           type="button"
           className={`viewer-dock-btn ${viewMode === "market" ? "active" : ""}`}
           onClick={() => goView("market")}
-          title="Биржа · 4"
+          title="Биржа · 5"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <Store size={18} strokeWidth={2} />
           </span>
           Биржа
-          <kbd className="viewer-dock-kbd">4</kbd>
+          <kbd className="viewer-dock-kbd">5</kbd>
           {tradePartnerCount > 0 && (
             <span className="dock-badge">
               {tradePartnerCount > 9 ? "9+" : tradePartnerCount}
@@ -4771,13 +4837,13 @@ export function ViewerPage() {
           type="button"
           className={`viewer-dock-btn ${viewMode === "diplomacy" ? "active" : ""} ${diploIncoming.length > 0 ? "is-alert" : ""}`}
           onClick={() => goView("diplomacy")}
-          title={mobile ? "Дипломатия · 5" : "Дипломатия · 5"}
+          title="Дипломатия · 6"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <Handshake size={18} strokeWidth={2} />
           </span>
           Дипло
-          <kbd className="viewer-dock-kbd">5</kbd>
+          <kbd className="viewer-dock-kbd">6</kbd>
           {(warCount > 0 || diploIncoming.length > 0) && (
             <span
               className={`dock-badge ${diploIncoming.length > 0 ? "dock-badge--hot" : ""}`}
@@ -4796,25 +4862,25 @@ export function ViewerPage() {
               type="button"
               className={`viewer-dock-btn ${viewMode === "forces" ? "active" : ""}`}
               onClick={() => goView("forces")}
-              title="Силы · 6"
+              title="Силы · 7"
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <Flag size={18} strokeWidth={2} />
               </span>
               Силы
-              <kbd className="viewer-dock-kbd">6</kbd>
+              <kbd className="viewer-dock-kbd">7</kbd>
             </button>
             <button
               type="button"
               className={`viewer-dock-btn ${viewMode === "quests" ? "active" : ""}`}
               onClick={() => goView("quests")}
-              title="Квесты · 7"
+              title="Квесты · 8"
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <BookMarked size={18} strokeWidth={2} />
               </span>
               Квесты
-              <kbd className="viewer-dock-kbd">7</kbd>
+              <kbd className="viewer-dock-kbd">8</kbd>
               {activeQuestCount > 0 && (
                 <span className="dock-badge">
                   {activeQuestCount > 9 ? "9+" : activeQuestCount}
@@ -4830,13 +4896,15 @@ export function ViewerPage() {
             goView("rp");
             setRpUnread(0);
           }}
-          title={mobile ? "Двор · 6" : "Двор · 8"}
+          title="Двор"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <MessageSquare size={18} strokeWidth={2} />
           </span>
           Двор
-          <kbd className="viewer-dock-kbd">{mobile ? "6" : "8"}</kbd>
+          <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
+            ·
+          </kbd>
           {rpUnread > 0 && viewMode !== "rp" && (
             <span className="dock-badge dock-badge--hot">
               {rpUnread > 9 ? "9+" : rpUnread}
@@ -4854,6 +4922,11 @@ export function ViewerPage() {
           </span>
           Справ.
           {!mobile && <kbd className="viewer-dock-kbd">9</kbd>}
+          {mobile && (
+            <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
+              ·
+            </kbd>
+          )}
         </button>
       </nav>
       {eraBanner != null && (
@@ -5022,7 +5095,17 @@ export function ViewerPage() {
                 techEco: {
                   techTiers: payload.economy?.techTiers,
                   unlockedProperties: payload.economy?.unlockedProperties,
+                  unlockedLineages: payload.economy?.unlockedLineages,
                 },
+                defaultCultureId:
+                  payload.world.factions.find((f) => f.id === payload.factionId)
+                    ?.defaultCultureId ?? "culture.baseline",
+                primaryFaith:
+                  payload.world.factions.find((f) => f.id === payload.factionId)
+                    ?.primaryFaith ?? "faith.secular",
+                unlockedLineages: payload.economy?.unlockedLineages ?? [],
+                onFoundHybrid: (raceA, raceB) =>
+                  void runFoundHybridLineage(raceA, raceB),
                 busy: planetBusy,
                 message: planetMsg,
                 onAction: (req) => void runPlanetAction(req),

@@ -30,6 +30,10 @@ import {
   COGNITIO_DND_MIME,
   type ResearchFilter,
 } from "./research";
+import {
+  hybridLockLabel,
+  hybridResearchBlocked,
+} from "../state/hybridClient";
 import { buildResearchPath } from "./research/researchPath";
 
 const CAT_ORDER: EconomyCategory[] = ["A", "B", "C", "D", "E", "F"];
@@ -71,6 +75,8 @@ function prereqNames(
 
 function lockLabel(tech: TechnologyDef): string | null {
   const content = getCachedContent();
+  const hybrid = hybridLockLabel(tech);
+  if (hybrid) return hybrid;
   if (tech.raceLock) {
     const name = content?.races?.[tech.raceLock]?.name ?? tech.raceLock;
     return `Только для расы «${name}» (≥30%)`;
@@ -139,6 +145,16 @@ function lockBlocksResearch(
   factionId: string | undefined,
   eco?: ViewerPayload["economy"],
 ): boolean {
+  if (
+    hybridResearchBlocked(
+      tech,
+      eco?.unlockedLineages,
+      world,
+      factionId,
+    )
+  ) {
+    return true;
+  }
   if (tech.raceLock) {
     if (raceSharePercent(world, factionId, tech.raceLock) < 30) return true;
   }
@@ -785,7 +801,7 @@ export function ResearchPanel({
                   className="research-cat"
                   style={{ color: CAT_COLOR[selected.category] }}
                 >
-                  {selected.category} · {CAT_NAME[selected.category]} · эра{" "}
+                  {CAT_NAME[selected.category]} · эра{" "}
                   {selected.era}
                   {selected.isBreakthrough ? " · брейкро" : ""}
                 </span>

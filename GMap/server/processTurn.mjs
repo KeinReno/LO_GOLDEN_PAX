@@ -40,6 +40,7 @@ import {
   processNpcTasks,
 } from "./narrative.mjs";
 import { researchUpgrade, researchTech, setResearchQueue } from "./techActions.mjs";
+import { foundHybridLineage } from "./hybridActions.mjs";
 import { transferTech } from "./techPool.mjs";
 import {
   applyPlanetAction,
@@ -1599,6 +1600,50 @@ function applyAllResearchQueues(world, turn, journal) {
   }
 }
 
+function applyFoundHybridLineage(world, intent, journal) {
+  const systemId = intent.payload?.systemId;
+  const planetId = intent.payload?.planetId;
+  const raceA = intent.payload?.raceA;
+  const raceB = intent.payload?.raceB;
+  if (!systemId || !planetId || !raceA || !raceB) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "system_planet_races_required",
+    });
+    return false;
+  }
+  const result = foundHybridLineage(
+    intent.factionId,
+    systemId,
+    planetId,
+    raceA,
+    raceB,
+    {
+      turn: world.meta?.turn ?? null,
+      world,
+      intentId: intent.id,
+    },
+  );
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "found_hybrid_lineage",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    systemId,
+    planetId,
+    lineageId: result.lineageId,
+  });
+  return true;
+}
+
 const APPLIERS = {
   "intent.move_fleet": applyMoveFleet,
   "intent.move_legion": applyMoveLegion,
@@ -1626,6 +1671,7 @@ const APPLIERS = {
   "intent.research_upgrade": applyResearchUpgrade,
   "intent.set_research_queue": applySetResearchQueue,
   "intent.set_build_queue": applySetBuildQueue,
+  "intent.found_hybrid_lineage": applyFoundHybridLineage,
   "intent.trade_tech": applyTradeTech,
   "intent.throw_quest_dice": applyThrowQuestDice,
   "intent.resolve_quest_choice": applyResolveQuestChoice,

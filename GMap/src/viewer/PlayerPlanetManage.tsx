@@ -20,11 +20,17 @@ import {
   raceIdsFromComposition,
 } from "../state/buildingAccess";
 import { BuildingSlotsPanel } from "./BuildingSlotsPanel";
+import {
+  buildingKindLabel,
+  buildingZoneLabel,
+  economyCategoryLabel,
+} from "../state/displayLabels";
 import { BuildingKindIcon } from "./BuildingKindIcon";
 import { FloatingPanel } from "../ui/FloatingPanel";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
 import type { MapResourceDef } from "../state/contentCatalog";
 import { canBuildWithTech, type TechEcoSlice } from "../state/techGate";
+import { collectFaithTabooProperties } from "../state/societyRegistry";
 import { InlineRename } from "../ui/InlineRename";
 import { BuildDeck } from "./BuildDeck";
 import {
@@ -36,6 +42,7 @@ import {
   type BuildQueueItem,
   type SlotViewMode,
 } from "./system";
+import { PlanetSocietyPanel } from "./society/PlanetSocietyPanel";
 
 export type BuildingSlotDef = {
   role: string;
@@ -140,6 +147,10 @@ export function PlayerPlanetManage({
   onPreviewBuild,
   highlightCategory,
   onShowInEconomy,
+  defaultCultureId,
+  primaryFaith,
+  unlockedLineages,
+  onFoundHybrid,
 }: {
   system: StarSystem;
   planet: Planet;
@@ -161,6 +172,10 @@ export function PlayerPlanetManage({
   onPreviewBuild?: (buildingId: string) => Promise<BuildPreviewResult | null>;
   highlightCategory?: string | null;
   onShowInEconomy?: (category: string) => void;
+  defaultCultureId?: string;
+  primaryFaith?: string;
+  unlockedLineages?: string[];
+  onFoundHybrid?: (raceA: string, raceB: string) => void;
 }) {
   const habit = classifyPlanet(planet);
   const ownerId = planet.ownerFactionId || system.ownerFactionId || null;
@@ -216,6 +231,11 @@ export function PlayerPlanetManage({
     const def = resolveBuildingDef(buildings, inst);
     return { inst, def };
   }, [inspect, surface, orbital, buildings]);
+
+  const faithTaboos = useMemo(
+    () => collectFaithTabooProperties(planet, primaryFaith),
+    [planet, primaryFaith],
+  );
 
   const requestPreview = async (buildingId: string) => {
     if (!onPreviewBuild) return;
@@ -361,6 +381,17 @@ export function PlayerPlanetManage({
               })}
             </div>
           </section>
+
+          <PlanetSocietyPanel
+            planet={planet}
+            managed={managed}
+            busy={busy}
+            apLeft={apLeft}
+            defaultCultureId={defaultCultureId}
+            primaryFaith={primaryFaith}
+            unlockedLineages={unlockedLineages}
+            onFoundHybrid={onFoundHybrid}
+          />
 
           <section className="planet-manage-block">
             <div className="planet-detail-head" style={{ marginBottom: 8 }}>
@@ -529,7 +560,8 @@ export function PlayerPlanetManage({
                 <div>
                   <strong>{inspectBuilding.def.name}</strong>
                   <div className="hint" style={{ fontSize: 10 }}>
-                    {inspectBuilding.def.zone} · {inspectBuilding.def.kind}
+                    {buildingZoneLabel(inspectBuilding.def.zone)} ·{" "}
+                    {buildingKindLabel(inspectBuilding.def.kind)}
                     {inspectBuilding.def.tier != null
                       ? ` · T${inspectBuilding.def.tier}`
                       : ""}
@@ -545,7 +577,7 @@ export function PlayerPlanetManage({
                     onShowInEconomy(String(inspectBuilding.def!.category))
                   }
                 >
-                  В экономике ({inspectBuilding.def.category})
+                  В экономике ({economyCategoryLabel(String(inspectBuilding.def!.category))})
                 </button>
               )}
               <p className="hint">
@@ -558,6 +590,7 @@ export function PlayerPlanetManage({
                 mapResources={mapResources}
                 localResourceNames={planet.resources}
                 techEco={techEco}
+                faithTabooProperties={faithTaboos}
                 busy={busy}
                 onFill={(role, resourceId) =>
                   onAction({

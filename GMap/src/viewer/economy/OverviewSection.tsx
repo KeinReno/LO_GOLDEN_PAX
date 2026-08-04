@@ -115,7 +115,7 @@ export function OverviewSection({
   const fCat = cats.find((c) => c.letter === "F");
   if (fCat?.status === "deficit" && onOpenResearch) {
     warnings.push({
-      text: "Нехватка Знания (F) — нужна наука или добыча cognitio",
+      text: "Нехватка Знания (F) — нужна наука или добыча категории F",
       action: () => onOpenResearch("cognitio"),
       actionLabel: "Наука",
     });

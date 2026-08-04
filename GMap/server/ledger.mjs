@@ -48,6 +48,8 @@ export function defaultFactionEco(factionId) {
     techTiers: { ...DEFAULT_TECH_TIERS },
     unlockedProperties: [],
     researchQueue: [],
+    /** Hybrid lineages unlocked empire-wide (race_hybrid.*). */
+    unlockedLineages: [],
     /** Planned builds: { systemId, planetId, buildingId }[] */
     buildQueue: [],
     /** RPS edge priorities: systemId | "_faction" → { from, to }. */
@@ -110,6 +112,7 @@ export function ensureFactionEco(ledger, factionId) {
   }
   if (!Array.isArray(f.unlockedProperties)) f.unlockedProperties = [];
   if (!Array.isArray(f.researchQueue)) f.researchQueue = [];
+  if (!Array.isArray(f.unlockedLineages)) f.unlockedLineages = [];
   if (!Array.isArray(f.buildQueue)) f.buildQueue = [];
   if (!f.flowPriorities || typeof f.flowPriorities !== "object") {
     f.flowPriorities = {};
@@ -242,6 +245,9 @@ const PUBLIC_EXPLAIN_KINDS = new Set([
   "deficit",
   "pressure",
   "depot",
+  "culture",
+  "faith",
+  "faith_taboo",
 ]);
 
 function explainChannelCategory(channelKey) {
@@ -501,6 +507,9 @@ export function publicEconomyPayload(eco) {
     unlockedProperties: eco.unlockedProperties,
     unlockedTechs: eco.unlockedTechs,
     unlockedUpgrades: eco.unlockedUpgrades,
+    unlockedLineages: Array.isArray(eco.unlockedLineages)
+      ? [...eco.unlockedLineages]
+      : [],
     acquiredTechs: Array.isArray(eco.acquiredTechs)
       ? eco.acquiredTechs.map((a) => ({ ...a }))
       : [],

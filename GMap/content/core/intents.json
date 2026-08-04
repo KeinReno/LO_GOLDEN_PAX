@@ -215,6 +215,13 @@
     "params": ["policyId"],
     "description": "Доктрина экономики (пресет налогов): military | trade | growth"
   },
+  "intent.found_hybrid_lineage": {
+    "id": "intent.found_hybrid_lineage",
+    "ap": 2,
+    "ops": ["found_hybrid_lineage"],
+    "params": ["systemId", "planetId", "raceA", "raceB"],
+    "description": "Основать гибридный линейдж на смешанной планете (cognitio + bios)"
+  },
 
   "intent.throw_quest_dice": {
     "id": "intent.throw_quest_dice",

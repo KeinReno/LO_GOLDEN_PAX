@@ -1071,5 +1071,268 @@
       "race_lord_dust": -0.05,
       "race_horn": 0
     }
+  },
+  "race_hybrid.human_psionic": {
+    "id": "race_hybrid.human_psionic",
+    "name": "Эмпаты",
+    "kind": "hybrid",
+    "origin": "Синтез людей и псиоников",
+    "hybridOf": ["race_human", "race_psionic"],
+    "tags": ["hybrid", "psionic", "baseline"],
+    "traits": [
+      {
+        "id": "trait.hybrid.human_psi.link",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": 2 }
+          },
+          {
+            "effect": "stat_mult",
+            "args": { "stat": "damage", "mult": 1.08 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.human_psi.strain",
+        "effects": [
+          {
+            "effect": "revolt_risk",
+            "args": { "chancePerTurn": 0.015 }
+          },
+          {
+            "effect": "production_mult",
+            "args": { "mult": 0.96 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.92,
+      "desert": 0.72,
+      "ocean": 0.97,
+      "ice": 0.72,
+      "toxic": 0.18
+    },
+    "growth": {
+      "baseRate": 0.0108,
+      "crowdPenalty": 0.45
+    },
+    "xenorelations": {
+      "race_swarm": -0.28,
+      "race_synth": 0.02
+    }
+  },
+  "race_hybrid.karned_synth": {
+    "id": "race_hybrid.karned_synth",
+    "name": "Холодные литейщики",
+    "kind": "hybrid",
+    "origin": "Карнеды + синты: автоматизированные плавильни",
+    "hybridOf": ["race_karned", "race_synth"],
+    "tags": ["hybrid", "lithoid", "synthetic"],
+    "traits": [
+      {
+        "id": "trait.hybrid.karned_synth.foundry",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": { "resource": "currency.materia", "mult": 1.12 }
+          },
+          {
+            "effect": "production_mult",
+            "args": { "resource": "currency.industria", "mult": 1.08 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.karned_synth.inertia",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": { "mult": 0.72 }
+          },
+          {
+            "effect": "move_cost_mult",
+            "args": { "mult": 1.08 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1.05,
+      "desert": 0.98,
+      "ocean": 0.42,
+      "ice": 0.88,
+      "toxic": 0.72
+    },
+    "growth": {
+      "baseRate": 0.0072,
+      "crowdPenalty": 0.22
+    },
+    "xenorelations": {
+      "race_psionic": -0.08
+    }
+  },
+  "race_hybrid.belator_horn": {
+    "id": "race_hybrid.belator_horn",
+    "name": "Имперские рогатые",
+    "kind": "hybrid",
+    "origin": "Белаторцы и хорны — двор и легион",
+    "hybridOf": ["race_belator", "race_horn"],
+    "tags": ["hybrid", "imperial", "horn"],
+    "traits": [
+      {
+        "id": "trait.hybrid.belator_horn.legion",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": { "stat": "defense", "mult": 1.12 }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": 1 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.belator_horn.tribute",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": { "resource": "currency.supply", "amount": 1 }
+          },
+          {
+            "effect": "research_cost_mult",
+            "args": { "mult": 1.05 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.98,
+      "desert": 0.78,
+      "ocean": 0.86,
+      "ice": 0.64,
+      "toxic": 0.22
+    },
+    "growth": {
+      "baseRate": 0.0105,
+      "crowdPenalty": 0.32
+    },
+    "xenorelations": {
+      "race_swarm": -0.28
+    }
+  },
+  "race_hybrid.human_voidborn": {
+    "id": "race_hybrid.human_voidborn",
+    "name": "Пустотные адаптанты",
+    "kind": "hybrid",
+    "origin": "Люди и войдборн — мост между мирами",
+    "hybridOf": ["race_human", "race_voidborn"],
+    "tags": ["hybrid", "void", "baseline"],
+    "traits": [
+      {
+        "id": "trait.hybrid.human_void.lanes",
+        "effects": [
+          {
+            "effect": "move_cost_mult",
+            "args": { "mult": 0.92 }
+          },
+          {
+            "effect": "habitability_mult",
+            "args": { "mult": 1.05 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.human_void.drift",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": -1 }
+          },
+          {
+            "effect": "pop_growth_mult",
+            "args": { "mult": 0.88 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.78,
+      "desert": 0.78,
+      "ocean": 0.68,
+      "ice": 0.92,
+      "toxic": 0.78
+    },
+    "growth": {
+      "baseRate": 0.0095,
+      "crowdPenalty": 0.32
+    },
+    "xenorelations": {}
+  },
+  "race_hybrid.lord_dust_psionic": {
+    "id": "race_hybrid.lord_dust_psionic",
+    "name": "Хор Праха",
+    "kind": "hybrid",
+    "origin": "Лорды Праха и псионики — резонанс завета",
+    "hybridOf": ["race_lord_dust", "race_psionic"],
+    "tags": ["hybrid", "ghost", "psionic"],
+    "reproduction": {
+      "requires": "currency.energia"
+    },
+    "traits": [
+      {
+        "id": "trait.hybrid.dust_psi.chorus",
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": { "mult": 0.9 }
+          },
+          {
+            "effect": "production_mult",
+            "args": { "resource": "currency.cognitio", "mult": 1.1 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.dust_psi.fragile",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": { "stat": "hp", "mult": 0.88 }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": { "resource": "currency.energia", "amount": 1 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.68,
+      "desert": 0.72,
+      "ocean": 0.72,
+      "ice": 0.88,
+      "toxic": 0.78,
+      "artifact": 1.15
+    },
+    "growth": {
+      "baseRate": 0.0076,
+      "crowdPenalty": 0.38
+    },
+    "xenorelations": {
+      "race_synth": -0.15
+    }
   }
 }

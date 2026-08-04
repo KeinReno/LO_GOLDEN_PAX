@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Правила гибридизации рас: совместимость, стоимость основания линейджа."
+  },
+  "minParentSharePercent": 35,
+  "foundLineageCost": {
+    "currency.cognitio": 40,
+    "currency.bios": 8
+  },
+  "lineageCompositionPercent": 20,
+  "hybridFatigueHabitability": 0.1,
+  "compatibility": {
+    "race_human": [
+      "race_horn",
+      "race_karned",
+      "race_psionic",
+      "race_voidborn",
+      "race_belator"
+    ],
+    "race_belator": ["race_horn", "race_human"],
+    "race_synth": ["race_human", "race_voidborn", "race_karned"],
+    "race_karned": ["race_human", "race_horn", "race_synth"],
+    "race_psionic": ["race_human", "race_voidborn", "race_lord_dust"],
+    "race_swarm": [],
+    "race_voidborn": ["race_human", "race_synth", "race_psionic"],
+    "race_lord_dust": ["race_psionic", "race_human"],
+    "race_horn": ["race_human", "race_belator", "race_karned"]
+  },
+  "forbiddenReason": {
+    "race_swarm": "hive_genome_lock — рой не смешивает геном; только ассимиляция сюжетом."
+  },
+  "compatibleBonusPairs": [
+    ["race_human", "race_psionic"],
+    ["race_karned", "race_synth"],
+    ["race_belator", "race_horn"]
+  ]
+}

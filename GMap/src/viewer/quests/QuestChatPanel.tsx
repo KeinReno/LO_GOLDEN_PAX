@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import type { Quest, QuestEffect, QuestLogEntry } from "./types";
+import {
+  QUEST_EFFECT_KIND_LABELS,
+  resolveResourceOrCurrencyLabel,
+} from "../../state/displayLabels";
 
 export type QuestChatPanelProps = {
   quest: Quest;
@@ -12,10 +16,14 @@ export type QuestChatPanelProps = {
 
 function EffectBadge({ effect }: { effect: QuestEffect }) {
   const sign = effect.value >= 0 ? "+" : "";
+  const kindLabel = QUEST_EFFECT_KIND_LABELS[effect.kind] ?? effect.kind;
+  const targetLabel = effect.target
+    ? resolveResourceOrCurrencyLabel(effect.target)
+    : null;
   const label =
     effect.kind === "resource"
-      ? `${sign}${effect.value} ${effect.target ?? "⬡"}`
-      : `${sign}${effect.value} ${effect.kind}`;
+      ? `${sign}${effect.value} ${targetLabel ?? "⬡"}`
+      : `${sign}${effect.value} ${kindLabel}`;
   return (
     <span
       className={`quest-chat-fx ${effect.value >= 0 ? "is-pos" : "is-neg"}`}

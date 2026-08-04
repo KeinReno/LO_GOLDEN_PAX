@@ -2307,6 +2307,51 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/society/found-lineage" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!faction || faction.password !== body.password) {
+          sendJson(res, 401, { error: "Неверный пароль" });
+          return;
+        }
+        const apMax = resolveApMax(
+          getContent().rules?.apPerTurn ?? 3,
+          buildModifierStack([]),
+        );
+        const { applyFoundHybridLineageInstant } = await import(
+          "./hybridActions.mjs"
+        );
+        const result = applyFoundHybridLineageInstant({
+          world,
+          factionId: faction.id,
+          systemId: body.systemId,
+          planetId: body.planetId,
+          raceA: body.raceA,
+          raceB: body.raceB,
+          apMax,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const filtered = filterWorldForFaction(world, faction.id);
+        sendJson(res, 200, {
+          ok: true,
+          lineageId: result.lineageId,
+          intent: result.intent,
+          economy: result.economy,
+          apMax,
+          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          ...filtered,
+        });
+        return;
+      }
+
       /** Instant quest actions: yearly dice / choice / quest dice (A9). */
       if (url.pathname === "/api/quest/action" && req.method === "POST") {
         const body = await readBody(req);

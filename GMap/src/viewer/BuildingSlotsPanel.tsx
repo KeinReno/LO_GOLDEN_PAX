@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import type { PlanetBuilding } from "../state/types";
 import {
+  economyCategoryLabel,
+  formatSlotRequire,
+} from "../state/displayLabels";
+import { SLOT_ROLE_LABELS } from "./forces/constants";
+import {
   buildResourceIndex,
   candidatesForRequire,
   CATEGORY_META,
@@ -12,6 +17,7 @@ import {
   canFillResourceProperties,
   type TechEcoSlice,
 } from "../state/techGate";
+import { resourceFaithTabooHit } from "../state/societyRegistry";
 
 export type BuildingSlotDef = {
   role: string;
@@ -32,12 +38,7 @@ function formatRequire(req: {
   tier?: string;
   properties?: string[];
 }): string {
-  const parts: string[] = [];
-  if (req.category) parts.push(req.category);
-  if (req.tier) parts.push(`T${req.tier}`);
-  if (req.properties && req.properties.length > 0)
-    parts.push(req.properties.join("/"));
-  return parts.join(" · ") || "любой";
+  return formatSlotRequire(req);
 }
 
 /**
@@ -51,6 +52,7 @@ export function BuildingSlotsPanel({
   mapResources,
   localResourceNames,
   techEco,
+  faithTabooProperties,
   onFill,
   onUnfill,
   busy,
@@ -61,6 +63,8 @@ export function BuildingSlotsPanel({
   /** Planet.resources names — when set, only those resources are offered. */
   localResourceNames?: string[];
   techEco?: TechEcoSlice;
+  /** Property ids taboo for planet faith — blocks slot fill UI. */
+  faithTabooProperties?: Set<string>;
   onFill: (role: string, resourceId: string) => void;
   /** Clear a filled slot (fill_slot with "" / "__clear__"). */
   onUnfill?: (role: string) => void;
@@ -121,7 +125,7 @@ export function BuildingSlotsPanel({
                 onClick={() => busy || setOpenRole(isOpen ? null : slot.role)}
               >
                 <span>
-                  <strong>{slot.role}</strong>
+                  <strong>{SLOT_ROLE_LABELS[slot.role] ?? slot.role}</strong>
                   <span className="hint" style={{ marginLeft: 6 }}>
                     ×{slot.count} · {formatRequire(slot.require)}
                   </span>
@@ -166,7 +170,11 @@ export function BuildingSlotsPanel({
                           slot.require.properties,
                           r.properties,
                         );
-                        const locked = !propGate.ok;
+                        const tabooHit = resourceFaithTabooHit(
+                          r.properties,
+                          faithTabooProperties ?? new Set(),
+                        );
+                        const locked = !propGate.ok || !!tabooHit;
                         return (
                           <button
                             key={r.id}
@@ -177,15 +185,17 @@ export function BuildingSlotsPanel({
                               onFill(slot.role, r.id);
                               setOpenRole(null);
                             }}
-                            className={`building-slot-cand${on ? " on" : ""}${locked ? " is-locked" : ""}`}
+                            className={`building-slot-cand${on ? " on" : ""}${locked ? " is-locked" : ""}${tabooHit ? " is-taboo" : ""}`}
                             style={{
                               borderColor: on ? meta.color : undefined,
                               color: on ? meta.color : undefined,
                             }}
                             title={
-                              locked
-                                ? `${r.name} — ${propGate.error}`
-                                : `${r.name} · ${r.category} T${r.tier} · ${r.properties.join(", ") || "—"}`
+                              tabooHit
+                                ? `${r.name} — табу веры: ${tabooHit}`
+                                : locked
+                                  ? `${r.name} — ${propGate.error}`
+                                  : `${r.name} · ${economyCategoryLabel(r.category ?? "")} T${r.tier} · ${r.properties.join(", ") || "—"}`
                             }
                           >
                             <span style={{ color: meta.color }}>T{r.tier}</span>{" "}

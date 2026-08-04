@@ -65,6 +65,13 @@
           "type": "array",
           "items": { "type": "string" }
         },
+        "hybridOf": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "string" }
+        },
+        "requiresLineage": { "type": "string" },
         "balanceBudget": { "type": "number" }
       }
     }

@@ -6,10 +6,14 @@ import { GESTURE } from "../../ui/gestureMap";
 import { CometCard } from "../quests/CometCard";
 import {
   TIER_COLORS,
+  COMBAT_ROLE_LABELS,
+  SLOT_ROLE_LABELS,
   type CatalogShip,
   type DropZoneId,
 } from "./constants";
 import { hitCardIndex, hitDropZone } from "./useDeckGestures";
+import { effectiveUnitStats } from "./veterancy";
+import { resolveResourceOrCurrencyLabel } from "../../state/displayLabels";
 
 export type UnitCardModel = {
   type: string;
@@ -58,15 +62,19 @@ export function UnitCard({
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
   const dragActive = useRef(false);
+  const pointerOrigin = useRef<{ x: number; y: number } | null>(null);
 
   const tier = Math.min(5, Math.max(1, catalogItem?.tier ?? 1));
   const level = Math.min(5, Math.max(0, group.level ?? 0));
-  const maxHp = catalogItem?.stats?.hp ?? 100;
-  const hpPercent = group.hp != null ? Math.round((group.hp / maxHp) * 100) : 100;
   const slots = catalogItem?.slots ?? [];
   const slotTotal = slots.length;
   const name = catalogItem?.name ?? group.type;
   const role = catalogItem?.roles?.[0] ?? group.type;
+  const roleLabel = COMBAT_ROLE_LABELS[role] ?? role;
+  const eff = effectiveUnitStats(catalogItem?.stats, level);
+  const maxHp = eff.hp || catalogItem?.stats?.hp || 100;
+  const hpPercent =
+    group.hp != null ? Math.round((group.hp / maxHp) * 100) : 100;
 
   const clearLong = () => {
     if (longTimer.current != null) {
@@ -99,14 +107,25 @@ export function UnitCard({
         drag={!reduce}
         dragSnapToOrigin
         dragElastic={0.12}
-        onPointerDown={() => {
+        dragMomentum={false}
+        onPointerDown={(e) => {
           longFired.current = false;
           dragActive.current = false;
+          pointerOrigin.current = { x: e.clientX, y: e.clientY };
           clearLong();
           longTimer.current = window.setTimeout(() => {
+            // Never fire long-press once a drag has started (avoids map jump mid-gesture).
+            if (dragActive.current) return;
             longFired.current = true;
             onLongPress();
           }, GESTURE.longPressMs);
+        }}
+        onPointerMove={(e) => {
+          const o = pointerOrigin.current;
+          if (!o || dragActive.current) return;
+          const dx = e.clientX - o.x;
+          const dy = e.clientY - o.y;
+          if (dx * dx + dy * dy > 36) clearLong();
         }}
         onPointerUp={clearLong}
         onPointerCancel={clearLong}
@@ -131,6 +150,7 @@ export function UnitCard({
           const mergeIndex = zone ? null : hitCardIndex(x, y, index);
           onDragEnd({ zone, mergeIndex });
           dragActive.current = false;
+          pointerOrigin.current = null;
         }}
         onTap={() => {
           if (longFired.current || dragActive.current) return;
@@ -141,7 +161,7 @@ export function UnitCard({
         initial={reduce ? false : { opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
-          delay: reduce ? 0 : index * 0.04,
+          delay: reduce ? 0 : Math.min(index, 8) * 0.04,
           type: "spring",
           stiffness: 300,
           damping: 26,
@@ -149,7 +169,7 @@ export function UnitCard({
       >
         <div className="forces-unit-card-header">
           <Rocket size={20} strokeWidth={1.6} aria-hidden />
-          <span className="forces-unit-role">{role}</span>
+          <span className="forces-unit-role">{roleLabel}</span>
         </div>
         <div className="forces-unit-name">{name}</div>
         <div className="forces-unit-count">×{group.count}</div>
@@ -162,12 +182,11 @@ export function UnitCard({
           {"☆".repeat(5 - level)}
         </div>
         <div className="forces-unit-stats">
-          <span title="Урон">
-            <Swords size={12} aria-hidden /> {catalogItem?.stats?.damage ?? "—"}
+          <span title="Урон (с ветеранством)">
+            <Swords size={12} aria-hidden /> {eff.damage || "—"}
           </span>
-          <span title="Броня">
-            <Shield size={12} aria-hidden />{" "}
-            {catalogItem?.stats?.armor ?? catalogItem?.stats?.defense ?? "—"}
+          <span title="Броня (с ветеранством)">
+            <Shield size={12} aria-hidden /> {eff.armor || "—"}
           </span>
           <span title="Прочность">
             <Heart size={12} aria-hidden /> {hpPercent}%
@@ -181,8 +200,8 @@ export function UnitCard({
                 className={group.filledSlots?.[s.role] ? "filled" : ""}
                 title={
                   group.filledSlots?.[s.role]
-                    ? `${s.role}: ${group.filledSlots[s.role]}`
-                    : s.role
+                    ? `${SLOT_ROLE_LABELS[s.role] ?? s.role}: ${resolveResourceOrCurrencyLabel(group.filledSlots[s.role]!)}`
+                    : SLOT_ROLE_LABELS[s.role] ?? s.role
                 }
               />
             ))}

@@ -1,4 +1,5 @@
 import { getCachedContent } from "../../state/contentCatalog";
+import { ECO_CATEGORY_NAMES } from "../economyFlowTypes";
 
 type RecentEntry = {
   currencyId: string;
@@ -39,7 +40,7 @@ export function ResearchTimeline({
     if (e.reason === "research" || e.reason === "research_rush") {
       const tech = techs[id];
       label = tech
-        ? `${tech.name} (${tech.category}${tech.era})${e.reason === "research_rush" ? " · ускор." : ""}`
+        ? `${tech.name} (${ECO_CATEGORY_NAMES[tech.category] ?? tech.category} · эра ${tech.era})${e.reason === "research_rush" ? " · ускор." : ""}`
         : id || "технология";
     } else {
       // upgrade id may be intentId

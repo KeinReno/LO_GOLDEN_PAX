@@ -6,6 +6,7 @@
 export type TechEcoSlice = {
   techTiers?: Record<string, number>;
   unlockedProperties?: string[];
+  unlockedLineages?: string[];
 };
 
 const BASE_PROPERTIES = new Set([

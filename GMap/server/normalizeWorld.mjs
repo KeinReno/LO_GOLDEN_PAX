@@ -105,6 +105,20 @@ export function normalizeWorld(raw) {
           raceComposition: Array.isArray(p.raceComposition)
             ? p.raceComposition
             : [],
+          cultureId:
+            typeof p.cultureId === "string" && p.cultureId
+              ? p.cultureId
+              : undefined,
+          lineageId:
+            typeof p.lineageId === "string" && p.lineageId
+              ? p.lineageId
+              : undefined,
+          faithShare: Array.isArray(p.faithShare)
+            ? p.faithShare.map((row) => ({
+                faithId: String(row.faithId || row.id || ""),
+                percent: Number(row.percent ?? row.share ?? 0),
+              }))
+            : undefined,
         }))
       : [],
     logistics:
@@ -269,6 +283,9 @@ export function normalizeWorld(raw) {
       traits: Array.isArray(f?.traits) ? f.traits : [],
       capitalSystemId: f?.capitalSystemId ?? null,
       primaryRaceId: f?.primaryRaceId ?? f?.primaryRace ?? null,
+      defaultCultureId: f?.defaultCultureId ?? "culture.baseline",
+      primaryFaith: f?.primaryFaith ?? "faith.secular",
+      dominantIdeology: f?.dominantIdeology ?? undefined,
       activeEffects: Array.isArray(f?.activeEffects) ? f.activeEffects : [],
       diplomacy: diplo,
       npcs: Array.isArray(f?.npcs)

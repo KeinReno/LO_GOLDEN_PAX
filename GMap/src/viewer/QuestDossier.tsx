@@ -6,6 +6,7 @@ import type {
   QuestHistoryEntry,
   WorldState,
 } from "../state/types";
+import { QUEST_HISTORY_KIND_LABELS } from "../state/displayLabels";
 import { CardBoard } from "../ui/cardBoardContext";
 import { DragCard } from "../ui/DragCard";
 import { DropZone } from "../ui/DropZone";
@@ -186,7 +187,7 @@ export function QuestDossier({
                     <span className="quest-timeline-dot" aria-hidden />
                     <div>
                       <strong>
-                        {h.kind}
+                        {QUEST_HISTORY_KIND_LABELS[h.kind] ?? h.kind}
                         {h.authorName ? ` · ${h.authorName}` : ""}
                       </strong>
                       <p className="quest-summary">{h.body}</p>

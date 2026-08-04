@@ -16,6 +16,7 @@ import {
   CATEGORY_CURRENCIES,
   categoryByLetter,
 } from "../state/economyLabels";
+import { economyCategoryLabel } from "../state/displayLabels";
 import { DIPLOMACY_LABELS } from "../state/defaults";
 import type { DiplomacyRelation, ViewerPayload } from "../state/types";
 import { ResourceIcon } from "../ui/ResourceIcon";
@@ -1287,7 +1288,8 @@ export function MarketPanel({
                       <>
                         {lotN > 0 ? (
                           <span className="hint ex-hero-lots">
-                            Заявок A–F по категории {selectedResource.category}:{" "}
+                            Заявок по категории{" "}
+                            {economyCategoryLabel(selectedResource.category ?? "")}:{" "}
                             <strong>{lotN}</strong>
                           </span>
                         ) : null}
@@ -1298,7 +1300,8 @@ export function MarketPanel({
                             goToTradeForCategory(selectedResource.category)
                           }
                         >
-                          Торговать {selectedResource.category ?? "A–F"}
+                          Торговать ·{" "}
+                          {economyCategoryLabel(selectedResource.category ?? "A")}
                         </button>
                       </>
                     );

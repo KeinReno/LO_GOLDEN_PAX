@@ -4,6 +4,19 @@ import type {
   ViewerPayload,
 } from "../../state/types";
 import { getCachedContent } from "../../state/contentCatalog";
+import {
+  buildingKindLabel,
+  buildingZoneLabel,
+  cultureLabel,
+  economyCategoryLabel,
+  faithLabel,
+  ideologyLabel,
+  raceKindLabel,
+  resolveBuildingDef,
+  resolveIntelEntityName,
+  shipRoleLabel,
+  traitLabel,
+} from "./codexResolve";
 
 export type CodexSection =
   | "races"
@@ -89,7 +102,10 @@ export function buildCodexEntries(
       if (level >= 1) {
         lines.push(`Тип: государство`);
         if ("capitalSystemId" in fac && fac.capitalSystemId) {
-          lines.push(`Столица: ${String(fac.capitalSystemId)}`);
+          const capId = String(fac.capitalSystemId);
+          const capName =
+            payload.world.systems.find((s) => s.id === capId)?.name ?? capId;
+          lines.push(`Столица: ${capName}`);
         }
       }
       if (level >= 2) {
@@ -100,14 +116,27 @@ export function buildCodexEntries(
         if ("specialization" in fac && fac.specialization) {
           lines.push(`Специализация: ${String(fac.specialization)}`);
         }
+        if ("dominantIdeology" in fac && fac.dominantIdeology) {
+          lines.push(
+            `Идеология: ${ideologyLabel(String(fac.dominantIdeology))}`,
+          );
+        }
       }
       if (level >= 3 && "primaryRaceId" in fac && fac.primaryRaceId) {
-        lines.push(`Основная раса: ${String(fac.primaryRaceId)}`);
+        const rid = String(fac.primaryRaceId);
+        const raceName = content?.races?.[rid]?.name ?? rid;
+        lines.push(`Основная раса: ${raceName}`);
+      }
+      if (level >= 3 && "primaryFaith" in fac && fac.primaryFaith) {
+        lines.push(`Вера: ${faithLabel(String(fac.primaryFaith))}`);
+      }
+      if (level >= 3 && "defaultCultureId" in fac && fac.defaultCultureId) {
+        lines.push(`Культура: ${cultureLabel(String(fac.defaultCultureId))}`);
       }
       out.push({
         id,
         name,
-        category: "faction",
+        category: "Государство",
         level,
         section,
         lines,
@@ -128,14 +157,16 @@ export function buildCodexEntries(
       const lines: string[] = [];
       const traitId = (t: unknown) =>
         typeof t === "string" ? t : (t as { id?: string })?.id ?? String(t);
+      const formatTraits = (ids: string[]) =>
+        ids.map((tid) => traitLabel(tid, content)).join(", ");
       if (level >= 1) {
-        lines.push(`Тип: ${def?.kind ?? "раса"}`);
+        lines.push(`Тип: ${raceKindLabel(def?.kind)}`);
         if (def?.origin) lines.push(`Происхождение: ${def.origin}`);
       }
       if (level >= 2) {
         const traits = Array.isArray(def?.traits) ? def.traits : [];
         const shown = traits.slice(0, 2).map(traitId);
-        if (shown.length) lines.push(`Черты: ${shown.join(", ")}`);
+        if (shown.length) lines.push(`Черты: ${formatTraits(shown)}`);
       }
       if (level >= 3) {
         const traits = Array.isArray(def?.traits) ? def.traits : [];
@@ -143,7 +174,7 @@ export function buildCodexEntries(
           .map(traitId)
           .filter((tid) => !tid.includes("hidden"));
         const idx = lines.findIndex((l) => l.startsWith("Черты:"));
-        const line = `Черты: ${visible.join(", ") || "—"}`;
+        const line = `Черты: ${visible.length ? formatTraits(visible) : "—"}`;
         if (idx >= 0) lines[idx] = line;
         else if (visible.length) lines.push(line);
       }
@@ -151,14 +182,14 @@ export function buildCodexEntries(
         const traits = Array.isArray(def?.traits) ? def.traits : [];
         const all = traits.map(traitId).filter(Boolean);
         const idx = lines.findIndex((l) => l.startsWith("Черты:"));
-        const line = `Черты: ${all.join(", ") || "—"}`;
+        const line = `Черты: ${all.length ? formatTraits(all) : "—"}`;
         if (idx >= 0) lines[idx] = line;
         else if (all.length) lines.push(line);
       }
       out.push({
         id,
         name,
-        category: def?.kind ?? "race",
+        category: raceKindLabel(def?.kind),
         level,
         section,
         lines,
@@ -179,8 +210,8 @@ export function buildCodexEntries(
         continue;
       const lines: string[] = [];
       if (level >= 1) {
-        lines.push(`Категория: ${def?.category ?? "—"}`);
-        const era = (def as { era?: number | string } | undefined)?.era;
+        lines.push(`Категория: ${economyCategoryLabel(def?.category)}`);
+        const era = def?.era;
         if (era != null) lines.push(`Эпоха: ${String(era)}`);
       }
       if (level >= 2) {
@@ -192,7 +223,11 @@ export function buildCodexEntries(
       }
       if (level >= 3) {
         const cost = def?.cost?.["currency.cognitio"];
-        if (cost != null) lines.push(`Стоимость: ${cost} cognitio`);
+        if (cost != null) {
+          lines.push(
+            `Стоимость: ${cost} ${economyCategoryLabel("currency.cognitio")}`,
+          );
+        }
         const effects = (def as { effects?: unknown[] } | undefined)?.effects;
         if (effects?.length) {
           lines.push(`Эффекты: ${effects.length}`);
@@ -207,7 +242,7 @@ export function buildCodexEntries(
       out.push({
         id,
         name,
-        category: def?.category ?? "tech",
+        category: economyCategoryLabel(def?.category),
         level,
         section,
         lines,
@@ -217,26 +252,32 @@ export function buildCodexEntries(
   }
 
   if (section === "buildings") {
-    const buildings = content?.buildings ?? {};
     for (const [id, raw] of Object.entries(intel.knownBuildings)) {
       const level = clampLevel(raw);
       if (level < Math.max(1, minLevel)) continue;
-      const def = buildings[id] as
-        | { name?: string; category?: string; tier?: number; description?: string }
-        | undefined;
-      const name = def?.name ?? id;
+      const def = resolveBuildingDef(content, id);
+      const name =
+        def?.name ??
+        buildingKindLabel(def?.kind) ??
+        resolveIntelEntityName(payload, "building", id);
       if (q && !name.toLowerCase().includes(q) && !id.toLowerCase().includes(q))
         continue;
       const lines: string[] = [];
-      if (level >= 1) lines.push(`Категория: ${def?.category ?? "здание"}`);
+      if (level >= 1) {
+        lines.push(`Тип: ${buildingKindLabel(def?.kind)}`);
+        if (def?.zone) lines.push(`Зона: ${buildingZoneLabel(def.zone)}`);
+        if (def?.category) {
+          lines.push(`Поток: ${economyCategoryLabel(def.category)}`);
+        }
+      }
       if (level >= 2 && def?.tier != null) lines.push(`Тир: ${def.tier}`);
-      if (level >= 2 && def?.description) {
-        lines.push(def.description.slice(0, 120));
+      if (level >= 2 && def?.signature) {
+        lines.push(def.signature.slice(0, 120));
       }
       out.push({
         id,
         name,
-        category: def?.category ?? "building",
+        category: buildingKindLabel(def?.kind),
         level,
         section,
         lines,
@@ -252,19 +293,30 @@ export function buildCodexEntries(
     for (const [id, raw] of Object.entries(intel.knownUnits)) {
       const level = clampLevel(raw);
       if (level < Math.max(1, minLevel)) continue;
-      const ships = (content as { ships?: Record<string, { name?: string; class?: string; roles?: string[]; tier?: number }> })?.ships ?? {};
-      const def = ships[id] ?? units[id];
-      const name = def?.name ?? id;
+      const ships = content?.ships ?? {};
+      const def =
+        ships[id] ??
+        units[id] ??
+        ships[id.startsWith("ship.") ? id : `ship.${id}`] ??
+        units[id.startsWith("unit.") ? id : `unit.${id}`];
+      const name = def?.name ?? resolveIntelEntityName(payload, "unit", id);
       if (q && !name.toLowerCase().includes(q) && !id.toLowerCase().includes(q))
         continue;
       const lines: string[] = [];
-      const klass = def?.class ?? (def as { roles?: string[] } | undefined)?.roles?.[0] ?? (ships[id] ? "корабль" : "юнит");
-      if (level >= 1) lines.push(`Класс: ${klass}`);
+      const roleRaw =
+        (def as { class?: string; roles?: string[] } | undefined)?.class ??
+        (def as { roles?: string[] } | undefined)?.roles?.[0];
+      const roleLabel = roleRaw
+        ? shipRoleLabel(roleRaw)
+        : ships[id] || id.startsWith("ship.")
+          ? "Корабль"
+          : "Юнит";
+      if (level >= 1) lines.push(`Роль: ${roleLabel}`);
       if (level >= 2 && def?.tier != null) lines.push(`Тир: ~${def.tier}`);
       out.push({
         id,
         name,
-        category: klass,
+        category: roleLabel,
         level,
         section,
         lines,

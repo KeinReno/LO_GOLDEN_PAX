@@ -2393,5 +2393,153 @@
     ],
     "balanceBudget": 1,
     "upgrades": []
+  },
+  "tech.hybrid.empathic_command": {
+    "id": "tech.hybrid.empathic_command",
+    "name": "Эмпатическое командование",
+    "category": "F",
+    "era": 3,
+    "hybridOf": ["race_human", "race_psionic"],
+    "requiresLineage": "race_hybrid.human_psionic",
+    "cost": {
+      "currency.cognitio": 95
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "crew",
+          "mult": 1.15
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "psion_store"
+        }
+      }
+    ],
+    "prerequisites": ["tech.psionics", "tech.geology"],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.hybrid.cold_foundry": {
+    "id": "tech.hybrid.cold_foundry",
+    "name": "Холодная литейная",
+    "category": "B",
+    "era": 3,
+    "hybridOf": ["race_karned", "race_synth"],
+    "requiresLineage": "race_hybrid.karned_synth",
+    "cost": {
+      "currency.cognitio": 92
+    },
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.15
+        }
+      },
+      {
+        "effect": "upkeep_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 0.85
+        }
+      }
+    ],
+    "prerequisites": ["tech.deep_prospecting", "tech.synth.uplift"],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.hybrid.imperial_synthesis": {
+    "id": "tech.hybrid.imperial_synthesis",
+    "name": "Имперский синтез",
+    "category": "C",
+    "era": 3,
+    "hybridOf": ["race_belator", "race_horn"],
+    "requiresLineage": "race_hybrid.belator_horn",
+    "cost": {
+      "currency.cognitio": 88
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "defense",
+          "mult": 1.12
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 3,
+          "amount": 2
+        }
+      }
+    ],
+    "prerequisites": ["tech.industrial_org", "tech.geology"],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.hybrid.void_interface": {
+    "id": "tech.hybrid.void_interface",
+    "name": "Интерфейс Пустоты",
+    "category": "D",
+    "era": 3,
+    "hybridOf": ["race_human", "race_voidborn"],
+    "requiresLineage": "race_hybrid.human_voidborn",
+    "cost": {
+      "currency.cognitio": 90
+    },
+    "effects": [
+      {
+        "effect": "move_cost_mult",
+        "args": {
+          "mult": 0.88
+        }
+      },
+      {
+        "effect": "logistics_disconnected_penalty",
+        "args": {
+          "productionMult": 0.95,
+          "upkeepMult": 1,
+          "combatDefMult": 1
+        }
+      }
+    ],
+    "prerequisites": ["tech.cybernetics", "tech.geology"],
+    "balanceBudget": 1,
+    "upgrades": []
+  },
+  "tech.hybrid.dust_chorus": {
+    "id": "tech.hybrid.dust_chorus",
+    "name": "Хор завета",
+    "category": "F",
+    "era": 4,
+    "hybridOf": ["race_lord_dust", "race_psionic"],
+    "requiresLineage": "race_hybrid.lord_dust_psionic",
+    "cost": {
+      "currency.cognitio": 110
+    },
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "corridor_open"
+        }
+      },
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.85
+        }
+      }
+    ],
+    "prerequisites": ["tech.psionic.resonance", "tech.psionics"],
+    "balanceBudget": 1,
+    "upgrades": []
   }
 }

@@ -40,7 +40,7 @@ export function BuildPreview({
     <div className="sys-build-preview" aria-label="Превью строительства">
       <header className="sys-build-preview__head">
         <strong>Превью: {building.name}</strong>
-        {building.category ? (
+            {building.category ? (
           <span
             className="sys-build-preview__cat"
             style={{
@@ -48,8 +48,7 @@ export function BuildPreview({
                 ECO_CATEGORY_COLORS[building.category] ?? "var(--text-muted)",
             }}
           >
-            {building.category}{" "}
-            {ECO_CATEGORY_NAMES[building.category] ?? ""}
+            {ECO_CATEGORY_NAMES[building.category] ?? building.category}
             {building.tier != null ? ` · T${building.tier}` : ""}
           </span>
         ) : null}

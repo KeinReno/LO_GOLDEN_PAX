@@ -50,6 +50,12 @@ const REASON_LABELS: Record<string, string> = {
   research: "Исследования",
   upkeep: "Содержание",
   income: "Доход",
+  forces_mutate: "Силы",
+  forge: "Модернизация",
+  disband: "Утиль",
+  outfit: "Оснащение",
+  caravan: "Караван",
+  reserve: "Резерв",
 };
 
 const DONUT_PALETTE = [

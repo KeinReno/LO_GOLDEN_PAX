@@ -16,6 +16,11 @@ import {
 import { readLiveBoard } from "./tableStore.mjs";
 import { applyUnitUpgradeEffectsToWorld } from "./combatResolve.mjs";
 import { factionCanAccessTech } from "./techPool.mjs";
+import {
+  factionCanUseLineage,
+  hybridLineageId,
+  canHybridizePair,
+} from "./hybridRegistry.mjs";
 
 export const DEFAULT_TECH_TIERS = { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1 };
 
@@ -263,6 +268,34 @@ function checkTechLocks(def, factionId, eco, content, world) {
       return {
         ok: false,
         error: `Нужно свойство: ${propertyLabel(content, prop)}`,
+      };
+    }
+  }
+
+  if (Array.isArray(def.hybridOf) && def.hybridOf.length === 2) {
+    const pair = canHybridizePair(content, def.hybridOf[0], def.hybridOf[1]);
+    if (!pair.ok) return pair;
+    const lineageId =
+      def.requiresLineage || pair.lineageId || hybridLineageId(def.hybridOf[0], def.hybridOf[1]);
+    const line = factionCanUseLineage(world, factionId, lineageId, eco, content);
+    if (!line.ok) {
+      return {
+        ok: false,
+        error: `Нужен гибридный линейдж: ${line.error}`,
+      };
+    }
+  } else if (def.requiresLineage) {
+    const line = factionCanUseLineage(
+      world,
+      factionId,
+      def.requiresLineage,
+      eco,
+      content,
+    );
+    if (!line.ok) {
+      return {
+        ok: false,
+        error: `Нужен линейдж «${def.requiresLineage}»: ${line.error}`,
       };
     }
   }

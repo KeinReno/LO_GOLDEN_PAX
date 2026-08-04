@@ -1,7 +1,7 @@
 import { Coins } from "lucide-react";
 import { FloatingPopover } from "../ui/FloatingPopover";
 import type { EconomySystemSignal } from "./economyFlowTypes";
-import { ECO_CATEGORY_COLORS } from "./economyFlowTypes";
+import { ECO_CATEGORY_COLORS, ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 
 type Props = {
   open: boolean;
@@ -57,12 +57,17 @@ export function EconomySignalPopover({
                     className="economy-signal-cat"
                     style={{ color: ECO_CATEGORY_COLORS[sig.category] }}
                     aria-hidden
+                    title={ECO_CATEGORY_NAMES[sig.category] ?? sig.category}
                   >
                     {sig.category}
                   </span>
                   <span className="economy-signal-text">
                     <strong>{sig.systemName}</strong>
-                    <span className="hint">{sig.reason}</span>
+                    <span className="hint">
+                      {ECO_CATEGORY_NAMES[sig.category]
+                        ? `${ECO_CATEGORY_NAMES[sig.category]} · ${sig.reason}`
+                        : sig.reason}
+                    </span>
                   </span>
                 </button>
               ) : (
@@ -71,12 +76,17 @@ export function EconomySignalPopover({
                     className="economy-signal-cat"
                     style={{ color: ECO_CATEGORY_COLORS[sig.category] }}
                     aria-hidden
+                    title={ECO_CATEGORY_NAMES[sig.category] ?? sig.category}
                   >
                     {sig.category}
                   </span>
                   <span className="economy-signal-text">
                     <strong>{sig.systemName}</strong>
-                    <span className="hint">{sig.reason}</span>
+                    <span className="hint">
+                      {ECO_CATEGORY_NAMES[sig.category]
+                        ? `${ECO_CATEGORY_NAMES[sig.category]} · ${sig.reason}`
+                        : sig.reason}
+                    </span>
                   </span>
                 </div>
               )}

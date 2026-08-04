@@ -530,6 +530,12 @@ export interface Planet {
   contested?: boolean;
   /** Population loyalty 0–100 (server SoT, A3). */
   loyalty?: number;
+  /** Culture catalog id (content/cultures.json). */
+  cultureId?: string;
+  /** Active hybrid lineage on world (race_hybrid.*). */
+  lineageId?: string;
+  /** Faith composition [{ faithId, percent }]. */
+  faithShare?: Array<{ faithId: string; percent: number }>;
 }
 
 /** Drill-down focus: galaxy map stays at GMap x/y; system/planet are nested views. */
@@ -768,6 +774,12 @@ export interface Faction {
    * Falls back to race_human when unset.
    */
   primaryRaceId?: string;
+  /** Default culture for new colonies (cultures.json). */
+  defaultCultureId?: string;
+  /** State faith / cult (faiths.json); planets inherit if faithShare unset. */
+  primaryFaith?: string;
+  /** Derived from traits / laws — diplomacy & UI (militarist, technocrat, …). */
+  dominantIdeology?: string;
   /** Explicit capital for logistics BFS (else first owned isCapital). */
   capitalSystemId?: string | null;
   /** Opinion matrix, active treaties, soft history (A8). */
@@ -820,6 +832,7 @@ export interface Race {
   override_traits?: RaceTrait[];
   remove_traits?: string[];
   state_overrides?: Record<string, unknown>;
+  hybridOf?: string[];
   reproduction?: { requires?: string };
   tags?: string[];
   traits?: RaceTrait[];
@@ -1301,6 +1314,7 @@ export interface ViewerPayload {
     }>;
     techTiers?: Record<string, number>;
     unlockedProperties?: string[];
+    unlockedLineages?: string[];
     /** Recent ledger entries (delta/reason/turn) for breakdown + deltas. */
     recent?: {
       factionId: string;

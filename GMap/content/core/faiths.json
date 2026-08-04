@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Религии / культы: taboo properties + effects. Идеология державы — faction_traits.",
+    "budgetRange": [-2, 2]
+  },
+  "faiths": {
+    "faith.secular": {
+      "id": "faith.secular",
+      "name": "Светская традиция",
+      "tags": ["general"],
+      "taboo_properties": [],
+      "effects": [],
+      "balanceBudget": 0
+    },
+    "faith.ancestor_cult": {
+      "id": "faith.ancestor_cult",
+      "name": "Культ предков",
+      "tags": ["human", "imperial"],
+      "taboo_properties": ["matter_destroy"],
+      "effects": [
+        {
+          "effect": "loyalty_add",
+          "args": { "amount": 2 }
+        },
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.bios", "mult": 1.05 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "faith.machine_god": {
+      "id": "faith.machine_god",
+      "name": "Бог-Машина",
+      "tags": ["synthetic"],
+      "taboo_properties": ["psion_emit", "psion_store"],
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.industria", "mult": 1.12 }
+        },
+        {
+          "effect": "research_cost_mult",
+          "args": { "mult": 0.92 }
+        }
+      ],
+      "balanceBudget": 0.5
+    },
+    "faith.void_pilgrimage": {
+      "id": "faith.void_pilgrimage",
+      "name": "Паломничество в Пустоту",
+      "tags": ["void"],
+      "taboo_properties": ["toxic"],
+      "effects": [
+        {
+          "effect": "move_cost_mult",
+          "args": { "mult": 0.92 }
+        },
+        {
+          "effect": "loyalty_add",
+          "args": { "amount": -1 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "faith.psi_mystery": {
+      "id": "faith.psi_mystery",
+      "name": "Тайна Разума",
+      "tags": ["psionic"],
+      "taboo_properties": ["weapon_amp"],
+      "effects": [
+        {
+          "effect": "research_cost_mult",
+          "args": { "mult": 0.88 }
+        },
+        {
+          "effect": "revolt_risk",
+          "args": { "chancePerTurn": 0.01 }
+        }
+      ],
+      "balanceBudget": -0.5
+    },
+    "faith.dust_covenant": {
+      "id": "faith.dust_covenant",
+      "name": "Завет Праха",
+      "tags": ["ghost", "dust"],
+      "taboo_properties": ["self_spreading"],
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.extracta", "mult": 1.1 }
+        },
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.bios", "mult": 0.9 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "faith.hive_overmind": {
+      "id": "faith.hive_overmind",
+      "name": "Сверхразум улья",
+      "tags": ["swarm"],
+      "taboo_properties": ["corridor_open", "info_store"],
+      "effects": [
+        {
+          "effect": "pop_growth_mult",
+          "args": { "mult": 1.1 }
+        },
+        {
+          "effect": "loyalty_mult",
+          "args": { "mult": 1.05 }
+        }
+      ],
+      "balanceBudget": 0.5
+    }
+  }
+}

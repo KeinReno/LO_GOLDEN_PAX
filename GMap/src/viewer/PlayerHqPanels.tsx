@@ -681,7 +681,7 @@ export function PlayerHqHome({
           className={`hq-signal-chip ${(warCount ?? 0) > 0 ? "is-warn" : ""}`}
           onClick={onOpenDiplomacy}
         >
-          <strong>Дипло</strong>
+          <strong>Дипломатия</strong>
           <span className="hint">
             {(warCount ?? 0) > 0 ? `${warCount} войн` : "контакты"}
           </span>

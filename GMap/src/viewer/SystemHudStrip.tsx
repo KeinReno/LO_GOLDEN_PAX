@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { resolveResourceOrCurrencyLabel } from "../state/displayLabels";
 import type { Planet, Race, StarSystem } from "../state/types";
 import { Users, Gem, Orbit } from "lucide-react";
 
@@ -50,7 +51,7 @@ function resourceChips(
 ): { id: string; label: string }[] {
   return ids.slice(0, 8).map((id) => ({
     id,
-    label: mapNames?.[id] ?? id.replace(/^map\./, "").replace(/_/g, " "),
+    label: resolveResourceOrCurrencyLabel(id, mapNames),
   }));
 }
 
@@ -60,7 +61,13 @@ function formatPop(n: number): string {
   return String(n);
 }
 
-function RacePie({ rows }: { rows: RaceRow[] }) {
+function RacePie({
+  rows,
+  raceLabel,
+}: {
+  rows: RaceRow[];
+  raceLabel: (id: string) => string;
+}) {
   const size = 72;
   const r = 30;
   const cx = size / 2;
@@ -102,7 +109,7 @@ function RacePie({ rows }: { rows: RaceRow[] }) {
       {slices.map((s) => (
         <path key={s.row.raceId} d={s.d} fill={s.color}>
           <title>
-            {s.row.raceId}: {s.row.pop} ({s.row.percent}%)
+            {raceLabel(s.row.raceId)}: {s.row.pop} ({s.row.percent}%)
           </title>
         </path>
       ))}
@@ -172,7 +179,7 @@ export function SystemHudStrip({
         </strong>
         {raceRows.length > 0 ? (
           <div className="system-hud-pop-row">
-            <RacePie rows={raceRows.slice(0, 8)} />
+            <RacePie rows={raceRows.slice(0, 8)} raceLabel={raceName} />
             <div className="system-hud-races">
               {raceRows.slice(0, 5).map((r, i) => (
                 <div key={r.raceId} className="system-hud-race">
@@ -208,7 +215,7 @@ export function SystemHudStrip({
             resourceChips(showRes, mapResourceNames).map((r) => {
               const yieldN = extractionByResource?.[r.id];
               return (
-                <span key={r.id} className="system-hud-res-chip" title={r.id}>
+                <span key={r.id} className="system-hud-res-chip" title={r.label}>
                   {r.label}
                   {yieldN != null && yieldN !== 0 ? <em>+{yieldN}</em> : null}
                 </span>

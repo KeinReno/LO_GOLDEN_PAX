@@ -1,4 +1,6 @@
 import type { WorldState } from "../state/types";
+import { SYSTEM_ACTIVITY_LABELS } from "../state/defaults";
+import { systemKindLabel } from "../state/displayLabels";
 import { censusPlanets } from "../state/planets";
 import { captureMapPngDataUrl } from "./mapExportBridge";
 
@@ -44,7 +46,7 @@ export function exportCampaignMarkdown(world: WorldState): string {
     const census = censusPlanets(s.planets);
     lines.push(`### ${s.name}`);
     lines.push(
-      `- Тип: ${s.kind} · Владелец: ${owner} · Сектор: ${sector} · Активность: ${s.activity}`,
+      `- Тип: ${systemKindLabel(s.kind)} · Владелец: ${owner} · Сектор: ${sector} · Активность: ${SYSTEM_ACTIVITY_LABELS[s.activity ?? "none"] ?? s.activity ?? "—"}`,
     );
     if (s.kind === "stellar") {
       lines.push(

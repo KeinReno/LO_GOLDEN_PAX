@@ -186,7 +186,7 @@ export function SystemDiveDock({
               : mine.status === "other"
                 ? "чужой"
                 : beltRes.length
-                  ? "idle"
+                  ? "нет добычи"
                   : "—"}
           </strong>
           <span>пояс ×{beltRes.length}</span>

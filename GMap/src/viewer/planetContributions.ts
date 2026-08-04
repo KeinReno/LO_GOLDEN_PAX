@@ -1,4 +1,7 @@
 import type { Planet, StarSystem } from "../state/types";
+import {
+  resolveResourceOrCurrencyLabel,
+} from "../state/displayLabels";
 import { getCachedContent } from "../state/contentCatalog";
 import { COLONY_TYPE_LABELS } from "../state/defaults";
 import { classifyPlanet } from "../state/planets";
@@ -136,11 +139,17 @@ export function planetContributionChips(
 
   const res = planet.resources ?? [];
   if (res.length > 0) {
+    const names = res
+      .slice(0, 4)
+      .map((id) => resolveResourceOrCurrencyLabel(id));
     chips.push({
       id: "ores",
-      label: `${res.length} местн. res`,
+      label:
+        res.length === 1
+          ? names[0] ?? "ресурс"
+          : `${res.length} месторожд.`,
       tone: own ? "good" : "muted",
-      title: res.join(", "),
+      title: res.map((id) => resolveResourceOrCurrencyLabel(id)).join(", "),
     });
   }
 

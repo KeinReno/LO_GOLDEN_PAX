@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { StarSystem, StationKind } from "../state/types";
+import { stationKindLabel } from "../state/displayLabels";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
 import {
   Pickaxe,
@@ -394,7 +395,7 @@ export function SystemCommandPanel({
       {selectedStation && (
         <div className="system-cmd-selected">
           <strong>{selectedStation.name}</strong>
-          <span className="hint">{selectedStation.kind}</span>
+          <span className="hint">{stationKindLabel(selectedStation.kind)}</span>
           {selectedStation.factionId === factionId && (
             <HoldRevealButton
               className="btn ghost"

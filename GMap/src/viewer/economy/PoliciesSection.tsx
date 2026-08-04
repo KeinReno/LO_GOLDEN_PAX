@@ -109,7 +109,9 @@ export function PoliciesSection({
           <h4>Законы</h4>
         </header>
         {laws.length === 0 ? (
-          <p className="hint">Активных законов нет. Enact — в следующих фазах.</p>
+          <p className="hint">
+            Активных законов нет. Принятие законов — в следующих фазах.
+          </p>
         ) : (
           <ul className="eco-laws-list">
             {laws.map((id) => (

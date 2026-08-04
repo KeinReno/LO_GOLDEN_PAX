@@ -40,6 +40,9 @@ const FILE_KEYS = [
   "faction_traits",
   "diplomacy_stances",
   "yearly_quests",
+  "hybrid_rules",
+  "cultures",
+  "faiths",
 ];
 
 let cache = null;
@@ -123,6 +126,9 @@ function loadContentPacks(packIds = ["core"]) {
   let faction_traits = { meta: {}, traits: {} };
   let diplomacy_stances = {};
   let yearly_quests = {};
+  let hybrid_rules = {};
+  let cultures = {};
+  let faiths = {};
   let id_aliases = { version: 1, ships: {}, resources: {}, units: {} };
 
   for (const id of packIds) {
@@ -206,6 +212,29 @@ function loadContentPacks(packIds = ["core"]) {
     }
     diplomacy_stances = mergeDicts(diplomacy_stances, pack.diplomacy_stances);
     yearly_quests = mergeDicts(yearly_quests, pack.yearly_quests);
+    if (pack.hybrid_rules && typeof pack.hybrid_rules === "object") {
+      hybrid_rules = { ...hybrid_rules, ...pack.hybrid_rules };
+    }
+    if (pack.cultures && typeof pack.cultures === "object") {
+      cultures = {
+        ...cultures,
+        ...pack.cultures,
+        cultures: {
+          ...(cultures.cultures || {}),
+          ...(pack.cultures.cultures || {}),
+        },
+      };
+    }
+    if (pack.faiths && typeof pack.faiths === "object") {
+      faiths = {
+        ...faiths,
+        ...pack.faiths,
+        faiths: {
+          ...(faiths.faiths || {}),
+          ...(pack.faiths.faiths || {}),
+        },
+      };
+    }
     if (
       pack.market_quote_seed &&
       typeof pack.market_quote_seed === "object" &&
@@ -258,6 +287,9 @@ function loadContentPacks(packIds = ["core"]) {
     faction_traits,
     diplomacy_stances,
     yearly_quests,
+    hybrid_rules,
+    cultures,
+    faiths,
     id_aliases,
     loadedAt: new Date().toISOString(),
   };
@@ -313,6 +345,9 @@ export function getPublicContent() {
     faction_traits: c.faction_traits,
     diplomacy_stances: c.diplomacy_stances,
     yearly_quests: c.yearly_quests,
+    hybrid_rules: c.hybrid_rules,
+    cultures: c.cultures,
+    faiths: c.faiths,
     effects: Object.keys(c.effects.effects || {}),
     loadedAt: c.loadedAt,
   };

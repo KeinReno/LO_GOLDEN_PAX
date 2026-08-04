@@ -1,5 +1,4 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CanvasRevealEffect } from "../../ui/CanvasRevealEffect";
 import {
   DROP_ZONES,
   FORGE_METAL_COST,
@@ -93,10 +92,10 @@ export function DropZones({
       {active && draggedCard && (
         <motion.div
           className="forces-drop-zones"
-          initial={reduce ? false : { opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={reduce ? undefined : { opacity: 0, height: 0 }}
-          transition={{ duration: 0.2 }}
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduce ? undefined : { opacity: 0 }}
+          transition={{ duration: 0.15 }}
         >
           {zones.map((zone) => {
             const { ok, reason } = canDrop(zone.id, draggedCard);
@@ -125,25 +124,13 @@ export function DropZones({
                 onPointerLeave={() => onHover(null)}
                 title={hint}
               >
-                <AnimatePresence>
-                  {isHovered && ok && !reduce && (
-                    <motion.div
-                      className="forces-drop-reveal"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CanvasRevealEffect
-                        active
-                        animationSpeed={zone.id === "disband" ? 4.2 : 3.2}
-                        colors={zone.revealColors}
-                        dotSize={2}
-                        showGradient
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* CSS reveal only — canvas effect caused drag-frame GPU/memory spikes */}
+                {isHovered && ok && !reduce && (
+                  <div
+                    className="forces-drop-reveal forces-drop-reveal--css"
+                    aria-hidden
+                  />
+                )}
                 <div className="forces-drop-zone-body">
                   <Icon size={22} strokeWidth={1.6} aria-hidden />
                   <span className="forces-drop-label">{zone.label}</span>

@@ -78,6 +78,10 @@ export type TechnologyDef = {
   requireProperties?: string[];
   /** Era-5+ breakthrough tech (distinct radial styling). */
   isBreakthrough?: boolean;
+  /** Parent species ids for hybrid synthesis techs. */
+  hybridOf?: string[];
+  /** Required race_hybrid.* lineage (or population gate). */
+  requiresLineage?: string;
   balanceBudget?: number;
 };
 
@@ -257,8 +261,44 @@ export type PublicContent = {
       habitability?: Record<string, number>;
       growth?: { baseRate?: number; crowdPenalty?: number };
       xenorelations?: Record<string, number>;
+      hybridOf?: string[];
     }
   >;
+  hybrid_rules?: {
+    minParentSharePercent?: number;
+    foundLineageCost?: Record<string, number>;
+    lineageCompositionPercent?: number;
+    compatibility?: Record<string, string[]>;
+    forbiddenReason?: Record<string, string>;
+  };
+  cultures?: {
+    meta?: { version?: number };
+    cultures?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        tags?: string[];
+        compatibleRaces?: string[];
+        effects?: EffectInstance[];
+        balanceBudget?: number;
+      }
+    >;
+  };
+  faiths?: {
+    meta?: { version?: number };
+    faiths?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        tags?: string[];
+        taboo_properties?: string[];
+        effects?: EffectInstance[];
+        balanceBudget?: number;
+      }
+    >;
+  };
   loyalty_tiers?: {
     loyalty_tiers?: Array<{
       min?: number;

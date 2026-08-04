@@ -1,4 +1,5 @@
 import type { SystemPoiType } from "../state/types";
+import { spaceObjectKindLabel } from "../state/displayLabels";
 import { getCachedContent } from "../state/contentCatalog";
 
 /** Player-facing “what do I do?” tips — complements content description. */
@@ -39,7 +40,7 @@ export function resolvePoiIntel(tag: SystemPoiType): PoiIntel {
   return {
     tag,
     name: def?.name ?? tag,
-    kind: def?.kind,
+    kind: def?.kind ? spaceObjectKindLabel(def.kind) : undefined,
     description:
       def?.description ??
       "Объект пояса системы. Следи за эффектами на потоки и миссии.",

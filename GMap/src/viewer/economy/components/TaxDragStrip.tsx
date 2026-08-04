@@ -65,7 +65,9 @@ export function TaxDragStrip({
     <div className={`eco-tax-strip ${dragging ? "is-dragging" : ""}`}>
       <header className="eco-tax-strip__head">
         <strong>{slot.name}</strong>
-        <span className="tabular-nums">{activeTier?.label ?? "—"}</span>
+        <span className="tabular-nums eco-tax-strip__value">
+          {activeTier?.label ?? "—"}
+        </span>
       </header>
       <div
         className="eco-tax-strip__track"

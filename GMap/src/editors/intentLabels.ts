@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   "intent.research_upgrade": "Апгрейд технологии",
   "intent.set_research_queue": "Очередь исследований",
   "intent.set_build_queue": "Очередь строительства",
+  "intent.found_hybrid_lineage": "Основать гибридный линейдж",
   "intent.trade_tech": "Обмен технологией",
 };
 

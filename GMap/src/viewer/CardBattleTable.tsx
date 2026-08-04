@@ -7,11 +7,13 @@ import { CardBoard } from "../ui/cardBoardContext";
 import { DragCard } from "../ui/DragCard";
 import { DropZone } from "../ui/DropZone";
 import type { BattleCard, CardBattleLogEntry, CardBattleState } from "../state/types";
+import { resolveShipOrUnitName } from "../state/displayLabels";
 import type { ViewerEngagement } from "./PlayerEngagementPanel";
 import { COMBAT_STANCE_LABELS, type CombatStanceId } from "./PlayerEngagementPanel";
+import { COMBAT_ROLE_LABELS } from "./forces/constants";
 
-function shortDef(defId: string): string {
-  return defId.replace(/^(ship|unit)\./, "");
+function battleCardRole(role: string): string {
+  return COMBAT_ROLE_LABELS[role] ?? role;
 }
 
 function CardFace({
@@ -272,8 +274,8 @@ export function CardBattleTable({
                     >
                       <DragCard
                         cardId={c.cardId}
-                        title={shortDef(c.defId)}
-                        subtitle={c.role}
+                        title={resolveShipOrUnitName(c.defId)}
+                        subtitle={battleCardRole(c.role)}
                         pinned
                         accent="var(--signal-attack)"
                       >
@@ -325,8 +327,8 @@ export function CardBattleTable({
                     >
                       <DragCard
                         cardId={c.cardId}
-                        title={shortDef(c.defId)}
-                        subtitle={c.role}
+                        title={resolveShipOrUnitName(c.defId)}
+                        subtitle={battleCardRole(c.role)}
                         pinned
                         accent="var(--accent)"
                       >
@@ -363,8 +365,8 @@ export function CardBattleTable({
                     <div key={c.cardId} className="cbt-hand-slot" role="listitem">
                       <DragCard
                         cardId={c.cardId}
-                        title={shortDef(c.defId)}
-                        subtitle={`${c.role} · ×${c.count}`}
+                        title={resolveShipOrUnitName(c.defId)}
+                        subtitle={`${battleCardRole(c.role)} · ×${c.count}`}
                         accent="var(--accent)"
                         pinned={!isMyTurn || busy || busyProp}
                         tilt={isMyTurn}

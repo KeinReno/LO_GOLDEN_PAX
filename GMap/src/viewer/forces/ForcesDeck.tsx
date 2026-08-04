@@ -96,6 +96,8 @@ export function ForcesDeck({
   const reduce = useReducedMotion();
   const pendingStock = useRef<Record<string, number>>({});
   const mutateBusyRef = useRef(false);
+  const hoverRafRef = useRef<number | null>(null);
+  const hoverPointRef = useRef<{ x: number; y: number } | null>(null);
   const [mutateBusy, setMutateBusy] = useState(false);
   /** Optimistic composition while mutate is in flight / until payload catches up. */
   const [localComp, setLocalComp] = useState<ShipGroup[] | null>(null);
@@ -172,7 +174,18 @@ export function ForcesDeck({
     onToast?.(toast);
     const t = window.setTimeout(() => clearToast(), 2800);
     return () => window.clearTimeout(t);
-  }, [toast, onToast, clearToast]);
+    // Intentionally omit onToast — parent passes inline lambdas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast, clearToast]);
+
+  useEffect(() => {
+    return () => {
+      if (hoverRafRef.current != null) {
+        cancelAnimationFrame(hoverRafRef.current);
+        hoverRafRef.current = null;
+      }
+    };
+  }, []);
 
   const notify = (msg: string) => setToast(msg);
 
@@ -537,18 +550,20 @@ export function ForcesDeck({
                   onTap={() => toggleCard(index)}
                   onDragStart={() => startDrag(index)}
                   onDragMove={(point) => {
-                    setHoveredZone(hitDropZone(point.x, point.y));
+                    hoverPointRef.current = point;
+                    if (hoverRafRef.current != null) return;
+                    hoverRafRef.current = requestAnimationFrame(() => {
+                      hoverRafRef.current = null;
+                      const p = hoverPointRef.current;
+                      if (!p) return;
+                      setHoveredZone(hitDropZone(p.x, p.y));
+                    });
                   }}
                   onDragEnd={(result) => handleDragEnd(index, result)}
                   onLongPress={() => {
-                    selectCard(index);
-                    if (deckKind === "fleet" && activeFleet) {
-                      onOrderWithFleet?.(activeFleet.id);
-                      notify("Режим приказов");
-                    } else if (deckKind === "legion" && activeLegion) {
-                      onOrderWithLegion?.(activeLegion.id);
-                      notify("Режим приказов");
-                    }
+                    // Stay in the deck — never navigate mid-gesture (was freezing the tab).
+                    openEquip(index);
+                    notify("Оснащение · долгий тап");
                   }}
                 />
               </div>
@@ -559,6 +574,7 @@ export function ForcesDeck({
         <AnimatePresence>
           {selectedGroup && selectedCardIndex != null && !isDragging && (
             <CardDetailStrip
+              key={`strip-${selectedCardIndex}-${stripMode}`}
               group={selectedGroup}
               catalogItem={selectedCatalog}
               mode={stripMode}

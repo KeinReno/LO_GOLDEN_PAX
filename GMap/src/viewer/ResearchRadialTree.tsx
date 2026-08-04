@@ -227,7 +227,12 @@ export function ResearchRadialTree({
           cost,
           upgradeStars,
           upgradeTotal,
-          exclusive: !!(tech.raceLock || tech.factionTraitLock),
+          exclusive: !!(
+            tech.raceLock ||
+            tech.factionTraitLock ||
+            tech.hybridOf?.length ||
+            tech.requiresLineage
+          ),
           breakthrough,
         };
         nodeList.push(node);
@@ -578,7 +583,8 @@ export function ResearchRadialTree({
               <span className="research-radial-node-top">
                 <span className="research-radial-node-era">
                   {n.exclusive ? "🔒" : ""}
-                  {n.tech.category}
+                  {ECO_CATEGORY_NAMES[n.tech.category] ?? n.tech.category}
+                  {" · "}
                   {n.tech.era}
                 </span>
                 <span className="research-radial-node-cost tabular">

@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  economyDeficitLabel,
+  resolveResourceOrCurrencyLabel,
+} from "../state/displayLabels";
+import { BUILD_METAL, BUILD_SUPPLY } from "../state/economyLabels";
 import { useWorldStore } from "../state/worldStore";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { FlowPanel } from "../viewer/FlowPanel";
@@ -103,13 +108,14 @@ export function EconomyPanel() {
             </strong>
             <br />
             <span className="hint">
-              дефицит: {eco.deficit} · давление: {eco.pressure}
+              дефицит: {economyDeficitLabel(eco.deficit)} · давление:{" "}
+              {eco.pressure}
             </span>
           </div>
           <ul className="hint" style={{ paddingLeft: 16 }}>
             {Object.entries(eco.stocks || {}).map(([k, v]) => (
               <li key={k}>
-                {k.replace("currency.", "")}: {v}
+                {resolveResourceOrCurrencyLabel(k)}: {v}
               </li>
             ))}
           </ul>
@@ -143,9 +149,11 @@ export function EconomyPanel() {
             if (!e) return null;
             return (
               <p key={f.id} className="hint">
-                <span style={{ color: f.color }}>{f.name}</span>: metal{" "}
-                {e.stocks?.["currency.metal"] ?? "—"} · supply{" "}
-                {e.stocks?.["currency.supply"] ?? "—"} · {e.deficit}
+                <span style={{ color: f.color }}>{f.name}</span>:{" "}
+                {BUILD_METAL.label}{" "}
+                {e.stocks?.["currency.metal"] ?? "—"} · {BUILD_SUPPLY.label}{" "}
+                {e.stocks?.["currency.supply"] ?? "—"} ·{" "}
+                {economyDeficitLabel(e.deficit)}
               </p>
             );
           })}

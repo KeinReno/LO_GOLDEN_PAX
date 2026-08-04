@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Культуры: нормы населения (не раса). Эффекты через ModifierStack.",
+    "budgetRange": [-2, 2]
+  },
+  "cultures": {
+    "culture.baseline": {
+      "id": "culture.baseline",
+      "name": "Базовая",
+      "tags": ["general"],
+      "effects": [],
+      "balanceBudget": 0
+    },
+    "culture.imperial_court": {
+      "id": "culture.imperial_court",
+      "name": "Имперский двор",
+      "tags": ["imperial", "discipline"],
+      "compatibleRaces": ["race_human", "race_belator", "race_horn"],
+      "effects": [
+        {
+          "effect": "loyalty_add",
+          "args": { "amount": 2 }
+        },
+        {
+          "effect": "research_cost_mult",
+          "args": { "mult": 1.05 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.frontier": {
+      "id": "culture.frontier",
+      "name": "Пограничье",
+      "tags": ["expansionist"],
+      "effects": [
+        {
+          "effect": "pop_growth_mult",
+          "args": { "mult": 1.06 }
+        },
+        {
+          "effect": "stability_add",
+          "args": { "amount": -1 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.mercantile": {
+      "id": "culture.mercantile",
+      "name": "Купеческая",
+      "tags": ["trade"],
+      "compatibleRaces": ["race_human", "race_human_barial"],
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.supply", "mult": 1.08 }
+        },
+        {
+          "effect": "loyalty_add",
+          "args": { "amount": -1 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.machine_cult": {
+      "id": "culture.machine_cult",
+      "name": "Культ Машины",
+      "tags": ["synthetic"],
+      "compatibleRaces": ["race_synth", "race_voidborn"],
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.industria", "mult": 1.1 }
+        },
+        {
+          "effect": "loyalty_mult",
+          "args": { "mult": 0.95 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.stone_clan": {
+      "id": "culture.stone_clan",
+      "name": "Клан Камня",
+      "tags": ["lithoid"],
+      "compatibleRaces": ["race_karned"],
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.extracta", "mult": 1.08 }
+        },
+        {
+          "effect": "move_cost_mult",
+          "args": { "mult": 1.05 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.hive_caste": {
+      "id": "culture.hive_caste",
+      "name": "Роевые касты",
+      "tags": ["swarm", "hive"],
+      "compatibleRaces": ["race_swarm"],
+      "effects": [
+        {
+          "effect": "loyalty_add",
+          "args": { "amount": 3 }
+        },
+        {
+          "effect": "diplomacy_trust_decay_mult",
+          "args": { "mult": 1.2 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.dust_liturgy": {
+      "id": "culture.dust_liturgy",
+      "name": "Пылевая литургия",
+      "tags": ["ghost", "psionic"],
+      "compatibleRaces": ["race_lord_dust", "race_psionic"],
+      "effects": [
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.cognitio", "mult": 1.1 }
+        },
+        {
+          "effect": "upkeep_flat",
+          "args": { "resource": "currency.energia", "amount": 1 }
+        }
+      ],
+      "balanceBudget": 0
+    },
+    "culture.syncretic": {
+      "id": "culture.syncretic",
+      "name": "Синкретическая",
+      "tags": ["hybrid", "mixed"],
+      "effects": [
+        {
+          "effect": "loyalty_add",
+          "args": { "amount": 1 }
+        },
+        {
+          "effect": "production_mult",
+          "args": { "mult": 0.97 }
+        }
+      ],
+      "balanceBudget": 0
+    }
+  }
+}

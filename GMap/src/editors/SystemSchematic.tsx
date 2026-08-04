@@ -16,6 +16,7 @@ import {
   planetsByOrbit,
 } from "../state/planets";
 import { STAR_CLASS_LABELS, SYSTEM_POI_LABELS } from "../state/defaults";
+import { stationKindLabel } from "../state/displayLabels";
 import { systemSpaceObjects } from "../state/spaceObjects";
 import { mapIconUrl, poiIconId } from "../renderers/mapIconAssets";
 import { resolveResourceDisplay } from "../ui/ResourceIcon";
@@ -1354,7 +1355,7 @@ function renderStationIso({
         strokeWidth={0.8}
       />
       <title>
-        {st.name} · {st.kind}
+        {st.name} · {stationKindLabel(st.kind)}
         {anchored ? ` · ось ${anchored.name}` : " · пояс системы"}
       </title>
     </g>

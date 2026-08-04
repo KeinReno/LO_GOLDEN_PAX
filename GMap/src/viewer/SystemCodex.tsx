@@ -8,6 +8,7 @@ import {
   Globe2,
   Radar,
 } from "lucide-react";
+import { buildingZoneLabel } from "../state/displayLabels";
 import { useWorldStore } from "../state/worldStore";
 import { getCachedContent } from "../state/contentCatalog";
 import { ResourceIcon } from "../ui/ResourceIcon";
@@ -232,7 +233,7 @@ export function SystemCodex({
                     <li key={b.id} className="sys-codex__card">
                       <header>
                         <strong>{b.name}</strong>
-                        <span className="sys-codex__tag">{b.zone}</span>
+                        <span className="sys-codex__tag">{buildingZoneLabel(b.zone)}</span>
                         <span className="sys-codex__cost">
                           {b.costLabel}
                           <em>{b.ap} AP</em>
