@@ -32,7 +32,7 @@ function recordAppliedIntent({ factionId, defId, payload, note, turn, apCost }) 
 }
 
 /**
- * @param {{ world: object, factionId: string, action: string, questId?: string, choiceId?: string, specIndex?: number, note?: string, apMax?: number }} opts
+ * @param {{ world: object, factionId: string, action: string, questId?: string, choiceId?: string, specIndex?: number, note?: string, message?: string, apMax?: number }} opts
  */
 export function applyQuestAction(opts) {
   const {
@@ -43,12 +43,35 @@ export function applyQuestAction(opts) {
     choiceId,
     specIndex = 0,
     note,
+    message,
   } = opts;
   if (!world) return { ok: false, error: "Нет мира" };
   if (!factionId) return { ok: false, error: "Нет фракции" };
 
   const content = getContent();
   const turn = world.meta?.turn ?? 0;
+
+  if (action === "send_quest_message") {
+    if (!questId) return { ok: false, error: "questId required" };
+    const text = String(message || note || "").trim().slice(0, 2000);
+    if (!text) return { ok: false, error: "Пустое сообщение" };
+    const quest = (world.quests || []).find((q) => q.id === questId);
+    if (!quest) return { ok: false, error: "Квест не найден" };
+    if (quest.sourceFactionId && quest.sourceFactionId !== factionId) {
+      return { ok: false, error: "Чужой квест" };
+    }
+    if (!Array.isArray(quest.history)) quest.history = [];
+    quest.history.push({
+      at: new Date().toISOString(),
+      turn,
+      kind: "message",
+      body: text,
+      authorName: "Игрок",
+    });
+    writeLiveBoard(world, { backup: false, reason: "quest_message" });
+    return { ok: true, quest, message: "Сообщение записано в журнал квеста" };
+  }
+
   const defId =
     action === "throw_quest_dice"
       ? "intent.throw_quest_dice"

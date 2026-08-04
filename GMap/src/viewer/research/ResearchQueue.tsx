@@ -1,10 +1,12 @@
 import { useRef, useState, type DragEvent } from "react";
 import type { TechnologyDef, EconomyCategory } from "../../state/contentCatalog";
+import { effectiveCognitioCost } from "../../state/researchCosts";
+import type { ViewerPayload } from "../../state/types";
 import { ECO_CATEGORY_NAMES, ECO_CATEGORY_COLORS } from "../economyFlowTypes";
 import { QUEUE_MAX, TECH_DND_MIME } from "./constants";
 
-function cognitioCost(tech: TechnologyDef): number {
-  return Number(tech.cost?.["currency.cognitio"] ?? 0);
+function cognitioCost(tech: TechnologyDef, eco?: ViewerPayload["economy"]): number {
+  return effectiveCognitioCost(tech, eco, tech.category);
 }
 
 export type QueueForecastItem = {
@@ -24,6 +26,7 @@ export function ResearchQueue({
   onSelect,
   onChangeQueue,
   onAccelerate,
+  eco,
 }: {
   queue: string[];
   byId: Map<string, TechnologyDef>;
@@ -36,6 +39,7 @@ export function ResearchQueue({
   onChangeQueue: (next: string[]) => void;
   /** Rush: pay 150% → unlock now. */
   onAccelerate?: (techId: string) => void;
+  eco?: ViewerPayload["economy"];
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -115,7 +119,7 @@ export function ResearchQueue({
       <ol className="research-queue-slots">
         {slots.map((techId, i) => {
           const tech = techId ? byId.get(techId) : undefined;
-          const cost = tech ? cognitioCost(tech) : 0;
+          const cost = tech ? cognitioCost(tech, eco) : 0;
           const cat = (tech?.category ?? "A") as EconomyCategory;
           const forecast = forecasts?.find((f) => f.techId === techId);
           const empty = !tech;

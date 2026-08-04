@@ -1,5 +1,8 @@
 import type { ShipGroup } from "../../state/types";
+import { getCachedContent } from "../../state/contentCatalog";
 import type { UnitCardModel } from "./UnitCard";
+
+const DEFAULT_XP_THRESHOLDS = [0, 100, 250, 500, 900, 1500];
 
 function cloneGroup(g: UnitCardModel): ShipGroup {
   return {
@@ -58,6 +61,16 @@ export function mergeComposition(
   if (!sameClass(from, to)) {
     return { ok: false, reason: "Нельзя объединить разные классы" };
   }
+  const aFills = from.filledSlots ?? {};
+  const bFills = to.filledSlots ?? {};
+  for (const role of Object.keys(aFills)) {
+    if (bFills[role] && bFills[role] !== aFills[role]) {
+      return {
+        ok: false,
+        reason: "Разное оснащение — снимите слоты или объедините одинаковые",
+      };
+    }
+  }
   const next = composition.map(cloneGroup);
   const a = next[fromIdx];
   const b = next[toIdx];
@@ -72,10 +85,10 @@ export function mergeComposition(
   if (avgHp != null) b.hp = avgHp;
   b.level = Math.max(a.level ?? 0, b.level ?? 0);
   b.xp = (a.xp ?? 0) + (b.xp ?? 0);
-  // Prefer richer loadout when merging
+  // Union compatible loadouts (conflicts rejected above)
   b.filledSlots = {
-    ...(a.filledSlots ?? {}),
-    ...(b.filledSlots ?? {}),
+    ...aFills,
+    ...bFills,
   };
   if (Object.keys(b.filledSlots).length === 0) b.filledSlots = undefined;
   next.splice(fromIdx, 1);
@@ -91,12 +104,15 @@ export function disbandAt(
   }
   const next = composition.map(cloneGroup);
   const cur = next[index];
+  const wasLast = cur.count <= 1;
+  // Modules are stack-shared: only the last unit of a stack takes fills (and refunds).
   const removed: UnitCardModel = {
     type: cur.type,
     count: 1,
     defId: cur.defId,
     hp: cur.hp,
-    filledSlots: cur.filledSlots ? { ...cur.filledSlots } : undefined,
+    filledSlots:
+      wasLast && cur.filledSlots ? { ...cur.filledSlots } : undefined,
     xp: cur.xp,
     level: cur.level,
   };
@@ -120,8 +136,20 @@ export function upgradeAt(
   if (level >= 5) {
     return { ok: false, reason: "Максимальный ранг" };
   }
-  next[index].level = level + 1;
-  next[index].xp = (next[index].xp ?? 0) + 100;
+  const nextLevel = level + 1;
+  next[index].level = nextLevel;
+  const thresholds =
+    (
+      getCachedContent()?.rules as
+        | { veterancy?: { thresholds?: number[] } }
+        | undefined
+    )?.veterancy?.thresholds ?? DEFAULT_XP_THRESHOLDS;
+  const nextThreshold =
+    thresholds[nextLevel] ??
+    thresholds[thresholds.length - 1] ??
+    DEFAULT_XP_THRESHOLDS[nextLevel] ??
+    0;
+  next[index].xp = Math.max(next[index].xp ?? 0, nextThreshold);
   return { ok: true, next };
 }
 

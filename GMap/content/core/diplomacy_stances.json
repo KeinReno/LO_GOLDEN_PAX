@@ -56,12 +56,14 @@
   "vassal": {
     "id": "vassal",
     "name": "Вассалитет",
+    "asymmetric": true,
     "effects": [
       {
         "effect": "production_mult",
         "args": { "resource": "currency.metal", "mult": 0.95 }
       }
     ],
+    "effectsOverlord": [],
     "duration": "permanent",
     "breakable": true,
     "trustDecayOnBreak": 20,

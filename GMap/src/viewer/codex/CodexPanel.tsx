@@ -63,6 +63,8 @@ export function CodexPanel({ payload }: { payload: ViewerPayload }) {
               key={s.id}
               type="button"
               role="tab"
+              id={`codex-tab-${s.id}`}
+              aria-controls={`codex-panel-${s.id}`}
               aria-selected={section === s.id}
               className={`codex-tab ${section === s.id ? "is-active" : ""}`}
               onClick={() => setSection(s.id)}
@@ -99,7 +101,12 @@ export function CodexPanel({ payload }: { payload: ViewerPayload }) {
       </div>
 
       {section === "history" ? (
-        <div className="codex-history">
+        <div
+          className="codex-history"
+          id="codex-panel-history"
+          role="tabpanel"
+          aria-labelledby="codex-tab-history"
+        >
           {history.length === 0 ? (
             <p className="codex-empty">Журнал разведки пуст.</p>
           ) : (
@@ -118,13 +125,23 @@ export function CodexPanel({ payload }: { payload: ViewerPayload }) {
           )}
         </div>
       ) : entries.length === 0 ? (
-        <p className="codex-empty">
+        <p
+          className="codex-empty"
+          id={`codex-panel-${section}`}
+          role="tabpanel"
+          aria-labelledby={`codex-tab-${section}`}
+        >
           Нет известных записей
           {minLevel !== "all" ? ` (уровень ≥ ${minLevel})` : ""}.
           Собирайте intel флотом, дипломатией или шпионажем.
         </p>
       ) : (
-        <div className="codex-grid">
+        <div
+          className="codex-grid"
+          id={`codex-panel-${section}`}
+          role="tabpanel"
+          aria-labelledby={`codex-tab-${section}`}
+        >
           {entries.map((e) => (
             <CodexEntry key={`${e.section}-${e.id}`} entry={e} />
           ))}

@@ -1,16 +1,24 @@
 import { useCallback, type MouseEvent } from "react";
 
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 /**
  * Aceternity "Card Spotlight" port — radial gradient follows the pointer.
- * Attach the returned handlers to any element with class `fx-spotlight`.
- * Reads --fx-spot-color (defaults to accent) and --fx-spot-size.
+ * Attach handlers to any element with class `fx-spotlight`.
+ * Color: `--fx-spot-color` (default imperial gold / accent-holo).
  *
  * Usage:
  *   const sp = useSpotlight();
- *   <button className="fx-spotlight" {...sp.bind} style={{ "--fx-spot-color": catColor }}>
+ *   <button className="fx-spotlight" {...sp.bind}>
  */
 export function useSpotlight() {
   const onMove = useCallback((e: MouseEvent<HTMLElement>) => {
+    if (prefersReducedMotion()) return;
     const el = e.currentTarget;
     const r = el.getBoundingClientRect();
     el.style.setProperty("--mouse-x", `${e.clientX - r.left}px`);
@@ -25,13 +33,13 @@ export function useSpotlight() {
 }
 
 /**
- * Aceternity "3D Card Effect" port — pointer-driven tilt with spring settle.
- * Returns bind handlers + a ref. Element needs class `fx-tilt` and an inner
- * layer with `fx-tilt-inner` (translates in Z for parallax).
+ * Aceternity "3D Card Effect" port — pointer-driven tilt.
+ * Disabled under prefers-reduced-motion.
  */
 export function useTilt(max = 8) {
   const onMove = useCallback(
     (e: MouseEvent<HTMLElement>) => {
+      if (prefersReducedMotion()) return;
       const el = e.currentTarget;
       const r = el.getBoundingClientRect();
       const px = (e.clientX - r.left) / r.width - 0.5;

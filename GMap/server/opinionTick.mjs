@@ -236,15 +236,29 @@ export function runOpinionTick(world, turn, content = null) {
 
 /**
  * Sync DiplomacyEdge relation into bilateral Treaty objects on both factions.
+ * Convention for asymmetric relations (vassal): aId = overlord, bId = subject,
+ * unless opts.subjectFactionId / opts.overlordFactionId override.
+ * Content may supply effectsSubject / effectsOverlord / asymmetric / effect.side.
  */
-export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances) {
+export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances, opts = {}) {
   const catalog = stances || getContent()?.diplomacy_stances || {};
   const stance = catalog[relation] || { effects: [], defaultDurationTurns: null };
-  const effects = Array.isArray(stance.effects) ? stance.effects : [];
   let expiresTurn = null;
   if (stance.duration === "turns" && stance.defaultDurationTurns) {
     expiresTurn = turn + Number(stance.defaultDurationTurns);
   }
+
+  const subjectId =
+    opts.subjectFactionId ||
+    opts.vassalFactionId ||
+    (relation === "vassal" || stance.asymmetric ? bId : null);
+  const overlordId =
+    opts.overlordFactionId ||
+    (subjectId && subjectId === bId
+      ? aId
+      : subjectId && subjectId === aId
+        ? bId
+        : null);
 
   for (const [selfId, otherId] of [
     [aId, bId],
@@ -256,6 +270,10 @@ export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances) {
     // Remove previous non-neutral treaty with other
     d.treaties = d.treaties.filter((t) => t.withFactionId !== otherId);
     if (relation && relation !== "neutral") {
+      const effects = stanceEffectsForParty(stance, relation, selfId, {
+        subjectId,
+        overlordId,
+      });
       d.treaties.push({
         id: `treaty_${selfId}_${otherId}_${relation}`,
         type: relation,
@@ -263,6 +281,8 @@ export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances) {
         startedTurn: turn,
         expiresTurn,
         effects: effects.map((e) => ({ ...e })),
+        ...(subjectId ? { subjectFactionId: subjectId } : {}),
+        ...(overlordId ? { overlordFactionId: overlordId } : {}),
       });
     }
     pushDiploHistory(fac, {
@@ -272,6 +292,50 @@ export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances) {
       label: `Отношения: ${relation}`,
     });
   }
+}
+
+/**
+ * Resolve which stance effects apply to one party of a bilateral relation.
+ */
+function stanceEffectsForParty(stance, relation, selfId, { subjectId, overlordId }) {
+  const base = Array.isArray(stance.effects) ? stance.effects : [];
+  const asymmetric =
+    stance.asymmetric === true ||
+    relation === "vassal" ||
+    Array.isArray(stance.effectsSubject) ||
+    Array.isArray(stance.effectsOverlord);
+
+  const filterSide = (effects, role) =>
+    (effects || []).filter((e) => {
+      if (!e?.effect) return false;
+      const side = e.side || e.args?.side;
+      if (!side || side === "both") return true;
+      if (side === "vassal" || side === "subject") return role === "subject";
+      if (side === "overlord") return role === "overlord";
+      if (side === "self") return true;
+      return true;
+    });
+
+  if (!asymmetric) {
+    return filterSide(base, "both").map((e) => ({ ...e }));
+  }
+
+  // Without a known subject, skip effects rather than applying bilaterally.
+  if (!subjectId && !overlordId) return [];
+
+  if (selfId === subjectId) {
+    const subj = Array.isArray(stance.effectsSubject)
+      ? stance.effectsSubject
+      : base;
+    return filterSide(subj, "subject").map((e) => ({ ...e }));
+  }
+  if (selfId === overlordId || (subjectId && selfId !== subjectId)) {
+    const over = Array.isArray(stance.effectsOverlord)
+      ? stance.effectsOverlord
+      : [];
+    return filterSide(over, "overlord").map((e) => ({ ...e }));
+  }
+  return [];
 }
 
 /**
@@ -325,10 +389,33 @@ export function collectTreatyEffects(faction) {
   const catalog = getContent()?.diplomacy_stances || {};
   const out = [];
   for (const t of d.treaties) {
-    let effects = t.effects || [];
-    if (!effects.length) {
+    let effects;
+    if (Array.isArray(t.effects)) {
+      // Respect explicit [] (asymmetric overlord / empty subject side).
+      effects = t.effects;
+    } else {
       const stance = catalog[t.type];
-      effects = Array.isArray(stance?.effects) ? stance.effects : [];
+      const asymmetric =
+        stance?.asymmetric === true ||
+        t.type === "vassal" ||
+        Array.isArray(stance?.effectsSubject) ||
+        Array.isArray(stance?.effectsOverlord);
+      if (asymmetric) {
+        const subjectId = t.subjectFactionId || null;
+        if (subjectId && faction.id !== subjectId) {
+          effects = Array.isArray(stance?.effectsOverlord)
+            ? stance.effectsOverlord
+            : [];
+        } else {
+          effects = Array.isArray(stance?.effectsSubject)
+            ? stance.effectsSubject
+            : Array.isArray(stance?.effects)
+              ? stance.effects
+              : [];
+        }
+      } else {
+        effects = Array.isArray(stance?.effects) ? stance.effects : [];
+      }
     }
     for (const e of effects) {
       if (!e?.effect) continue;
@@ -338,8 +425,7 @@ export function collectTreatyEffects(faction) {
         label: t.type,
       };
       if (e.effect === "treaty_effect") {
-        out.push({ ...e, source });
-        // Unwrap nested effect for ModifierStack channels (research_pact cognitio, etc.)
+        // Unwrap nested effect only — avoid stacking treaty_effect + direct mult.
         if (e.args?.effect) {
           out.push({
             effect: e.args.effect,

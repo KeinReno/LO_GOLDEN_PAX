@@ -32,10 +32,10 @@ export type MarketBookStats = {
 };
 
 export const MARKET_TAB_ORDER: { id: MarketTab; label: string; hotkey: string }[] = [
-  { id: "quotes", label: "Ресурсы", hotkey: "1" },
-  { id: "currencies", label: "Валюты", hotkey: "2" },
-  { id: "trade", label: "Торговля", hotkey: "3" },
-  { id: "superpowers", label: "Сверхдержавы", hotkey: "4" },
+  { id: "quotes", label: "Ресурсы", hotkey: "Alt+1" },
+  { id: "currencies", label: "Валюты", hotkey: "Alt+2" },
+  { id: "trade", label: "Торговля", hotkey: "Alt+3" },
+  { id: "superpowers", label: "Сверхдержавы", hotkey: "Alt+4" },
 ];
 type TradeVenue = "contacts" | "common";
 type HistoryPoint = { turn: number; price: number; volume: number };
@@ -507,6 +507,7 @@ export function MarketPanel({
   onPlaceOffer,
   onCancelOffer,
   onEconomyPatch,
+  onSessionPatch,
   asRoom,
   tab: controlledTab,
   onTabChange,
@@ -530,7 +531,7 @@ export function MarketPanel({
     fromCurrency: string,
     toCurrency: string,
     amountFrom: number,
-  ) => void;
+  ) => void | Promise<boolean | void>;
   onPlaceOffer?: (
     side: "sell" | "buy",
     giveCurrency: string,
@@ -538,9 +539,11 @@ export function MarketPanel({
     wantCurrency: string,
     wantAmount: number,
     venue: "common" | "contacts",
-  ) => void;
-  onCancelOffer?: (offerId: string) => void;
+  ) => void | Promise<boolean | void>;
+  onCancelOffer?: (offerId: string) => void | Promise<boolean | void>;
   onEconomyPatch?: (eco: ViewerPayload["economy"]) => void;
+  /** Merge full session fields after instant market actions (scout fog etc.). */
+  onSessionPatch?: (data: Partial<ViewerPayload>) => void;
   asRoom?: boolean;
   tab?: MarketTab;
   onTabChange?: (tab: MarketTab) => void;
@@ -561,6 +564,9 @@ export function MarketPanel({
   const [venue, setVenue] = useState<TradeVenue>("contacts");
   const [ready, setReady] = useState(false);
   const [market, setMarket] = useState<MarketSchema | null>(null);
+  const [liveRates, setLiveRates] = useState<
+    MarketSchema["placeholder_rates"] | null
+  >(null);
   const [resources, setResources] = useState<MapResourceDef[]>([]);
   const [fx, setFx] = useState<FactionCurrency[]>([]);
   const [seedSeries, setSeedSeries] = useState<Record<string, number[]>>({});
@@ -612,6 +618,8 @@ export function MarketPanel({
   const [composeHint, setComposeHint] = useState<string | null>(null);
   const [offerSubmitting, setOfferSubmitting] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
+  const [convertBusy, setConvertBusy] = useState(false);
+  const [convertMsg, setConvertMsg] = useState<string | null>(null);
   const [superBusy, setSuperBusy] = useState<string | null>(null);
   const [superSuccess, setSuperSuccess] = useState<string | null>(null);
 
@@ -675,7 +683,10 @@ export function MarketPanel({
 
   useEffect(() => {
     if (!orderMsg) return;
-    setOfferSuccess(true);
+    // Only treat explicit offer-queue confirmations as success — not errors / other panels.
+    if (/^Заявка\s*\(/.test(orderMsg) || orderMsg.startsWith("Заявка в очереди")) {
+      setOfferSuccess(true);
+    }
   }, [orderMsg]);
 
   useEffect(() => {
@@ -686,6 +697,13 @@ export function MarketPanel({
         return;
       }
       setMarket(c.economy_schema?.market ?? null);
+      void fetch("/api/market/rates")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (cancelled || !d?.rates) return;
+          setLiveRates(d.rates);
+        })
+        .catch(() => {});
       const mapList = Object.values(c.map_resources ?? {}).filter(
         (r): r is MapResourceDef => Boolean(r?.id && r.name),
       );
@@ -844,7 +862,7 @@ export function MarketPanel({
     });
   }, [partners, tradePartnerIds, worldFactions]);
 
-  const rates = market?.placeholder_rates ?? [];
+  const rates = liveRates ?? market?.placeholder_rates ?? [];
   const convertAp = intentApCost("intent.market_convert");
   const offerAp = intentApCost("intent.market_offer");
 
@@ -896,6 +914,7 @@ export function MarketPanel({
     interactive &&
     !!onConvert &&
     !!selectedPair &&
+    !convertBusy &&
     parsedConvertAmount > 0 &&
     parsedConvertAmount <= convertStock &&
     previewTo != null &&
@@ -1037,6 +1056,17 @@ export function MarketPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.economy) onEconomyPatch?.(data.economy);
+      if (data.world || data.visibleSystemIds) {
+        onSessionPatch?.({
+          world: data.world,
+          visibleSystemIds: data.visibleSystemIds,
+          knownFactionIds: data.knownFactionIds,
+          tradePartnerIds: data.tradePartnerIds,
+          economy: data.economy,
+          intel: data.intel,
+          briefing: data.briefing,
+        });
+      }
       if (Array.isArray(data.superpowers)) setSuperpowers(data.superpowers);
       setSuperSuccess(listingId);
       setLocalMsg(
@@ -1126,6 +1156,8 @@ export function MarketPanel({
               key={t.id}
               type="button"
               role="tab"
+              id={`market-tab-${t.id}`}
+              aria-controls={`market-panel-${t.id}`}
               aria-selected={tab === t.id}
               className={`ex-mode-tab ${tab === t.id ? "on" : ""}`}
               onClick={() => setTab(t.id)}
@@ -1142,7 +1174,12 @@ export function MarketPanel({
           {localMsg || orderMsg}
         </p>
       )}
-      {narrative && (tab === "quotes" || tab === "currencies") && (
+
+      <div
+        id={`market-panel-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`market-tab-${tab}`}
+      >      {narrative && (tab === "quotes" || tab === "currencies") && (
         <p className="ex-narrative hint">{narrative}</p>
       )}
 
@@ -1654,23 +1691,31 @@ export function MarketPanel({
                 disabled={!canPlaceOffer}
                 busy={offerSubmitting}
                 success={offerSuccess}
-                successLabel="Заявка отправлена"
+                successLabel="В очереди хода"
                 onSuccessEnd={() => setOfferSuccess(false)}
                 onClick={() => {
                   if (!canPlaceOffer || !onPlaceOffer) return;
                   setOfferSubmitting(true);
-                  onPlaceOffer(
-                    offerSide,
-                    giveCurrency,
-                    parsedGive,
-                    wantCurrency,
-                    parsedWant,
-                    venue,
-                  );
-                  setOfferSubmitting(false);
-                  setOfferSuccess(true);
-                  setComposeHint(null);
-                  void refreshBook();
+                  void Promise.resolve(
+                    onPlaceOffer(
+                      offerSide,
+                      giveCurrency,
+                      parsedGive,
+                      wantCurrency,
+                      parsedWant,
+                      venue,
+                    ),
+                  )
+                    .then((ok) => {
+                      if (ok === false) {
+                        setOfferSuccess(false);
+                        setComposeHint("Заявка не принята");
+                        return;
+                      }
+                      setOfferSuccess(true);
+                      setComposeHint("Заявка в очереди — в книге после хода");
+                    })
+                    .finally(() => setOfferSubmitting(false));
                 }}
               >
                 Разместить ({offerAp} AP)
@@ -1759,20 +1804,44 @@ export function MarketPanel({
                     </span>
                   </div>
                 )}
+              {convertMsg && (
+                <p className={`hint ${convertMsg.startsWith("Ок") ? "ok" : ""}`}>
+                  {convertMsg}
+                </p>
+              )}
               <button
                 type="button"
                 className="btn block"
                 disabled={!canConvert}
                 onClick={() => {
-                  if (!canConvert || !selectedPair) return;
-                  onConvert(
-                    selectedPair.from,
-                    selectedPair.to,
-                    parsedConvertAmount,
-                  );
+                  if (!canConvert || !selectedPair || !onConvert) return;
+                  setConvertBusy(true);
+                  setConvertMsg(null);
+                  void Promise.resolve(
+                    onConvert(
+                      selectedPair.from,
+                      selectedPair.to,
+                      parsedConvertAmount,
+                    ),
+                  )
+                    .then((ok) => {
+                      setConvertMsg(
+                        ok === false
+                          ? "Обмен не принят"
+                          : "Ок — обмен в очереди хода",
+                      );
+                    })
+                    .catch((e) => {
+                      setConvertMsg(
+                        e instanceof Error ? e.message : String(e),
+                      );
+                    })
+                    .finally(() => setConvertBusy(false));
                 }}
               >
-                Обменять ({convertAp} AP)
+                {convertBusy
+                  ? "Отправка…"
+                  : `Обменять (${convertAp} AP)`}
               </button>
             </ExpandableSection>
           )}
@@ -1905,6 +1974,7 @@ export function MarketPanel({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 

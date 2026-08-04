@@ -38,6 +38,9 @@ export function BottomSheet({
           ) : (
             <Drawer.Title className="sr-only">Панель</Drawer.Title>
           )}
+          <Drawer.Description className="sr-only">
+            Нижняя панель интерфейса
+          </Drawer.Description>
           <div className="gmap-sheet-body">{children}</div>
         </Drawer.Content>
       </Drawer.Portal>

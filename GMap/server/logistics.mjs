@@ -58,6 +58,8 @@ function canTraverse(world, factionId, sys, content) {
   const rules = logisticsRules(content);
   if (!isAllyOrSelf(world, factionId, sys.ownerFactionId)) return false;
   if (rules.quarantineBreaksLogistics && hasQuarantine(sys)) return false;
+  // Blockaded systems are not usable as supply stepping-stones.
+  if (rules.blockadedIsDisconnected && sys.blockaded) return false;
   return true;
 }
 

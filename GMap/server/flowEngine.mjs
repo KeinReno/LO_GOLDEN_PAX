@@ -68,6 +68,23 @@ export function sumRateAtLeast(flows, cat, minTier = 1) {
   return sum;
 }
 
+/** Consume `amount` of available rate from tiers >= minTier (low→high). */
+function consumeRateAtLeast(flows, cat, minTier, amount) {
+  let remaining = Math.max(0, Number(amount) || 0);
+  if (remaining <= 0) return 0;
+  for (let t = minTier; t <= 10 && remaining > 0; t++) {
+    const cell = flows[cat]?.[t];
+    if (!cell) continue;
+    const available =
+      cell.capacity > 0 ? Math.min(cell.rate || 0, cell.capacity) : cell.rate || 0;
+    if (available <= 0) continue;
+    const take = Math.min(available, remaining);
+    cell.rate = (cell.rate || 0) - take;
+    remaining -= take;
+  }
+  return (Number(amount) || 0) - remaining;
+}
+
 export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
   const c = content || getContent();
   const maxTiers = opts.maxTiers || null;
@@ -80,7 +97,19 @@ export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
     const t = Number(def.tier);
     if (maxTiers && Number(maxTiers[def.category] ?? 1) < t) continue;
     if (!flows[def.category]?.[t]) continue;
-    flows[def.category][t].rate += 1 * scale;
+    const yieldEntries = Object.entries(def.yield || {}).filter(
+      ([, amt]) => Number(amt) > 0,
+    );
+    if (yieldEntries.length === 0) {
+      flows[def.category][t].rate += 1 * scale;
+      continue;
+    }
+    for (const [cur, amt] of yieldEntries) {
+      const cat = currencyToCategory(cur, c) || def.category;
+      const cell = flows[cat]?.[t];
+      if (!cell) continue;
+      cell.rate += Number(amt) * scale;
+    }
   }
 }
 
@@ -172,6 +201,12 @@ export function applyFlowConvert(flows, args, opts = {}) {
   if (rateScale !== 1) produced = produced * rateScale;
 
   if (produced <= 0) return 0;
+  // Consume upstream inputs so later converters see a real bottleneck
+  consumeRateAtLeast(flows, fromCat, fromTierMin, produced);
+  if (secondary?.category) {
+    const secMin = parseTierMin(secondary.tier) || 1;
+    consumeRateAtLeast(flows, secondary.category, secMin, produced);
+  }
   flows[toCat][outTier].rate += produced;
   return produced;
 }
@@ -229,8 +264,11 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
       const tt = Number(e.args?.tier);
       const amt = Number(e.args?.amount) || 0;
       if (cc && tt && flows[cc]?.[tt]) flows[cc][tt].capacity += amt;
-    } else if (e.effect === "yield_flat" && !hasConvert) {
-      const cur = e.args?.currency;
+    } else if (
+      (e.effect === "yield_flat" || e.effect === "production_flat") &&
+      !hasConvert
+    ) {
+      const cur = e.args?.currency || e.args?.resource;
       const amt = (Number(e.args?.amount) || 0) * rateScale;
       const mapped = currencyToCategory(cur, c) || cat;
       if (mapped && flows[mapped]?.[tier]) {
@@ -241,7 +279,12 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
 
   if (
     !hasConvert &&
-    !effects.some((e) => e.effect === "yield_flat" || e.effect === "capacity_add")
+    !effects.some(
+      (e) =>
+        e.effect === "yield_flat" ||
+        e.effect === "production_flat" ||
+        e.effect === "capacity_add",
+    )
   ) {
     const edge = rpsEdges(c).find((ed) => ed.to === cat);
     if (edge && ["factory", "lab", "farm"].includes(buildingDef.kind)) {

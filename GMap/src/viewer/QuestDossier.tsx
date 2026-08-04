@@ -70,6 +70,7 @@ export function QuestDossier({
     value: number;
     rolling: boolean;
     message?: string;
+    sides?: number;
   } | null>(null);
   const history: QuestHistoryEntry[] = quest.history ?? [];
   const interactive = quest.status === "active";
@@ -100,7 +101,11 @@ export function QuestDossier({
     setBusy(false);
     if (!res.ok) return;
     const value = res.rolls?.[0] ?? 1;
-    setDiceResult({ value, rolling: true, message: res.message });
+    const choice = choices.find((c) => c.id === pendingDiceChoice);
+    const sides =
+      choice?.diceRequired?.[0]?.sides ??
+      (value > 6 ? 20 : 6);
+    setDiceResult({ value, rolling: true, message: res.message, sides });
   };
 
   return (
@@ -251,6 +256,7 @@ export function QuestDossier({
                     >
                       <DiceRoller
                         value={diceResult.value}
+                        sides={diceResult.sides ?? 6}
                         rolling={diceResult.rolling}
                         onSettled={() =>
                           setDiceResult((d) =>

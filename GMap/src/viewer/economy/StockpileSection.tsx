@@ -210,7 +210,7 @@ export function StockpileSection({
         stock: eco.stocks?.[BUILD_METAL.id] ?? 0,
         reserved: reserves[BUILD_METAL.id]?.amount ?? 0,
         available: 0,
-        cssVar: "var(--eco-cat-d)",
+        cssVar: "var(--accent-holo, #c9a227)",
       },
       {
         id: BUILD_SUPPLY.id,
@@ -218,7 +218,7 @@ export function StockpileSection({
         stock: eco.stocks?.[BUILD_SUPPLY.id] ?? 0,
         reserved: reserves[BUILD_SUPPLY.id]?.amount ?? 0,
         available: 0,
-        cssVar: "var(--eco-cat-e)",
+        cssVar: "var(--signal-build, #22c55e)",
       },
       ...CATEGORY_CURRENCIES.map((c) => ({
         id: c.id,

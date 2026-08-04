@@ -23,8 +23,8 @@ export function usePendingIntents() {
   const [busy, setBusy] = useState(false);
   const [apCap, setApCap] = useState(3);
 
-  const refresh = useCallback(async () => {
-    setBusy(true);
+  const refresh = useCallback(async (opts?: { quiet?: boolean }) => {
+    if (!opts?.quiet) setBusy(true);
     try {
       await fetchContent();
       setApCap(apPerTurn());
@@ -38,17 +38,17 @@ export function usePendingIntents() {
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(false);
+      if (!opts?.quiet) setBusy(false);
     }
   }, [masterToken, setSyncMsg]);
 
   useEffect(() => {
-    void refresh();
+    void refresh({ quiet: true });
   }, [refresh, world.meta.turn, world.meta.tableRevision]);
 
   // Dock: poll — player orders do not bump tableRevision.
   useEffect(() => {
-    const id = window.setInterval(() => void refresh(), 5000);
+    const id = window.setInterval(() => void refresh({ quiet: true }), 5000);
     return () => window.clearInterval(id);
   }, [refresh]);
 
@@ -83,9 +83,7 @@ export function IntentsInbox({
   const factions =
     variant === "dock"
       ? world.factions
-      : world.factions.filter(
-          (f) => (byFaction.get(f.id) ?? []).length > 0 || true,
-        );
+      : world.factions.filter((f) => (byFaction.get(f.id) ?? []).length > 0);
 
   return (
     <section className={`intents-inbox intents-inbox--${variant}`}>

@@ -37,7 +37,7 @@ export type NpcCardProps = {
     taskLabel: string;
     etaTurn: number;
     linkedQuestId?: string;
-  }) => void | Promise<void>;
+  }) => void | Promise<boolean | void>;
   busy?: boolean;
   /** Compact row inside court list (still DragCard). */
   compact?: boolean;
@@ -72,11 +72,12 @@ export function NpcCard({
 
   const submit = async () => {
     if (!onGiveTask || !taskLabel.trim()) return;
-    await onGiveTask(npc.id, {
+    const ok = await onGiveTask(npc.id, {
       taskLabel: taskLabel.trim(),
       etaTurn: turn + Math.max(1, etaDelta),
       linkedQuestId: linkedQuestId || undefined,
     });
+    if (ok === false) return;
     setTaskLabel("");
     setLinkedQuestId("");
     setAssignOpen(false);

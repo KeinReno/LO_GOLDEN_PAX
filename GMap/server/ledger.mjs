@@ -54,6 +54,8 @@ export function defaultFactionEco(factionId) {
     flowPriorities: {},
     /** Soft reserves: currencyId → { amount, label }. */
     stockReserves: {},
+    /** Units pulled from decks into faction reserve pool. */
+    forceReserve: [],
     /** Active doctrine id: military | trade | growth | null */
     economicPolicy: null,
   };
@@ -115,6 +117,9 @@ export function ensureFactionEco(ledger, factionId) {
   if (!f.stockReserves || typeof f.stockReserves !== "object") {
     f.stockReserves = {};
   }
+  if (!Array.isArray(f.forceReserve)) {
+    f.forceReserve = [];
+  }
   if (f.economicPolicy === undefined) f.economicPolicy = null;
   if (!Array.isArray(f.laws)) f.laws = [];
   return f;
@@ -143,12 +148,31 @@ export function appendLedgerEntry(ledger, entry) {
 
 /**
  * Apply delta to a stock. Clamps at 0 (no negative treasury).
- * Returns { stock, applied, clamped } where clamped is true if delta was reduced.
+ * Respects stockReserves: spending cannot drop below reserved amount
+ * unless reason is a reserve change itself.
+ * Returns the resulting stock value.
  */
 export function adjustStock(ledger, factionId, currencyId, delta, meta = {}) {
   const eco = ensureFactionEco(ledger, factionId);
   const cur = Number(eco.stocks[currencyId] ?? 0);
-  const raw = cur + Number(delta || 0);
+  const reason = meta.reason ?? "adjust";
+  const isReserveChange =
+    reason === "reserve_stock" ||
+    reason === "reserve_change" ||
+    reason === "set_stock_reserve";
+  let requested = Number(delta || 0);
+  if (requested < 0 && !isReserveChange) {
+    const reserved = eco.stockReserves?.[currencyId];
+    const reserveAmt = Math.max(
+      0,
+      Math.floor(Number(reserved?.amount ?? 0) || 0),
+    );
+    const spendable = Math.max(0, Math.floor(cur) - reserveAmt);
+    if (-requested > spendable) {
+      requested = -spendable;
+    }
+  }
+  const raw = cur + requested;
   const next = Math.max(0, Math.floor(raw));
   const applied = next - Math.floor(cur);
   eco.stocks[currencyId] = next;
@@ -158,7 +182,7 @@ export function adjustStock(ledger, factionId, currencyId, delta, meta = {}) {
       currencyId,
       delta: applied,
       turn: meta.turn ?? null,
-      reason: meta.reason ?? "adjust",
+      reason,
       intentId: meta.intentId ?? null,
       requested: Number(delta || 0),
       clamped: applied !== Math.floor(Number(delta || 0)),
@@ -496,6 +520,9 @@ export function publicEconomyPayload(eco) {
       eco.stockReserves && typeof eco.stockReserves === "object"
         ? { ...eco.stockReserves }
         : {},
+    forceReserve: Array.isArray(eco.forceReserve)
+      ? eco.forceReserve.map((g) => ({ ...g }))
+      : [],
     economicPolicy: eco.economicPolicy ?? null,
     laws: Array.isArray(eco.laws) ? [...eco.laws] : [],
   };

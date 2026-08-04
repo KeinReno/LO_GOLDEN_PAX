@@ -130,7 +130,7 @@ export function ViewerDiploPanel({
     give: DiploDealItem[];
     want: DiploDealItem[];
     note: string;
-  }) => void;
+  }) => void | boolean | Promise<void | boolean>;
   onAccept?: (offerId: string) => void;
   onReject?: (offerId: string) => void;
   onCancel?: (offerId: string) => void;

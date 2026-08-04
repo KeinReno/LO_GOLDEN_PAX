@@ -56,9 +56,8 @@ function systemHasPropaganda(system) {
 
 function systemDisconnected(system) {
   return !!(
-    system.supplyLevel === 0 ||
-    system.logistics?.disconnected ||
-    system.disconnected
+    !system.logistics?.connectedToCapital ||
+    system.logistics?.supplyLevel === 0
   );
 }
 
@@ -100,16 +99,24 @@ export function loyaltyTierFor(loyalty, content) {
 
 /**
  * Collect loyalty-tier production/revolt effects for a faction's planets.
+ * production_mult is averaged once per faction (not stacked ×N planets).
  */
 export function collectLoyaltyTierEffects(world, factionId, content) {
   const out = [];
+  const prodMults = [];
+  let planetCount = 0;
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
     for (const planet of sys.planets ?? []) {
       if ((planet.population ?? 0) <= 0) continue;
+      planetCount += 1;
       const loyalty = planet.loyalty ?? BASE_LOYALTY;
       const tier = loyaltyTierFor(loyalty, content);
       for (const e of tier.effects || []) {
+        if (e.effect === "production_mult") {
+          prodMults.push(Number(e.args?.mult ?? 1));
+          continue;
+        }
         out.push({
           ...e,
           source: {
@@ -120,6 +127,18 @@ export function collectLoyaltyTierEffects(world, factionId, content) {
         });
       }
     }
+  }
+  if (prodMults.length > 0) {
+    const avg = prodMults.reduce((a, b) => a + b, 0) / prodMults.length;
+    out.push({
+      effect: "production_mult",
+      args: { mult: avg },
+      source: {
+        kind: "loyalty_tier",
+        id: `faction_avg:${factionId}`,
+        label: `Лояльность (ср. ×${planetCount})`,
+      },
+    });
   }
   return out;
 }

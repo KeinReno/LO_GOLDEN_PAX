@@ -34,6 +34,12 @@ if (!fs.existsSync(path.join(dist, "index.html"))) {
 const app = express();
 app.set("trust proxy", 1);
 app.use(createApiMiddleware());
+// Player share hosts: root → /view (never expose GM editor by accident).
+if (process.env.GMAP_PLAYER_SHARE === "1" || process.env.GMAP_SHARE_ONLY === "1") {
+  app.get("/", (_req, res) => {
+    res.redirect(302, "/view");
+  });
+}
 app.use(
   express.static(dist, {
     index: false,

@@ -10,6 +10,8 @@ export type ProductionSystemRow = {
   resourceIds: string[];
   categories: string[];
   ratePerTurn: number;
+  /** True when rate is heuristic (tier/buildings), not flow-engine. */
+  rateIsEstimate?: boolean;
   bottleneck: boolean;
   bottleneckReason?: string;
 };
@@ -93,6 +95,7 @@ export function buildProductionSystemRows(
       resourceIds: resourceIds.slice(0, 4),
       categories: [...cats].sort(),
       ratePerTurn: Math.max(0, Math.round(rate)),
+      rateIsEstimate: true,
       bottleneck,
       bottleneckReason,
     });

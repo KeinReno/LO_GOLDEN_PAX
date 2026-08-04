@@ -122,45 +122,7 @@ export function OverviewSection({
   }
 
   if (!producing) {
-    return (
-      <div className="eco-overview">
-        <div className="eco-metrics-row">
-          <MetricCard
-            label="Казна"
-            value={metrics.treasury}
-            tone="gold"
-            tip="Металл в казне фракции"
-          />
-          <MetricCard
-            label="Доход/ход"
-            value={metrics.income}
-            tone="income"
-            tip="Сумма положительных проводок по металлу"
-          />
-          <MetricCard
-            label="Расход/ход"
-            value={metrics.expense}
-            tone="expense"
-            tip="Сумма списаний по металлу"
-          />
-        </div>
-        <EmptyState
-          title="Производство ещё не запущено"
-          body="Постройте первую шахту, чтобы запустить поток A–F."
-          action={
-            onFocusBuild ? (
-              <button
-                type="button"
-                className="btn sm primary"
-                onClick={onFocusBuild}
-              >
-                К системе
-              </button>
-            ) : undefined
-          }
-        />
-      </div>
-    );
+    // Keep A–F / warnings visible; empty CTA is secondary, not a full replace.
   }
 
   return (
@@ -177,15 +139,33 @@ export function OverviewSection({
           label="Доход/ход"
           value={metrics.income}
           tone="income"
-          tip="Сумма положительных проводок по металлу в журнале"
+          tip="Сумма положительных проводок по металлу за последний ход журнала"
         />
         <MetricCard
           label="Расход/ход"
           value={metrics.expense}
           tone="expense"
-          tip="Сумма списаний по металлу в журнале"
+          tip="Сумма списаний по металлу за последний ход журнала"
         />
       </div>
+
+      {!producing ? (
+        <EmptyState
+          title="Производство ещё не запущено"
+          body="Постройте первую шахту, чтобы запустить поток A–F."
+          action={
+            onFocusBuild ? (
+              <button
+                type="button"
+                className="btn sm primary"
+                onClick={onFocusBuild}
+              >
+                К системе
+              </button>
+            ) : undefined
+          }
+        />
+      ) : null}
 
       <div className="eco-bento" aria-label="Категории A–F">
         {cats.map((c) => (

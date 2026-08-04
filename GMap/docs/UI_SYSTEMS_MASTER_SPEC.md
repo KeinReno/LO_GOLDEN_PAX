@@ -822,9 +822,9 @@ Aceternity — библиотека маркетинговых компонен�
 ### Фаза E: Жесты и полировка
 - [x] Drag cognitio на ноду, drag ресурсов на системы.
 - [x] Long-press радиальные меню (склад / science nodes).
-- [ ] Перекраска Aceternity под палитру.
-- [ ] AnimatedTooltip на все элементы.
-- [ ] Оптимизация производительности.
+- [x] Перекраска Aceternity под палитру. *(gold + holo cyan; glow default accent)*
+- [x] AnimatedTooltip (`ui/AnimatedTooltip` + EcoTip) на метрики / эффекты / cognitio.
+- [x] Оптимизация производительности. *(reduced-motion; content-visibility на eco/research)*
 
 ---
 

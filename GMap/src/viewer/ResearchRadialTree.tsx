@@ -7,6 +7,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { TechnologyDef, EconomyCategory } from "../state/contentCatalog";
+import { effectiveCognitioCost } from "../state/researchCosts";
+import type { ViewerPayload } from "../state/types";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 import type { ResearchFilter } from "./research/constants";
 import { TECH_DND_MIME, COGNITIO_DND_MIME } from "./research/constants";
@@ -95,8 +97,11 @@ function polar(angle: number, r: number) {
   };
 }
 
-function cognitioCost(tech: TechnologyDef): number {
-  return Number(tech.cost?.["currency.cognitio"] ?? 0);
+function cognitioCost(
+  tech: TechnologyDef,
+  eco?: ViewerPayload["economy"],
+): number {
+  return effectiveCognitioCost(tech, eco, tech.category);
 }
 
 function scramble(name: string): string {
@@ -124,6 +129,7 @@ export function ResearchRadialTree({
   isTechBlocked,
   onCognitioDrop,
   onNodeLongPress,
+  eco,
 }: {
   byCat: Map<EconomyCategory, TechnologyDef[]>;
   unlocked: Set<string>;
@@ -143,6 +149,7 @@ export function ResearchRadialTree({
   /** Drop cognitio chip onto node → research / accelerate. */
   onCognitioDrop?: (techId: string) => void;
   onNodeLongPress?: (techId: string, x: number, y: number) => void;
+  eco?: ViewerPayload["economy"];
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -198,7 +205,7 @@ export function ResearchRadialTree({
         const prereqOk = (tech.prerequisites || []).every((p) =>
           unlocked.has(p),
         );
-        const cost = cognitioCost(tech);
+        const cost = cognitioCost(tech, eco);
         const lockBlocked = !!isTechBlocked?.(tech);
         const canQueue =
           !done && prereqOk && !lockBlocked && !busy;
@@ -259,7 +266,7 @@ export function ResearchRadialTree({
     );
 
     return { nodes: nodeList, edges: edgeList, rings: ringRs };
-  }, [byCat, unlocked, unlockedUpgrades, cognitio, busy, maxDepth, isTechBlocked]);
+  }, [byCat, unlocked, unlockedUpgrades, cognitio, busy, maxDepth, isTechBlocked, eco]);
 
   const searchLc = search.trim().toLowerCase();
 
@@ -411,7 +418,7 @@ export function ResearchRadialTree({
           {edges.map((e) => {
             const cat = e.id.includes("hub->")
               ? nodes.find((n) => e.id.endsWith(n.tech.id))?.tech.category
-              : nodes.find((n) => e.id.startsWith(n.tech.id))?.tech.category;
+              : (() => { const from = e.id.split("->")[0]; return nodes.find((n) => n.tech.id === from)?.tech.category; })();
             const dim =
               focusBranch != null && cat && focusBranch !== cat
                 ? "is-dim"

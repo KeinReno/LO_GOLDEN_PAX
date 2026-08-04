@@ -506,9 +506,9 @@ export function Toolbar() {
 
   const onLoad = async (file: File) => {
     if (file.name.endsWith(".zip") || file.name.endsWith(".gmap.zip")) {
-      loadWorld(await importCampaignZip(file));
+      loadWorld(await importCampaignZip(file), { resetUi: true });
     } else {
-      loadWorld(await importCampaignJson(file));
+      loadWorld(await importCampaignJson(file), { resetUi: true });
     }
     rememberSave();
     setSyncMsg(`Загружен файл: ${file.name}`);
@@ -526,7 +526,7 @@ export function Toolbar() {
       const res = await fetch("/campaigns/lo_golden_pax.json");
       if (!res.ok) throw new Error(await res.text());
       const data = parseWorldJson(await res.json());
-      loadWorld(data);
+      loadWorld(data, { resetUi: true });
       rememberSave();
       setSyncMsg(
         `Лор загружен: ${data.systems.length} систем, ход ${data.meta.turn}`,
@@ -542,7 +542,7 @@ export function Toolbar() {
       setSyncMsg("Черновик в браузере пуст");
       return;
     }
-    loadWorld(draft);
+    loadWorld(draft, { resetUi: true });
     const meta = getDraftMeta();
     if (meta) markSaved(meta.savedAt);
     setSyncMsg(`Черновик восстановлен · ${draft.systems.length} систем`);

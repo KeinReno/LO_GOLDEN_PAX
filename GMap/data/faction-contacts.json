@@ -21,6 +21,7 @@
       "faction_north_swarm",
       "faction_or",
       "faction_pirates",
+      "faction_rebels",
       "faction_sahale",
       "faction_scavengers",
       "faction_sikuri",
@@ -33,6 +34,7 @@
       "faction_heshah",
       "faction_or",
       "faction_pirates",
+      "faction_rebels",
       "faction_sikuri",
       "faction_south_swarm",
       "faction_taala"
@@ -42,6 +44,7 @@
       "faction_belator",
       "faction_north_swarm",
       "faction_pirates",
+      "faction_rebels",
       "faction_sahale"
     ],
     "faction_north_swarm": [
@@ -50,6 +53,7 @@
       "faction_federation",
       "faction_heshah",
       "faction_pirates",
+      "faction_rebels",
       "faction_sahale"
     ],
     "faction_korvun": [
@@ -72,12 +76,14 @@
       "faction_belator",
       "faction_north_swarm",
       "faction_pirates",
+      "faction_rebels",
       "faction_sikuri",
       "faction_turon"
     ],
     "faction_sikuri": [
       "faction_belator",
       "faction_heshah",
+      "faction_rebels",
       "faction_turon"
     ],
     "faction_huchi": [
@@ -89,6 +95,7 @@
       "faction_nomad_f_672edfda15",
       "faction_nomad_pax_terrialis",
       "faction_pirates",
+      "faction_rebels",
       "faction_turon"
     ],
     "faction_balsagon": [
@@ -111,6 +118,7 @@
       "faction_nomad_f_f3466a10f0",
       "faction_nomad_f_f8d3f947d6",
       "faction_north_swarm",
+      "faction_rebels",
       "faction_scavengers",
       "faction_south_swarm",
       "faction_taala",
@@ -119,6 +127,7 @@
     "faction_or": [
       "faction_belator",
       "faction_korvun",
+      "faction_rebels",
       "faction_taala",
       "faction_turon"
     ],
@@ -134,7 +143,8 @@
       "faction_belator",
       "faction_federation",
       "faction_nomad_f_61f8054f59",
-      "faction_north_swarm"
+      "faction_north_swarm",
+      "faction_rebels"
     ],
     "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": [
       "faction_belator",

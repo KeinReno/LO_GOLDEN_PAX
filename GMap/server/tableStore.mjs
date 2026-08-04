@@ -79,6 +79,7 @@ export function backupTurnSnapshot(turn, reason = "manual") {
   copyIf(path.join(DATA_DIR, "market-membership.json"), "market-membership.json");
   copyIf(path.join(DATA_DIR, "market-history.json"), "market-history.json");
   copyIf(path.join(DATA_DIR, "race_states.json"), "race_states.json");
+  copyIf(path.join(DATA_DIR, "faction-intel.json"), "faction-intel.json");
   writeJson(path.join(dir, "backup-meta.json"), {
     turn: turn ?? null,
     reason,
@@ -99,11 +100,27 @@ export function readLiveBoard() {
 }
 
 /**
- * Write live board. Always bumps tableRevision.
+ * Write live board. Always bumps tableRevision unless expectedRevision conflicts.
  * @param {object} world
- * @param {{ backup?: boolean, reason?: string, alsoDraft?: boolean, alsoLore?: boolean }} opts
+ * @param {{ backup?: boolean, reason?: string, alsoDraft?: boolean, alsoLore?: boolean, expectedRevision?: number }} opts
  */
 export function writeLiveBoard(world, opts = {}) {
+  if (opts.expectedRevision != null && Number.isFinite(Number(opts.expectedRevision))) {
+    const live = readPublishedRaw();
+    const current =
+      live?.meta?.tableRevision ?? getTableMeta().tableRevision ?? 0;
+    if (Number(opts.expectedRevision) !== Number(current)) {
+      return {
+        ok: false,
+        conflict: true,
+        tableRevision: current,
+        error: "revision_conflict",
+        world: null,
+        updatedAt: live?.meta?.updatedAt ?? null,
+        turn: live?.meta?.turn ?? 0,
+      };
+    }
+  }
   const turn = world?.meta?.turn ?? 0;
   if (opts.backup) {
     backupTurnSnapshot(turn, opts.reason || "write");
@@ -122,6 +139,7 @@ export function writeLiveBoard(world, opts = {}) {
     writeJson(LORE_PATH, normalized);
   }
   return {
+    ok: true,
     world: normalized,
     tableRevision: revMeta.tableRevision,
     updatedAt: now,

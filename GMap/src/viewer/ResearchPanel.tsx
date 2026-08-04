@@ -6,9 +6,14 @@ import type {
   EconomyCategory,
 } from "../state/contentCatalog";
 import { getCachedContent } from "../state/contentCatalog";
+import {
+  effectiveCognitioCost,
+  missingRequireProperties,
+} from "../state/researchCosts";
 import { canBuildWithTech } from "../state/techGate";
 import { StatefulButton } from "../ui/StatefulButton";
 import { ActionRing } from "../ui/ActionRing";
+import { AnimatedTooltip } from "../ui/AnimatedTooltip";
 import { useSpotlight } from "../ui/aceternityFx";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 import { ResearchRadialTree } from "./ResearchRadialTree";
@@ -47,8 +52,12 @@ export const RESEARCH_BRANCH_BY_DIGIT: Record<string, EconomyCategory> = {
   "6": "F",
 };
 
-function cognitioCost(tech: TechnologyDef | TechUpgrade): number {
-  return Number(tech.cost?.["currency.cognitio"] ?? 0);
+function cognitioCost(
+  tech: TechnologyDef | TechUpgrade,
+  eco?: ViewerPayload["economy"],
+  category?: string,
+): number {
+  return effectiveCognitioCost(tech, eco, category);
 }
 
 function prereqNames(
@@ -128,6 +137,7 @@ function lockBlocksResearch(
   tech: TechnologyDef,
   world: ViewerPayload["world"] | undefined,
   factionId: string | undefined,
+  eco?: ViewerPayload["economy"],
 ): boolean {
   if (tech.raceLock) {
     if (raceSharePercent(world, factionId, tech.raceLock) < 30) return true;
@@ -138,6 +148,7 @@ function lockBlocksResearch(
       return true;
     }
   }
+  if (missingRequireProperties(tech, eco).length > 0) return true;
   return false;
 }
 
@@ -194,6 +205,7 @@ export function ResearchPanel({
   cognitioIncome = 0,
   categoryIncome = 0,
   categoryDemand = 0,
+  flowTotals,
   onOpenBuilding,
   onTechMapDrag,
   onEffectNavigate,
@@ -214,7 +226,8 @@ export function ResearchPanel({
   cognitioIncome?: number;
   categoryIncome?: number;
   categoryDemand?: number;
-  onOpenBuilding?: (buildingId: string) => void;
+  flowTotals?: Record<string, { rate?: number; demand?: number; net?: number }>;
+  onOpenBuilding?: (buildingName: string) => void;
   onTechMapDrag?: (techId: string) => void;
   onEffectNavigate?: (target: import("./research/EffectsList").EffectNavigateTarget) => void;
 }) {
@@ -275,15 +288,16 @@ export function ResearchPanel({
   const unlockedProps = eco?.unlockedProperties || [];
 
   const income =
-    cognitioIncome ||
-    (() => {
-      const spark = cognitioSparkFromRecent(eco?.recent, 1);
-      return spark[0] ?? 0;
-    })();
+    cognitioIncome != null
+      ? cognitioIncome
+      : (() => {
+          const spark = cognitioSparkFromRecent(eco?.recent, 1);
+          return spark[0] ?? 0;
+        })();
 
   const forecasts = useMemo(
-    () => buildQueueForecasts(queue, byId, cognitio, income),
-    [queue, byId, cognitio, income],
+    () => buildQueueForecasts(queue, byId, cognitio, income, eco),
+    [queue, byId, cognitio, income, eco],
   );
   const spark = useMemo(
     () => cognitioSparkFromRecent(eco?.recent, 10),
@@ -336,7 +350,8 @@ export function ResearchPanel({
     for (const t of Object.values(getCachedContent()?.technologies || {})) {
       if (unlocked.has(t.id)) continue;
       if (!(t.prerequisites || []).every((p) => unlocked.has(p))) continue;
-      const cost = cognitioCost(t);
+      if (lockBlocksResearch(t, world, factionId, eco)) continue;
+      const cost = cognitioCost(t, eco, t.category);
       if (cognitio >= cost) list.push({ tech: t, cost });
     }
     list.sort(
@@ -346,7 +361,7 @@ export function ResearchPanel({
         a.tech.name.localeCompare(b.tech.name, "ru"),
     );
     return list;
-  }, [unlocked, cognitio]);
+  }, [unlocked, cognitio, world, factionId, eco]);
 
   const nextBuy = affordable[0] ?? null;
   const selected = selectedId ? byId.get(selectedId) : undefined;
@@ -357,9 +372,9 @@ export function ResearchPanel({
     const prereqOk = (selected.prerequisites || []).every((p) =>
       unlocked.has(p),
     );
-    const cost = cognitioCost(selected);
+    const cost = cognitioCost(selected, eco, selected.category);
     const lock = lockLabel(selected);
-    const lockBlocked = lockBlocksResearch(selected, world, factionId);
+    const lockBlocked = lockBlocksResearch(selected, world, factionId, eco);
     const canBuy =
       !done && prereqOk && !lockBlocked && cognitio >= cost && !busy;
     let status = "доступно";
@@ -445,7 +460,7 @@ export function ResearchPanel({
     const tech = byId.get(techId);
     if (!tech) return;
     if (!(tech.prerequisites || []).every((p) => unlocked.has(p))) return;
-    if (lockBlocksResearch(tech, world, factionId)) return;
+    if (lockBlocksResearch(tech, world, factionId, eco)) return;
     changeQueue([...queue, techId]);
   };
 
@@ -471,18 +486,21 @@ export function ResearchPanel({
         <div className="research-stock-row">
           <p className="hint research-stock">
             Знание:{" "}
-            <strong
-              className="tabular research-cognitio-chip"
-              draggable={!busy && cognitio > 0}
-              title="Перетащите на технологию — изучить или ускорить"
-              onDragStart={(e) => {
-                e.dataTransfer.setData(COGNITIO_DND_MIME, "currency.cognitio");
-                e.dataTransfer.setData("text/plain", "currency.cognitio");
-                e.dataTransfer.effectAllowed = "copy";
-              }}
+            <AnimatedTooltip
+              content="Перетащите на ноду дерева — изучить сейчас или ускорить слот очереди"
             >
-              {cognitio}
-            </strong>
+              <strong
+                className="tabular research-cognitio-chip"
+                draggable={!busy && cognitio > 0}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(COGNITIO_DND_MIME, "currency.cognitio");
+                  e.dataTransfer.setData("text/plain", "currency.cognitio");
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+              >
+                {cognitio}
+              </strong>
+            </AnimatedTooltip>
             {income !== 0 ? (
               <span className="tabular">
                 {" "}
@@ -514,6 +532,7 @@ export function ResearchPanel({
 
       {onSetQueue ? (
         <ResearchQueue
+          eco={eco}
           queue={queue}
           byId={byId}
           cognitio={cognitio}
@@ -528,6 +547,7 @@ export function ResearchPanel({
       ) : null}
 
       <CognitioForecast
+        eco={eco}
         cognitio={cognitio}
         income={income}
         forecasts={forecasts}
@@ -597,6 +617,8 @@ export function ResearchPanel({
         <button
           type="button"
           role="tab"
+          id="research-tab-all"
+          aria-controls="research-panel-main"
           aria-selected={focusBranch == null}
           className={`research-branch-tab research-branch-tab--all fx-spotlight ${focusBranch == null ? "on" : ""}`}
           onClick={() => setFocusBranch(null)}
@@ -613,13 +635,16 @@ export function ResearchPanel({
             (t) =>
               !unlocked.has(t.id) &&
               (t.prerequisites || []).every((p) => unlocked.has(p)) &&
-              cognitio >= cognitioCost(t),
+              !lockBlocksResearch(t, world, factionId, eco) &&
+              cognitio >= cognitioCost(t, eco, t.category),
           );
           return (
             <button
               key={c}
               type="button"
               role="tab"
+              id={`research-tab-${c}`}
+              aria-controls="research-panel-main"
               aria-selected={focusBranch === c}
               className={`research-branch-tab fx-spotlight ${focusBranch === c ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
               style={
@@ -637,10 +662,10 @@ export function ResearchPanel({
                 );
                 if (next) setSelectedId(next.id);
               }}
-              title={`${CAT_NAME[c]} · ${i + 1}`}
+              title={`${CAT_NAME[c]} · Alt+${i + 1}`}
               {...branchSpot.bind}
             >
-              <span className="research-tab-hotkey">{i + 1}</span>
+              <span className="research-tab-hotkey">Alt+{i + 1}</span>
               <span style={{ color: CAT_COLOR[c] }}>{c}</span>
               <strong>{CAT_NAME[c]}</strong>
               <span className="hint">
@@ -652,12 +677,22 @@ export function ResearchPanel({
         })}
       </div>
 
-      <div className="research-workbench">
+      <div
+        className="research-workbench"
+        id="research-panel-main"
+        role="tabpanel"
+        aria-labelledby={
+          focusBranch == null
+            ? "research-tab-all"
+            : `research-tab-${focusBranch}`
+        }
+      >
         <ResearchRadialTree
           byCat={byCat}
           unlocked={unlocked}
           unlockedUpgrades={unlockedUpgrades}
           cognitio={cognitio}
+          eco={eco}
           selectedId={selectedId}
           focusBranch={focusBranch}
           busy={busy}
@@ -668,7 +703,7 @@ export function ResearchPanel({
           queueIds={queueSet}
           onNodeDragStart={onTechMapDrag}
           isTechBlocked={(tech) =>
-            lockBlocksResearch(tech, world, factionId)
+            lockBlocksResearch(tech, world, factionId, eco)
           }
           onCognitioDrop={(techId) => {
             const tech = byId.get(techId);
@@ -896,6 +931,7 @@ export function ResearchPanel({
 
               {selectedState.done && selectedState.upgrades.length > 0 ? (
                 <UpgradesComparison
+                  eco={eco}
                   tech={selected}
                   unlockedUpgrades={unlockedUpgrades}
                   unlockedTechs={unlocked}
@@ -903,8 +939,12 @@ export function ResearchPanel({
                   busy={busy}
                   pendingUpgradeId={pendingUpgradeId}
                   successId={successId}
-                  categoryIncome={categoryIncome}
-                  categoryDemand={categoryDemand}
+                  categoryIncome={
+                    flowTotals?.[selected.category]?.rate ?? categoryIncome
+                  }
+                  categoryDemand={
+                    flowTotals?.[selected.category]?.demand ?? categoryDemand
+                  }
                   onResearchUpgrade={
                     onResearchUpgrade
                       ? (techId, upgradeId) =>
@@ -917,7 +957,7 @@ export function ResearchPanel({
           )}
           {msg && (
             <p
-              className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") || msg.startsWith("Очередь") ? "is-ok" : "is-err"}`}
+              className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") || msg.startsWith("Очередь") || msg.startsWith("Ускорено") ? "is-ok" : "is-err"}`}
               role="status"
             >
               {msg}
@@ -944,6 +984,8 @@ export function ResearchPanel({
 /** Count techs the player can buy right now (for dock badge). */
 export function countAffordableResearch(
   eco: ViewerPayload["economy"],
+  world?: ViewerPayload["world"],
+  factionId?: string,
 ): number {
   if (!eco) return 0;
   const unlocked = new Set(eco.unlockedTechs || []);
@@ -952,7 +994,8 @@ export function countAffordableResearch(
   for (const t of Object.values(getCachedContent()?.technologies || {})) {
     if (unlocked.has(t.id)) continue;
     if (!(t.prerequisites || []).every((p) => unlocked.has(p))) continue;
-    if (cognitio >= cognitioCost(t)) n += 1;
+    if (lockBlocksResearch(t, world, factionId, eco)) continue;
+    if (cognitio >= cognitioCost(t, eco, t.category)) n += 1;
   }
   return n;
 }

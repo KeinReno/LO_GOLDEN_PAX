@@ -644,6 +644,7 @@ export function MapCanvas({
   const onHoldProgressRef = useRef(onHoldProgress);
   const onSystemOpenRef = useRef(onSystemOpen);
   const playerFactionIdRef = useRef(playerFactionId);
+  const interactiveRef = useRef(interactive);
   const onModelSubscribeRef = useRef(onModelSubscribe);
   const apiRefInternal = useRef(apiRef);
   readModelRef.current = readModel;
@@ -657,6 +658,7 @@ export function MapCanvas({
   onHoldProgressRef.current = onHoldProgress;
   onSystemOpenRef.current = onSystemOpen;
   playerFactionIdRef.current = playerFactionId;
+  interactiveRef.current = interactive;
   onModelSubscribeRef.current = onModelSubscribe;
   apiRefInternal.current = apiRef;
 
@@ -1252,8 +1254,13 @@ export function MapCanvas({
       app.stage.eventMode = "static";
       app.stage.hitArea = app.screen;
 
-      if (interactive) {
+      {
+        // Keep Pixi app alive across interactive toggles; gate via ref.
         app.stage.on("pointerdown", (e: FederatedPointerEvent) => {
+          if (!interactiveRef.current) {
+            panRef.current = { active: true, lx: e.global.x, ly: e.global.y };
+            return;
+          }
           const worldPos = toWorld(e);
           const model = getModel();
 
@@ -1539,10 +1546,10 @@ export function MapCanvas({
             if (!hit) return;
             const fac = state.activeFactionId;
             if (!fac) return;
-            const token =
-              (
-                window as unknown as { __GMAP_MASTER_TOKEN?: string }
-              ).__GMAP_MASTER_TOKEN || "master2142";
+            const token = (
+              window as unknown as { __GMAP_MASTER_TOKEN?: string }
+            ).__GMAP_MASTER_TOKEN;
+            if (!token) return;
             void fetch("/api/fog/paint", {
               method: "POST",
               headers: {
@@ -1571,10 +1578,10 @@ export function MapCanvas({
             const presetId =
               useWorldStore.getState().activeConsequencePresetId;
             if (!presetId) return;
-            const token =
-              (
-                window as unknown as { __GMAP_MASTER_TOKEN?: string }
-              ).__GMAP_MASTER_TOKEN || "master2142";
+            const token = (
+              window as unknown as { __GMAP_MASTER_TOKEN?: string }
+            ).__GMAP_MASTER_TOKEN;
+            if (!token) return;
             const ids =
               state.selectedSystemIds.includes(hit.id) &&
               state.selectedSystemIds.length > 1
@@ -1885,10 +1892,13 @@ export function MapCanvas({
                     ? modelNow.world.fleets.find((f) => f.id === drag.id)
                     : modelNow.world.legions.find((l) => l.id === drag.id);
                 const fromSystemId = unit?.systemId ?? "";
+                const travelMode =
+                  drag.kind === "fleet" ? "fleet" : "legion";
                 const hops = hopDistance(
                   modelNow.world,
                   fromSystemId,
                   target.id,
+                  travelMode,
                 );
                 if (mode === "viewer") {
                   if (
@@ -1995,6 +2005,7 @@ export function MapCanvas({
 
         const openContextMenu = (ev: MouseEvent) => {
           ev.preventDefault();
+          if (!interactiveRef.current) return;
           const layer = worldLayerRef.current;
           if (!layer) return;
           const rect = app.canvas.getBoundingClientRect();
@@ -2063,23 +2074,6 @@ export function MapCanvas({
             /* canvas already detached */
           }
         };
-      } else {
-        app.stage.on("pointerdown", (e: FederatedPointerEvent) => {
-          panRef.current = { active: true, lx: e.global.x, ly: e.global.y };
-        });
-        app.stage.on("pointermove", (e: FederatedPointerEvent) => {
-          if (panRef.current.active && worldLayerRef.current) {
-            const dx = e.global.x - panRef.current.lx;
-            const dy = e.global.y - panRef.current.ly;
-            panRef.current.lx = e.global.x;
-            panRef.current.ly = e.global.y;
-            worldLayerRef.current.x += dx;
-            worldLayerRef.current.y += dy;
-          }
-        });
-        app.stage.on("pointerup", () => {
-          panRef.current.active = false;
-        });
       }
 
       app.canvas.addEventListener(
@@ -2650,7 +2644,12 @@ export function MapCanvas({
             order.type === "move_fleet" ||
             order.type === "move_legion"
           ) {
-            const path = hopPath(world, from.id, to.id);
+            const path = hopPath(
+              world,
+              from.id,
+              to.id,
+              order.type === "move_fleet" ? "fleet" : "legion",
+            );
             if (path.length >= 2) {
               for (let i = 0; i < path.length - 1; i++) {
                 const a = byId.get(path[i]!);
@@ -3192,8 +3191,19 @@ export function MapCanvas({
           drag.kind === "fleet"
             ? world.fleets.find((x) => x.id === drag.id)
             : world.legions.find((x) => x.id === drag.id);
-        const hops = hopDistance(world, unit?.systemId, dropTarget.id);
-        const path = hopPath(world, unit?.systemId, dropTarget.id);
+        const travelMode = drag.kind === "fleet" ? "fleet" : "legion";
+        const hops = hopDistance(
+          world,
+          unit?.systemId,
+          dropTarget.id,
+          travelMode,
+        );
+        const path = hopPath(
+          world,
+          unit?.systemId,
+          dropTarget.id,
+          travelMode,
+        );
         const reachable = Number.isFinite(hops) && hops > 0;
         const same = hops === 0;
         // Intent color: gold=move, red=attack, cyan=claim. Reachability dims it.
@@ -3590,7 +3600,7 @@ export function MapCanvas({
       }
       safeDestroy();
     };
-  }, [mode, interactive]);
+  }, [mode]);
 
   return (
     <div

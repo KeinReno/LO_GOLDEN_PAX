@@ -1,8 +1,10 @@
 import type { TechnologyDef, TechUpgrade } from "../../state/contentCatalog";
+import { effectiveCognitioCost } from "../../state/researchCosts";
+import type { ViewerPayload } from "../../state/types";
 import { StatefulButton } from "../../ui/StatefulButton";
 
-function cognitioCost(u: TechUpgrade): number {
-  return Number(u.cost?.["currency.cognitio"] ?? 0);
+function cognitioCost(u: TechUpgrade, eco?: ViewerPayload["economy"], category?: string): number {
+  return effectiveCognitioCost(u, eco, category);
 }
 
 function effectSummary(u: TechUpgrade): string {
@@ -30,8 +32,10 @@ export function upgradeRoiScore(
   u: TechUpgrade,
   categoryIncome: number,
   categoryDemand: number,
+  eco?: ViewerPayload["economy"],
+  category?: string,
 ): number {
-  const cost = Math.max(1, cognitioCost(u));
+  const cost = Math.max(1, cognitioCost(u, eco, category));
   let gainPerTurn = 0;
   for (const e of u.effects || []) {
     if (e.effect === "production_mult") {
@@ -71,6 +75,7 @@ export function UpgradesComparison({
   categoryIncome,
   categoryDemand,
   onResearchUpgrade,
+  eco,
 }: {
   tech: TechnologyDef;
   unlockedUpgrades: Set<string>;
@@ -82,15 +87,16 @@ export function UpgradesComparison({
   categoryIncome: number;
   categoryDemand: number;
   onResearchUpgrade?: (techId: string, upgradeId: string) => void;
+  eco?: ViewerPayload["economy"];
 }) {
   const upgrades = tech.upgrades || [];
   if (!upgrades.length) return null;
 
   const scored = upgrades.map((u) => ({
     u,
-    score: upgradeRoiScore(u, categoryIncome, categoryDemand),
+    score: upgradeRoiScore(u, categoryIncome, categoryDemand, eco, tech.category),
     done: unlockedUpgrades.has(u.id),
-    cost: cognitioCost(u),
+    cost: cognitioCost(u, eco, tech.category),
   }));
   const maxScore = Math.max(
     0,

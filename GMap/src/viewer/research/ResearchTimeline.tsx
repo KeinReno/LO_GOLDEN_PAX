@@ -20,7 +20,13 @@ export function ResearchTimeline({
   const seen = new Set<string>();
 
   for (const e of recent || []) {
-    if (e.reason !== "research" && e.reason !== "research_upgrade") continue;
+    if (
+      e.reason !== "research" &&
+      e.reason !== "research_upgrade" &&
+      e.reason !== "research_rush"
+    ) {
+      continue;
+    }
     if (e.turn == null) continue;
     let id = e.intentId || "";
     // legacy auto-queue entries used queue:factionId
@@ -30,10 +36,10 @@ export function ResearchTimeline({
     seen.add(key);
 
     let label = id;
-    if (e.reason === "research") {
+    if (e.reason === "research" || e.reason === "research_rush") {
       const tech = techs[id];
       label = tech
-        ? `${tech.name} (${tech.category}${tech.era})`
+        ? `${tech.name} (${tech.category}${tech.era})${e.reason === "research_rush" ? " · ускор." : ""}`
         : id || "технология";
     } else {
       // upgrade id may be intentId

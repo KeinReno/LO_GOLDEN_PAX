@@ -259,11 +259,16 @@ export function bootstrapOwnKnowledge(world, factionId, opts = {}) {
     }
   }
 
-  // Owned systems → buildings present
+  // Owned systems → buildings present (legacy + surface/orbital)
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
     for (const p of sys.planets ?? []) {
-      for (const b of p.buildings ?? []) {
+      const lists = [
+        ...(p.buildings ?? []),
+        ...(p.surfaceBuildings ?? []),
+        ...(p.orbitalBuildings ?? []),
+      ];
+      for (const b of lists) {
         const bid = typeof b === "string" ? b : b?.buildingId ?? b?.id;
         if (bid) {
           setKnowledgeLevel(factionId, "building", bid, 4, {
@@ -277,28 +282,31 @@ export function bootstrapOwnKnowledge(world, factionId, opts = {}) {
     }
   }
 
+  const seedUnitId = (uid) => {
+    if (!uid || typeof uid !== "string") return;
+    // Skip display-name leftovers (non catalog ids)
+    if (!uid.includes(".") && !uid.startsWith("ship") && !uid.startsWith("unit")) {
+      return;
+    }
+    setKnowledgeLevel(factionId, "unit", uid, 4, {
+      source: "own",
+      turn,
+      store,
+      persist: false,
+    });
+  };
   for (const f of world.fleets ?? []) {
     if (f.factionId !== factionId) continue;
-    const uid = f.unitDefId ?? f.templateId ?? f.classId;
-    if (uid) {
-      setKnowledgeLevel(factionId, "unit", uid, 4, {
-        source: "own",
-        turn,
-        store,
-        persist: false,
-      });
+    seedUnitId(f.unitDefId ?? f.templateId ?? f.classId);
+    for (const g of f.composition ?? []) {
+      seedUnitId(g?.defId || g?.type);
     }
   }
   for (const l of world.legions ?? []) {
     if (l.factionId !== factionId) continue;
-    const uid = l.unitDefId ?? l.templateId ?? l.classId;
-    if (uid) {
-      setKnowledgeLevel(factionId, "unit", uid, 4, {
-        source: "own",
-        turn,
-        store,
-        persist: false,
-      });
+    seedUnitId(l.unitDefId ?? l.templateId ?? l.classId);
+    for (const g of l.composition ?? []) {
+      seedUnitId(g?.defId || g?.type);
     }
   }
 
@@ -359,7 +367,7 @@ export function applySystemDiscovery(
 
   for (const p of sys.planets ?? []) {
     // Population race composition if present
-    for (const slice of p.raceMix ?? p.races ?? []) {
+    for (const slice of p.raceComposition ?? p.raceMix ?? p.races ?? []) {
       const rid =
         typeof slice === "string" ? slice : slice?.raceId ?? slice?.id;
       if (rid) {
@@ -371,7 +379,12 @@ export function applySystemDiscovery(
         });
       }
     }
-    for (const b of p.buildings ?? []) {
+    const lists = [
+      ...(p.buildings ?? []),
+      ...(p.surfaceBuildings ?? []),
+      ...(p.orbitalBuildings ?? []),
+    ];
+    for (const b of lists) {
       const bid = typeof b === "string" ? b : b?.buildingId ?? b?.id;
       if (bid) {
         setKnowledgeLevel(factionId, "building", bid, lv, {
@@ -485,17 +498,19 @@ export function updateIntelFromDiplomacy(
     const partner = (world?.factions ?? []).find(
       (f) => f.id === targetFactionId,
     );
-    const races = partner?.races ?? [];
-    for (const r of races) {
+    const raceIds = new Set();
+    if (partner?.primaryRaceId) raceIds.add(partner.primaryRaceId);
+    for (const r of partner?.races ?? []) {
       const rid = typeof r === "string" ? r : r?.id;
-      if (rid) {
-        setKnowledgeLevel(factionId, "race", rid, 2, {
-          source: "trade_agreement",
-          turn,
-          store,
-          persist: false,
-        });
-      }
+      if (rid) raceIds.add(rid);
+    }
+    for (const rid of raceIds) {
+      setKnowledgeLevel(factionId, "race", rid, 2, {
+        source: "trade_agreement",
+        turn,
+        store,
+        persist: false,
+      });
     }
   }
 

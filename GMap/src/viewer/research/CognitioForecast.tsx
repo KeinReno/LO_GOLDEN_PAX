@@ -1,8 +1,10 @@
 import type { TechnologyDef } from "../../state/contentCatalog";
+import { effectiveCognitioCost } from "../../state/researchCosts";
+import type { ViewerPayload } from "../../state/types";
 import type { QueueForecastItem } from "./ResearchQueue";
 
-function cognitioCost(tech: TechnologyDef): number {
-  return Number(tech.cost?.["currency.cognitio"] ?? 0);
+function cognitioCost(tech: TechnologyDef, eco?: ViewerPayload["economy"]): number {
+  return effectiveCognitioCost(tech, eco, tech.category);
 }
 
 /** Cumulative turns to afford each queued tech given current stock + income. */
@@ -11,6 +13,7 @@ export function buildQueueForecasts(
   byId: Map<string, TechnologyDef>,
   cognitio: number,
   income: number,
+  eco?: ViewerPayload["economy"],
 ): QueueForecastItem[] {
   let pool = cognitio;
   const out: QueueForecastItem[] = [];
@@ -22,7 +25,7 @@ export function buildQueueForecasts(
       out.push({ techId, turns: null, ready: false });
       continue;
     }
-    const cost = cognitioCost(tech);
+    const cost = cognitioCost(tech, eco);
     if (pool >= cost) {
       out.push({ techId, turns: spentTurns, ready: spentTurns === 0 });
       pool -= cost;
@@ -103,12 +106,14 @@ export function CognitioForecast({
   forecasts,
   byId,
   spark,
+  eco,
 }: {
   cognitio: number;
   income: number;
   forecasts: QueueForecastItem[];
   byId: Map<string, TechnologyDef>;
   spark: number[];
+  eco?: ViewerPayload["economy"];
 }) {
   if (forecasts.length === 0) {
     return (
@@ -145,7 +150,7 @@ export function CognitioForecast({
       <ul className="research-forecast-list">
         {forecasts.map((f) => {
           const tech = byId.get(f.techId);
-          const cost = tech ? cognitioCost(tech) : 0;
+          const cost = tech ? cognitioCost(tech, eco) : 0;
           let label: string;
           if (f.ready) label = "готова сейчас ✓";
           else if (f.turns == null) label = "нет дохода — ждать";

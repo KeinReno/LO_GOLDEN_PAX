@@ -133,7 +133,7 @@ export function DealDesk({
     give: DiploDealItem[];
     want: DiploDealItem[];
     note: string;
-  }) => void;
+  }) => void | boolean | Promise<void | boolean>;
   onAccept: (offerId: string) => void;
   onReject: (offerId: string) => void;
   onCancel: (offerId: string) => void;
@@ -197,9 +197,15 @@ export function DealDesk({
   );
   const needsHold = packageHasWar || packageHasAlliance;
 
-  const flushSend = () => {
+  const flushSend = async () => {
     if (!canSend) return;
-    onCreate({ toFactionId: partnerId, give, want, note });
+    const ok = await onCreate({
+      toFactionId: partnerId,
+      give,
+      want,
+      note,
+    });
+    if (ok === false) return;
     setGive([]);
     setWant([]);
     setNote("");

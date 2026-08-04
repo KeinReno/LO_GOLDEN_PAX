@@ -189,7 +189,27 @@ if (qRoll.quests?.[0]) {
   const q = qRoll.quests[0];
   const choice = q.choices?.find((c) => !c.diceRequired) || q.choices?.[0];
   if (choice && !choice.diceRequired) {
-    const res = resolveQuestChoice(q.id, choice.id, world, content, { factionId: "f1" });
+    // Affordability preflight spends real stocks — seed smoke ledger.
+    const { readLedger, writeLedger, ensureFactionEco } = await import(
+      "../server/ledger.mjs"
+    );
+    const ledger = readLedger();
+    const eco = ensureFactionEco(ledger, "f1");
+    for (const cur of [
+      "currency.bios",
+      "currency.materia",
+      "currency.energia",
+      "currency.industria",
+      "currency.cognitio",
+      "currency.metal",
+      "currency.supply",
+    ]) {
+      eco.stocks[cur] = Math.max(Number(eco.stocks[cur] || 0), 50);
+    }
+    writeLedger(ledger);
+    const res = resolveQuestChoice(q.id, choice.id, world, content, {
+      factionId: "f1",
+    });
     check("resolveQuestChoice ok", !!res.ok, res.error || `status=${res.quest?.status}`);
   } else {
     check("resolveQuestChoice (skipped — only dice choices)", true);

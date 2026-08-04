@@ -1111,7 +1111,7 @@ export function PlayerOrdersPanel({
   const canSubmit =
     !!targetSystemId &&
     (orderType === "claim_system"
-      ? true
+      ? !!selectedFleetId || !!selectedLegionId
       : needsLegion
         ? !!selectedLegionId && Number.isFinite(hops) && hops > 0
         : !!selectedFleetId &&

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ViewerPayload } from "../../state/types";
 import { TaxDragStrip } from "./components/TaxDragStrip";
 import {
@@ -28,6 +28,19 @@ export function PoliciesSection({
   const [confirmDoctrine, setConfirmDoctrine] = useState<DoctrinePreset | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!confirmDoctrine) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        setConfirmDoctrine(null);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [confirmDoctrine]);
 
   if (!eco) {
     return (
@@ -100,7 +113,11 @@ export function PoliciesSection({
         ) : (
           <ul className="eco-laws-list">
             {laws.map((id) => (
-              <li key={id}>{id}</li>
+              <li key={id}>
+                {String(id)
+                  .replace(/^law\./, "")
+                  .replace(/_/g, " ")}
+              </li>
             ))}
           </ul>
         )}

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { v4 as uuid } from "uuid";
 import { generateAlongBrush, type Point } from "../generators/brushGenerator";
 import { createRandomSystem, createRng } from "../generators/systemFactory";
-import { createEmptyWorld } from "./defaults";
+import { createEmptyWorld, DEFAULT_MASTER_TOKEN, RESOURCE_POOL } from "./defaults";
 import {
   POI_PAINT_TOOLS,
   type Caravan,
@@ -36,7 +36,6 @@ import {
 } from "./history";
 import { advanceCaravans, clampRep, driftAnomalies } from "./mapFeatures";
 import { toggleSpaceObject, withSpaceObjects } from "./spaceObjects";
-import { RESOURCE_POOL } from "./defaults";
 import {
   readStoredEditorGraphics,
   writeStoredEditorGraphics,
@@ -136,7 +135,7 @@ interface WorldStore extends UiState {
   removeQuest: (id: string) => void;
   addCaravan: (caravan: Omit<Caravan, "id"> & { id?: string }) => void;
   removeCaravan: (id: string) => void;
-  loadWorld: (world: WorldState) => void;
+  loadWorld: (world: WorldState, opts?: { resetUi?: boolean }) => void;
   resetWorld: () => void;
   addSystemAt: (x: number, y: number) => void;
   moveSystem: (id: string, x: number, y: number) => void;
@@ -831,25 +830,92 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     });
   },
 
-  loadWorld: (world) =>
-    rawSet({
-      world: normalizeWorld(world),
-      selectedSystemId: null,
-      selectedSystemIds: [],
-      selectedFleetId: null,
-      selectedLegionId: null,
-      selectedLinkId: null,
-      selectedSectorId: null,
-      linkDraftFromId: null,
-      sectorDraftPoints: [],
-      dossierSystemId: null,
-      dossierFactionId: null,
-      pendingCapitalFactionId: null,
-      cameraFocusSystemId: null,
-      mapFocus: { level: "galaxy" },
-      contextMenu: null,
-      ...emptyHistory(),
-    }),
+  loadWorld: (world, opts) => {
+    const normalized = normalizeWorld(world);
+    const resetUi = !!opts?.resetUi;
+    const systemIds = new Set(normalized.systems.map((s) => s.id));
+    const fleetIds = new Set(normalized.fleets.map((f) => f.id));
+    const legionIds = new Set(normalized.legions.map((l) => l.id));
+    const linkIds = new Set(normalized.links.map((l) => l.id));
+    const sectorIds = new Set(normalized.sectors.map((s) => s.id));
+    const factionIds = new Set(normalized.factions.map((f) => f.id));
+
+    if (resetUi) {
+      rawSet({
+        world: normalized,
+        selectedSystemId: null,
+        selectedSystemIds: [],
+        selectedFleetId: null,
+        selectedLegionId: null,
+        selectedLinkId: null,
+        selectedSectorId: null,
+        linkDraftFromId: null,
+        sectorDraftPoints: [],
+        dossierSystemId: null,
+        dossierFactionId: null,
+        pendingCapitalFactionId: null,
+        cameraFocusSystemId: null,
+        mapFocus: { level: "galaxy" },
+        contextMenu: null,
+        ...emptyHistory(),
+      });
+      return;
+    }
+
+    rawSet((state) => {
+      const keepSys = (id: string | null | undefined) =>
+        id && systemIds.has(id) ? id : null;
+      const focus = state.mapFocus;
+      let mapFocus = focus;
+      if (focus?.level === "system" || focus?.level === "planet") {
+        const sid = keepSys(focus.systemId);
+        mapFocus = sid
+          ? focus.level === "planet" && focus.planetId
+            ? { ...focus, systemId: sid }
+            : { level: "system", systemId: sid }
+          : { level: "galaxy" };
+      }
+      return {
+        world: normalized,
+        selectedSystemId: keepSys(state.selectedSystemId),
+        selectedSystemIds: (state.selectedSystemIds || []).filter((id) =>
+          systemIds.has(id),
+        ),
+        selectedFleetId:
+          state.selectedFleetId && fleetIds.has(state.selectedFleetId)
+            ? state.selectedFleetId
+            : null,
+        selectedLegionId:
+          state.selectedLegionId && legionIds.has(state.selectedLegionId)
+            ? state.selectedLegionId
+            : null,
+        selectedLinkId:
+          state.selectedLinkId && linkIds.has(state.selectedLinkId)
+            ? state.selectedLinkId
+            : null,
+        selectedSectorId:
+          state.selectedSectorId && sectorIds.has(state.selectedSectorId)
+            ? state.selectedSectorId
+            : null,
+        linkDraftFromId: keepSys(state.linkDraftFromId),
+        sectorDraftPoints: state.sectorDraftPoints ?? [],
+        dossierSystemId: keepSys(state.dossierSystemId),
+        dossierFactionId:
+          state.dossierFactionId && factionIds.has(state.dossierFactionId)
+            ? state.dossierFactionId
+            : null,
+        pendingCapitalFactionId:
+          state.pendingCapitalFactionId &&
+          factionIds.has(state.pendingCapitalFactionId)
+            ? state.pendingCapitalFactionId
+            : null,
+        cameraFocusSystemId: keepSys(state.cameraFocusSystemId),
+        mapFocus,
+        contextMenu: null,
+        ...emptyHistory(),
+      };
+    });
+  },
 
   resetWorld: () =>
     rawSet({
@@ -2010,25 +2076,46 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     });
   },
 
-  publishCampaign: async (masterToken = "master2142") => {
+  publishCampaign: async (masterToken = DEFAULT_MASTER_TOKEN) => {
     set({ publishStatus: "Публикация…" });
     try {
+      const world = get().world;
       const res = await fetch("/api/publish", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Master-Token": masterToken,
         },
-        body: JSON.stringify(get().world),
+        body: JSON.stringify({
+          ...world,
+          expectedRevision: world.meta?.tableRevision ?? 0,
+        }),
       });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || res.statusText);
       }
-      const data = (await res.json()) as { ok: boolean; turn: number };
-      set({
-        publishStatus: `Опубликовано (ход ${data.turn}). Игроки: /view`,
-      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        turn: number;
+        tableRevision?: number;
+      };
+      if (typeof data.tableRevision === "number") {
+        set({
+          world: {
+            ...get().world,
+            meta: {
+              ...get().world.meta,
+              tableRevision: data.tableRevision,
+            },
+          },
+          publishStatus: `Опубликовано (ход ${data.turn}). Игроки: /view`,
+        });
+      } else {
+        set({
+          publishStatus: `Опубликовано (ход ${data.turn}). Игроки: /view`,
+        });
+      }
     } catch (err) {
       set({
         publishStatus: `Ошибка публикации: ${err instanceof Error ? err.message : String(err)}`,

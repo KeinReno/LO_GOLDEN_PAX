@@ -185,6 +185,7 @@ function dockViewFromDigit(key: string, isMobile: boolean): PlayerView | null {
     "6": "forces",
     "7": "quests",
     "8": "rp",
+    "9": "codex",
   };
   return desktopMap[key] ?? null;
 }
@@ -312,7 +313,16 @@ const PERF_OPTIONS: {
 ];
 
 export function ViewerPage() {
-  const mobile = useMemo(() => isLikelyMobile(), []);
+  const [mobile, setMobile] = useState(() => isLikelyMobile());
+  useEffect(() => {
+    const sync = () => setMobile(isLikelyMobile());
+    window.addEventListener("resize", sync);
+    window.addEventListener("orientationchange", sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("orientationchange", sync);
+    };
+  }, []);
   const [factions, setFactions] = useState<FactionOption[]>([]);
   const [factionId, setFactionId] = useState("");
   const [password, setPassword] = useState("");
@@ -489,6 +499,7 @@ export function ViewerPage() {
   const listeners = useRef(new Set<() => void>());
   const mapStampRef = useRef<string | null>(null);
   const credsRef = useRef({ factionId: "", password: "" });
+  const sessionGenRef = useRef(0);
 
   const bump = () => {
     for (const l of listeners.current) l();
@@ -651,6 +662,7 @@ export function ViewerPage() {
           briefing: data.briefing ?? prev?.briefing,
           apMax: data.apMax ?? prev?.apMax,
           reservedAp: data.reservedAp ?? prev?.reservedAp,
+          intel: data.intel ?? prev?.intel,
         }));
         if (typeof data.apMax === "number") setApMax(data.apMax);
         if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
@@ -669,8 +681,7 @@ export function ViewerPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payload?.factionId]);
+  }, [payload?.factionId, password, loadWorld, bump]);
 
   // RP unread while campaign sheet is closed
   useEffect(() => {
@@ -684,6 +695,7 @@ export function ViewerPage() {
       try {
         const headers: Record<string, string> = {
           "X-Faction-Id": payload.factionId,
+          "X-Faction-Password": password,
         };
         const idxRes = await fetch("/api/rp", { headers });
         if (!idxRes.ok || cancelled) return;
@@ -749,7 +761,7 @@ export function ViewerPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt]);
+  }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt, password, rpFloatOpen]);
 
   useEffect(() => {
     if (!payload?.factionId) {
@@ -777,7 +789,10 @@ export function ViewerPage() {
   const refreshEngagements = async (factionId: string) => {
     try {
       const res = await fetch("/api/engagements", {
-        headers: { "X-Faction-Id": factionId },
+        headers: {
+          "X-Faction-Id": factionId,
+          "X-Faction-Password": password,
+        },
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -1134,8 +1149,8 @@ export function ViewerPage() {
     toCurrency: string,
     amountFrom: number,
   ) => {
-    if (!payload) return;
-    await submitPlayerIntent(
+    if (!payload) return false;
+    return submitPlayerIntent(
       "intent.market_convert",
       { fromCurrency, toCurrency, amountFrom },
       `Обмен в очереди: ${amountFrom} ${fromCurrency.replace(/^currency\./, "")}`,
@@ -1150,8 +1165,8 @@ export function ViewerPage() {
     wantAmount: number,
     venue: "common" | "contacts" = "contacts",
   ) => {
-    if (!payload) return;
-    await submitPlayerIntent(
+    if (!payload) return false;
+    return submitPlayerIntent(
       "intent.market_offer",
       { side, giveCurrency, giveAmount, wantCurrency, wantAmount, venue },
       `Заявка (${venue === "common" ? "общий" : "контакты"}): ${giveAmount} → ${wantAmount}`,
@@ -1159,8 +1174,8 @@ export function ViewerPage() {
   };
 
   const submitMarketCancel = async (offerId: string) => {
-    if (!payload) return;
-    await submitPlayerIntent(
+    if (!payload) return false;
+    return submitPlayerIntent(
       "intent.market_cancel",
       { offerId },
       `Отмена заявки в очереди`,
@@ -1279,8 +1294,8 @@ export function ViewerPage() {
     action: "create" | "accept" | "reject" | "cancel",
     body: Record<string, unknown>,
     okMsg: string,
-  ) => {
-    if (!payload) return;
+  ): Promise<boolean> => {
+    if (!payload) return false;
     setDiploBusy(true);
     setDiploMsg(null);
     try {
@@ -1299,8 +1314,10 @@ export function ViewerPage() {
       applyDiploSession(data);
       setDiploMsg(okMsg);
       setFocusDiploOfferId(null);
+      return true;
     } catch (err) {
       setDiploMsg(err instanceof Error ? err.message : String(err));
+      return false;
     } finally {
       setDiploBusy(false);
     }
@@ -1323,10 +1340,11 @@ export function ViewerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.economy) {
-        setPayload({
-          ...payload,
-          economy: { ...payload.economy, ...data.economy },
-        });
+        setPayload((prev) =>
+          prev
+            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            : prev,
+        );
       }
       setResearchMsg(`Исследовано: ${data.tech?.name ?? techId}`);
     } catch (err) {
@@ -1354,10 +1372,11 @@ export function ViewerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.economy) {
-        setPayload({
-          ...payload,
-          economy: { ...payload.economy, ...data.economy },
-        });
+        setPayload((prev) =>
+          prev
+            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            : prev,
+        );
       }
       setResearchMsg(`Улучшено: ${data.upgrade?.name ?? upgradeId}`);
     } catch (err) {
@@ -1384,10 +1403,11 @@ export function ViewerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.economy) {
-        setPayload({
-          ...payload,
-          economy: { ...payload.economy, ...data.economy },
-        });
+        setPayload((prev) =>
+          prev
+            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            : prev,
+        );
       }
       setResearchMsg(
         `Очередь: ${(data.queue as string[] | undefined)?.length ?? 0} слотов`,
@@ -1416,10 +1436,11 @@ export function ViewerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.economy) {
-        setPayload({
-          ...payload,
-          economy: { ...payload.economy, ...data.economy },
-        });
+        setPayload((prev) =>
+          prev
+            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            : prev,
+        );
       }
       setResearchMsg(`Ускорено: ${data.tech?.name ?? techId}`);
     } catch (err) {
@@ -1665,7 +1686,7 @@ export function ViewerPage() {
           ),
         };
       }
-      setPayload({ ...payload, world });
+      setPayload((prev) => (prev ? { ...prev, world } : prev));
       loadWorld(world);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
       else setReservedAp((r) => Math.max(0, r - 1));
@@ -1747,7 +1768,12 @@ export function ViewerPage() {
       kind === "fleet"
         ? world.fleets.find((f) => f.id === unitId)?.systemId
         : world.legions.find((l) => l.id === unitId)?.systemId;
-    const path = hopPath(world, fromId, toSystemId);
+    const path = hopPath(
+      world,
+      fromId,
+      toSystemId,
+      kind === "fleet" ? "fleet" : "legion",
+    );
     // Mirror server: first hop this "tick" preview as full remaining path for UI.
     const route = path.length >= 2 ? path.slice(1) : [];
     if (kind === "fleet") {
@@ -1855,6 +1881,7 @@ export function ViewerPage() {
     noteOverride?: string,
   ) => {
     if (!payload) return;
+    const gen = sessionGenRef.current;
     setOrderMsg(null);
     const fromSystemId =
       kind === "fleet"
@@ -1911,7 +1938,8 @@ export function ViewerPage() {
           fromSystemId,
         );
       }
-      setPayload({ ...payload, world: nextWorld });
+      if (sessionGenRef.current !== gen) return;
+      setPayload((prev) => (prev ? { ...prev, world: nextWorld } : prev));
       loadWorld(nextWorld);
       if (typeof data.apMax === "number") setApMax(data.apMax);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
@@ -1990,12 +2018,15 @@ export function ViewerPage() {
           throw new Error(data.error || res.statusText);
         }
         const data = await res.json();
-        const nextWorld = {
-          ...payload.world,
-          orders: [...payload.world.orders, data.order],
-        };
-        setPayload({ ...payload, world: nextWorld });
-        loadWorld(nextWorld);
+        setPayload((prev) => {
+          if (!prev) return prev;
+          const nextWorld = {
+            ...prev.world,
+            orders: [...prev.world.orders, data.order],
+          };
+          loadWorld(nextWorld);
+          return { ...prev, world: nextWorld };
+        });
         if (typeof data.apMax === "number") setApMax(data.apMax);
         if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
         else if (typeof data.intent?.apCost === "number") {
@@ -2047,7 +2078,7 @@ export function ViewerPage() {
           f.id === fleetId ? { ...f, route: [] } : f,
         ),
       };
-      setPayload({ ...payload, world: nextWorld });
+      setPayload((prev) => (prev ? { ...prev, world: nextWorld } : prev));
       loadWorld(nextWorld);
       setOrderMsg("Маршрут сброшен");
       bump();
@@ -2071,7 +2102,7 @@ export function ViewerPage() {
             : f,
         ),
       };
-      setPayload({ ...payload, world: nextWorld });
+      setPayload((prev) => (prev ? { ...prev, world: nextWorld } : prev));
       loadWorld(nextWorld);
       setOrderMsg("Режим сброшен");
       bump();
@@ -2321,7 +2352,7 @@ export function ViewerPage() {
           );
         }
       }
-      setPayload({ ...payload, world: nextWorld });
+      setPayload((prev) => (prev ? { ...prev, world: nextWorld } : prev));
       loadWorld(nextWorld);
       if (typeof data.apMax === "number") setApMax(data.apMax);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
@@ -2563,7 +2594,7 @@ export function ViewerPage() {
         setQueueOpen((v) => !v);
         return;
       }
-      if (viewMode === "market") {
+      if (viewMode === "market" && e.altKey) {
         const mt = MARKET_TAB_BY_DIGIT[e.key];
         if (mt) {
           e.preventDefault();
@@ -2571,7 +2602,7 @@ export function ViewerPage() {
           return;
         }
       }
-      if (viewMode === "research") {
+      if (viewMode === "research" && e.altKey) {
         const rb = RESEARCH_BRANCH_BY_DIGIT[e.key];
         if (rb) {
           e.preventDefault();
@@ -2579,6 +2610,7 @@ export function ViewerPage() {
           return;
         }
       }
+      if (e.altKey) return;
       const view = dockViewFromDigit(e.key, mobile);
       if (!view) return;
       e.preventDefault();
@@ -2730,7 +2762,11 @@ export function ViewerPage() {
       ? playerQuests.find((q) => q.id === openQuestId) ?? null
       : null;
 
-  const affordableResearch = countAffordableResearch(payload.economy);
+  const affordableResearch = countAffordableResearch(
+    payload.economy,
+    payload.world,
+    payload.factionId,
+  );
   const tradePartnerCount = payload.tradePartnerIds?.length ?? 0;
 
   const hqPanel = (
@@ -2791,17 +2827,24 @@ export function ViewerPage() {
       branch={researchBranch}
       onBranchChange={setResearchBranch}
       highlightTechId={researchHighlightTechId}
-      cognitioIncome={flowData?.totals?.F?.net ?? 0}
+      cognitioIncome={flowData?.totals?.F?.rate ?? 0}
       categoryIncome={
-        researchBranch
-          ? (flowData?.totals?.[researchBranch]?.net ?? 0)
-          : (flowData?.totals?.F?.net ?? 0)
+        (() => {
+          const letter =
+            researchBranch ??
+            null;
+          // Prefer selected tech category rate when available via focus
+          const cat = letter || "F";
+          return flowData?.totals?.[cat]?.rate ?? 0;
+        })()
       }
       categoryDemand={
-        researchBranch
-          ? (flowData?.totals?.[researchBranch]?.demand ?? 0)
-          : (flowData?.totals?.F?.demand ?? 0)
+        (() => {
+          const cat = researchBranch || "F";
+          return flowData?.totals?.[cat]?.demand ?? 0;
+        })()
       }
+      flowTotals={flowData?.totals}
       onOpenBuilding={openBuildingFromResearch}
       onTechMapDrag={highlightSystemsForTech}
       onEffectNavigate={(target) => {
@@ -2855,9 +2898,9 @@ export function ViewerPage() {
       prefillSellCurrency={marketPrefillCurrency}
       onOpenDiplomacy={() => goView("diplomacy")}
       onBookStats={setMarketBookStats}
-      onConvert={(from, to, amt) => void submitMarketConvert(from, to, amt)}
+      onConvert={(from, to, amt) => submitMarketConvert(from, to, amt)}
       onPlaceOffer={(side, giveCur, giveAmt, wantCur, wantAmt, venue) =>
-        void submitMarketOffer(
+        submitMarketOffer(
           side,
           giveCur,
           giveAmt,
@@ -2866,12 +2909,37 @@ export function ViewerPage() {
           venue,
         )
       }
-      onCancelOffer={(offerId) => void submitMarketCancel(offerId)}
+      onCancelOffer={(offerId) => submitMarketCancel(offerId)}
       onEconomyPatch={(eco) => {
         if (!eco) return;
         setPayload((prev) =>
           prev ? { ...prev, economy: { ...prev.economy, ...eco } } : prev,
         );
+      }}
+      onSessionPatch={(data) => {
+        setPayload((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            ...(data.world ? { world: data.world } : {}),
+            ...(data.visibleSystemIds
+              ? { visibleSystemIds: data.visibleSystemIds }
+              : {}),
+            ...(data.knownFactionIds
+              ? { knownFactionIds: data.knownFactionIds }
+              : {}),
+            ...(data.tradePartnerIds
+              ? { tradePartnerIds: data.tradePartnerIds }
+              : {}),
+            ...(data.economy
+              ? { economy: { ...prev.economy, ...data.economy } }
+              : {}),
+            ...(data.intel ? { intel: data.intel } : {}),
+            ...(data.briefing ? { briefing: data.briefing } : {}),
+          };
+        });
+        if (data.world) loadWorld(data.world);
+        bump();
       }}
     />
   );
@@ -2891,7 +2959,7 @@ export function ViewerPage() {
       msg={diploMsg}
       focusOfferId={focusDiploOfferId}
       onCreate={({ toFactionId, give, want, note }) =>
-        void diploOfferAction(
+        diploOfferAction(
           "create",
           { toFactionId, give, want, note },
           "Предложение отправлено — адресат увидит его сразу",
@@ -2984,8 +3052,17 @@ export function ViewerPage() {
           );
         },
         onSendChat: async (questId, text) => {
-          setOrderMsg(`Квест ${questId}: ход отправлен агенту`);
-          void text;
+          const res = await submitQuestAction("send_quest_message", {
+            questId,
+            message: text,
+          });
+          if (!res.ok) {
+            setOrderMsg(
+              (res.error as string | undefined) || "Не удалось отправить",
+            );
+            return;
+          }
+          setOrderMsg(res.message || "Запись в журнале квеста");
         },
       }}
     />
@@ -3052,52 +3129,62 @@ export function ViewerPage() {
         setSelectedFleetId(null);
         setOrderType("move_legion");
         const leg = payload.world.legions.find((l) => l.id === id);
-        if (leg) setSelectedSystemId(leg.systemId);
-        setQueueOpen(true);
-        goView("map");
+        if (leg) {
+          setSelectedSystemId(leg.systemId);
+          setTargetSystemId(null);
+          setPickingTarget(true);
+          setQueueOpen(true);
+          goView("map");
+          window.setTimeout(() => {
+            mapApiRef.current?.focusSystem(leg.systemId);
+          }, 100);
+          setOrderMsg("Легион выбран — укажите систему назначения на карте");
+        } else {
+          setQueueOpen(true);
+          goView("map");
+        }
       }}
-      onFleetComposition={(fleetId, composition) => {
-        setPayload((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            world: {
-              ...prev.world,
-              fleets: prev.world.fleets.map((f) =>
-                f.id === fleetId ? { ...f, composition } : f,
-              ),
-            },
-          };
-        });
-      }}
-      onLegionComposition={(legionId, composition) => {
-        setPayload((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            world: {
-              ...prev.world,
-              legions: prev.world.legions.map((l) =>
-                l.id === legionId ? { ...l, composition } : l,
-              ),
-            },
-          };
-        });
-      }}
-      onStocksPatch={(patch) => {
-        setPayload((prev) => {
-          if (!prev?.economy) return prev;
-          return {
-            ...prev,
-            economy: {
-              ...prev.economy,
-              stocks: {
-                ...prev.economy.stocks,
-                ...patch,
-              },
-            },
-          };
-        });
+      onForcesMutate={async ({ kind, id, composition, stockDeltas, forceReserve }) => {
+        if (!payload) return false;
+        try {
+          const res = await fetch("/api/forces/mutate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              factionId: payload.factionId,
+              password,
+              kind,
+              id,
+              composition,
+              stockDeltas,
+              forceReserve,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setOrderMsg(data.error || res.statusText);
+            return false;
+          }
+          setPayload((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              world: data.world ?? prev.world,
+              economy: data.economy
+                ? { ...prev.economy, ...data.economy }
+                : prev.economy,
+              intel: data.intel ?? prev.intel,
+              visibleSystemIds:
+                data.visibleSystemIds ?? prev.visibleSystemIds,
+            };
+          });
+          if (data.world) loadWorld(data.world);
+          bump();
+          return true;
+        } catch (e) {
+          setOrderMsg(e instanceof Error ? e.message : String(e));
+          return false;
+        }
       }}
       onToast={(msg) => setOrderMsg(msg)}
       highlightDefIds={forcesHighlightDefIds}
@@ -4140,6 +4227,8 @@ export function ViewerPage() {
             type="button"
             className="btn ghost block"
             onClick={() => {
+              sessionGenRef.current += 1;
+              credsRef.current = { factionId: "", password: "" };
               setPayload(null);
               setPassword("");
               setMenuOpen(false);
@@ -4541,7 +4630,7 @@ export function ViewerPage() {
             avatarUrl={faction?.avatarUrl}
             onMsg={(m) => setOrderMsg(m)}
             onGiveNpcTask={async (npcId, opts) => {
-              await submitPlayerIntent(
+              return submitPlayerIntent(
                 "intent.give_npc_task",
                 {
                   npcId,
@@ -4758,12 +4847,13 @@ export function ViewerPage() {
           type="button"
           className={`viewer-dock-btn ${viewMode === "codex" ? "active" : ""}`}
           onClick={() => goView("codex")}
-          title="Справочник"
+          title="Справочник · 9"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <BookOpen size={18} strokeWidth={2} />
           </span>
           Справ.
+          {!mobile && <kbd className="viewer-dock-kbd">9</kbd>}
         </button>
       </nav>
       {eraBanner != null && (
@@ -4986,6 +5076,17 @@ export function ViewerPage() {
             <button
               type="button"
               className="btn ghost"
+              disabled={
+                !selectedFleetId ||
+                focusedSystem.ownerFactionId === payload.factionId
+              }
+              title={
+                !selectedFleetId
+                  ? "Выберите свой флот на карте"
+                  : focusedSystem.ownerFactionId === payload.factionId
+                    ? "Система уже под вашим контролем"
+                    : "Заявить права на систему (флот должен быть на месте)"
+              }
               onClick={() =>
                 submitDirectClaim(focusedSystem.id, selectedFleetId)
               }

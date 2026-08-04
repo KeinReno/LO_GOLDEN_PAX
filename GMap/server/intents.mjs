@@ -29,7 +29,24 @@ const VISION_GATED_INTENTS = new Set([
   "intent.blockade",
   "intent.fortify",
   "intent.claim_system",
+  "intent.scout_reveal",
+  "intent.scout_world",
 ]);
+
+function factionHasScoutPresence(world, factionId, systemId) {
+  const near = new Set([systemId]);
+  for (const l of world.links ?? []) {
+    if (l.fromId === systemId) near.add(l.toId);
+    else if (l.toId === systemId) near.add(l.fromId);
+  }
+  for (const f of world.fleets ?? []) {
+    if (f.factionId === factionId && near.has(f.systemId)) return true;
+  }
+  for (const l of world.legions ?? []) {
+    if (l.factionId === factionId && near.has(l.systemId)) return true;
+  }
+  return false;
+}
 
 function legacyTypeToDefId(type) {
   const intents = getContent().intents || {};
@@ -163,7 +180,15 @@ function validateIntentGates(world, factionId, defId, payload) {
     if (toSystemId) {
       const visible = resolveVisibleWithFog(world, factionId, readFog());
       if (!visible.has(toSystemId)) {
-        return { ok: false, error: "Цель вне радиуса обзора" };
+        // scout_reveal: allow if owned fleet/legion is in/adjacent even without fog vision
+        if (
+          defId === "intent.scout_reveal" &&
+          factionHasScoutPresence(world, factionId, toSystemId)
+        ) {
+          // ok
+        } else {
+          return { ok: false, error: "Цель вне радиуса обзора" };
+        }
       }
     }
   }

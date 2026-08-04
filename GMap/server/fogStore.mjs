@@ -122,7 +122,6 @@ export function resolveVisibleWithFog(world, factionId, fogState) {
     if ((facs ?? []).includes(factionId)) visible.add(sysId);
   }
 
-  const permReveal = fogState?.permanentReveal ?? {};
   const fleetSystemIds = new Set();
   const legionSystemIds = new Set();
   for (const f of world.fleets ?? []) {
@@ -132,14 +131,15 @@ export function resolveVisibleWithFog(world, factionId, fogState) {
     if (l.factionId === factionId && l.systemId) legionSystemIds.add(l.systemId);
   }
 
+  // Permanent reveal lights the system itself (above), but does not seed
+  // forever-neighbor vision — only ownership / presence expands hops.
   const systemHopSeeds = new Set();
   for (const s of world.systems ?? []) {
     const id = s.id;
     const owned = s.ownerFactionId === factionId;
     const fleetHere = fleetSystemIds.has(id);
     const legionHere = legionSystemIds.has(id);
-    const perm = (permReveal[id] ?? []).includes(factionId);
-    if (owned || fleetHere || legionHere || perm) systemHopSeeds.add(id);
+    if (owned || fleetHere || legionHere) systemHopSeeds.add(id);
   }
   for (const id of expandVisionHops(world, systemHopSeeds, VISION_SYSTEM_HOPS)) {
     visible.add(id);

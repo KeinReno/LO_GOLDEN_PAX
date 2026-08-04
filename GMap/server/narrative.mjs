@@ -4,6 +4,76 @@
  */
 import { getContent } from "./contentLoader.mjs";
 import { rollNpcTaskProgress } from "./dice.mjs";
+import { getRelation } from "./opinionTick.mjs";
+
+/** Default lifetime for NPC/quest lasting effects pushed onto faction.activeEffects. */
+export const ACTIVE_EFFECT_DEFAULT_TURNS = 10;
+
+const REFUGEE_ELIGIBLE_RELATIONS = new Set(["alliance", "migration_treaty"]);
+
+/** Dest may receive refugees from moverFactionId (own / alliance / migration_treaty). */
+export function isRefugeeEligibleDest(world, destSys, moverFactionId) {
+  if (!destSys) return false;
+  if (!moverFactionId) return true;
+  const owner = destSys.ownerFactionId;
+  if (owner === moverFactionId) return true;
+  if (!owner) return false;
+  return REFUGEE_ELIGIBLE_RELATIONS.has(getRelation(world, moverFactionId, owner));
+}
+
+/**
+ * Blend incoming pop into planet.raceComposition (weighted by headcount).
+ * @param {object} planet
+ * @param {number} amount
+ * @param {{ raceId: string, percent?: number }[]} [incomingComposition]
+ */
+export function addPopWithRaceComposition(planet, amount, incomingComposition) {
+  if (!planet || !(amount > 0)) return;
+  const before = Math.max(0, Number(planet.population) || 0);
+  const add = Math.floor(amount);
+  planet.population = before + add;
+
+  const incoming = (incomingComposition || []).filter((s) => s?.raceId);
+  if (!incoming.length) return;
+
+  const byRace = new Map();
+  for (const s of planet.raceComposition || []) {
+    if (!s?.raceId) continue;
+    const w = (before * (Number(s.percent) || 0)) / 100;
+    byRace.set(s.raceId, (byRace.get(s.raceId) || 0) + w);
+  }
+  for (const s of incoming) {
+    const w = (add * (Number(s.percent) || 0)) / 100;
+    byRace.set(s.raceId, (byRace.get(s.raceId) || 0) + w);
+  }
+  const total = [...byRace.values()].reduce((a, b) => a + b, 0);
+  if (total <= 0) {
+    planet.raceComposition = incoming.map((s) => ({
+      raceId: s.raceId,
+      percent: Number(s.percent) || 0,
+    }));
+    return;
+  }
+  const entries = [...byRace.entries()].map(([raceId, w]) => ({
+    raceId,
+    percent: Math.round((w / total) * 1000) / 10,
+  }));
+  const sum = entries.reduce((a, e) => a + e.percent, 0);
+  if (entries.length && Math.abs(sum - 100) > 0.05) {
+    entries[0].percent = Math.round((entries[0].percent + (100 - sum)) * 10) / 10;
+  }
+  planet.raceComposition = entries;
+}
+
+function planetDominantComposition(planet, faction) {
+  if (planet?.raceComposition?.length) return planet.raceComposition;
+  const raceId =
+    faction?.primaryRaceId ||
+    faction?.primaryRace ||
+    faction?.dominantRaceId ||
+    "race_human";
+  return [{ raceId, percent: 100 }];
+}
 
 export function systemSpaceObjectTags(sys) {
   const raw = sys?.spaceObjects;
@@ -200,7 +270,12 @@ export function processSystemTimers(world, turn, journal) {
     if (!Array.isArray(sys.timers) || sys.timers.length === 0) continue;
     const keep = [];
     for (const t of sys.timers) {
-      if ((t.expiresTurn ?? 0) <= turn) {
+      // Missing expiresTurn must NOT fire immediately — keep until scheduled.
+      if (t.expiresTurn == null || !Number.isFinite(Number(t.expiresTurn))) {
+        keep.push(t);
+        continue;
+      }
+      if (Number(t.expiresTurn) <= turn) {
         journal.push({
           type: "timer_fired",
           systemId: sys.id,
@@ -259,33 +334,42 @@ export function spawnRefugees(world, fromSystemId, amount, journal, opts = {}) {
   const from = (world.systems ?? []).find((s) => s.id === fromSystemId);
   if (!from) return null;
 
+  const moverFactionId = opts.factionId || from.ownerFactionId || null;
+  const fromFac = moverFactionId
+    ? (world.factions ?? []).find((f) => f.id === moverFactionId)
+    : null;
+  const srcPlanet = (from.planets || []).find((p) => (p.population || 0) > 0);
+  const incomingComp = planetDominantComposition(srcPlanet || from.planets?.[0], fromFac);
+
   const neighbors = neighborIds(world, fromSystemId)
     .map((id) => (world.systems ?? []).find((s) => s.id === id))
     .filter(Boolean);
-  if (!neighbors.length) {
+  const eligible = neighbors.filter((s) =>
+    isRefugeeEligibleDest(world, s, moverFactionId),
+  );
+  if (!eligible.length) {
     addSpaceObject(from, "refugees");
     journal?.push({
       type: "refugees_camp",
       systemId: from.id,
       amount: moved,
-      note: "no_neighbor",
+      note: neighbors.length ? "no_eligible_neighbor" : "no_neighbor",
     });
     return from.id;
   }
 
   // Prefer existing camp, else lowest pop neighbor, else first
   let dest =
-    neighbors.find((s) => systemSpaceObjectTags(s).includes("refugees")) ||
-    [...neighbors].sort(
+    eligible.find((s) => systemSpaceObjectTags(s).includes("refugees")) ||
+    [...eligible].sort(
       (a, b) =>
         (a.planets?.[0]?.population || 0) - (b.planets?.[0]?.population || 0),
     )[0];
 
   addSpaceObject(dest, "refugees");
-  // soft pop bump on destination first planet if any
   const planet = (dest.planets || [])[0];
   if (planet) {
-    planet.population = (planet.population || 0) + moved;
+    addPopWithRaceComposition(planet, moved, incomingComp);
   }
   journal?.push({
     type: "refugees_camp",
@@ -331,11 +415,30 @@ export function applyRefugeeConvoy(world, intent, journal) {
     return false;
   }
 
-  // drain pop from source if possible
+  const moverFactionId = intent.factionId || from.ownerFactionId || null;
+  if (!isRefugeeEligibleDest(world, to, moverFactionId)) {
+    journal.push({
+      type: "reject",
+      intentId: intent.id,
+      reason: "dest_not_own_or_allied",
+    });
+    return false;
+  }
+
+  const fromFac = moverFactionId
+    ? (world.factions ?? []).find((f) => f.id === moverFactionId)
+    : null;
+
+  // drain pop from source if possible; track mix from first drained planet
   let left = amount;
+  let incomingComp = null;
   for (const p of from.planets || []) {
     if (left <= 0) break;
     const take = Math.min(left, p.population || 0);
+    if (take <= 0) continue;
+    if (!incomingComp) {
+      incomingComp = planetDominantComposition(p, fromFac);
+    }
     p.population = Math.max(0, (p.population || 0) - take);
     left -= take;
   }
@@ -351,7 +454,11 @@ export function applyRefugeeConvoy(world, intent, journal) {
 
   const destPlanet = (to.planets || [])[0];
   if (destPlanet) {
-    destPlanet.population = (destPlanet.population || 0) + moved;
+    addPopWithRaceComposition(
+      destPlanet,
+      moved,
+      incomingComp || [{ raceId: "race_human", percent: 100 }],
+    );
   }
   addSpaceObject(to, "refugees");
   // clear empty camp if no pop left and small camp
@@ -405,8 +512,21 @@ export function applyGiveNpcTask(world, intent, journal) {
   const taskLabel = String(intent.payload?.taskLabel || "").trim();
   const etaTurn = Math.floor(Number(intent.payload?.etaTurn));
   const linkedQuestId = intent.payload?.linkedQuestId || null;
-  const effects = Array.isArray(intent.payload?.effects)
-    ? intent.payload.effects
+  // Never accept client-supplied effects — only content task defs.
+  const taskId = intent.payload?.taskId || null;
+  const content = getContent();
+  const taskDef =
+    (taskId &&
+      (content.npc_tasks?.[taskId] ||
+        content.court_tasks?.[taskId] ||
+        content.tasks?.[taskId])) ||
+    null;
+  const effects = Array.isArray(taskDef?.effects)
+    ? taskDef.effects.map((e) =>
+        e && typeof e === "object"
+          ? { ...e, args: e.args ? { ...e.args } : e.args }
+          : e,
+      )
     : [];
   const turn = world.meta?.turn ?? 0;
 
@@ -570,6 +690,10 @@ export function processNpcTasks(world, turn, journal) {
         for (const e of effects) {
           fac.activeEffects.push({
             ...e,
+            expiresTurn:
+              e.expiresTurn != null
+                ? Number(e.expiresTurn)
+                : turn + ACTIVE_EFFECT_DEFAULT_TURNS,
             source: e.source || {
               kind: "npc_task",
               id: task.id,

@@ -41,8 +41,8 @@ function ownedSystems(world, factionId) {
 function warCount(world, factionId) {
   let n = 0;
   for (const d of world.diplomacy ?? []) {
-    const a = d.aFactionId || d.fromFactionId;
-    const b = d.bFactionId || d.toFactionId;
+    const a = d.aId || d.aFactionId || d.fromFactionId;
+    const b = d.bId || d.bFactionId || d.toFactionId;
     if (a !== factionId && b !== factionId) continue;
     if (d.status === "war" || d.relation === "war" || d.state === "war") n += 1;
   }
@@ -81,10 +81,15 @@ function hasRace(world, factionId, raceId) {
 function hasBuilding(world, factionId, buildingId) {
   for (const s of ownedSystems(world, factionId)) {
     for (const p of s.planets ?? []) {
-      for (const b of p.buildings ?? []) {
-        if (b.buildingId === buildingId || b.kind === buildingId || b.id === buildingId) {
-          return true;
-        }
+      const lists = [
+        ...(p.buildings ?? []),
+        ...(p.surfaceBuildings ?? []),
+        ...(p.orbitalBuildings ?? []),
+      ];
+      for (const b of lists) {
+        const bid =
+          typeof b === "string" ? b : b?.buildingId ?? b?.kind ?? b?.id;
+        if (bid === buildingId) return true;
       }
     }
   }
@@ -103,16 +108,16 @@ function borderWithWar(world, factionId) {
   if (warCount(world, factionId) <= 0) return false;
   const owned = new Set(ownedSystems(world, factionId).map((s) => s.id));
   for (const link of world.links ?? []) {
-    const a = link.a || link.fromSystemId;
-    const b = link.b || link.toSystemId;
+    const a = link.fromId || link.a || link.fromSystemId;
+    const b = link.toId || link.b || link.toSystemId;
     if (!owned.has(a) && !owned.has(b)) continue;
     const otherId = owned.has(a) ? b : a;
     const other = (world.systems ?? []).find((s) => s.id === otherId);
     if (!other?.ownerFactionId || other.ownerFactionId === factionId) continue;
     // Neighbor owned by someone we are at war with
     for (const d of world.diplomacy ?? []) {
-      const x = d.aFactionId || d.fromFactionId;
-      const y = d.bFactionId || d.toFactionId;
+      const x = d.aId || d.aFactionId || d.fromFactionId;
+      const y = d.bId || d.bFactionId || d.toFactionId;
       const pair =
         (x === factionId && y === other.ownerFactionId) ||
         (y === factionId && x === other.ownerFactionId);
@@ -200,10 +205,51 @@ function catalogQuestToInstance(def, factionId, systemId, turn, expiresTurn) {
 }
 
 /**
+ * Compute negative stock spends required by quest effects.
+ */
+export function stockCostsFromEffects(effects) {
+  /** @type {Record<string, number>} */
+  const need = {};
+  for (const e of effects || []) {
+    if (
+      (e.effect === "upkeep_flat" || e.effect === "production_flat") &&
+      e.args?.resource
+    ) {
+      const delta = Number(e.args.amount || 0);
+      if (delta < 0) {
+        const id = String(e.args.resource);
+        need[id] = (need[id] || 0) + Math.abs(delta);
+      }
+    }
+  }
+  return need;
+}
+
+function canAffordQuestCosts(factionId, effects) {
+  const need = stockCostsFromEffects(effects);
+  const keys = Object.keys(need);
+  if (!keys.length) return { ok: true };
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  for (const [currencyId, amt] of Object.entries(need)) {
+    const stock = Number(eco.stocks?.[currencyId] ?? 0);
+    if (stock < amt) {
+      return {
+        ok: false,
+        error: `Недостаточно ${currencyId.replace(/^currency\./, "")} (нужно ${amt}, есть ${stock})`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
+/**
  * Apply one-shot quest effects (stocks + soft loyalty). Continuous stack channels
  * are recorded on faction.activeEffects for A3/economy consumers.
  */
-export function applyQuestEffects(world, factionId, effects, meta = {}) {
+function applyQuestEffects(world, factionId, effects, meta = {}) {
+  const afford = canAffordQuestCosts(factionId, effects);
+  if (!afford.ok) return { applied: [], notes: [], error: afford.error, ok: false };
   const list = Array.isArray(effects) ? effects : [];
   if (!list.length) return { applied: [], notes: [] };
   const faction = factionById(world, factionId);
@@ -268,6 +314,10 @@ export function applyQuestEffects(world, factionId, effects, meta = {}) {
       if (!Array.isArray(faction.activeEffects)) faction.activeEffects = [];
       faction.activeEffects.push({
         ...e,
+        expiresTurn:
+          e.expiresTurn != null
+            ? Number(e.expiresTurn)
+            : turn + 10,
         source: {
           kind: "quest",
           id: meta.questId || "quest",
@@ -423,6 +473,9 @@ export function resolveQuestChoice(questId, choiceId, world, content, opts = {})
     intentId: opts.intentId,
     reason: "quest_choice",
   });
+  if (effectResult.error) {
+    return { ok: false, error: effectResult.error };
+  }
 
   pushHistory(quest, {
     at: nowIso(),
@@ -519,6 +572,9 @@ export function resolveQuestDice(questId, specIndex, world, content, opts = {}) 
       intentId: opts.intentId,
       reason: "quest_dice",
     });
+    if (effectResult.error) {
+      return { ok: false, error: effectResult.error, rolls, success, message };
+    }
     // Consume choice after dice resolution for yearly quests
     if (quest.type === "yearly" || !quest.arc) {
       quest.status = "done";

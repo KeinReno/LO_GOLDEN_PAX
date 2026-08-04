@@ -74,6 +74,8 @@ export type TechnologyDef = {
   raceLock?: string;
   /** Requires matching Faction.traits id. */
   factionTraitLock?: string;
+  /** Requires unlockedProperties on faction eco. */
+  requireProperties?: string[];
   /** Era-5+ breakthrough tech (distinct radial styling). */
   isBreakthrough?: boolean;
   balanceBudget?: number;
@@ -242,6 +244,10 @@ export type PublicContent = {
     {
       id: string;
       name: string;
+      kind?: string;
+      origin?: string;
+      parent?: string;
+      base?: string;
       tags?: string[];
       traits?: Array<{
         id: string;

@@ -786,6 +786,7 @@ async function ensureShareTargetPort(devPort) {
         PORT: String(PROD_PORT),
         HOST: "127.0.0.1",
         NODE_ENV: "production",
+        GMAP_PLAYER_SHARE: "1",
       },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,

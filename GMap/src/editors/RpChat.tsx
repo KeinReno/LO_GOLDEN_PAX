@@ -172,8 +172,12 @@ export function RpChat({
 
   const headers = useMemo((): Record<string, string> => {
     if (mode === "master") return { "X-Master-Token": masterToken };
-    return { "X-Faction-Id": factionId || "" };
-  }, [mode, masterToken, factionId]);
+    const h: Record<string, string> = {
+      "X-Faction-Id": factionId || "",
+    };
+    if (password) h["X-Faction-Password"] = password;
+    return h;
+  }, [mode, masterToken, factionId, password]);
 
   const flatChannels = useMemo(() => {
     const out: { chapterId: string; chapterTitle: string; episode: Episode }[] =

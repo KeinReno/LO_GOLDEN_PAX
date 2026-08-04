@@ -59,18 +59,20 @@ export function CourtPanel({
   const headers = useMemo(
     (): Record<string, string> => ({
       "X-Faction-Id": payload.factionId,
+      "X-Faction-Password": password,
     }),
-    [payload.factionId],
+    [payload.factionId, password],
   );
 
   const giveTask = async (
     npcId: string,
     opts: { taskLabel: string; etaTurn: number; linkedQuestId?: string },
   ) => {
-    if (!onGiveNpcTask) return;
+    if (!onGiveNpcTask) return false;
     setTaskBusy(true);
     try {
-      await onGiveNpcTask(npcId, opts);
+      const result = await onGiveNpcTask(npcId, opts);
+      return result !== false;
     } finally {
       setTaskBusy(false);
     }

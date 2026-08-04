@@ -3,6 +3,11 @@
  * New effect ⇒ add here (+ tech_schema enum), not if(techId) in components.
  */
 import { ECO_CATEGORY_NAMES } from "../viewer/economyFlowTypes";
+import {
+  BUILD_METAL,
+  BUILD_SUPPLY,
+  CATEGORY_CURRENCIES,
+} from "./economyLabels";
 
 export type EffectInstance = {
   effect: string;
@@ -24,8 +29,12 @@ function catName(cat: unknown): string {
 
 function resourceLabel(args: Record<string, unknown>): string {
   if (args.resource) {
-    const r = String(args.resource).replace(/^currency\./, "");
-    return r;
+    const id = String(args.resource);
+    const fromCat = CATEGORY_CURRENCIES.find((c) => c.id === id);
+    if (fromCat) return fromCat.name;
+    if (id === BUILD_METAL.id) return BUILD_METAL.label;
+    if (id === BUILD_SUPPLY.id) return BUILD_SUPPLY.label;
+    return id.replace(/^currency\./, "");
   }
   if (args.category) return catName(args.category);
   return "выход";

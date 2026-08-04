@@ -67,12 +67,26 @@ export function splitStackCounts(count) {
   return chunks;
 }
 
+/** Stable id on the live composition ref so finalize can restore duplicate stacks. */
+function ensureGroupId(group, indexBase) {
+  const ref = group.ref;
+  const fallback = `${group.parentKind || "x"}_${group.parentId || "?"}_${group.defId}_${indexBase}`;
+  if (ref && typeof ref === "object") {
+    if (!ref.id) ref.id = fallback;
+    return String(ref.id);
+  }
+  if (!group.id) group.id = fallback;
+  return String(group.id);
+}
+
 function groupToCards(group, sideId, indexBase) {
   const chunks = splitStackCounts(group.count || 1);
   const role = (group.roles && group.roles[0]) || "line";
+  const groupId = ensureGroupId(group, indexBase);
   return chunks.map((count, i) => ({
     cardId: `${sideId}_${group.defId}_${indexBase}_${i}`,
     defId: group.defId,
+    groupId,
     role,
     count,
     hp: group.hp ?? group.maxHp ?? 40,
@@ -220,7 +234,7 @@ export function prepareCardBattle(engagement, world, content = getContent()) {
 
   for (let si = 0; si < ids.length; si++) {
     const side = engagement.sides[si];
-    const groups = gatherGroups(world, side, theater, content);
+    const groups = gatherGroups(world, side, theater, content, engagement);
     const cards = [];
     groups.forEach((g, gi) => {
       cards.push(...groupToCards(g, side.factionId, gi));
@@ -279,7 +293,8 @@ function drawCards(state, sideId, n) {
 }
 
 /**
- * Manual draw from deck (UI: click deck pile). Only on your turn.
+ * Manual draw from deck (UI: click deck pile). Consumes the turn so the
+ * table cannot free-draw the whole deck (aligns with play/pass).
  */
 export function drawFromDeck(state, sideId, content = getContent()) {
   if (!state || state.status !== "active") {
@@ -297,6 +312,12 @@ export function drawFromDeck(state, sideId, content = getContent()) {
     action: "draw",
     cardId: drawn[0],
   });
+  const rules = cardBattleRules(content);
+  advanceTurn(state, rules);
+  if (checkEndCondition(state, content)) {
+    state.status = "resolved";
+    settleWinner(state);
+  }
   return { ok: true, state, drawn };
 }
 
@@ -324,7 +345,8 @@ function sideHasCards(state, sideId) {
 }
 
 /**
- * End when max rounds or one side has no cards left anywhere.
+ * End when max rounds or one side has no cards left anywhere
+ * (hand+deck+front). Empty board ends the fight even if baseHp remains.
  */
 export function checkEndCondition(state, content = getContent()) {
   const rules = cardBattleRules(content);
@@ -332,17 +354,8 @@ export function checkEndCondition(state, content = getContent()) {
   if (state.round > rules.maxRounds) return true;
   const ids = Object.keys(state.hands);
   for (const id of ids) {
-    if (!sideHasCards(state, id) && (state.baseHp[id] || 0) <= 0) return true;
-  }
-  // One side wiped on base + no cards
-  for (const id of ids) {
-    const other = opponentId(state, id);
-    if (!other) continue;
-    if (
-      !sideHasCards(state, id) &&
-      (state.baseHp[id] || 0) <= 0 &&
-      sideHasCards(state, other)
-    ) {
+    if (!sideHasCards(state, id)) {
+      state.baseHp[id] = 0;
       return true;
     }
   }
@@ -468,33 +481,52 @@ export function passCardRound(state, sideId, content = getContent()) {
   return { ok: true, state };
 }
 
+function stackKey(card) {
+  const parentKind = card.parentKind || "fleet";
+  const parentId = card.parentId || "?";
+  if (card.groupId) return `${parentKind}|${parentId}|gid:${card.groupId}`;
+  return `${parentKind}|${parentId}|def:${card.defId}`;
+}
+
+function findCompositionGroup(composition, meta) {
+  if (!Array.isArray(composition)) return null;
+  if (meta.groupId) {
+    const byId = composition.find((x) => x.id === meta.groupId);
+    if (byId) return byId;
+  }
+  return composition.find((x) => (x.defId || x.type) === meta.defId) || null;
+}
+
 /**
  * Write surviving card counts back onto fleet/legion composition.
+ * Prefer group id/ref so duplicate defId stacks do not collapse.
  */
 export function finalizeCardBattle(state, world) {
   if (!state) return { ok: false, error: "no state" };
 
-  const survivors = new Map(); // key: parentKind|parentId|defId -> count/hp
-  const participated = new Map(); // key -> { parentKind, parentId, defId }
+  const survivors = new Map(); // stackKey -> count/hp
+  const participated = new Map(); // stackKey -> meta
 
   const noteParticipated = (card) => {
     if (!card?.parentId || !card.defId) return;
-    const key = `${card.parentKind || "fleet"}|${card.parentId}|${card.defId}`;
+    const key = stackKey(card);
     participated.set(key, {
       parentKind: card.parentKind || "fleet",
       parentId: card.parentId,
       defId: card.defId,
+      groupId: card.groupId || null,
     });
   };
 
   const collect = (card) => {
     noteParticipated(card);
     if (!card || (card.count || 0) <= 0) return;
-    const key = `${card.parentKind || "fleet"}|${card.parentId || "?"}|${card.defId}`;
+    const key = stackKey(card);
     const cur = survivors.get(key) || {
       parentKind: card.parentKind || "fleet",
       parentId: card.parentId,
       defId: card.defId,
+      groupId: card.groupId || null,
       count: 0,
       hp: card.hp,
     };
@@ -514,18 +546,14 @@ export function finalizeCardBattle(state, world) {
   for (const p of participated.values()) {
     if (p.parentKind === "fleet") {
       const fleet = (world.fleets ?? []).find((f) => f.id === p.parentId);
-      const g = (fleet?.composition || []).find(
-        (x) => (x.defId || x.type) === p.defId,
-      );
+      const g = findCompositionGroup(fleet?.composition, p);
       if (g) {
         g.count = 0;
         g.hp = 0;
       }
     } else if (p.parentKind === "legion") {
       const legion = (world.legions ?? []).find((l) => l.id === p.parentId);
-      const g = (legion?.composition || []).find(
-        (x) => (x.defId || x.type) === p.defId,
-      );
+      const g = findCompositionGroup(legion?.composition, p);
       if (g) {
         g.count = 0;
         g.hp = 0;
@@ -538,9 +566,7 @@ export function finalizeCardBattle(state, world) {
     if (v.parentKind === "fleet") {
       const fleet = (world.fleets ?? []).find((f) => f.id === v.parentId);
       if (!fleet) continue;
-      const g = (fleet.composition || []).find(
-        (x) => (x.defId || x.type) === v.defId,
-      );
+      const g = findCompositionGroup(fleet.composition, v);
       if (g) {
         g.count = v.count;
         g.hp = v.hp;
@@ -548,9 +574,7 @@ export function finalizeCardBattle(state, world) {
     } else if (v.parentKind === "legion") {
       const legion = (world.legions ?? []).find((l) => l.id === v.parentId);
       if (!legion || !Array.isArray(legion.composition)) continue;
-      const g = legion.composition.find(
-        (x) => (x.defId || x.type) === v.defId,
-      );
+      const g = findCompositionGroup(legion.composition, v);
       if (g) {
         g.count = v.count;
         g.hp = v.hp;
@@ -574,8 +598,8 @@ export function estimatePowerShare(world, engagement, content = getContent()) {
   const sideA = engagement.sides?.[0];
   const sideB = engagement.sides?.[1];
   if (!sideA || !sideB) return 0.5;
-  const groupsA = gatherGroups(world, sideA, theater, content);
-  const groupsB = gatherGroups(world, sideB, theater, content);
+  const groupsA = gatherGroups(world, sideA, theater, content, engagement);
+  const groupsB = gatherGroups(world, sideB, theater, content, engagement);
   const pow = (groups) =>
     groups.reduce(
       (s, g) =>

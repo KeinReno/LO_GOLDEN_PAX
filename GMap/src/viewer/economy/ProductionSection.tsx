@@ -76,8 +76,8 @@ function SystemRow({
               </span>
             )}
           </span>
-          <span className="eco-prod-row__rate tabular-nums">
-            ⚙ {row.ratePerTurn}/ход
+          <span className="eco-prod-row__rate tabular-nums" title="Оценка по тирам ресурсов/зданий, не поток flow-engine">
+            ~{row.ratePerTurn}
             {row.bottleneck ? " ⚠" : ""}
           </span>
           <span className="eco-prod-row__open hint">открыть →</span>

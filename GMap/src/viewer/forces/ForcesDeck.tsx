@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, MapPin, Crosshair, Package } from "lucide-react";
-import type { Fleet, Legion, ShipGroup, ViewerPayload } from "../../state/types";
+import type { ShipGroup, ViewerPayload } from "../../state/types";
 import { getCachedContent } from "../../state/contentCatalog";
 import type { MapResourceDef } from "../../state/contentCatalog";
-import { useWorldStore } from "../../state/worldStore";
 import { FleetCover } from "./FleetCover";
 import { LegionCover } from "./LegionCover";
 import { UnitCard, type UnitCardModel } from "./UnitCard";
@@ -33,6 +32,14 @@ import {
 import { hitDropZone } from "./useDeckGestures";
 import { canOutfitUnit } from "./outfitRules";
 
+export type ForcesMutateArgs = {
+  kind: "fleet" | "legion";
+  id: string;
+  composition: ShipGroup[];
+  stockDeltas: Record<string, number>;
+  forceReserve: UnitCardModel[];
+};
+
 export type ForcesDeckProps = {
   payload: ViewerPayload;
   selectedFleetId?: string | null;
@@ -42,16 +49,12 @@ export type ForcesDeckProps = {
   onFocusOnMap?: (systemId: string) => void;
   onOrderWithFleet?: (id: string) => void;
   onOrderWithLegion?: (id: string) => void;
-  onFleetComposition?: (fleetId: string, composition: ShipGroup[]) => void;
-  onLegionComposition?: (
-    legionId: string,
-    composition: NonNullable<Legion["composition"]>,
-  ) => void;
-  /** Patch economy stocks after forge / scrap / equip. */
-  onStocksPatch?: (patch: Record<string, number>) => void;
+  /** Persist deck mutation to server (composition + stocks + reserve). */
+  onForcesMutate?: (args: ForcesMutateArgs) => Promise<boolean>;
   onToast?: (msg: string) => void;
   /** Highlight unit/ship defs (from Science unit_upgrade). */
   highlightDefIds?: string[] | null;
+  password?: string;
 };
 
 function findCatalog(
@@ -86,15 +89,16 @@ export function ForcesDeck({
   onFocusOnMap,
   onOrderWithFleet,
   onOrderWithLegion,
-  onFleetComposition,
-  onLegionComposition,
-  onStocksPatch,
+  onForcesMutate,
   onToast,
   highlightDefIds,
 }: ForcesDeckProps) {
   const reduce = useReducedMotion();
-  const updateFleet = useWorldStore((s) => s.updateFleet);
-  const updateLegion = useWorldStore((s) => s.updateLegion);
+  const pendingStock = useRef<Record<string, number>>({});
+  const mutateBusyRef = useRef(false);
+  const [mutateBusy, setMutateBusy] = useState(false);
+  /** Optimistic composition while mutate is in flight / until payload catches up. */
+  const [localComp, setLocalComp] = useState<ShipGroup[] | null>(null);
 
   const {
     mode,
@@ -146,7 +150,8 @@ export function ForcesDeck({
   const getSystemName = (id: string) =>
     payload.world.systems.find((s) => s.id === id)?.name ?? id;
 
-  const metalStock = metalFromStocks(stocks);
+  const metalStock =
+    metalFromStocks(stocks) + (pendingStock.current[METAL_CURRENCY] ?? 0);
 
   const activeFleet =
     fleets.find((f) => f.id === activeFleetId) ??
@@ -171,31 +176,83 @@ export function ForcesDeck({
 
   const notify = (msg: string) => setToast(msg);
 
+  // Drop optimistic override when server payload composition changes / deck switches.
+  useEffect(() => {
+    setLocalComp(null);
+    pendingStock.current = {};
+  }, [activeFleetId, activeLegionId, deckKind]);
+
+  useEffect(() => {
+    if (mutateBusy) return;
+    setLocalComp(null);
+  }, [activeFleet?.composition, activeLegion?.composition, mutateBusy]);
+
+  // Hydrate reserve from server economy slice (skip while a mutate is in flight)
+  useEffect(() => {
+    if (mutateBusy) return;
+    const serverReserve = (
+      payload.economy as { forceReserve?: UnitCardModel[] } | undefined
+    )?.forceReserve;
+    if (!Array.isArray(serverReserve)) return;
+    useForcesState.setState({
+      reserve: serverReserve.map((g) => ({
+        type: g.type ?? g.defId ?? "unit",
+        count: g.count ?? 1,
+        defId: g.defId,
+        hp: g.hp,
+        filledSlots: g.filledSlots,
+        xp: g.xp,
+        level: g.level,
+      })),
+    });
+  }, [payload.economy, mutateBusy]);
+
   const adjustStock = (currencyId: string, delta: number) => {
     if (!delta) return;
-    onStocksPatch?.({ [currencyId]: (stocks[currencyId] ?? 0) + delta });
+    pendingStock.current[currencyId] =
+      (pendingStock.current[currencyId] ?? 0) + delta;
   };
 
-  const applyFleetComp = (fleet: Fleet, next: ShipGroup[]) => {
-    updateFleet(fleet.id, { composition: next });
-    onFleetComposition?.(fleet.id, next);
-  };
-
-  const applyLegionComp = (legion: Legion, next: ShipGroup[]) => {
-    const mapped = next.map((g) => ({
-      defId: g.defId ?? g.type,
-      type: g.type,
-      count: g.count,
-      hp: g.hp,
-      xp: g.xp,
-      level: g.level,
-      filledSlots: g.filledSlots,
-    }));
-    updateLegion(legion.id, { composition: mapped });
-    onLegionComposition?.(legion.id, mapped);
+  const flushMutate = async (next: ShipGroup[]) => {
+    if (!onForcesMutate) {
+      notify("Нет обработчика сохранения состава");
+      return false;
+    }
+    if (mutateBusyRef.current) return false;
+    const kind = deckKind;
+    const id =
+      kind === "fleet" ? activeFleet?.id : activeLegion?.id;
+    if (!id) return false;
+    const stockDeltas = { ...pendingStock.current };
+    pendingStock.current = {};
+    const forceReserve = useForcesState.getState().reserve;
+    mutateBusyRef.current = true;
+    setMutateBusy(true);
+    try {
+      const ok = await onForcesMutate({
+        kind,
+        id,
+        composition: next,
+        stockDeltas,
+        forceReserve,
+      });
+      if (!ok) {
+        // restore pending deltas so retry can work after user fixes stocks
+        for (const [k, v] of Object.entries(stockDeltas)) {
+          pendingStock.current[k] = (pendingStock.current[k] ?? 0) + v;
+        }
+        notify("Не удалось сохранить состав");
+        return false;
+      }
+      return true;
+    } finally {
+      mutateBusyRef.current = false;
+      setMutateBusy(false);
+    }
   };
 
   const getComposition = (): UnitCardModel[] => {
+    if (localComp) return toUnitModels(localComp);
     if (deckKind === "fleet" && activeFleet) {
       return toUnitModels(activeFleet.composition);
     }
@@ -205,10 +262,15 @@ export function ForcesDeck({
     return [];
   };
 
-  const commitComposition = (next: ShipGroup[]) => {
-    if (deckKind === "fleet" && activeFleet) applyFleetComp(activeFleet, next);
-    else if (deckKind === "legion" && activeLegion)
-      applyLegionComp(activeLegion, next);
+  const commitComposition = (next: ShipGroup[], successToast?: string) => {
+    setLocalComp(next);
+    void flushMutate(next).then((ok) => {
+      if (!ok) {
+        setLocalComp(null);
+        return;
+      }
+      if (successToast) notify(successToast);
+    });
   };
 
   const catalogFor = (group: UnitCardModel) =>
@@ -229,23 +291,24 @@ export function ForcesDeck({
       return;
     }
     adjustStock(METAL_CURRENCY, -FORGE_METAL_COST);
-    commitComposition(res.next);
-    notify(`Модернизация −${FORGE_METAL_COST} мет.`);
+    commitComposition(res.next, `Модернизация −${FORGE_METAL_COST} мет.`);
   };
 
   const doDisband = (index: number) => {
     const comp = getComposition();
     const { next, extracted: removed } = extractOneAt(comp, index);
     if (!removed) return;
-    // Refund metal + return equipped resources to stocks when possible
+    // Refund metal + return equipped resources (slot.count units each)
     adjustStock(METAL_CURRENCY, DISBAND_METAL_REFUND);
-    for (const resId of Object.values(removed.filledSlots ?? {})) {
-      if (typeof resId === "string") adjustStock(resId, 1);
+    const cat = catalogFor(removed);
+    for (const [role, resId] of Object.entries(removed.filledSlots ?? {})) {
+      if (typeof resId !== "string") continue;
+      const slot = cat?.slots?.find((s) => s.role === role);
+      adjustStock(resId, Math.max(1, slot?.count ?? 1));
     }
-    commitComposition(next);
+    commitComposition(next, `Утиль · +${DISBAND_METAL_REFUND} мет.`);
     selectCard(null);
     setStripMode("summary");
-    notify(`Утиль · +${DISBAND_METAL_REFUND} мет.`);
   };
 
   const doReserve = (index: number) => {
@@ -253,10 +316,9 @@ export function ForcesDeck({
     const { next, extracted } = extractOneAt(comp, index);
     if (!extracted) return;
     pushReserve(extracted);
-    commitComposition(next);
+    commitComposition(next, "Выведено в резерв");
     selectCard(null);
     setStripMode("summary");
-    notify("Выведено в резерв");
   };
 
   const doAttachFromReserve = (reserveIndex: number) => {
@@ -267,38 +329,50 @@ export function ForcesDeck({
     const taken = removeReserveAt(reserveIndex);
     if (!taken) return;
     const next = appendGroup(getComposition(), taken);
-    commitComposition(next);
-    notify("Принято из резерва в колоду");
+    commitComposition(next, "Принято из резерва в колоду");
   };
 
   const doFillSlot = (index: number, role: string, resourceId: string) => {
     const comp = getComposition();
+    const card = comp[index];
+    const cat = card ? catalogFor(card) : null;
+    const slot = cat?.slots?.find((s) => s.role === role);
+    const need = Math.max(1, slot?.count ?? 1);
+    const have = stocks[resourceId] ?? 0;
+    const previousId = card?.filledSlots?.[role] ?? null;
+    const spend = previousId === resourceId ? 0 : need;
+    if (spend > 0 && have < spend) {
+      notify(`Нужно ${spend} на складе (есть ${Math.floor(have)})`);
+      return;
+    }
     const res = fillSlotAt(comp, index, role, resourceId);
     if (!res.ok) {
       notify(res.reason);
       return;
     }
-    // Spend from stock if available; refund previous fill
-    if ((stocks[resourceId] ?? 0) > 0) {
-      adjustStock(resourceId, -1);
+    if (spend > 0) adjustStock(resourceId, -spend);
+    if (res.previousId && res.previousId !== resourceId) {
+      adjustStock(res.previousId, Math.max(1, slot?.count ?? 1));
     }
-    if (res.previousId) {
-      adjustStock(res.previousId, 1);
-    }
-    commitComposition(res.next);
-    notify("Слот оснащён");
+    commitComposition(
+      res.next,
+      spend > 0 ? `Слот оснащён (−${spend})` : "Слот оснащён",
+    );
   };
 
   const doClearSlot = (index: number, role: string) => {
     const comp = getComposition();
+    const card = comp[index];
+    const cat = card ? catalogFor(card) : null;
+    const slot = cat?.slots?.find((s) => s.role === role);
+    const refund = Math.max(1, slot?.count ?? 1);
     const res = clearSlotAt(comp, index, role);
     if (!res.ok) {
       notify(res.reason);
       return;
     }
-    if (res.clearedId) adjustStock(res.clearedId, 1);
-    commitComposition(res.next);
-    notify("Слот снят");
+    if (res.clearedId) adjustStock(res.clearedId, refund);
+    commitComposition(res.next, "Слот снят");
   };
 
   const handleZoneAction = (zone: DropZoneId, index: number) => {
@@ -349,14 +423,15 @@ export function ForcesDeck({
       const comp = getComposition();
       const merged = mergeComposition(comp, index, result.mergeIndex);
       if (merged.ok) {
-        commitComposition(merged.next);
+        commitComposition(merged.next, "Стопки объединены");
         selectCard(null);
-        notify("Стопки объединены");
         return;
       }
-      commitComposition(reorderComposition(comp, index, result.mergeIndex));
+      commitComposition(
+        reorderComposition(comp, index, result.mergeIndex),
+        "Боевой порядок изменён",
+      );
       selectCard(null);
-      notify("Боевой порядок изменён");
     }
   };
 

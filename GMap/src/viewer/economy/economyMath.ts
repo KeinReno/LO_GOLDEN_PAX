@@ -21,17 +21,25 @@ export type CategorySnapshot = {
   bottleneckDeficit: number;
 };
 
-/** Sum recent ledger deltas for income / expense (last known turn window). */
+/** Sum metal income / expense for the latest ledger turn only. */
 export function computeMetrics(
   economy: NonNullable<ViewerPayload["economy"]>,
 ): EconomyMetrics {
   const stocks = economy.stocks ?? {};
   const treasury = stocks[BUILD_METAL.id] ?? 0;
   const recent = economy.recent ?? [];
+  let latestTurn: number | null = null;
+  for (const row of recent) {
+    if (row.currencyId !== BUILD_METAL.id) continue;
+    if (row.turn == null) continue;
+    if (latestTurn == null || row.turn > latestTurn) latestTurn = row.turn;
+  }
   let income = 0;
   let expense = 0;
   for (const row of recent) {
     if (row.currencyId !== BUILD_METAL.id) continue;
+    if (latestTurn != null && row.turn !== latestTurn) continue;
+    if (latestTurn == null && row.turn != null) continue;
     if (row.delta > 0) income += row.delta;
     else if (row.delta < 0) expense += Math.abs(row.delta);
   }

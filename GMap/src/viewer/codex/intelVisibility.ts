@@ -2,7 +2,7 @@
  * Client helpers for Intel Fog visibility (Race Registry / Variant System).
  * Server already masks payload; these gate content-catalog extras.
  */
-import type { FactionIntelPublic, KnowledgeLevel } from "../state/types";
+import type { FactionIntelPublic, KnowledgeLevel } from "../../state/types";
 
 function levelOf(
   map: Record<string, KnowledgeLevel> | undefined,
@@ -16,14 +16,16 @@ function levelOf(
 
 /** Traits visible for a race at current intel level. */
 export function getVisibleTraits(
-  traits: string[] | undefined,
+  traits: Array<string | { id?: string }> | undefined,
   raceId: string,
   intel: FactionIntelPublic | undefined,
 ): string[] {
-  const list = Array.isArray(traits) ? traits : [];
+  const list = (Array.isArray(traits) ? traits : []).map((t) =>
+    typeof t === "string" ? t : String(t?.id ?? ""),
+  ).filter(Boolean);
   const level = levelOf(intel?.knownRaces, raceId);
   if (level >= 4) return list;
-  if (level === 3) return list.filter((t) => !String(t).includes("hidden"));
+  if (level === 3) return list.filter((t) => !t.includes("hidden"));
   if (level === 2) return list.slice(0, 2);
   return [];
 }

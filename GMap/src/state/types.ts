@@ -187,6 +187,8 @@ export interface FactionEffectInstance {
   effect: string;
   args?: Record<string, unknown>;
   source?: { kind: string; id: string; label?: string };
+  /** Turn after which the effect is pruned (economyTick). */
+  expiresTurn?: number | null;
 }
 
 /** Court timeline entry (RP Court / A10). */
@@ -211,6 +213,8 @@ export interface Caravan {
   progress: number;
   /** Owning faction or null = neutral traffic. */
   factionId: string | null;
+  /** Optional cargo delivered once on arrival, then caravan despawns. */
+  cargo?: Record<string, number>;
 }
 
 /** Dynamic anomaly motion (world units per turn). */
@@ -837,6 +841,8 @@ export interface RaceStateModifier {
 export interface ShipGroup {
   type: string;
   count: number;
+  /** Stable stack id for card-battle finalize / duplicate stacks. */
+  id?: string;
   defId?: string;
   hp?: number;
   filledSlots?: Record<string, string>;
@@ -855,8 +861,14 @@ export interface Fleet {
   composition: ShipGroup[];
   stance: FleetStance;
   route: string[];
+  /** Previous system after a hop — used for retreat. */
+  lastSystemId?: string;
   /** Set while multi-hop en route; applied when route empties. */
-  pendingArrival?: { stance: FleetStance; systemId: string };
+  pendingArrival?: {
+    stance: FleetStance;
+    systemId: string;
+    fromSystemId?: string;
+  };
 }
 
 /** Ground force / legion attached to a system. */
@@ -869,9 +881,12 @@ export interface Legion {
   status: LegionStatus;
   /** Planned hops (system ids), same as fleets. */
   route?: string[];
+  /** Previous system after a hop — used for retreat. */
+  lastSystemId?: string;
   /** Species for raceVariants (A3). */
   raceId?: string | null;
   composition?: Array<{
+    id?: string;
     defId?: string;
     type?: string;
     count?: number;
@@ -1126,6 +1141,8 @@ export interface TurnBriefing {
 export interface BattleCard {
   cardId: string;
   defId: string;
+  /** Stable composition stack id (avoids collapsing duplicate defId stacks). */
+  groupId?: string;
   role: string;
   count: number;
   hp: number;
@@ -1308,6 +1325,16 @@ export interface ViewerPayload {
     flowPriorities?: Record<string, { from: string; to: string; edge?: string }>;
     /** Soft stock reserves (do not deduct from stocks). */
     stockReserves?: Record<string, { amount: number; label?: string }>;
+    /** Units pulled from fleets/legions into reserve pool. */
+    forceReserve?: Array<{
+      type?: string;
+      defId?: string;
+      count?: number;
+      hp?: number;
+      xp?: number;
+      level?: number;
+      filledSlots?: Record<string, string>;
+    }>;
     /** Active economic doctrine id. */
     economicPolicy?: string | null;
     /** Active law ids (future enact_law). */

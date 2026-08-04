@@ -156,24 +156,50 @@ export function createEngagement({
   return eng;
 }
 
-function retreatFleet(world, fleetId, fromSystemId) {
-  const fleet = (world.fleets ?? []).find((f) => f.id === fleetId);
-  if (!fleet) return;
-  const routeBack = (fleet.route || [])[0];
-  if (routeBack && routeBack !== fromSystemId) {
-    fleet.systemId = routeBack;
-    fleet.route = [];
-    fleet.stance = "move";
+/** Retreat to previous system when known — never use route[0] (forward hop). */
+function retreatUnit(world, unit, fromSystemId, idleField, idleValue) {
+  const back =
+    unit.pendingArrival?.fromSystemId ||
+    unit.lastSystemId ||
+    unit.previousSystemId ||
+    unit.fromSystemId ||
+    null;
+  if (back && back !== fromSystemId) {
+    unit.lastSystemId = fromSystemId;
+    unit.systemId = back;
+    unit.route = [];
+    delete unit.pendingArrival;
+    unit[idleField] = idleValue;
     return;
   }
+  const forward = (unit.route || [])[0];
   const neighbors = (world.links ?? [])
     .filter((l) => l.fromId === fromSystemId || l.toId === fromSystemId)
     .map((l) => (l.fromId === fromSystemId ? l.toId : l.fromId));
-  const dest = neighbors[0];
+  // Prefer any neighbor that is not the next forward hop.
+  const dest =
+    neighbors.find((id) => id !== forward && id !== unit.pendingArrival?.systemId) ||
+    neighbors.find((id) => id !== forward) ||
+    neighbors[0];
   if (dest) {
-    fleet.systemId = dest;
-    fleet.stance = "move";
+    unit.lastSystemId = fromSystemId;
+    unit.systemId = dest;
+    unit.route = [];
+    delete unit.pendingArrival;
+    unit[idleField] = idleValue;
   }
+}
+
+function retreatFleet(world, fleetId, fromSystemId) {
+  const fleet = (world.fleets ?? []).find((f) => f.id === fleetId);
+  if (!fleet) return;
+  retreatUnit(world, fleet, fromSystemId, "stance", "idle");
+}
+
+function retreatLegion(world, legionId, fromSystemId) {
+  const legion = (world.legions ?? []).find((l) => l.id === legionId);
+  if (!legion) return;
+  retreatUnit(world, legion, fromSystemId, "status", "idle");
 }
 
 function applyOccupationEffects(world, eng, journal) {
@@ -222,9 +248,11 @@ function applyAftermath(world, eng, fight, journal) {
 
   if (fight.outcome === "retreat_a" || fight.retreated === a.factionId) {
     for (const fid of a.fleetIds || []) retreatFleet(world, fid, eng.systemId);
+    for (const lid of a.legionIds || []) retreatLegion(world, lid, eng.systemId);
   }
   if (fight.outcome === "retreat_b" || fight.retreated === b.factionId) {
     for (const fid of b.fleetIds || []) retreatFleet(world, fid, eng.systemId);
+    for (const lid of b.legionIds || []) retreatLegion(world, lid, eng.systemId);
   }
 
   if (
@@ -586,14 +614,36 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       )
       .map((l) => l.id);
 
-    const attackerFleets = fleetId
-      ? [fleetId]
-      : (world.fleets ?? [])
-          .filter((f) => f.factionId === intent.factionId && f.systemId === toId)
-          .map((f) => f.id);
+    // Only fleets/legions already at the target system fight this tick (not mid-route).
+    const attackerFleets = (
+      fleetId
+        ? (world.fleets ?? []).filter(
+            (f) =>
+              f.id === fleetId &&
+              f.factionId === intent.factionId &&
+              f.systemId === toId,
+          )
+        : (world.fleets ?? []).filter(
+            (f) => f.factionId === intent.factionId && f.systemId === toId,
+          )
+    ).map((f) => f.id);
     const attackerLegions = (world.legions ?? [])
       .filter((l) => l.factionId === intent.factionId && l.systemId === toId)
       .map((l) => l.id);
+
+    const attackersPresent =
+      attackerFleets.length > 0 ||
+      (theater === "assault" && attackerLegions.length > 0);
+    if (!attackersPresent) {
+      journal.push({
+        type: "attack_deferred",
+        reason: "attacker_not_at_target",
+        systemId: toId,
+        factionId: intent.factionId,
+        fleetId: fleetId || null,
+      });
+      continue;
+    }
 
     let defFaction =
       defendersFleets[0] &&
@@ -612,7 +662,17 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
         systemId: toId,
         factionId: intent.factionId,
       });
-      if (theater === "assault" || intent.payload?.claimOnWin) {
+      const hasPresence =
+        (world.fleets ?? []).some(
+          (f) => f.factionId === intent.factionId && f.systemId === toId,
+        ) ||
+        (world.legions ?? []).some(
+          (l) => l.factionId === intent.factionId && l.systemId === toId,
+        );
+      if (
+        hasPresence &&
+        (theater === "assault" || intent.payload?.claimOnWin)
+      ) {
         sys.ownerFactionId = intent.factionId;
       }
       continue;
@@ -635,7 +695,12 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
         factionId: defFaction,
         fleetIds: defendersFleets,
         legionIds: defendersLegions,
-        stance: "hold",
+        stance: defendersFleets.some((id) => {
+          const f = (world.fleets ?? []).find((x) => x.id === id);
+          return f?.stance === "fortify";
+        })
+          ? "fortify"
+          : "hold",
       },
     });
     if (

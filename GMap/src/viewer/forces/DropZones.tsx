@@ -57,11 +57,12 @@ export function canDropZone(
       }
       const slots = catalogItem?.slots ?? [];
       const filled = filledSlotCount(card);
+      const roles = slots.length;
       return {
         ok: true,
         reason:
-          filled >= slots.length
-            ? "Все слоты заняты — можно заменить"
+          roles > 0 && filled >= roles
+            ? "Все роли заняты — можно заменить"
             : undefined,
       };
     }
@@ -107,7 +108,7 @@ export function DropZones({
                 : zone.id === "forge"
                   ? `${zone.hint} · −${FORGE_METAL_COST} мет. (${metalStock})`
                   : zone.id === "equip" && catalogItem
-                    ? `${zone.hint} · ${Object.keys(draggedCard.filledSlots ?? {}).length}/${catalogItem.slots?.length ?? 0}`
+                    ? `${zone.hint} · ${filledSlotCount(draggedCard)}/${catalogItem.slots?.length ?? 0} ролей`
                     : zone.hint;
             return (
               <div

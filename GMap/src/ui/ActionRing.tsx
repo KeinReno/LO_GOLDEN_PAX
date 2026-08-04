@@ -87,13 +87,13 @@ export function ActionRing({
       ref={rootRef}
       className="action-ring"
       role="menu"
-      aria-label="Actions"
+      aria-label="Действия"
       style={{ left: x, top: y }}
     >
       <button
         type="button"
         className="action-ring-center"
-        aria-label="Close actions"
+        aria-label="Закрыть действия"
         onClick={onClose}
       />
 

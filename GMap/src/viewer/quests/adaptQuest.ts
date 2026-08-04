@@ -16,8 +16,17 @@ import type {
 } from "./types";
 import { QUEST_ART_BY_KIND } from "./types";
 
-export function visiblePlayerQuests(world: WorldState): WorldQuest[] {
-  return (world.quests ?? []).filter((q) => q.status !== "hidden");
+export function visiblePlayerQuests(
+  world: WorldState,
+  factionId?: string,
+): WorldQuest[] {
+  return (world.quests ?? []).filter((q) => {
+    if (q.status === "hidden") return false;
+    if (!factionId) return true;
+    if (!q.sourceFactionId || q.sourceFactionId === factionId) return true;
+    if (q.type === "foreign" || q.type === "main") return true;
+    return false;
+  });
 }
 
 function mapKind(type: QuestType | undefined): QuestKind {
@@ -179,7 +188,7 @@ export function adaptQuests(
   payload: ViewerPayload,
   logsByQuest: Record<string, QuestLogEntry[]>,
 ): Quest[] {
-  return visiblePlayerQuests(payload.world).map((q) =>
+  return visiblePlayerQuests(payload.world, payload.factionId).map((q) =>
     adaptQuest(q, payload.world, logsByQuest[q.id] ?? []),
   );
 }

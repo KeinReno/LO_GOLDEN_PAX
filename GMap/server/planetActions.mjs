@@ -135,6 +135,20 @@ function defForKindZone(content, kind, zone) {
   );
 }
 
+/** Prefer exact buildingId / baseBuildingId; fall back to kind+zone. */
+function buildingDefFromInstance(content, buildingInst) {
+  const defs = buildingDefs(content);
+  const id = buildingInst?.buildingId || buildingInst?.id;
+  if (id && defs[id]) return defs[id];
+  const baseId = buildingInst?.baseBuildingId;
+  if (baseId && defs[baseId]) return defs[baseId];
+  return defForKindZone(
+    content,
+    buildingInst?.kind,
+    buildingInst?.zone || "surface",
+  );
+}
+
 function colonyDefForType(content, colonyType) {
   const t = normalizeColonyType(colonyType);
   return Object.values(colonyDefs(content)).find((d) => d.colonyType === t);
@@ -256,12 +270,41 @@ export function applyPlanetAction({
   slotRole,
   slotResourceId,
   name,
+  /** When false, caller (processTurn) persists the board. Default true. */
+  persist = true,
+  /** Skip AP gate — pending tick intent already reserved AP. */
+  skipApCheck = false,
+  /** Skip writing a second applied intent row (tick already owns the intent). */
+  skipIntentRecord = false,
 }) {
   const content = getContent();
   const turn = world.meta?.turn ?? 0;
   const found = findSystemPlanet(world, systemId, planetId);
   if (found.error) return { ok: false, error: found.error };
   const { system, planet } = found;
+
+  const persistBoard = (reason) => {
+    if (persist) writeLiveBoard(world, { backup: false, reason });
+  };
+
+  const gateAp = (apCost) => {
+    if (skipApCheck) return { ok: true };
+    return checkAp(factionId, turn, apCost, apMax);
+  };
+
+  const recordIntent = (opts) => {
+    if (skipIntentRecord) {
+      return {
+        id: opts.idHint || `tick_${opts.defId}`,
+        defId: opts.defId,
+        factionId,
+        turn,
+        apCost: opts.apCost,
+        payload: opts.payload || {},
+      };
+    }
+    return recordAppliedIntent(opts);
+  };
 
   if (action === "build") {
     const forbid = checkBuildForbidden(factionId);
@@ -323,15 +366,14 @@ export function applyPlanetAction({
         ...(planet.orbitalBuildings ?? []),
       ];
       const same = all.filter(
-        (b) =>
-          (b.buildingId === buildingId || b.kind === def.kind) && !b.disabled,
+        (b) => b.buildingId === buildingId && !b.disabled,
       ).length;
       if (same >= def.maxPerPlanet) {
         return { ok: false, error: `Лимит «${def.name}» на планете` };
       }
     }
     const apCost = def.ap ?? content.intents?.["intent.build"]?.ap ?? 1;
-    const apGate = checkAp(factionId, turn, apCost, apMax);
+    const apGate = gateAp(apCost);
     if (!apGate.ok) return apGate;
     const cost = scaledCost(def.cost, buildCostMult(factionId));
     const ledger = readLedger();
@@ -352,7 +394,7 @@ export function applyPlanetAction({
     planet[listKey] = list;
     if (!planet.ownerFactionId) planet.ownerFactionId = factionId;
 
-    const intent = recordAppliedIntent({
+    const intent = recordIntent({
       factionId,
       defId: "intent.build",
       payload: { systemId, planetId, buildingId, instanceId: building.id },
@@ -369,7 +411,7 @@ export function applyPlanetAction({
       buildingId,
       description: `Построено: ${def.name} на ${planet.name}`,
     });
-    writeLiveBoard(world, { backup: false, reason: "planet_build" });
+    persistBoard("planet_build");
     // New economy model: surface slot requirements (advisory, non-blocking)
     let slotInfo = null;
     try {
@@ -392,7 +434,7 @@ export function applyPlanetAction({
       return { ok: false, error: "Планета не под вашим контролем" };
     }
     const apCost = content.intents?.["intent.demolish"]?.ap ?? 0;
-    const apGate = checkAp(factionId, turn, apCost, apMax);
+    const apGate = gateAp(apCost);
     if (!apGate.ok) return apGate;
     let removed = null;
     for (const key of ["surfaceBuildings", "orbitalBuildings"]) {
@@ -405,7 +447,7 @@ export function applyPlanetAction({
       }
     }
     if (!removed) return { ok: false, error: "Постройка не найдена" };
-    const intent = recordAppliedIntent({
+    const intent = recordIntent({
       factionId,
       defId: "intent.demolish",
       payload: { systemId, planetId, instanceId },
@@ -420,7 +462,7 @@ export function applyPlanetAction({
       buildingId: removed.buildingId || removed.id,
       description: `Снесено: ${removed.name || removed.kind} на ${planet.name}`,
     });
-    writeLiveBoard(world, { backup: false, reason: "planet_demolish" });
+    persistBoard("planet_demolish");
     return { ok: true, intent, world, planet, removed };
   }
 
@@ -440,7 +482,7 @@ export function applyPlanetAction({
     const cdef = colonyDefForType(content, targetType);
     if (!cdef) return { ok: false, error: "Неизвестный тип колонии" };
     const apCost = cdef.colonizeAp ?? content.intents?.["intent.colonize"]?.ap ?? 1;
-    const apGate = checkAp(factionId, turn, apCost, apMax);
+    const apGate = gateAp(apCost);
     if (!apGate.ok) return apGate;
     const cost = scaledCost(cdef.colonizeCost, buildCostMult(factionId));
     const ledger = readLedger();
@@ -460,7 +502,7 @@ export function applyPlanetAction({
     if (!planet.surfaceBuildings) planet.surfaceBuildings = [];
     if (!planet.orbitalBuildings) planet.orbitalBuildings = [];
 
-    const intent = recordAppliedIntent({
+    const intent = recordIntent({
       factionId,
       defId: "intent.colonize",
       payload: { systemId, planetId, colonyType: targetType },
@@ -476,7 +518,7 @@ export function applyPlanetAction({
       planetId,
       description: `Колонизирована планета ${planet.name} (${targetType})`,
     });
-    writeLiveBoard(world, { backup: false, reason: "planet_colonize" });
+    persistBoard("planet_colonize");
     return { ok: true, intent, world, planet, cost };
   }
 
@@ -500,7 +542,7 @@ export function applyPlanetAction({
     if (!cdef) return { ok: false, error: "Неизвестный тип колонии" };
     const apCost =
       cdef.setTypeAp ?? content.intents?.["intent.set_colony_type"]?.ap ?? 1;
-    const apGate = checkAp(factionId, turn, apCost, apMax);
+    const apGate = gateAp(apCost);
     if (!apGate.ok) return apGate;
     const cost = scaledCost(cdef.setTypeCost, buildCostMult(factionId));
     const ledger = readLedger();
@@ -510,7 +552,7 @@ export function applyPlanetAction({
 
     planet.colonyType = targetType;
 
-    const intent = recordAppliedIntent({
+    const intent = recordIntent({
       factionId,
       defId: "intent.set_colony_type",
       payload: { systemId, planetId, colonyType: targetType },
@@ -520,7 +562,7 @@ export function applyPlanetAction({
     });
     spendCost(ledger, factionId, cost, turn, intent.id, "set_colony_type");
     writeLedger(ledger);
-    writeLiveBoard(world, { backup: false, reason: "planet_set_type" });
+    persistBoard("planet_set_type");
     return { ok: true, intent, world, planet, cost };
   }
 
@@ -533,8 +575,8 @@ export function applyPlanetAction({
       return { ok: true, planet };
     }
     planet.name = next;
-    writeLiveBoard(world, { backup: false, reason: "planet_rename" });
-    const intent = recordAppliedIntent({
+    persistBoard("planet_rename");
+    const intent = recordIntent({
       factionId,
       defId: "intent.rename_planet",
       payload: { systemId, planetId, name: next },
@@ -624,7 +666,7 @@ export function applyPlanetAction({
     const idx = list.findIndex((b) => b.id === inst);
     list[idx] = target;
     planet[listKey] = list;
-    const intent = recordAppliedIntent({
+    const intent = recordIntent({
       factionId,
       defId: "intent.fill_slot",
       payload: {
@@ -639,10 +681,7 @@ export function applyPlanetAction({
       turn,
       apCost: 0,
     });
-    writeLiveBoard(world, {
-      backup: false,
-      reason: clearing ? "planet_unfill_slot" : "planet_fill_slot",
-    });
+    persistBoard(clearing ? "planet_unfill_slot" : "planet_fill_slot");
     return { ok: true, intent, world, planet, building: target };
   }
 
@@ -659,7 +698,7 @@ export function planetCapFromBuildings(planet, content) {
   ];
   for (const b of all) {
     if (b.disabled) continue;
-    const def = defForKindZone(content, b.kind, b.zone || "surface");
+    const def = buildingDefFromInstance(content, b);
     let added = false;
     for (const e of def?.effects || []) {
       if (e.effect === "pop_cap_add") {
@@ -706,7 +745,7 @@ export function collectPlanetYields(system, content) {
     ];
     for (const b of all) {
       if (b.disabled) continue;
-      const def = defForKindZone(content, b.kind, b.zone || "surface");
+      const def = buildingDefFromInstance(content, b);
       for (const e of def?.effects || []) {
         if (e.effect === "yield_flat") {
           const cur = e.args?.currency;

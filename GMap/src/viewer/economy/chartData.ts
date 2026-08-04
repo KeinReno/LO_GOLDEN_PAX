@@ -186,10 +186,19 @@ export function buildExpenseSlices(
   currencyFilter?: string | null,
 ): ExpenseSlice[] {
   const recent = economy.recent ?? [];
+  let latestTurn: number | null = null;
+  for (const r of recent) {
+    if (r.delta >= 0) continue;
+    if (currencyFilter && r.currencyId !== currencyFilter) continue;
+    if (r.turn == null) continue;
+    if (latestTurn == null || r.turn > latestTurn) latestTurn = r.turn;
+  }
   const byReason = new Map<string, number>();
   for (const r of recent) {
     if (r.delta >= 0) continue;
     if (currencyFilter && r.currencyId !== currencyFilter) continue;
+    if (latestTurn != null && r.turn !== latestTurn) continue;
+    if (latestTurn == null && r.turn != null) continue;
     byReason.set(r.reason, (byReason.get(r.reason) ?? 0) + Math.abs(r.delta));
   }
   const slices = [...byReason.entries()]

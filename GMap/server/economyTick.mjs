@@ -70,12 +70,48 @@ function habitabilityForPlanet(planet, racesContent, composition) {
     if (!race) continue;
     const w = (share.percent ?? 0) / 100;
     const map = race.habitability || {};
-    const hv = map[climate] ?? map[planet.type] ?? 0.8;
+    // Missing climate key → 1.0 (neutral), never invent a soft 0.8 penalty.
+    const hv = map[climate] ?? map[planet.type] ?? 1.0;
     hSum += hv * w;
     wSum += w;
   }
   if (wSum > 0) h = hSum / wSum;
   return h;
+}
+
+/** Building effects that feed planet growth / habitability. */
+function collectPlanetBuildingGrowthEffects(planet, content) {
+  const out = [];
+  for (const b of planetBuildingList(planet)) {
+    const def = resolveBuildingDef(content, b);
+    if (!def?.effects?.length) continue;
+    for (const e of def.effects) {
+      if (
+        e?.effect === "habitability_mult" ||
+        e?.effect === "pop_growth_mult" ||
+        e?.effect === "pop_growth_flat"
+      ) {
+        out.push({
+          ...e,
+          source: {
+            kind: "building",
+            id: def.id || b.buildingId || b.kind,
+            label: def.name || def.id,
+          },
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** Drop expired NPC/quest lasting effects. */
+function pruneActiveEffects(faction, turn) {
+  if (!Array.isArray(faction?.activeEffects)) return;
+  faction.activeEffects = faction.activeEffects.filter((e) => {
+    if (e?.expiresTurn == null) return true;
+    return Number(e.expiresTurn) > turn;
+  });
 }
 
 function applyProductionChannel(delta, channel) {
@@ -87,11 +123,9 @@ function applyProductionChannel(delta, channel) {
 
 function applyUpkeepChannel(delta, channel) {
   if (!channel) return delta;
-  let next = delta - floor(channel.flat || 0);
-  if (next < 0 && (channel.mult ?? 1) !== 1) {
-    next = -floor(applyFlatThenMult(-next, channel));
-  }
-  return next;
+  // upkeep = flat * mult (flat counted once); apply whether net stays >= 0 or not
+  const upkeep = floor(applyFlatThenMult(0, channel));
+  return delta - upkeep;
 }
 
 /** Merge specific resource channel with wildcard production:* / upkeep:* */
@@ -200,7 +234,8 @@ function collectFactionEffects(world, factionId, eco, content, turn = 0) {
 
   effects.push(...applyLogisticsEffects(world, factionId, content));
 
-  // Completed NPC court tasks (A10)
+  // Completed NPC court tasks / quest lasting effects (A10) — prune first
+  if (faction) pruneActiveEffects(faction, turn);
   for (const e of faction?.activeEffects || []) {
     if (!e?.effect) continue;
     effects.push({
@@ -510,25 +545,15 @@ export function runEconomyTick(world, turn) {
       // Do NOT call collectPlanetYields — buildings already in flows (avoids double count)
     }
 
-    // Bridge income: mirror positive category nets into legacy stocks
+    // Bridge income: mirror positive category nets into legacy stocks.
+    // Category nets already ran applyProductionChannel — do NOT re-apply
+    // production flats/mults here (only tax below).
     const bridgeMetal = Math.max(0, materiaNet) + (legacyGross["currency.metal"] || 0);
     const bridgeSupply =
       Math.max(0, biosNet) + Math.max(0, energiaNet) + (legacyGross["currency.supply"] || 0);
 
-    let metalAfter = applyFlatThenMult(
-      bridgeMetal,
-      mergeChannels(
-        stack.channels["production:currency.metal"],
-        stack.channels["production:*"],
-      ),
-    );
-    let supplyAfter = applyFlatThenMult(
-      bridgeSupply,
-      mergeChannels(
-        stack.channels["production:currency.supply"],
-        stack.channels["production:*"],
-      ),
-    );
+    let metalAfter = floor(bridgeMetal);
+    let supplyAfter = floor(bridgeSupply);
 
     const taxInd = taxRateFor(eco, content, "tax.industry");
     const taxSup = taxRateFor(eco, content, "tax.supply");
@@ -679,11 +704,46 @@ export function runEconomyTick(world, turn) {
           factionId: owner || undefined,
           turn,
         }),
+        ...collectPlanetBuildingGrowthEffects(p, content),
       ];
+      if (fac) {
+        growthEffects.push(...collectTreatyEffects(fac));
+        for (const trait of fac.traits || []) {
+          const traitId = typeof trait === "string" ? trait : trait.id;
+          const fromCatalog =
+            typeof trait === "string"
+              ? content.faction_traits?.traits?.[trait]
+              : null;
+          const effectsList =
+            fromCatalog?.effects ||
+            (typeof trait === "object" ? trait.effects : null) ||
+            [];
+          for (const e of effectsList) {
+            if (
+              e?.effect === "pop_growth_mult" ||
+              e?.effect === "pop_growth_flat" ||
+              e?.effect === "habitability_mult"
+            ) {
+              growthEffects.push({
+                ...e,
+                source: {
+                  kind: "faction",
+                  id: traitId,
+                  label: fromCatalog?.name || traitId,
+                },
+              });
+            }
+          }
+        }
+      }
       const growthStack = buildModifierStack(growthEffects, {
         mergeOrder: content.rules?.economyMergeOrder,
       });
-      let natural = pop * rate * hab * supplyFactor * overcrowd;
+      let habEff = hab;
+      if (growthStack.channels.habitability) {
+        habEff = applyFlatThenMult(hab, growthStack.channels.habitability);
+      }
+      let natural = pop * rate * habEff * supplyFactor * overcrowd;
       natural = applyFlatThenMult(natural, growthStack.channels.pop_growth);
 
       if (eco?.deficit === "empty") natural = Math.min(natural, -pop * 0.02);

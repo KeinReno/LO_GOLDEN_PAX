@@ -187,9 +187,33 @@ export function normalizeWorld(raw) {
         else if (edge.bId === f.id) otherId = edge.aId;
         if (!otherId) continue;
         const stance = stances[edge.relation] || {};
-        const effects = Array.isArray(stance.effects)
+        const asymmetric =
+          stance.asymmetric === true ||
+          edge.relation === "vassal" ||
+          Array.isArray(stance.effectsSubject) ||
+          Array.isArray(stance.effectsOverlord);
+        let effects = Array.isArray(stance.effects)
           ? stance.effects.map((e) => ({ ...e }))
           : [];
+        if (asymmetric) {
+          const subjectId =
+            edge.subjectFactionId || edge.vassalFactionId || null;
+          const overlordId = edge.overlordFactionId || null;
+          if (!subjectId && !overlordId) {
+            // Undirected edge — skip rather than apply bilaterally.
+            effects = [];
+          } else if (f.id === subjectId) {
+            effects = Array.isArray(stance.effectsSubject)
+              ? stance.effectsSubject.map((e) => ({ ...e }))
+              : effects;
+          } else if (f.id === overlordId || (subjectId && f.id !== subjectId)) {
+            effects = Array.isArray(stance.effectsOverlord)
+              ? stance.effectsOverlord.map((e) => ({ ...e }))
+              : [];
+          } else {
+            effects = [];
+          }
+        }
         diplo.treaties.push({
           id: edge.id || `treaty_${f.id}_${otherId}_${edge.relation}`,
           type: edge.relation,
@@ -197,14 +221,40 @@ export function normalizeWorld(raw) {
           startedTurn: raw.meta?.turn ?? 0,
           expiresTurn: null,
           effects,
+          ...(edge.subjectFactionId || edge.vassalFactionId
+            ? {
+                subjectFactionId:
+                  edge.subjectFactionId || edge.vassalFactionId,
+              }
+            : {}),
+          ...(edge.overlordFactionId
+            ? { overlordFactionId: edge.overlordFactionId }
+            : {}),
         });
       }
     } else {
       // Backfill empty effects from stance catalog (legacy migrated treaties).
       const stances = loadDiplomacyStances();
       diplo.treaties = diplo.treaties.map((t) => {
-        if (Array.isArray(t.effects) && t.effects.length > 0) return t;
+        // Respect explicit empty effects (e.g. vassal overlord side).
+        if (Array.isArray(t.effects)) return t;
         const stance = stances[t.type] || {};
+        const asymmetric =
+          stance.asymmetric === true ||
+          t.type === "vassal" ||
+          Array.isArray(stance.effectsSubject) ||
+          Array.isArray(stance.effectsOverlord);
+        if (asymmetric) {
+          const subjectId = t.subjectFactionId || null;
+          if (subjectId && f.id !== subjectId) {
+            return {
+              ...t,
+              effects: Array.isArray(stance.effectsOverlord)
+                ? stance.effectsOverlord.map((e) => ({ ...e }))
+                : [],
+            };
+          }
+        }
         return {
           ...t,
           effects: Array.isArray(stance.effects)

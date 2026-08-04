@@ -594,6 +594,7 @@ export function applyCasualties(groups, damagePoints, preferredTargeting) {
         lost: unitsLost,
         before: g.count,
         after: remainCount,
+        stationary: !!g.stationary,
       });
     }
 
@@ -606,6 +607,47 @@ export function applyCasualties(groups, damagePoints, preferredTargeting) {
   }
 
   return log;
+}
+
+/**
+ * After stationary (building-spawned) units take losses, disable matching
+ * defense/barracks buildings so occupation re-gather does not respawn them.
+ */
+export function persistStationaryCasualties(world, engagement, losses) {
+  const lost = (losses || [])
+    .filter((e) => e.stationary && (e.lost || 0) > 0)
+    .reduce((s, e) => s + (e.lost || 0), 0);
+  if (lost <= 0) return 0;
+
+  const sys = (world.systems ?? []).find((s) => s.id === engagement.systemId);
+  if (!sys) return 0;
+
+  const planets = (sys.planets || []).filter((p) => {
+    if (engagement.planetId) return p.id === engagement.planetId;
+    return true;
+  });
+
+  let remaining = lost;
+  let disabled = 0;
+  for (const p of planets) {
+    if (remaining <= 0) break;
+    const lists = [
+      p.surfaceBuildings,
+      p.orbitalBuildings,
+      p.buildings,
+    ].filter(Array.isArray);
+    for (const buildings of lists) {
+      for (const b of buildings) {
+        if (remaining <= 0) break;
+        if (b.disabled) continue;
+        if (b.kind !== "defense" && b.kind !== "barracks") continue;
+        b.disabled = true;
+        remaining -= 1;
+        disabled += 1;
+      }
+    }
+  }
+  return disabled;
 }
 
 export function cleanupEmptyComposition(world) {
@@ -689,15 +731,10 @@ export function resolveEngagementFight(world, engagement) {
   powerA *= meanPropertyMultVsSample(groupsA, groupsB[0], content);
   powerB *= meanPropertyMultVsSample(groupsB, groupsA[0], content);
 
-  // Disconnected supply weakens the system owner (defender).
+  // Logistics combatDefMult is applied once in gatherDefenseUnits (stationary stats).
   const fightSys = (world.systems ?? []).find(
     (s) => s.id === engagement.systemId,
   );
-  const logisticsDefMult = logisticsCombatDefMult(fightSys, content);
-  if (logisticsDefMult !== 1 && fightSys?.ownerFactionId) {
-    if (sideA.factionId === fightSys.ownerFactionId) powerA *= logisticsDefMult;
-    if (sideB.factionId === fightSys.ownerFactionId) powerB *= logisticsDefMult;
-  }
 
   // Loyalty defense penalty / garrison defection (ground & assault)
   const loyaltyNotes = [];
@@ -770,6 +807,7 @@ export function resolveEngagementFight(world, engagement) {
     rawDmgToA,
     groupsB[0]?.targeting || "line_first",
   );
+  persistStationaryCasualties(world, engagement, [...lossesA, ...lossesB]);
   cleanupEmptyComposition(world);
   awardVeterancyXp(groupsA, content);
   awardVeterancyXp(groupsB, content);
@@ -907,6 +945,7 @@ export function resolveAssaultPhase(world, engagement) {
       powerB * 0.55 * (stA.casualtyTakenMult ?? 1),
       groundB[0]?.targeting || "assault_first",
     );
+    persistStationaryCasualties(world, engagement, [...lossesA, ...lossesB]);
 
     const aliveA = groundA.some((g) => g.count > 0);
     const aliveB = groundB.some((g) => g.count > 0);
@@ -920,10 +959,12 @@ export function resolveAssaultPhase(world, engagement) {
       else outcome = "draw";
     }
   } else if (phase === "occupation") {
-    // Occupation: claim if attackers still have ground presence and defenders wiped
+    // Occupation: claim if attackers still have ground presence and defenders wiped.
+    // Stationary wiped in ground phase stay gone (persistStationaryCasualties).
     groupsA = gatherGroups(world, sideA, "assault", content, engagement);
     groupsB = gatherGroups(world, sideB, "assault", content, engagement);
     const aliveA = groupsA.some((g) => g.count > 0 && !g.stationary);
+    // Wiped stationary stay count 0 / buildings disabled — only remaining forces block.
     const aliveB = groupsB.some((g) => g.count > 0);
     powerA = aliveA ? 1 : 0;
     powerB = aliveB ? 1 : 0;

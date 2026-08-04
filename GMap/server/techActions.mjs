@@ -11,6 +11,7 @@ import {
 import {
   buildModifierStack,
   resolvePlanetRaceComposition,
+  collectRaceEffects,
 } from "./modifierStack.mjs";
 import { readLiveBoard } from "./tableStore.mjs";
 import { applyUnitUpgradeEffectsToWorld } from "./combatResolve.mjs";
@@ -175,12 +176,14 @@ function researchStackForFaction(factionId, eco, content, world) {
       });
     }
   }
-  // Active research_pact treaties (stored on faction.diplomacy or world treaties)
+  // Active research_pact treaties — prefer unwrapped treaty_effect; skip duplicate direct mults
   for (const t of faction?.diplomacy?.treaties || []) {
     if (t.type !== "research_pact" && t.id !== "research_pact") continue;
+    const unwrapped = [];
+    const direct = [];
     for (const e of t.effects || []) {
       if (e.effect === "treaty_effect" && e.args?.effect) {
-        effects.push({
+        unwrapped.push({
           effect: e.args.effect,
           args: e.args.args || {},
           source: {
@@ -190,7 +193,7 @@ function researchStackForFaction(factionId, eco, content, world) {
           },
         });
       } else {
-        effects.push({
+        direct.push({
           ...e,
           source: {
             kind: "treaty",
@@ -200,7 +203,26 @@ function researchStackForFaction(factionId, eco, content, world) {
         });
       }
     }
+    effects.push(...(unwrapped.length ? unwrapped : direct));
   }
+
+  // Race research_cost_mult from owned colony populations
+  if (world && content?.races) {
+    for (const sys of world.systems || []) {
+      if (sys.ownerFactionId !== factionId) continue;
+      for (const p of sys.planets || []) {
+        if ((p.population ?? 0) <= 0) continue;
+        const composition = p.raceComposition || [];
+        for (const e of collectRaceEffects(content.races, composition, {
+          factionId,
+          turn: world.meta?.turn ?? 0,
+        })) {
+          if (e.effect === "research_cost_mult") effects.push(e);
+        }
+      }
+    }
+  }
+
   return buildModifierStack(effects, {
     mergeOrder: content?.rules?.economyMergeOrder,
   });
@@ -501,6 +523,7 @@ export function accelerateResearch(factionId, techId, meta = {}) {
     tech: def,
     cost: rushCost,
     eco: publicEcoSlice(eco),
+    worldMutated: Boolean(world && (def.effects || []).some((e) => e?.effect === "unit_upgrade")),
   };
 }
 
@@ -512,8 +535,13 @@ export function removeFromResearchQueue(eco, techId) {
 
 /**
  * Build prerequisite path (root → target) with total cognitio cost of missing techs.
+ * Applies research_cost_mult when eco / factionId / stack is provided.
+ * @param {string} techId
+ * @param {string[]} unlockedTechs
+ * @param {object} content
+ * @param {{ eco?: object, factionId?: string, world?: object, stack?: object }} [opts]
  */
-export function researchPathTo(techId, unlockedTechs, content) {
+export function researchPathTo(techId, unlockedTechs, content, opts = {}) {
   const techs = content?.technologies || getContent().technologies || {};
   const unlocked = new Set(unlockedTechs || []);
   const path = [];
@@ -530,10 +558,27 @@ export function researchPathTo(techId, unlockedTechs, content) {
   }
 
   walk(techId);
+
+  let stack = opts.stack || null;
+  if (!stack && (opts.eco || opts.factionId)) {
+    const factionId = opts.factionId || null;
+    const world = opts.world ?? readLiveBoard();
+    const eco =
+      opts.eco ||
+      (factionId ? ensureFactionEco(readLedger(), factionId) : null);
+    if (factionId && eco) {
+      stack = researchStackForFaction(factionId, eco, content || getContent(), world);
+    }
+  }
+
   let totalCognitio = 0;
   const steps = path.map((id) => {
     const def = techs[id];
-    const cost = Number(def?.cost?.["currency.cognitio"] ?? 0);
+    const rawCost = def?.cost || {};
+    const adjusted = stack
+      ? applyResearchCostMult(rawCost, stack, def?.category)
+      : rawCost;
+    const cost = Number(adjusted["currency.cognitio"] ?? 0);
     totalCognitio += cost;
     return {
       techId: id,
@@ -595,10 +640,15 @@ export function researchTech(factionId, techId, meta = {}) {
   removeFromResearchQueue(eco, techId);
   writeLedger(ledger);
 
+  if (world) {
+    applyUnitUpgradeEffectsToWorld(world, factionId, def.effects || [], content);
+  }
+
   return {
     ok: true,
     eco: publicEcoSlice(eco),
     tech: def,
+    worldMutated: Boolean(world && (def.effects || []).some((e) => e?.effect === "unit_upgrade")),
   };
 }
 
@@ -670,6 +720,7 @@ export function researchUpgrade(factionId, techId, upgradeId, meta = {}) {
     eco: publicEcoSlice(eco),
     upgrade: up,
     tech: def,
+    worldMutated: Boolean(world && (up.effects || []).some((e) => e?.effect === "unit_upgrade")),
   };
 }
 

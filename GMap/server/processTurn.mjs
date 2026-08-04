@@ -78,9 +78,29 @@ import {
   applyResolveQuestChoice,
   applyResolveQuestDice,
 } from "./questActions.mjs";
+import { createDiploOffer } from "./diploOffers.mjs";
 
 function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
+}
+
+/** Recompute whether a system is blockaded (any idle blockading fleet present). */
+function refreshSystemBlockade(world, systemId) {
+  if (!systemId) return;
+  const sys = (world.systems ?? []).find((s) => s.id === systemId);
+  if (!sys) return;
+  const still = (world.fleets ?? []).some(
+    (f) =>
+      f.systemId === systemId &&
+      f.stance === "blockade" &&
+      !(f.route && f.route.length),
+  );
+  sys.blockaded = still;
+}
+
+/** @deprecated alias — prefer refreshSystemBlockade */
+function clearBlockadeIfEmpty(world, systemId) {
+  refreshSystemBlockade(world, systemId);
 }
 
 /**
@@ -90,9 +110,18 @@ function journalPush(journal, entry) {
  */
 function beginFleetTravel(world, fleet, toId, arriveStance, journal, meta) {
   const fromId = fleet.systemId;
+  const leftBlockade =
+    fleet.stance === "blockade" && (fromId !== toId || arriveStance !== "blockade");
   if (fromId === toId) {
     fleet.route = [];
     fleet.stance = arriveStance;
+    if (leftBlockade || arriveStance !== "blockade") {
+      refreshSystemBlockade(world, fromId);
+    }
+    if (arriveStance === "blockade") {
+      const sys = (world.systems ?? []).find((s) => s.id === toId);
+      if (sys) sys.blockaded = true;
+    }
     return { ok: true, fromId, toId, arrived: true, hopsLeft: 0 };
   }
   const path = hopPath(world, fromId, toId, "fleet");
@@ -110,6 +139,7 @@ function beginFleetTravel(world, fleet, toId, arriveStance, journal, meta) {
   // path[0]=from, path[1]=next, … path[n]=dest
   const nextId = path[1];
   const remaining = path.slice(2); // may be empty if 1-hop
+  fleet.lastSystemId = fromId;
   fleet.systemId = nextId;
   fleet.route = remaining.length ? [...remaining] : [];
   if (fleet.route.length === 0) {
@@ -117,7 +147,18 @@ function beginFleetTravel(world, fleet, toId, arriveStance, journal, meta) {
     delete fleet.pendingArrival;
   } else {
     fleet.stance = "move";
-    fleet.pendingArrival = { stance: arriveStance, systemId: toId };
+    fleet.pendingArrival = {
+      stance: arriveStance,
+      systemId: toId,
+      fromSystemId: fromId,
+    };
+  }
+  if (leftBlockade || fromId !== nextId) {
+    refreshSystemBlockade(world, fromId);
+  }
+  if (fleet.route.length === 0 && arriveStance === "blockade") {
+    const sys = (world.systems ?? []).find((s) => s.id === toId);
+    if (sys) sys.blockaded = true;
   }
   journalPush(journal, {
     type: meta.type,
@@ -139,8 +180,11 @@ function beginFleetTravel(world, fleet, toId, arriveStance, journal, meta) {
   };
 }
 
-/** Advance fleets/legions with pending routes by one hop each tick. */
-function advanceUnitRoutes(world, journal) {
+/**
+ * Advance fleets/legions with pending routes by one hop each tick.
+ * @param {Set<string>} [skipFleetIds] fleets with a new move/blockade/fortify intent this tick
+ */
+function advanceUnitRoutes(world, journal, skipFleetIds) {
   for (const fleet of world.fleets ?? []) {
     // Migrate legacy underscore fields from earlier builds.
     if (fleet._arriveStance && !fleet.pendingArrival) {
@@ -151,6 +195,8 @@ function advanceUnitRoutes(world, journal) {
     }
     delete fleet._arriveStance;
     delete fleet._arriveSystemId;
+
+    if (skipFleetIds?.has(fleet.id)) continue;
 
     const route = fleet.route ?? [];
     if (!route.length) {
@@ -184,6 +230,7 @@ function advanceUnitRoutes(world, journal) {
       });
       continue;
     }
+    fleet.lastSystemId = fromId;
     fleet.systemId = nextId;
     fleet.route = rest;
     const arrived = rest.length === 0;
@@ -197,7 +244,11 @@ function advanceUnitRoutes(world, journal) {
       delete fleet.pendingArrival;
     } else {
       fleet.stance = "move";
+      if (fleet.pendingArrival) {
+        fleet.pendingArrival.fromSystemId = fromId;
+      }
     }
+    clearBlockadeIfEmpty(world, fromId);
     journalPush(journal, {
       type: "route_step",
       fleetId: fleet.id,
@@ -218,6 +269,7 @@ function advanceUnitRoutes(world, journal) {
       legion.route = [];
       continue;
     }
+    legion.lastSystemId = fromId;
     legion.systemId = nextId;
     legion.route = rest;
     legion.status = rest.length ? "move" : "idle";
@@ -267,6 +319,7 @@ function applyMoveFleet(world, intent, journal) {
     intentId: intent.id,
     factionId: intent.factionId,
   });
+  if (travel.ok) clearBlockadeIfEmpty(world, travel.fromId);
   return travel.ok;
 }
 
@@ -316,6 +369,7 @@ function applyMoveLegion(world, intent, journal) {
   }
   const nextId = path[1];
   const remaining = path.slice(2);
+  legion.lastSystemId = fromId;
   legion.systemId = nextId;
   legion.route = remaining;
   legion.status = remaining.length ? "move" : "idle";
@@ -341,6 +395,22 @@ function applyClaim(world, intent, journal) {
       type: "reject",
       intentId: intent.id,
       reason: "system_missing",
+    });
+    return false;
+  }
+  const hasPresence =
+    (world.fleets ?? []).some(
+      (f) => f.factionId === intent.factionId && f.systemId === toId,
+    ) ||
+    (world.legions ?? []).some(
+      (l) => l.factionId === intent.factionId && l.systemId === toId,
+    );
+  if (!hasPresence) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "no_presence",
+      systemId: toId,
     });
     return false;
   }
@@ -537,6 +607,7 @@ function applyBlockade(world, intent, journal) {
     factionId: intent.factionId,
   });
   if (!travel.ok) return false;
+  clearBlockadeIfEmpty(world, travel.fromId);
   if (travel.arrived) {
     sys.blockaded = true;
     fleet.stance = "blockade";
@@ -585,7 +656,85 @@ function applyFortify(world, intent, journal) {
       factionId: intent.factionId,
     },
   );
+  if (travel.ok) clearBlockadeIfEmpty(world, travel.fromId);
   return travel.ok;
+}
+
+function applyPlanetIntent(action) {
+  return (world, intent, journal) => {
+    const result = applyPlanetAction({
+      world,
+      factionId: intent.factionId,
+      action,
+      systemId: intent.payload?.systemId,
+      planetId: intent.payload?.planetId,
+      buildingId: intent.payload?.buildingId,
+      instanceId: intent.payload?.instanceId,
+      colonyType: intent.payload?.colonyType,
+      note: intent.note || intent.payload?.note,
+      persist: false,
+      skipApCheck: true,
+      skipIntentRecord: true,
+    });
+    if (!result.ok) {
+      journalPush(journal, {
+        type: "reject",
+        intentId: intent.id,
+        reason: result.error || "planet_action_failed",
+        action,
+      });
+      return false;
+    }
+    journalPush(journal, {
+      type: action,
+      intentId: intent.id,
+      factionId: intent.factionId,
+      systemId: intent.payload?.systemId,
+      planetId: intent.payload?.planetId,
+      buildingId: intent.payload?.buildingId || result.building?.buildingId,
+      colonyType: intent.payload?.colonyType,
+    });
+    return true;
+  };
+}
+
+function applyMakeDiploOffer(world, intent, journal) {
+  const toFactionId = intent.payload?.toFactionId;
+  if (!toFactionId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "toFactionId_required",
+    });
+    return false;
+  }
+  const visible = resolveVisibleWithFog(world, intent.factionId, readFog());
+  const known = getKnownFactionIds(world, intent.factionId, [...visible]);
+  const result = createDiploOffer({
+    fromFactionId: intent.factionId,
+    toFactionId,
+    give: intent.payload?.give,
+    want: intent.payload?.want,
+    note: intent.payload?.note || intent.note,
+    turn: world.meta?.turn ?? 0,
+    knownOk: known.has(toFactionId),
+  });
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error || "diplo_offer_failed",
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "make_diplo_offer",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    toFactionId,
+    offerId: result.offer?.id,
+  });
+  return true;
 }
 
 function applyScoutReveal(world, intent, journal) {
@@ -598,6 +747,14 @@ function applyScoutReveal(world, intent, journal) {
     });
     return false;
   }
+  if (!factionHasScoutPresence(world, intent.factionId, systemId)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "scout_presence_required",
+    });
+    return false;
+  }
   addPermanentReveal(intent.factionId, systemId);
   journalPush(journal, {
     type: "scout_reveal",
@@ -606,6 +763,22 @@ function applyScoutReveal(world, intent, journal) {
     factionId: intent.factionId,
   });
   return true;
+}
+
+/** Owned fleet/legion in target system or adjacent via hyperlane. */
+function factionHasScoutPresence(world, factionId, systemId) {
+  const near = new Set([systemId]);
+  for (const l of world.links ?? []) {
+    if (l.fromId === systemId) near.add(l.toId);
+    else if (l.toId === systemId) near.add(l.fromId);
+  }
+  for (const f of world.fleets ?? []) {
+    if (f.factionId === factionId && near.has(f.systemId)) return true;
+  }
+  for (const l of world.legions ?? []) {
+    if (l.factionId === factionId && near.has(l.systemId)) return true;
+  }
+  return false;
 }
 
 function applyScoutWorld(world, intent, journal) {
@@ -748,21 +921,38 @@ function applyEspionage(world, intent, journal) {
       });
     }
   } else if (category === "unit") {
-    for (const f of world.fleets ?? []) {
-      if (f.factionId !== targetFactionId) continue;
-      const uid = f.unitDefId ?? f.templateId ?? f.classId;
-      if (!uid) continue;
+    const seed = (uid) => {
+      if (!uid || typeof uid !== "string") return;
       const lv = getLevel(intent.factionId, "unit", uid);
       setKnowledgeLevel(intent.factionId, "unit", uid, lv + 1, {
         source: "espionage",
         turn,
       });
+    };
+    for (const f of world.fleets ?? []) {
+      if (f.factionId !== targetFactionId) continue;
+      seed(f.unitDefId ?? f.templateId ?? f.classId);
+      for (const g of f.composition ?? []) {
+        seed(g?.defId || g?.type);
+      }
+    }
+    for (const l of world.legions ?? []) {
+      if (l.factionId !== targetFactionId) continue;
+      seed(l.unitDefId ?? l.templateId ?? l.classId);
+      for (const g of l.composition ?? []) {
+        seed(g?.defId || g?.type);
+      }
     }
   } else if (category === "building") {
     for (const sys of world.systems ?? []) {
       if (sys.ownerFactionId !== targetFactionId) continue;
       for (const p of sys.planets ?? []) {
-        for (const b of p.buildings ?? []) {
+        const lists = [
+          ...(p.buildings ?? []),
+          ...(p.surfaceBuildings ?? []),
+          ...(p.orbitalBuildings ?? []),
+        ];
+        for (const b of lists) {
           const bid = typeof b === "string" ? b : b?.buildingId ?? b?.id;
           if (!bid) continue;
           const lv = getLevel(intent.factionId, "building", bid);
@@ -1440,18 +1630,41 @@ const APPLIERS = {
   "intent.throw_quest_dice": applyThrowQuestDice,
   "intent.resolve_quest_choice": applyResolveQuestChoice,
   "intent.resolve_quest_dice": applyResolveQuestDice,
+  "intent.build": applyPlanetIntent("build"),
+  "intent.demolish": applyPlanetIntent("demolish"),
+  "intent.colonize": applyPlanetIntent("colonize"),
+  "intent.set_colony_type": applyPlanetIntent("set_colony_type"),
+  "intent.make_diplo_offer": applyMakeDiploOffer,
 };
 
 function advanceCaravans(world) {
+  const ledger = ensureAllFactions(readLedger(), world);
+  const turn = world.meta?.turn ?? 0;
+  let ledgerDirty = false;
+  const remaining = [];
   for (const c of world.caravans ?? []) {
     c.progress = Math.min(1, (c.progress ?? 0) + 0.15);
-    if (c.progress >= 1) {
-      const tmp = c.fromSystemId;
-      c.fromSystemId = c.toSystemId;
-      c.toSystemId = tmp;
-      c.progress = 0;
+    if (c.progress < 1) {
+      remaining.push(c);
+      continue;
+    }
+    // Arrived at destination — deliver cargo once, then despawn (no ping-pong).
+    const cargo = c.cargo && typeof c.cargo === "object" ? c.cargo : null;
+    if (cargo && c.factionId) {
+      for (const [cur, amt] of Object.entries(cargo)) {
+        const n = Number(amt) || 0;
+        if (!n) continue;
+        adjustStock(ledger, c.factionId, cur, n, {
+          turn,
+          reason: "caravan_delivery",
+          intentId: c.id,
+        });
+        ledgerDirty = true;
+      }
     }
   }
+  world.caravans = remaining;
+  if (ledgerDirty) writeLedger(ledger);
 }
 
 /**
@@ -1476,9 +1689,6 @@ export function processTurn(opts = {}) {
   processSystemTimers(world, turn, journal);
   processNpcTasks(world, turn, journal);
 
-  // Continue multi-hop routes from previous ticks (one hop each).
-  advanceUnitRoutes(world, journal);
-
   const intents = readIntents()
     .filter((i) => i.status === "pending" && i.turn === turn)
     .sort((a, b) => {
@@ -1497,8 +1707,26 @@ export function processTurn(opts = {}) {
       return String(a.submittedAt).localeCompare(String(b.submittedAt));
     });
 
-  setTableMeta({ tickFrozen: true });
+  // Skip route advance for fleets that also have a move/blockade/fortify intent
+  // this tick — beginFleetTravel will hop once (avoids same-tick double hop).
+  const pendingTravelFleetIds = new Set(
+    intents
+      .filter(
+        (i) =>
+          i.defId === "intent.move_fleet" ||
+          i.defId === "intent.blockade" ||
+          i.defId === "intent.fortify",
+      )
+      .map((i) => i.payload?.fleetId)
+      .filter(Boolean),
+  );
+  advanceUnitRoutes(world, journal, pendingTravelFleetIds);
 
+  // Mid-tick lock reuses tickFrozen; finally always releases it so a throw
+  // cannot leave the table permanently frozen (GM freeze is set outside ticks).
+  let midTickLock = true;
+  setTableMeta({ tickFrozen: true });
+  try {
   const nextIntents = readIntents();
   const deferredStance = [];
   const deferredCard = [];
@@ -1656,12 +1884,18 @@ export function processTurn(opts = {}) {
     lastTickAt: new Date().toISOString(),
     lastJournal: briefing,
   });
+  midTickLock = false;
 
   return {
     ok: true,
     ...written,
     journal: briefing,
   };
+  } finally {
+    if (midTickLock) {
+      setTableMeta({ tickFrozen: false });
+    }
+  }
 }
 
 export function getLastJournal() {

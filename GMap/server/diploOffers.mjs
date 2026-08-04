@@ -23,6 +23,7 @@ import {
   ensureFactionDiplomacy,
 } from "./opinionTick.mjs";
 import { recomputeUnlocksFromTechs } from "./techActions.mjs";
+import { applyUnitUpgradeEffectsToWorld } from "./combatResolve.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { updateIntelFromDiplomacy } from "./intel.mjs";
 
@@ -40,6 +41,24 @@ const TREATIES = new Set([
   "migration_treaty",
   "embargo",
 ]);
+
+/** Techs with race/trait locks or non-transferable acquired records stay private. */
+function isShareableTechId(techId, eco, content) {
+  const def = content?.technologies?.[techId];
+  if (!def) return false;
+  if (def.raceLock || def.factionTraitLock) return false;
+  const acq = (eco?.acquiredTechs || []).find((a) => a.techId === techId);
+  if (acq && (acq.transferable === false || acq.source === "historical")) {
+    return false;
+  }
+  return true;
+}
+
+function shareableTechIds(eco, content) {
+  return (eco?.unlockedTechs || []).filter((tid) =>
+    isShareableTechId(tid, eco, content),
+  );
+}
 
 function emptyStore() {
   return { offers: [] };
@@ -218,7 +237,11 @@ function setDiplomacyRelation(world, aId, bId, relation, turn) {
   }
   world.diplomacy = list;
   const stances = getContent()?.diplomacy_stances || {};
-  syncTreatiesFromEdge(world, aId, bId, relation, turn ?? 0, stances);
+  const syncOpts =
+    relation === "vassal"
+      ? { overlordFactionId: aId, subjectFactionId: bId }
+      : {};
+  syncTreatiesFromEdge(world, aId, bId, relation, turn ?? 0, stances, syncOpts);
 }
 
 /**
@@ -301,26 +324,64 @@ export function respondDiploOffer({
     (i) => i.kind === "treaty",
   );
 
-  // Research pact: share unlocked tech catalogs (union both sides).
+  // Research pact: share only transferable / non-exclusive techs (not race/trait locks).
+  let researchPactNewTechs = null;
   if (treatyItem?.treaty === "research_pact") {
     const content = getContent();
     const fromEco = ensureFactionEco(ledger, offer.fromFactionId);
     const toEco = ensureFactionEco(ledger, offer.toFactionId);
-    const union = [
-      ...new Set([
-        ...(fromEco.unlockedTechs || []),
-        ...(toEco.unlockedTechs || []),
-      ]),
+    const fromPrev = new Set(fromEco.unlockedTechs || []);
+    const toPrev = new Set(toEco.unlockedTechs || []);
+    const fromShare = shareableTechIds(fromEco, content);
+    const toShare = shareableTechIds(toEco, content);
+    const fromNext = [
+      ...new Set([...(fromEco.unlockedTechs || []), ...toShare]),
     ];
-    fromEco.unlockedTechs = [...union];
-    toEco.unlockedTechs = [...union];
+    const toNext = [
+      ...new Set([...(toEco.unlockedTechs || []), ...fromShare]),
+    ];
+    fromEco.unlockedTechs = fromNext;
+    toEco.unlockedTechs = toNext;
     recomputeUnlocksFromTechs(fromEco, content);
     recomputeUnlocksFromTechs(toEco, content);
     writeLedger(ledger);
+    researchPactNewTechs = {
+      content,
+      fromPrev,
+      toPrev,
+      fromNext,
+      toNext,
+    };
   }
 
   const world = readLiveBoard();
   if (world) {
+    if (researchPactNewTechs) {
+      const { content, fromPrev, toPrev, fromNext, toNext } =
+        researchPactNewTechs;
+      for (const tid of fromNext) {
+        if (fromPrev.has(tid)) continue;
+        const effects = content.technologies?.[tid]?.effects || [];
+        if (!effects.length) continue;
+        applyUnitUpgradeEffectsToWorld(
+          world,
+          offer.fromFactionId,
+          effects,
+          content,
+        );
+      }
+      for (const tid of toNext) {
+        if (toPrev.has(tid)) continue;
+        const effects = content.technologies?.[tid]?.effects || [];
+        if (!effects.length) continue;
+        applyUnitUpgradeEffectsToWorld(
+          world,
+          offer.toFactionId,
+          effects,
+          content,
+        );
+      }
+    }
     const hasResources = [...(offer.give || []), ...(offer.want || [])].some(
       (i) => i.kind === "resource",
     );

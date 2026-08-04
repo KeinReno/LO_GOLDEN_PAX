@@ -1,3 +1,2890 @@
 {
-  "factions": {}
+  "factions": {
+    "faction_belator": {
+      "factionId": "faction_belator",
+      "knownFactions": {
+        "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": 1,
+        "faction_a": 1,
+        "faction_amalfea": 1,
+        "faction_balsagon": 1,
+        "faction_federation": 2,
+        "faction_free_traders": 1,
+        "faction_heshah": 1,
+        "faction_huchi": 1,
+        "faction_khanate": 1,
+        "faction_korvun": 1,
+        "faction_north_swarm": 1,
+        "faction_or": 1,
+        "faction_pirates": 1,
+        "faction_sahale": 2,
+        "faction_scavengers": 1,
+        "faction_sikuri": 1,
+        "faction_south_swarm": 1,
+        "faction_taala": 1,
+        "faction_turon": 1,
+        "faction_belator": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_test": 2,
+        "race_belator": 1,
+        "race_corinfad": 1
+      },
+      "knownTechs": {
+        "tech.fusion": 4,
+        "tech.geology": 4,
+        "tech.scientific_charter": 4,
+        "tech.archaeology": 4,
+        "tech.psionics": 4,
+        "tech.industrial_org": 4,
+        "tech.materials_science": 4,
+        "tech.pyrometallurgy": 4,
+        "tech.crystal_integration": 4,
+        "tech.metamaterials": 4,
+        "tech.white_corridors": 4,
+        "tech.matter_destruction": 4,
+        "tech.energy_grid": 4,
+        "tech.plasma_engineering": 4,
+        "tech.antimatter": 4,
+        "tech.modular_construction": 4,
+        "tech.cybernetics": 4,
+        "tech.nanotech": 4,
+        "tech.black_iron_forges": 4
+      },
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.battleship": 4,
+        "ship.cruiser": 4,
+        "ship.frigate": 4,
+        "ship.transport": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "faction_federation",
+          "entityType": "faction",
+          "oldLevel": 1,
+          "newLevel": 2,
+          "source": "test",
+          "turn": 1
+        },
+        {
+          "entityId": "faction_sahale",
+          "entityType": "faction",
+          "oldLevel": 1,
+          "newLevel": 2,
+          "source": "test",
+          "turn": 1
+        },
+        {
+          "entityId": "tech.fusion",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 1
+        },
+        {
+          "entityId": "race_test",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 2,
+          "source": "x",
+          "turn": 1
+        },
+        {
+          "entityId": "tech.geology",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.scientific_charter",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.archaeology",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.psionics",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.industrial_org",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.materials_science",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.pyrometallurgy",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.crystal_integration",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.metamaterials",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.white_corridors",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.matter_destruction",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.energy_grid",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.plasma_engineering",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.antimatter",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.modular_construction",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.cybernetics",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.nanotech",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "tech.black_iron_forges",
+          "entityType": "tech",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.battleship",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.cruiser",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.transport",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_belator",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        },
+        {
+          "entityId": "race_corinfad",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_turon": {
+      "factionId": "faction_turon",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_heshah": 1,
+        "faction_or": 1,
+        "faction_pirates": 1,
+        "faction_sikuri": 1,
+        "faction_south_swarm": 1,
+        "faction_taala": 1,
+        "faction_turon": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_sikuri": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.cruiser": 4,
+        "ship.corvette": 4,
+        "ship.frigate": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.cruiser",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_sikuri",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_federation": {
+      "factionId": "faction_federation",
+      "knownFactions": {
+        "faction_a": 1,
+        "faction_belator": 1,
+        "faction_north_swarm": 1,
+        "faction_pirates": 1,
+        "faction_sahale": 1,
+        "faction_federation": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_corinfad": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.frigate": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_corinfad",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_north_swarm": {
+      "factionId": "faction_north_swarm",
+      "knownFactions": {
+        "faction_a": 1,
+        "faction_belator": 1,
+        "faction_federation": 1,
+        "faction_heshah": 1,
+        "faction_pirates": 1,
+        "faction_sahale": 1,
+        "faction_north_swarm": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_corinfad": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4,
+        "ship.frigate": 4,
+        "ship.cruiser": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.cruiser",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_corinfad",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_korvun": {
+      "factionId": "faction_korvun",
+      "knownFactions": {
+        "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": 1,
+        "faction_belator": 1,
+        "faction_huchi": 1,
+        "faction_or": 1,
+        "faction_pirates": 1,
+        "faction_scavengers": 1,
+        "faction_taala": 1,
+        "faction_korvun": 4
+      },
+      "knownRaces": {
+        "race_belator": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "race_belator",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_taala": {
+      "factionId": "faction_taala",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_korvun": 1,
+        "faction_or": 1,
+        "faction_pirates": 1,
+        "faction_turon": 1,
+        "faction_taala": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_heshah": {
+      "factionId": "faction_heshah",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_north_swarm": 1,
+        "faction_pirates": 1,
+        "faction_sikuri": 1,
+        "faction_turon": 1,
+        "faction_heshah": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_sikuri": 1,
+        "race_heshah": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.battleship": 4,
+        "ship.frigate": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.battleship",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_sikuri",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        },
+        {
+          "entityId": "race_heshah",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_sikuri": {
+      "factionId": "faction_sikuri",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_heshah": 1,
+        "faction_turon": 1,
+        "faction_sikuri": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_sikuri": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "race_sikuri",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_huchi": {
+      "factionId": "faction_huchi",
+      "knownFactions": {
+        "faction_korvun": 1,
+        "faction_huchi": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_south_swarm": {
+      "factionId": "faction_south_swarm",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_free_traders": 1,
+        "faction_nomad_f_672edfda15": 1,
+        "faction_nomad_pax_terrialis": 1,
+        "faction_pirates": 1,
+        "faction_turon": 1,
+        "faction_south_swarm": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_balsagon": {
+      "factionId": "faction_balsagon",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_balsagon": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_pirates": {
+      "factionId": "faction_pirates",
+      "knownFactions": {
+        "faction_amalfea": 1,
+        "faction_federation": 1,
+        "faction_free_traders": 1,
+        "faction_heshah": 1,
+        "faction_karned": 1,
+        "faction_korvun": 1,
+        "faction_nomad_f_0849e7d5d5": 1,
+        "faction_nomad_f_0d845d87f2": 1,
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_nomad_f_672edfda15": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_899b2c60de": 1,
+        "faction_nomad_f_eb376e7120": 1,
+        "faction_nomad_f_f3466a10f0": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_north_swarm": 1,
+        "faction_scavengers": 1,
+        "faction_south_swarm": 1,
+        "faction_taala": 1,
+        "faction_turon": 1,
+        "faction_pirates": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_or": {
+      "factionId": "faction_or",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_korvun": 1,
+        "faction_taala": 1,
+        "faction_turon": 1,
+        "faction_or": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_amalfea": {
+      "factionId": "faction_amalfea",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_pirates": 1,
+        "faction_amalfea": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_khanate": {
+      "factionId": "faction_khanate",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_khanate": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_sahale": {
+      "factionId": "faction_sahale",
+      "knownFactions": {
+        "faction_a": 1,
+        "faction_belator": 1,
+        "faction_federation": 1,
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_north_swarm": 1,
+        "faction_sahale": 4,
+        "faction_rebels": 1
+      },
+      "knownRaces": {
+        "race_corinfad": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.battleship": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.battleship",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_corinfad",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 108
+        }
+      ]
+    },
+    "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": {
+      "factionId": "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
+      "knownFactions": {
+        "faction_belator": 1,
+        "faction_korvun": 1,
+        "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_nomad_pax_terrialis": {
+      "factionId": "faction_nomad_pax_terrialis",
+      "knownFactions": {
+        "faction_nomad_f_0610a823c5": 1,
+        "faction_nomad_f_08a06270a3": 1,
+        "faction_nomad_f_38366f84e5": 1,
+        "faction_nomad_f_eb376e7120": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_south_swarm": 1,
+        "faction_nomad_pax_terrialis": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.frigate": 4,
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_6d6fb61623": {
+      "factionId": "faction_nomad_f_6d6fb61623",
+      "knownFactions": {
+        "faction_nomad_f_0849e7d5d5": 1,
+        "faction_nomad_f_38366f84e5": 1,
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_nomad_f_899b2c60de": 1,
+        "faction_nomad_f_eb376e7120": 1,
+        "faction_nomad_f_f3466a10f0": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_6d6fb61623": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_0d845d87f2": {
+      "factionId": "faction_nomad_f_0d845d87f2",
+      "knownFactions": {
+        "faction_nomad_f_0610a823c5": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_0d845d87f2": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4,
+        "ship.frigate": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_f8d3f947d6": {
+      "factionId": "faction_nomad_f_f8d3f947d6",
+      "knownFactions": {
+        "faction_nomad_f_0610a823c5": 1,
+        "faction_nomad_f_0d845d87f2": 1,
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_eb376e7120": 1,
+        "faction_nomad_pax_terrialis": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_f8d3f947d6": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_0849e7d5d5": {
+      "factionId": "faction_nomad_f_0849e7d5d5",
+      "knownFactions": {
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_f3466a10f0": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_0849e7d5d5": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.cruiser": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.cruiser",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_f3466a10f0": {
+      "factionId": "faction_nomad_f_f3466a10f0",
+      "knownFactions": {
+        "faction_nomad_f_0849e7d5d5": 1,
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_899b2c60de": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_f3466a10f0": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.frigate": 4,
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_672edfda15": {
+      "factionId": "faction_nomad_f_672edfda15",
+      "knownFactions": {
+        "faction_nomad_f_08a06270a3": 1,
+        "faction_nomad_f_38366f84e5": 1,
+        "faction_pirates": 1,
+        "faction_scavengers": 1,
+        "faction_south_swarm": 1,
+        "faction_nomad_f_672edfda15": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_899b2c60de": {
+      "factionId": "faction_nomad_f_899b2c60de",
+      "knownFactions": {
+        "faction_nomad_f_61f8054f59": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_f3466a10f0": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_899b2c60de": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_0610a823c5": {
+      "factionId": "faction_nomad_f_0610a823c5",
+      "knownFactions": {
+        "faction_free_traders": 1,
+        "faction_nomad_f_0d845d87f2": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_nomad_pax_terrialis": 1,
+        "faction_nomad_f_0610a823c5": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.frigate": 4,
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_eb376e7120": {
+      "factionId": "faction_nomad_f_eb376e7120",
+      "knownFactions": {
+        "faction_nomad_f_08a06270a3": 1,
+        "faction_nomad_f_38366f84e5": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_nomad_pax_terrialis": 1,
+        "faction_pirates": 1,
+        "faction_nomad_f_eb376e7120": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.corvette": 4,
+        "ship.frigate": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_38366f84e5": {
+      "factionId": "faction_nomad_f_38366f84e5",
+      "knownFactions": {
+        "faction_nomad_f_08a06270a3": 1,
+        "faction_nomad_f_672edfda15": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_eb376e7120": 1,
+        "faction_nomad_pax_terrialis": 1,
+        "faction_nomad_f_38366f84e5": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.frigate": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_08a06270a3": {
+      "factionId": "faction_nomad_f_08a06270a3",
+      "knownFactions": {
+        "faction_nomad_f_38366f84e5": 1,
+        "faction_nomad_f_672edfda15": 1,
+        "faction_nomad_f_eb376e7120": 1,
+        "faction_nomad_pax_terrialis": 1,
+        "faction_scavengers": 1,
+        "faction_nomad_f_08a06270a3": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.cruiser": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.cruiser",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_nomad_f_61f8054f59": {
+      "factionId": "faction_nomad_f_61f8054f59",
+      "knownFactions": {
+        "faction_nomad_f_0849e7d5d5": 1,
+        "faction_nomad_f_6d6fb61623": 1,
+        "faction_nomad_f_899b2c60de": 1,
+        "faction_nomad_f_f3466a10f0": 1,
+        "faction_nomad_f_f8d3f947d6": 1,
+        "faction_pirates": 1,
+        "faction_sahale": 1,
+        "faction_nomad_f_61f8054f59": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {
+        "ship.battleship": 4,
+        "ship.frigate": 4,
+        "ship.corvette": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "ship.battleship",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        }
+      ]
+    },
+    "faction_free_traders": {
+      "factionId": "faction_free_traders",
+      "knownFactions": {
+        "faction_nomad_f_0610a823c5": 1,
+        "faction_pirates": 1,
+        "faction_south_swarm": 1,
+        "faction_free_traders": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_scavengers": {
+      "factionId": "faction_scavengers",
+      "knownFactions": {
+        "faction_korvun": 1,
+        "faction_nomad_f_08a06270a3": 1,
+        "faction_nomad_f_672edfda15": 1,
+        "faction_pirates": 1,
+        "faction_scavengers": 4
+      },
+      "knownRaces": {},
+      "knownTechs": {},
+      "knownBuildings": {},
+      "knownUnits": {},
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": []
+    },
+    "faction_karned": {
+      "factionId": "faction_karned",
+      "knownFactions": {
+        "faction_amalfea": 1,
+        "faction_belator": 1,
+        "faction_nomad_f_0d845d87f2": 1,
+        "faction_pirates": 1,
+        "faction_south_swarm": 1,
+        "faction_karned": 4
+      },
+      "knownRaces": {
+        "race_elanor": 1,
+        "race_vendir": 1,
+        "race_elanis": 1,
+        "race_elatris": 1,
+        "race_triumvis": 1,
+        "race_horn": 1,
+        "race_lithoid": 1,
+        "race_elacrin": 1,
+        "race_eladon": 1,
+        "race_bistier": 1
+      },
+      "knownTechs": {},
+      "knownBuildings": {
+        "cf969b98-e31a-4283-a569-b778caf250f4": 4,
+        "599fb57a-9e1b-4502-80d5-6ba5d98d853d": 4,
+        "076ad44f-3a2a-4152-83ad-8d98594010e6": 4,
+        "f9447b21-7919-4a15-a882-6090d552c37c": 4,
+        "1e78ee6b-4561-4a32-9743-af361f40ce2e": 4,
+        "ec98649c-475e-4e5b-a16a-29ea1362cc95": 4,
+        "03f4aeee-fe21-4cd6-b024-29563adfcebb": 4,
+        "2f1033cf-4ee2-4164-a9e5-c2d271f6b0af": 4,
+        "90b93423-17be-499b-b720-d0267788bd94": 4,
+        "b73b8410-11f8-48ba-b540-521222e76a41": 4,
+        "bios.medical": 4,
+        "2479910d-4f77-43b0-baed-d30dcaaca077": 4,
+        "1fe9fb40-4d2d-4c3d-b254-12847e9f3369": 4,
+        "c0ccdd00-f21e-44f2-958b-e4c2d1dc03f6": 4,
+        "777c2b87-4410-4a67-a8a5-1816d3f3bafa": 4,
+        "833dcbc8-4872-4273-87b7-63f418be0c63": 4,
+        "bios.hydroponics": 4,
+        "ccc3fe03-27b7-4ac6-a960-6d20f552a96d": 4,
+        "326ecd1a-8a86-4f89-be33-d9b7daa33331": 4,
+        "38e237bd-eb53-4a8b-a7ad-94b11a216abf": 4,
+        "08f46592-febf-4926-ad6f-4989c479bcbc": 4,
+        "3ad78f25-210a-4fb2-8a17-0b3882468ece": 4,
+        "7013fd46-f060-45d8-bc1e-9d6851f728b0": 4,
+        "6d2f2daa-717c-4258-9465-b334707ba8df": 4,
+        "2ec7b4f4-7974-4b41-9588-aa79a16cf1d6": 4,
+        "b1a38cb7-7690-440d-85ba-c189ff82e6ac": 4,
+        "194beee0-eff6-491a-882a-8563d2af5a35": 4,
+        "9bbd0098-cafa-4d81-8c74-8f1510ce7e26": 4,
+        "extract.gas_well": 4,
+        "materia.smelter": 4,
+        "energia.thermal_plant": 4,
+        "9aadd717-d424-42c9-865a-833e11a39eca": 4,
+        "c6d8e6fd-5276-4c2c-aa38-5aa13d4f54a4": 4,
+        "ab7eed48-78ba-4dc0-8b02-6deaac841b93": 4,
+        "energia.geo_hydro": 4,
+        "e93e5799-743d-4cb3-b00a-285c7fccfb5a": 4,
+        "industria.repair_dock": 4,
+        "7e900da7-d7db-4c8e-b8e7-f19771575b80": 4,
+        "474bdce8-f44d-4dc9-94cc-3a12aab0864b": 4,
+        "ec3e4291-6286-4197-b0e6-552c30b0590b": 4,
+        "e09a8117-5bd8-446e-be53-ee71cf932eab": 4,
+        "materia.crystal_workshop": 4,
+        "789d4b9c-55d4-4584-98b9-736d163569dd": 4,
+        "169327d0-73be-4ed3-afc9-fd849cee7833": 4,
+        "9d145347-d91e-4fc3-931e-1ff81adf696a": 4,
+        "bc86926b-ffc4-44f4-a697-bcbf9ec166e4": 4,
+        "40538daf-788e-4674-bb60-4f416dcfb9b8": 4,
+        "2a672b7b-c5a1-475a-a0dc-e32cf4fd2a21": 4,
+        "9c5c00cf-d818-44e8-986d-74b3c70d8424": 4,
+        "e65fb250-9c8b-4fdf-a18a-8d08a9c4c765": 4,
+        "a8482020-272d-407b-a7ce-46dfe11d635a": 4,
+        "e6595f40-99f2-4c33-a72f-bb58df6e2bda": 4,
+        "fdc8f9f3-aee3-4ccb-8d66-844d94d1b7fc": 4,
+        "55e77f8f-4bca-4e00-b97b-68334bbf54f4": 4,
+        "492fd127-cc49-43fb-b425-0a47dd887827": 4,
+        "53b7381d-acd5-439b-afc6-5bc83324decd": 4,
+        "ce8fd452-c467-4733-a89d-4c99f08eebe5": 4,
+        "7c8b0bfc-b836-4bfd-a9e0-64c7a69fc23e": 4,
+        "e291386c-8b75-4a19-8d74-298707df785d": 4,
+        "70c953e1-98b7-4ffa-bdfa-359704c913f5": 4,
+        "b582608d-5b7f-4f64-9881-cb6a9f13632c": 4,
+        "7936c99a-1bed-46fa-bd78-2e94ace73eb2": 4,
+        "04b22ed6-cff3-4025-b757-6bc7c2627a25": 4,
+        "12a211ac-70d4-4946-8111-7d5b3ca7ff60": 4,
+        "5ca81af3-0009-4e75-b330-63cc92a18e55": 4,
+        "826eef6f-5704-4e35-a60f-c2f839c5e4c3": 4,
+        "cd880292-7a10-433b-b00e-2e1aa2a002f2": 4,
+        "42302ef9-3e53-4082-a1f2-ed42936cd5cf": 4,
+        "c0bdd9ee-f394-41ed-8f18-c212a6067183": 4,
+        "d41b07c0-3dd5-4581-8a8d-95853bab060c": 4,
+        "b1460bf9-5ce2-4033-95e7-8197c5d8a78a": 4,
+        "3f5348c4-a699-44ba-bf2c-e328f9b0a4ed": 4,
+        "458f854d-eb66-408e-816f-062496297e6e": 4,
+        "3d116bb0-137b-455c-9424-ee8e63efea89": 4,
+        "92c01dcf-d8d0-440c-b45e-0404f349c49f": 4,
+        "2daed3fc-6869-472d-b7c3-4b55c3974890": 4,
+        "13dff5a3-4e00-43b6-9989-344b87dce2d1": 4,
+        "0acf2cf4-08fe-442d-aac1-7eaddaca2832": 4,
+        "5463cb6f-b9df-4b00-bb3e-9aa5037be2f5": 4,
+        "1f6350e8-c172-469a-aa57-ae744b020273": 4,
+        "dc5ff1e6-f6a1-46ba-8ed6-7bc15d7f7218": 4,
+        "7b899234-8785-491e-a173-1c6666652650": 4,
+        "afcefa3f-5a5a-4992-b727-29c16e8d8d0f": 4,
+        "67b5a8b5-701c-458d-845a-a58c8d2d203f": 4,
+        "0e3b46b9-38df-4b6b-8fed-199bf7f5c258": 4,
+        "ab1541e1-f101-4559-8465-aac33591acd0": 4,
+        "066e3508-5994-475a-8e2c-7c1389c1242a": 4,
+        "6bc13651-dc41-4bfe-b970-6fbbee576646": 4,
+        "ad494519-11cd-4f52-a700-bea153ae7aea": 4,
+        "174e4e52-cf36-4861-be68-1677e64953a0": 4,
+        "25262e65-1f25-46c6-83df-57d0a1c6a61f": 4,
+        "595febc4-f1cd-4dd1-a0bf-9b1aac2437b7": 4,
+        "8059921a-56aa-4c6a-bccb-e2adbf8d8f8b": 4,
+        "f6fda6ce-257d-4878-87c8-cc2eba6cb98f": 4,
+        "8e6fa747-226f-4233-8140-99f10d54770e": 4,
+        "b8dca77c-7990-4ed2-9b70-09ddd2ab3faa": 4,
+        "851f09f8-2ec3-4033-8f8c-305df7345766": 4,
+        "2be05de4-382d-451a-983e-2fceaefab63a": 4,
+        "44f5f38f-521c-48ed-9290-dc8663879d0a": 4,
+        "2cb03120-3d96-4077-915f-992adf0cc70f": 4,
+        "b20beebb-ca02-4fbc-bb04-c40d296650c9": 4,
+        "9aec8bba-ba88-4cc3-a88a-b56e0d33e90c": 4,
+        "97052b50-b245-4207-8ece-b1bb8722c68b": 4,
+        "681052fd-95b5-4a0d-b093-456ba35d038c": 4,
+        "31bee220-8b02-4b8c-83c5-80bddc65b0e7": 4,
+        "e86261f2-db6c-46de-9a7d-2268e56c4164": 4,
+        "industria.assembly": 4,
+        "2e4f24e4-c9c5-42b5-b600-1c5f3c13a6cb": 4,
+        "4030f3e4-8ff4-4985-80e3-5711a6e0fa7c": 4,
+        "31e23402-f8cc-433b-ae73-c9ece10ce302": 4,
+        "2b714e66-8e4e-4262-81e7-d06fae310987": 4,
+        "f6a3827b-d28f-4c3f-b681-594d1b682b1d": 4,
+        "2c3878fb-21f5-4f73-abdd-9cf4e7ca4285": 4,
+        "e7f06002-1a4d-495f-9de2-7de2c4acb494": 4,
+        "a7e78e0c-a3a8-48d8-9f3b-078c39690219": 4,
+        "ac526028-7772-4b84-b7f1-9d652bb8936f": 4,
+        "6819c899-1469-44c0-8ca5-ad5b56e0236b": 4,
+        "7b3a3e7a-d179-4dc6-a8e0-8df1e5a2d515": 4,
+        "5501cbb0-26f2-4e4a-8ad2-29ae1858a63b": 4,
+        "d52e70f3-b711-4ab5-87fe-00114e3b9cef": 4,
+        "99dff041-14ea-4ec4-b682-5ee33a520a27": 4,
+        "66e158f0-1e10-4341-a43d-6679f9effdfb": 4,
+        "94080f44-c095-4e7e-8f55-15a97422099f": 4,
+        "5ab902fb-cd10-4143-9937-7bca8e34768f": 4,
+        "2ca8931d-aa4d-4957-9129-93315b2ecbdd": 4,
+        "4e2dfa4c-ea2d-4439-a2f5-980c50bf6011": 4,
+        "53799e6b-80ba-407f-84cb-d01bc16c962e": 4,
+        "95ac2241-753d-4d46-afc5-16a14979eb5a": 4,
+        "a3ee1dcf-620e-4104-91e6-911a4a948028": 4,
+        "14548ca3-1bec-404b-a133-36c20675d822": 4,
+        "ec4d75c1-7570-4dec-bc8a-ab71dd3935cd": 4,
+        "84c4cf4d-b2d5-4529-8618-8d9cd0d79c2c": 4,
+        "a2c843de-38ed-4998-81e7-039f584578be": 4,
+        "industria.modular_yard": 4,
+        "8c613e7e-b784-4b33-8150-018414965d73": 4,
+        "d3df0707-d640-43f5-9feb-d78ed2684fd0": 4,
+        "57705ed3-48b1-4ebe-8a8d-3271ce076c39": 4,
+        "c8082cc5-ab99-4180-a3d0-9ac635df4f0e": 4,
+        "314927a6-7317-44f6-b05f-604f0a0634c0": 4,
+        "588860e5-629a-47e4-a9dc-4438e991b43c": 4,
+        "cb83ee77-af33-4f2f-86d9-914876a85486": 4,
+        "b9029dbc-82a3-4682-b185-b236c987355b": 4,
+        "a083e21c-2787-4b1f-8274-e3ea0927b4b7": 4,
+        "ba073805-2460-4903-a2c0-001a584997ce": 4,
+        "20795fc4-867a-4155-b401-2a5742c1b6e2": 4,
+        "3ebd0cd2-5fa5-4ab5-9b7b-b79429de5992": 4,
+        "9d105e9d-b2b9-4ccd-a221-f021cac2da81": 4,
+        "4d536574-88e7-4bee-bfab-ac90cb11e209": 4,
+        "36c77f08-4f2f-40f4-9a86-14a41772e572": 4,
+        "a299e888-2a53-406c-8527-4c067ec2de4e": 4,
+        "552cbc34-ee97-4c52-bef1-5a2567ee7477": 4
+      },
+      "knownUnits": {
+        "ship.battleship": 4,
+        "ship.frigate": 4,
+        "unit.generic_line": 4
+      },
+      "systemProgress": {},
+      "espionageCooldown": {},
+      "intelHistory": [
+        {
+          "entityId": "cf969b98-e31a-4283-a569-b778caf250f4",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "599fb57a-9e1b-4502-80d5-6ba5d98d853d",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "076ad44f-3a2a-4152-83ad-8d98594010e6",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "f9447b21-7919-4a15-a882-6090d552c37c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "1e78ee6b-4561-4a32-9743-af361f40ce2e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ec98649c-475e-4e5b-a16a-29ea1362cc95",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "03f4aeee-fe21-4cd6-b024-29563adfcebb",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2f1033cf-4ee2-4164-a9e5-c2d271f6b0af",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "90b93423-17be-499b-b720-d0267788bd94",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b73b8410-11f8-48ba-b540-521222e76a41",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "bios.medical",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2479910d-4f77-43b0-baed-d30dcaaca077",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "1fe9fb40-4d2d-4c3d-b254-12847e9f3369",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "c0ccdd00-f21e-44f2-958b-e4c2d1dc03f6",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "777c2b87-4410-4a67-a8a5-1816d3f3bafa",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "833dcbc8-4872-4273-87b7-63f418be0c63",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "bios.hydroponics",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ccc3fe03-27b7-4ac6-a960-6d20f552a96d",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "326ecd1a-8a86-4f89-be33-d9b7daa33331",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "38e237bd-eb53-4a8b-a7ad-94b11a216abf",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "08f46592-febf-4926-ad6f-4989c479bcbc",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "3ad78f25-210a-4fb2-8a17-0b3882468ece",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "7013fd46-f060-45d8-bc1e-9d6851f728b0",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "6d2f2daa-717c-4258-9465-b334707ba8df",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2ec7b4f4-7974-4b41-9588-aa79a16cf1d6",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b1a38cb7-7690-440d-85ba-c189ff82e6ac",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "194beee0-eff6-491a-882a-8563d2af5a35",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "9bbd0098-cafa-4d81-8c74-8f1510ce7e26",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "extract.gas_well",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "materia.smelter",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "9aadd717-d424-42c9-865a-833e11a39eca",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "c6d8e6fd-5276-4c2c-aa38-5aa13d4f54a4",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ab7eed48-78ba-4dc0-8b02-6deaac841b93",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "energia.geo_hydro",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e93e5799-743d-4cb3-b00a-285c7fccfb5a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "industria.repair_dock",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "7e900da7-d7db-4c8e-b8e7-f19771575b80",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "474bdce8-f44d-4dc9-94cc-3a12aab0864b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ec3e4291-6286-4197-b0e6-552c30b0590b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e09a8117-5bd8-446e-be53-ee71cf932eab",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "materia.crystal_workshop",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "789d4b9c-55d4-4584-98b9-736d163569dd",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "169327d0-73be-4ed3-afc9-fd849cee7833",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "9d145347-d91e-4fc3-931e-1ff81adf696a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "bc86926b-ffc4-44f4-a697-bcbf9ec166e4",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "40538daf-788e-4674-bb60-4f416dcfb9b8",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2a672b7b-c5a1-475a-a0dc-e32cf4fd2a21",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "9c5c00cf-d818-44e8-986d-74b3c70d8424",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e65fb250-9c8b-4fdf-a18a-8d08a9c4c765",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "a8482020-272d-407b-a7ce-46dfe11d635a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e6595f40-99f2-4c33-a72f-bb58df6e2bda",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "fdc8f9f3-aee3-4ccb-8d66-844d94d1b7fc",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "55e77f8f-4bca-4e00-b97b-68334bbf54f4",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "492fd127-cc49-43fb-b425-0a47dd887827",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "53b7381d-acd5-439b-afc6-5bc83324decd",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ce8fd452-c467-4733-a89d-4c99f08eebe5",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "7c8b0bfc-b836-4bfd-a9e0-64c7a69fc23e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e291386c-8b75-4a19-8d74-298707df785d",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "70c953e1-98b7-4ffa-bdfa-359704c913f5",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b582608d-5b7f-4f64-9881-cb6a9f13632c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "7936c99a-1bed-46fa-bd78-2e94ace73eb2",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "04b22ed6-cff3-4025-b757-6bc7c2627a25",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "12a211ac-70d4-4946-8111-7d5b3ca7ff60",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "5ca81af3-0009-4e75-b330-63cc92a18e55",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "826eef6f-5704-4e35-a60f-c2f839c5e4c3",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "cd880292-7a10-433b-b00e-2e1aa2a002f2",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "42302ef9-3e53-4082-a1f2-ed42936cd5cf",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "c0bdd9ee-f394-41ed-8f18-c212a6067183",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "d41b07c0-3dd5-4581-8a8d-95853bab060c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b1460bf9-5ce2-4033-95e7-8197c5d8a78a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "3f5348c4-a699-44ba-bf2c-e328f9b0a4ed",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "458f854d-eb66-408e-816f-062496297e6e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "3d116bb0-137b-455c-9424-ee8e63efea89",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "92c01dcf-d8d0-440c-b45e-0404f349c49f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2daed3fc-6869-472d-b7c3-4b55c3974890",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "13dff5a3-4e00-43b6-9989-344b87dce2d1",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "0acf2cf4-08fe-442d-aac1-7eaddaca2832",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "5463cb6f-b9df-4b00-bb3e-9aa5037be2f5",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "1f6350e8-c172-469a-aa57-ae744b020273",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "dc5ff1e6-f6a1-46ba-8ed6-7bc15d7f7218",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "7b899234-8785-491e-a173-1c6666652650",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "afcefa3f-5a5a-4992-b727-29c16e8d8d0f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "67b5a8b5-701c-458d-845a-a58c8d2d203f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "0e3b46b9-38df-4b6b-8fed-199bf7f5c258",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ab1541e1-f101-4559-8465-aac33591acd0",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "066e3508-5994-475a-8e2c-7c1389c1242a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "6bc13651-dc41-4bfe-b970-6fbbee576646",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ad494519-11cd-4f52-a700-bea153ae7aea",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "174e4e52-cf36-4861-be68-1677e64953a0",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "25262e65-1f25-46c6-83df-57d0a1c6a61f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "595febc4-f1cd-4dd1-a0bf-9b1aac2437b7",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "8059921a-56aa-4c6a-bccb-e2adbf8d8f8b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "f6fda6ce-257d-4878-87c8-cc2eba6cb98f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "8e6fa747-226f-4233-8140-99f10d54770e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b8dca77c-7990-4ed2-9b70-09ddd2ab3faa",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "851f09f8-2ec3-4033-8f8c-305df7345766",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2be05de4-382d-451a-983e-2fceaefab63a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "44f5f38f-521c-48ed-9290-dc8663879d0a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2cb03120-3d96-4077-915f-992adf0cc70f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b20beebb-ca02-4fbc-bb04-c40d296650c9",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "9aec8bba-ba88-4cc3-a88a-b56e0d33e90c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "97052b50-b245-4207-8ece-b1bb8722c68b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "681052fd-95b5-4a0d-b093-456ba35d038c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "31bee220-8b02-4b8c-83c5-80bddc65b0e7",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e86261f2-db6c-46de-9a7d-2268e56c4164",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "industria.assembly",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2e4f24e4-c9c5-42b5-b600-1c5f3c13a6cb",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "4030f3e4-8ff4-4985-80e3-5711a6e0fa7c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "31e23402-f8cc-433b-ae73-c9ece10ce302",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2b714e66-8e4e-4262-81e7-d06fae310987",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "f6a3827b-d28f-4c3f-b681-594d1b682b1d",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2c3878fb-21f5-4f73-abdd-9cf4e7ca4285",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "e7f06002-1a4d-495f-9de2-7de2c4acb494",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "a7e78e0c-a3a8-48d8-9f3b-078c39690219",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ac526028-7772-4b84-b7f1-9d652bb8936f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "6819c899-1469-44c0-8ca5-ad5b56e0236b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "7b3a3e7a-d179-4dc6-a8e0-8df1e5a2d515",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "5501cbb0-26f2-4e4a-8ad2-29ae1858a63b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "d52e70f3-b711-4ab5-87fe-00114e3b9cef",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "99dff041-14ea-4ec4-b682-5ee33a520a27",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "66e158f0-1e10-4341-a43d-6679f9effdfb",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "94080f44-c095-4e7e-8f55-15a97422099f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "5ab902fb-cd10-4143-9937-7bca8e34768f",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "2ca8931d-aa4d-4957-9129-93315b2ecbdd",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "4e2dfa4c-ea2d-4439-a2f5-980c50bf6011",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "53799e6b-80ba-407f-84cb-d01bc16c962e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "95ac2241-753d-4d46-afc5-16a14979eb5a",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "a3ee1dcf-620e-4104-91e6-911a4a948028",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "14548ca3-1bec-404b-a133-36c20675d822",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ec4d75c1-7570-4dec-bc8a-ab71dd3935cd",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "84c4cf4d-b2d5-4529-8618-8d9cd0d79c2c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "a2c843de-38ed-4998-81e7-039f584578be",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "industria.modular_yard",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "8c613e7e-b784-4b33-8150-018414965d73",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "d3df0707-d640-43f5-9feb-d78ed2684fd0",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "57705ed3-48b1-4ebe-8a8d-3271ce076c39",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "c8082cc5-ab99-4180-a3d0-9ac635df4f0e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "314927a6-7317-44f6-b05f-604f0a0634c0",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "588860e5-629a-47e4-a9dc-4438e991b43c",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "cb83ee77-af33-4f2f-86d9-914876a85486",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "b9029dbc-82a3-4682-b185-b236c987355b",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "a083e21c-2787-4b1f-8274-e3ea0927b4b7",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ba073805-2460-4903-a2c0-001a584997ce",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "20795fc4-867a-4155-b401-2a5742c1b6e2",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "3ebd0cd2-5fa5-4ab5-9b7b-b79429de5992",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "9d105e9d-b2b9-4ccd-a221-f021cac2da81",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "4d536574-88e7-4bee-bfab-ac90cb11e209",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "36c77f08-4f2f-40f4-9a86-14a41772e572",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "a299e888-2a53-406c-8527-4c067ec2de4e",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "552cbc34-ee97-4c52-bef1-5a2567ee7477",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.battleship",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "ship.frigate",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "unit.generic_line",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 108
+        },
+        {
+          "entityId": "race_elanor",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_vendir",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_elanis",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_elatris",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_triumvis",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_horn",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_lithoid",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_elacrin",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_eladon",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        },
+        {
+          "entityId": "race_bistier",
+          "entityType": "race",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 108
+        }
+      ]
+    }
+  }
 }
