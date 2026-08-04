@@ -1,0 +1,11 @@
+{
+  "extraction": { "glyph": "⛏", "label": "Добыча" },
+  "metallurgy": { "glyph": "🔩", "label": "Металлургия" },
+  "industry": { "glyph": "🏭", "label": "Промышленность" },
+  "energy": { "glyph": "⚡", "label": "Энергия" },
+  "biology": { "glyph": "🧬", "label": "Биология" },
+  "psionics": { "glyph": "◈", "label": "Псионика" },
+  "megastructure": { "glyph": "🏛", "label": "Мегаструктура" },
+  "trade": { "glyph": "⚖", "label": "Торговля" },
+  "diplomacy": { "glyph": "🤝", "label": "Дипломатия" }
+}

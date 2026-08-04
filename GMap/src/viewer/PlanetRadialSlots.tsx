@@ -172,6 +172,10 @@ export function PlanetRadialSlots({
   busy,
   onAction,
   onInspect,
+  onOpenResearch,
+  highlightCategory,
+  highlightBuildingIds,
+  onSelectBuilding,
 }: {
   planet: Planet;
   systemId: string;
@@ -185,8 +189,11 @@ export function PlanetRadialSlots({
   techEco?: TechEcoSlice;
   busy?: boolean;
   onAction: (req: PlanetActionRequest) => void;
-  /** Occupied slot selected for slot-fill drill-down. */
   onInspect?: (info: PlanetRadialInspect | null) => void;
+  onOpenResearch?: (techId: string) => void;
+  highlightCategory?: string | null;
+  highlightBuildingIds?: string[];
+  onSelectBuilding?: (buildingId: string) => void;
 }) {
   const surfaceSlots = buildSlots(planet, "surface", buildings);
   const orbitalSlots = buildSlots(planet, "orbital", buildings);
@@ -223,6 +230,16 @@ export function PlanetRadialSlots({
     setHoverTip(null);
     onInspect?.(null);
   }, [planetId]);
+
+  useEffect(() => {
+    const id = highlightBuildingIds?.[0];
+    if (id && buildings[id]) {
+      setSelectedBuildId(id);
+      const zone = buildings[id].zone;
+      if (zone === "orbital") setPaletteZone("orbital");
+      else setPaletteZone("surface");
+    }
+  }, [highlightBuildingIds, buildings]);
 
   const catalog = useMemo(() => {
     const fid = factionId ?? "";
@@ -662,17 +679,24 @@ export function PlanetRadialSlots({
           dragId={drag?.id ?? null}
           zoneLabel={ZONE_CHIP_LABEL[zoneForDeck]}
           slotArmed={!!openSlot}
-          onSelect={(id) => setSelectedBuildId(id)}
+          highlightCategory={highlightCategory}
+          highlightBuildingIds={highlightBuildingIds}
+          onSelect={(id) => {
+            setSelectedBuildId(id);
+            onSelectBuilding?.(id);
+          }}
           onHoldBuild={(id) => tryBuild(id)}
           onDragStart={(id, x, y) => {
             dragActive.current = false;
             setSelectedBuildId(id);
+            onSelectBuilding?.(id);
             setDrag({ id, x, y });
           }}
           onClose={() => {
             setOpenSlot(null);
             setSelectedBuildId(null);
           }}
+          onOpenResearch={onOpenResearch}
         />
       </FloatingPanel>
 

@@ -96,6 +96,25 @@
     "ops": ["scout_reveal"],
     "params": ["systemId"]
   },
+  "intent.scout_world": {
+    "id": "intent.scout_world",
+    "ap": 1,
+    "ops": ["gather_intel"],
+    "params": ["targetSystemId", "fleetId"],
+    "requires": { "unit": ["fleet", "legion"] },
+    "description": "Изучение мира — сбор intel о системе"
+  },
+  "intent.espionage": {
+    "id": "intent.espionage",
+    "ap": 2,
+    "ops": ["gather_intel"],
+    "params": ["targetFactionId", "intelCategory"],
+    "risk": {
+      "detectionChance": 0.3,
+      "penalty": "diplomacy_shock"
+    },
+    "description": "Шпионаж — +1 уровень знания по категории (риск разоблачения)"
+  },
   "intent.refugee_convoy": {
     "id": "intent.refugee_convoy",
     "ap": 1,
@@ -158,6 +177,44 @@
     "ops": ["research_upgrade"],
     "params": ["techId", "upgradeId"]
   },
+  "intent.set_research_queue": {
+    "id": "intent.set_research_queue",
+    "ap": 0,
+    "instant": true,
+    "ops": ["set_research_queue"],
+    "params": ["queue"],
+    "description": "Установить очередь исследований (массив techId, max 5)"
+  },
+  "intent.set_build_queue": {
+    "id": "intent.set_build_queue",
+    "ap": 0,
+    "instant": true,
+    "ops": ["set_build_queue"],
+    "params": ["queue"],
+    "description": "Установить очередь строительства (массив {systemId,planetId,buildingId}, max 5)"
+  },
+  "intent.set_flow_priority": {
+    "id": "intent.set_flow_priority",
+    "ap": 1,
+    "ops": ["set_flow_priority"],
+    "params": ["from", "to", "systemId"],
+    "description": "Приоритет RPS-трансформации (from→to), опционально по системе"
+  },
+  "intent.reserve_stock": {
+    "id": "intent.reserve_stock",
+    "ap": 0,
+    "instant": true,
+    "ops": ["reserve_stock"],
+    "params": ["currencyId", "amount", "label"],
+    "description": "Резерв ресурса под стройку/цель (не списывает со склада)"
+  },
+  "intent.set_economic_policy": {
+    "id": "intent.set_economic_policy",
+    "ap": 1,
+    "ops": ["set_economic_policy"],
+    "params": ["policyId"],
+    "description": "Доктрина экономики (пресет налогов): military | trade | growth"
+  },
 
   "intent.throw_quest_dice": {
     "id": "intent.throw_quest_dice",
@@ -182,5 +239,13 @@
     "ops": ["resolve_quest_dice"],
     "params": ["questId", "specIndex"],
     "description": "Серверный бросок кубика по квесту"
+  },
+  "intent.trade_tech": {
+    "id": "intent.trade_tech",
+    "ap": 2,
+    "ops": ["transfer_tech"],
+    "params": ["techId", "targetFactionId", "price"],
+    "requires": { "diplomacy": ["trade", "alliance"] },
+    "description": "Обмен технологией с другой фракцией"
   }
 }

@@ -24,6 +24,7 @@ import {
 } from "./opinionTick.mjs";
 import { recomputeUnlocksFromTechs } from "./techActions.mjs";
 import { getContent } from "./contentLoader.mjs";
+import { updateIntelFromDiplomacy } from "./intel.mjs";
 
 export const DIPLO_OFFERS_PATH = path.join(DATA_DIR, "diplo-offers.json");
 
@@ -320,6 +321,9 @@ export function respondDiploOffer({
 
   const world = readLiveBoard();
   if (world) {
+    const hasResources = [...(offer.give || []), ...(offer.want || [])].some(
+      (i) => i.kind === "resource",
+    );
     if (treatyItem) {
       setDiplomacyRelation(
         world,
@@ -328,13 +332,41 @@ export function respondDiploOffer({
         treatyItem.treaty,
         turn,
       );
+      const fromEco = ensureFactionEco(readLedger(), offer.fromFactionId);
+      const toEco = ensureFactionEco(readLedger(), offer.toFactionId);
+      updateIntelFromDiplomacy(
+        world,
+        offer.fromFactionId,
+        offer.toFactionId,
+        treatyItem.treaty,
+        { turn, partnerUnlockedTechs: toEco.unlockedTechs },
+      );
+      updateIntelFromDiplomacy(
+        world,
+        offer.toFactionId,
+        offer.fromFactionId,
+        treatyItem.treaty,
+        { turn, partnerUnlockedTechs: fromEco.unlockedTechs },
+      );
+    } else if (hasResources) {
+      updateIntelFromDiplomacy(
+        world,
+        offer.fromFactionId,
+        offer.toFactionId,
+        "trade",
+        { turn },
+      );
+      updateIntelFromDiplomacy(
+        world,
+        offer.toFactionId,
+        offer.fromFactionId,
+        "trade",
+        { turn },
+      );
     }
     // Gift / deal opinion bump both ways
     const fromFac = world.factions?.find((f) => f.id === offer.fromFactionId);
     const toFac = world.factions?.find((f) => f.id === offer.toFactionId);
-    const hasResources = [...(offer.give || []), ...(offer.want || [])].some(
-      (i) => i.kind === "resource",
-    );
     if (fromFac && toFac) {
       ensureFactionDiplomacy(fromFac);
       ensureFactionDiplomacy(toFac);

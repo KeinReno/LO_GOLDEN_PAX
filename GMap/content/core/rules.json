@@ -97,5 +97,29 @@
   "fog": {
     "storage": "per_system",
     "fleetReveal": "ephemeral"
+  },
+  "races": {
+    "maxTraitsBase": 6,
+    "maxTraitsSubrace": 4,
+    "maxForkExtraTraits": 3,
+    "budgetMin": -2,
+    "budgetMax": 2
+  },
+  "variants": {
+    "minRacePercent": 20
+  },
+  "intel": {
+    "intelPerBlockadeTurn": 1,
+    "thresholdLevel1": 1,
+    "thresholdLevel2": 3,
+    "thresholdLevel3": 6,
+    "thresholdLevel4": 10,
+    "scoutWorldIntel": 2,
+    "espionageIntel": 3,
+    "espionageDetectionChance": 0.3,
+    "espionageCognitioCost": 10,
+    "espionageCooldownTurns": 3,
+    "tradeIntel": 2,
+    "allianceIntel": 3
   }
 }

@@ -43,8 +43,19 @@ export function defaultFactionEco(factionId) {
     bottlenecks: {},
     unlockedTechs: [],
     unlockedUpgrades: [],
+    /** Acquired via trade/history: { techId, source, transferable?, acquiredTurn? }[] */
+    acquiredTechs: [],
     techTiers: { ...DEFAULT_TECH_TIERS },
     unlockedProperties: [],
+    researchQueue: [],
+    /** Planned builds: { systemId, planetId, buildingId }[] */
+    buildQueue: [],
+    /** RPS edge priorities: systemId | "_faction" → { from, to }. */
+    flowPriorities: {},
+    /** Soft reserves: currencyId → { amount, label }. */
+    stockReserves: {},
+    /** Active doctrine id: military | trade | growth | null */
+    economicPolicy: null,
   };
 }
 
@@ -87,6 +98,7 @@ export function ensureFactionEco(ledger, factionId) {
   if (!f.bottlenecks) f.bottlenecks = {};
   if (!Array.isArray(f.unlockedTechs)) f.unlockedTechs = [];
   if (!Array.isArray(f.unlockedUpgrades)) f.unlockedUpgrades = [];
+  if (!Array.isArray(f.acquiredTechs)) f.acquiredTechs = [];
   if (!f.techTiers || typeof f.techTiers !== "object") {
     f.techTiers = { ...DEFAULT_TECH_TIERS };
   } else {
@@ -95,6 +107,16 @@ export function ensureFactionEco(ledger, factionId) {
     }
   }
   if (!Array.isArray(f.unlockedProperties)) f.unlockedProperties = [];
+  if (!Array.isArray(f.researchQueue)) f.researchQueue = [];
+  if (!Array.isArray(f.buildQueue)) f.buildQueue = [];
+  if (!f.flowPriorities || typeof f.flowPriorities !== "object") {
+    f.flowPriorities = {};
+  }
+  if (!f.stockReserves || typeof f.stockReserves !== "object") {
+    f.stockReserves = {};
+  }
+  if (f.economicPolicy === undefined) f.economicPolicy = null;
+  if (!Array.isArray(f.laws)) f.laws = [];
   return f;
 }
 
@@ -455,6 +477,27 @@ export function publicEconomyPayload(eco) {
     unlockedProperties: eco.unlockedProperties,
     unlockedTechs: eco.unlockedTechs,
     unlockedUpgrades: eco.unlockedUpgrades,
+    acquiredTechs: Array.isArray(eco.acquiredTechs)
+      ? eco.acquiredTechs.map((a) => ({ ...a }))
+      : [],
+    researchQueue: Array.isArray(eco.researchQueue) ? [...eco.researchQueue] : [],
+    buildQueue: Array.isArray(eco.buildQueue)
+      ? eco.buildQueue.map((q) => ({
+          systemId: String(q.systemId || ""),
+          planetId: String(q.planetId || ""),
+          buildingId: String(q.buildingId || ""),
+        }))
+      : [],
+    flowPriorities:
+      eco.flowPriorities && typeof eco.flowPriorities === "object"
+        ? { ...eco.flowPriorities }
+        : {},
+    stockReserves:
+      eco.stockReserves && typeof eco.stockReserves === "object"
+        ? { ...eco.stockReserves }
+        : {},
+    economicPolicy: eco.economicPolicy ?? null,
+    laws: Array.isArray(eco.laws) ? [...eco.laws] : [],
   };
   if (eco.bottlenecks != null) out.bottlenecks = eco.bottlenecks;
   if (eco.explain != null) out.explain = eco.explain;

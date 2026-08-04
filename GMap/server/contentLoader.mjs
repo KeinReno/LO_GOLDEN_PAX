@@ -31,6 +31,8 @@ const FILE_KEYS = [
   "buildings",
   "colonies",
   "technologies",
+  "tech_icons",
+  "tech_market",
   "space_objects",
   "superpower_market",
   "faction_currencies",
@@ -112,6 +114,8 @@ function loadContentPacks(packIds = ["core"]) {
   let buildings = {};
   let colonies = {};
   let technologies = {};
+  let tech_icons = {};
+  let tech_market = {};
   let space_objects = {};
   let superpower_market = {};
   let faction_currencies = {};
@@ -158,6 +162,8 @@ function loadContentPacks(packIds = ["core"]) {
     buildings = mergeDicts(buildings, pack.buildings);
     colonies = mergeDicts(colonies, pack.colonies);
     technologies = mergeDicts(technologies, pack.technologies);
+    tech_icons = mergeDicts(tech_icons, pack.tech_icons);
+    tech_market = mergeDicts(tech_market, pack.tech_market);
     space_objects = mergeDicts(space_objects, pack.space_objects);
     if (pack.superpower_market) {
       // Deep-ish merge: keep relationRank, merge superpowers dict.
@@ -243,6 +249,8 @@ function loadContentPacks(packIds = ["core"]) {
     buildings,
     colonies,
     technologies,
+    tech_icons,
+    tech_market,
     space_objects,
     superpower_market,
     faction_currencies,
@@ -276,6 +284,8 @@ export function getPublicContent() {
       combat: c.rules.combat,
       cardBattle: c.rules.cardBattle,
       fog: c.rules.fog,
+      races: c.rules.races,
+      variants: c.rules.variants,
     },
     combat_matchups: c.combat_matchups,
     currencies: c.currencies,
@@ -293,6 +303,8 @@ export function getPublicContent() {
     buildings: c.buildings,
     colonies: c.colonies,
     technologies: c.technologies,
+    tech_icons: c.tech_icons,
+    tech_market: c.tech_market,
     space_objects: c.space_objects,
     combat_stances: c.combat_stances,
     combat_property_matchups: c.combat_property_matchups,

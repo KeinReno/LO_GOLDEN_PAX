@@ -512,6 +512,7 @@ export function MarketPanel({
   onTabChange,
   onOpenDiplomacy,
   onBookStats,
+  prefillSellCurrency,
 }: {
   compact?: boolean;
   interactive?: boolean;
@@ -545,6 +546,8 @@ export function MarketPanel({
   onTabChange?: (tab: MarketTab) => void;
   onOpenDiplomacy?: () => void;
   onBookStats?: (stats: MarketBookStats) => void;
+  /** Prefill sell currency when opening from Economy stockpile. */
+  prefillSellCurrency?: string | null;
 }) {
   const [internalTab, setInternalTab] = useState<Tab>("quotes");
   const tab = controlledTab ?? internalTab;
@@ -588,6 +591,13 @@ export function MarketPanel({
   );
 
   const [offerSide, setOfferSide] = useState<"sell" | "buy">("sell");
+  const [extraTradeCurrencies, setExtraTradeCurrencies] = useState<string[]>(
+    [],
+  );
+  const tradeCurrencies = useMemo(
+    () => [...new Set([...TRADE_CURRENCIES, ...extraTradeCurrencies])],
+    [extraTradeCurrencies],
+  );
   const [giveCurrency, setGiveCurrency] = useState(TRADE_CURRENCIES[0] ?? "");
   const [wantCurrency, setWantCurrency] = useState(TRADE_CURRENCIES[1] ?? "");
   const [giveAmount, setGiveAmount] = useState("");
@@ -608,6 +618,22 @@ export function MarketPanel({
   useEffect(() => {
     if (mapSelectedSystemId) setScoutSystemId(mapSelectedSystemId);
   }, [mapSelectedSystemId]);
+
+  useEffect(() => {
+    if (!prefillSellCurrency) return;
+    if (!TRADE_CURRENCIES.includes(prefillSellCurrency)) {
+      setExtraTradeCurrencies((prev) =>
+        prev.includes(prefillSellCurrency)
+          ? prev
+          : [...prev, prefillSellCurrency],
+      );
+    }
+    setGiveCurrency(prefillSellCurrency);
+    setOfferSide("sell");
+    setTab("trade");
+    const other = TRADE_CURRENCIES.find((c) => c !== prefillSellCurrency);
+    if (other) setWantCurrency(other);
+  }, [prefillSellCurrency, setTab]);
 
   useEffect(() => {
     const root = tabsRef.current;
@@ -1556,9 +1582,11 @@ export function MarketPanel({
                     value={giveCurrency}
                     onChange={(e) => setGiveCurrency(e.target.value)}
                   >
-                    {TRADE_CURRENCIES.map((c) => (
+                    {tradeCurrencies.map((c) => (
                       <option key={c} value={c}>
-                        {CURRENCY_LABELS[c]} · {economy.stocks?.[c] ?? 0}
+                        {CURRENCY_LABELS[c] ||
+                          c.replace(/^currency\./, "")}{" "}
+                        · {economy.stocks?.[c] ?? 0}
                       </option>
                     ))}
                   </select>
@@ -1589,7 +1617,7 @@ export function MarketPanel({
                     value={wantCurrency}
                     onChange={(e) => setWantCurrency(e.target.value)}
                   >
-                    {TRADE_CURRENCIES.filter((c) => c !== giveCurrency).map(
+                    {tradeCurrencies.filter((c) => c !== giveCurrency).map(
                       (c) => (
                         <option key={c} value={c}>
                           {CURRENCY_LABELS[c]}

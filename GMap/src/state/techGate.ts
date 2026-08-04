@@ -94,3 +94,79 @@ export function canFillResourceProperties(
   }
   return { ok: true };
 }
+
+export type TechHint = {
+  techId: string;
+  techName: string;
+  reason: string;
+};
+
+/**
+ * Find a technology that would unlock building construction
+ * (tier raise or missing property). Used for System → Science jump.
+ */
+export function techHintForBuilding(
+  eco: TechEcoSlice | undefined,
+  buildingDef: BuildingDefLike,
+  technologies: Record<
+    string,
+    {
+      id: string;
+      name: string;
+      effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+    }
+  >,
+): TechHint | null {
+  const gate = canBuildWithTech(eco, buildingDef);
+  if (gate.ok) return null;
+
+  const needTier: { category: string; to: number }[] = [];
+  if (buildingDef?.category) {
+    const need = Number(buildingDef.tier) || 1;
+    const max = Math.max(3, factionMaxTier(eco, buildingDef.category) + 1);
+    if (need > max) {
+      needTier.push({
+        category: buildingDef.category,
+        to: Math.max(1, need - 1),
+      });
+    }
+  }
+
+  const missingProps = [...collectRequiredProperties(buildingDef)].filter(
+    (p) => !factionHasProperty(eco, p),
+  );
+
+  for (const tech of Object.values(technologies || {})) {
+    for (const e of tech.effects || []) {
+      if (e.effect === "unlock_tech_tier") {
+        const cat = String(e.args?.category ?? "");
+        const to = Number(e.args?.to ?? 0);
+        if (
+          needTier.some((n) => n.category === cat && to >= n.to)
+        ) {
+          return {
+            techId: tech.id,
+            techName: tech.name,
+            reason: `Нужна технология: ${tech.name}`,
+          };
+        }
+      }
+      if (e.effect === "unlock_property") {
+        const prop = String(e.args?.property ?? "");
+        if (missingProps.includes(prop)) {
+          return {
+            techId: tech.id,
+            techName: tech.name,
+            reason: `Нужна технология: ${tech.name}`,
+          };
+        }
+      }
+    }
+  }
+
+  return {
+    techId: "",
+    techName: "",
+    reason: gate.error || "Нужна технология",
+  };
+}

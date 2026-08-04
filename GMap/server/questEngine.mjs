@@ -15,6 +15,7 @@ import {
   readLedger,
   writeLedger,
 } from "./ledger.mjs";
+import { setKnowledgeLevel } from "./intel.mjs";
 
 function nowIso() {
   return new Date().toISOString();
@@ -227,6 +228,20 @@ export function applyQuestEffects(world, factionId, effects, meta = {}) {
         if (!args.raceId) faction.loyalty = next;
         applied.push(e);
         notes.push(`loyalty ${key}: ${prev}→${next}`);
+      }
+      continue;
+    }
+    if (e.effect === "grant_intel") {
+      const entityType = args.entityType || args.type || "faction";
+      const entityId = args.entityId || args.id;
+      const level = Number(args.level ?? 2);
+      if (entityId) {
+        setKnowledgeLevel(factionId, entityType, entityId, level, {
+          source: "quest",
+          turn,
+        });
+        applied.push(e);
+        notes.push(`intel ${entityType}:${entityId}→${level}`);
       }
       continue;
     }

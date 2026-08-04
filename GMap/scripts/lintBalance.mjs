@@ -1,9 +1,15 @@
 /**
  * lint:balance — race traits + faction traits (+ techs) balanceBudget in [-2, +2].
+ * Uses Race Registry resolveRace for forks/parents.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  resolveRace,
+  raceTraitBudget,
+  validateRaceBudget,
+} from "../server/raceRegistry.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CORE = path.resolve(__dirname, "../content/core");
@@ -18,37 +24,39 @@ function traitBudget(t) {
   return Number(t?.balanceBudget) || 0;
 }
 
-function raceBudget(race) {
-  return (race.traits || []).reduce((s, t) => s + traitBudget(t), 0);
-}
-
 const races = readJson("races.json") || {};
+const rules = readJson("rules.json") || {};
 const factionTraitsFile = readJson("faction_traits.json") || {};
 const factionTraits = Object.values(factionTraitsFile.traits || {});
 const techs = Object.values(readJson("technologies.json") || {});
 
-const MIN = -2;
-const MAX = 2;
+const MIN = rules.races?.budgetMin ?? -2;
+const MAX = rules.races?.budgetMax ?? 2;
 const errors = [];
 
-for (const race of Object.values(races)) {
-  const rb = raceBudget(race);
-  if (rb < MIN || rb > MAX) {
-    errors.push(`race ${race.id}: traits budget ${rb} outside [${MIN},${MAX}]`);
+const resolvedRaces = {};
+for (const [id, raw] of Object.entries(races)) {
+  const resolved = resolveRace(id, races);
+  resolvedRaces[id] = resolved;
+  for (const e of validateRaceBudget(raw, resolved, rules)) {
+    errors.push(e);
   }
-  for (const t of race.traits || []) {
+  for (const t of raw.traits || []) {
     if (t.balanceBudget == null) {
-      errors.push(`race ${race.id} trait ${t.id}: missing balanceBudget`);
+      errors.push(`race ${id} trait ${t.id}: missing balanceBudget`);
+    }
+  }
+  for (const t of raw.override_traits || []) {
+    if (t.balanceBudget == null) {
+      errors.push(`race ${id} override ${t.id}: missing balanceBudget`);
     }
   }
 }
 
-// Combinations: race + up to 3 faction traits (empty + singles + pairs sampled)
-const raceList = Object.values(races);
+const raceList = Object.values(resolvedRaces).filter(Boolean);
 if (factionTraits.length) {
   for (const race of raceList) {
-    const rb = raceBudget(race);
-    // empty
+    const rb = raceTraitBudget(race);
     if (rb < MIN || rb > MAX) {
       errors.push(`combo ${race.id}+[]: ${rb}`);
     }
@@ -91,5 +99,5 @@ if (errors.length) {
 }
 
 console.log(
-  `[lint:balance] ok — ${raceList.length} races, ${factionTraits.length} faction traits`,
+  `[lint:balance] ok — ${raceList.length} races (resolved), ${factionTraits.length} faction traits`,
 );

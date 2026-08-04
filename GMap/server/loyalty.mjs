@@ -199,8 +199,11 @@ export function computePlanetLoyalty(world, system, planet, content) {
     }
   }
 
-  // Apply race trait loyalty_add / loyalty_mult via stack
-  const raceEffects = collectRaceEffects(races, composition).filter(
+  // Apply race trait loyalty_add / loyalty_mult via stack (+ race_states)
+  const raceEffects = collectRaceEffects(races, composition, {
+    factionId: ownerId,
+    turn: world.meta?.turn ?? 0,
+  }).filter(
     (e) => e.effect === "loyalty_add" || e.effect === "loyalty_mult",
   );
   const stack = buildModifierStack(raceEffects);
@@ -294,11 +297,13 @@ export function checkRevolt(world, system, planet, content) {
     }
   }
   // Extra race revolt_risk
-  const faction = (world.factions ?? []).find(
-    (f) => f.id === (planet.ownerFactionId || system.ownerFactionId),
-  );
+  const ownerId = planet.ownerFactionId || system.ownerFactionId;
+  const faction = (world.factions ?? []).find((f) => f.id === ownerId);
   const composition = resolvePlanetRaceComposition(planet, faction);
-  const raceEffects = collectRaceEffects(content.races || {}, composition);
+  const raceEffects = collectRaceEffects(content.races || {}, composition, {
+    factionId: ownerId || undefined,
+    turn: world.meta?.turn ?? 0,
+  });
   for (const e of raceEffects) {
     if (e.effect === "revolt_risk") {
       chance += Number(e.args?.chancePerTurn ?? 0);
@@ -315,7 +320,6 @@ export function checkRevolt(world, system, planet, content) {
     };
   }
 
-  const ownerId = planet.ownerFactionId || system.ownerFactionId;
   const lostPop = Math.max(1, Math.floor((planet.population || 1) * 0.2));
   planet.population = Math.max(0, (planet.population || 0) - lostPop);
   planet.loyalty = 35;

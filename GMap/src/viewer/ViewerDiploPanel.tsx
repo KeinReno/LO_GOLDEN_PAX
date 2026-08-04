@@ -157,6 +157,7 @@ export function ViewerDiploPanel({
       .map((f) => ({
         faction: f,
         relation: getRelation(payload, playerId, f.id),
+        intelLevel: Number(payload.intel?.knownFactions?.[f.id] ?? 1),
         opinion: opinionOf(me, f.id),
       }))
       .sort(
@@ -239,7 +240,7 @@ export function ViewerDiploPanel({
           {known.length === 0 ? (
             <p className="hint">Нет известных держав.</p>
           ) : (
-            known.map(({ faction, relation, opinion }) => (
+            known.map(({ faction, relation, opinion, intelLevel }) => (
               <div
                 key={faction.id}
                 className={`diplo-faction-card ${focus?.id === faction.id ? "is-selected" : ""} ${relation === "war" ? "is-glow" : ""}`}
@@ -258,6 +259,9 @@ export function ViewerDiploPanel({
                   <span className="diplo-faction-card__meta">
                     <strong>{faction.name}</strong>
                     <RelationBadge relation={relation} />
+                    <span className="diplo-intel-pill" title="Уровень знания (Intel Fog)">
+                      Intel L{intelLevel}
+                    </span>
                     <OpinionBar value={opinion} />
                   </span>
                 </button>

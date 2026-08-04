@@ -548,6 +548,15 @@ export interface OrbitalStation {
   beltAngle?: number;
 }
 
+/** Soft timeline row for system dive history UI. */
+export interface SystemHistoryEntry {
+  turn: number;
+  type: "build" | "demolish" | "colonize" | "capture";
+  planetId?: string;
+  buildingId?: string;
+  description: string;
+}
+
 export interface StarSystem {
   id: string;
   name: string;
@@ -561,6 +570,8 @@ export interface StarSystem {
   ownerFactionId: string | null;
   sectorId: string | null;
   locked: boolean;
+  /** Recent build / colonize / capture events (capped server-side). */
+  history?: SystemHistoryEntry[];
   /** Capital / core world — drawn as a star on the map. */
   isCapital?: boolean;
   /**
@@ -794,11 +805,33 @@ export interface RaceTrait {
 export interface Race {
   id: string;
   name: string;
+  kind?: "race" | "subrace" | string;
+  origin?: string;
+  /** Soft hierarchy parent (display / compose when composeParent). */
+  parent?: string;
+  /** Fork inheritance source. */
+  base?: string;
+  forked_from?: string;
+  composeParent?: boolean;
+  override_traits?: RaceTrait[];
+  remove_traits?: string[];
+  state_overrides?: Record<string, unknown>;
+  reproduction?: { requires?: string };
   tags?: string[];
   traits?: RaceTrait[];
   habitability?: Record<string, number>;
   growth?: { baseRate?: number; crowdPenalty?: number };
   xenorelations?: Record<string, number>;
+}
+
+/** Campaign-dynamic race modifier (data/race_states.json). */
+export interface RaceStateModifier {
+  id: string;
+  source?: string;
+  turn_applied?: number;
+  effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+  expires?: number | null;
+  permanent?: boolean;
 }
 
 export interface ShipGroup {
@@ -1136,6 +1169,49 @@ export interface CardBattleState {
   winnerFactionId?: string | null;
 }
 
+/** Intel Fog knowledge depth for an entity (0 = unknown … 4 = full). */
+export type KnowledgeLevel = 0 | 1 | 2 | 3 | 4;
+
+export type IntelEntityType =
+  | "race"
+  | "faction"
+  | "tech"
+  | "building"
+  | "unit";
+
+export type IntelSource =
+  | "fleet"
+  | "legion"
+  | "blockade"
+  | "scout"
+  | "diplomacy"
+  | "espionage"
+  | "trade"
+  | "trade_agreement"
+  | "quest"
+  | "gm"
+  | "own"
+  | string;
+
+export interface IntelHistoryEntry {
+  entityId: string;
+  entityType: IntelEntityType;
+  oldLevel: KnowledgeLevel;
+  newLevel: KnowledgeLevel;
+  source: IntelSource;
+  turn: number;
+}
+
+/** Per-faction knowledge maps shipped to the viewer (already filtered). */
+export interface FactionIntelPublic {
+  knownFactions: Record<string, KnowledgeLevel>;
+  knownRaces: Record<string, KnowledgeLevel>;
+  knownTechs: Record<string, KnowledgeLevel>;
+  knownBuildings: Record<string, KnowledgeLevel>;
+  knownUnits: Record<string, KnowledgeLevel>;
+  intelHistory: IntelHistoryEntry[];
+}
+
 export interface ViewerPayload {
   world: WorldState;
   factionId: string;
@@ -1144,6 +1220,8 @@ export interface ViewerPayload {
   knownFactionIds?: string[];
   /** Known polities with trade or alliance corridor. */
   tradePartnerIds?: string[];
+  /** Intel Fog levels for Codex + masked entity UI. */
+  intel?: FactionIntelPublic;
   /** Pending diplomatic deals (inbox). */
   diploOffers?: {
     incoming: Array<{
@@ -1187,6 +1265,23 @@ export interface ViewerPayload {
     unlockedTechs?: string[];
     /** Researched tech upgrade ids (e.g. tech.fusion.overclock). */
     unlockedUpgrades?: string[];
+    /** Trade / historical acquisitions (Phase D). */
+    acquiredTechs?: Array<{
+      techId: string;
+      source?: string;
+      acquiredTurn?: number | null;
+      transferable?: boolean;
+      tradedWith?: string | null;
+      note?: string | null;
+    }>;
+    /** Planned research order (tech ids, max 5). */
+    researchQueue?: string[];
+    /** Planned builds (max 5). */
+    buildQueue?: Array<{
+      systemId: string;
+      planetId: string;
+      buildingId: string;
+    }>;
     techTiers?: Record<string, number>;
     unlockedProperties?: string[];
     /** Recent ledger entries (delta/reason/turn) for breakdown + deltas. */
@@ -1209,6 +1304,14 @@ export interface ViewerPayload {
       raceTraits?: { label: string; summary: string }[];
       factionTraits?: { label: string; summary: string }[];
     };
+    /** RPS edge priorities keyed by systemId or "_faction". */
+    flowPriorities?: Record<string, { from: string; to: string; edge?: string }>;
+    /** Soft stock reserves (do not deduct from stocks). */
+    stockReserves?: Record<string, { amount: number; label?: string }>;
+    /** Active economic doctrine id. */
+    economicPolicy?: string | null;
+    /** Active law ids (future enact_law). */
+    laws?: string[];
   };
   /** Faction-filtered summary of the last processed turn (P2.5). */
   briefing?: TurnBriefing | null;

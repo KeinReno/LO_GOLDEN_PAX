@@ -8,9 +8,24 @@ import type {
 import { getCachedContent } from "../state/contentCatalog";
 import { canBuildWithTech } from "../state/techGate";
 import { StatefulButton } from "../ui/StatefulButton";
+import { ActionRing } from "../ui/ActionRing";
 import { useSpotlight } from "../ui/aceternityFx";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 import { ResearchRadialTree } from "./ResearchRadialTree";
+import {
+  ResearchQueue,
+  EffectsList,
+  CognitioForecast,
+  buildQueueForecasts,
+  cognitioSparkFromRecent,
+  ResearchTimeline,
+  UpgradesComparison,
+  QUEUE_MAX,
+  RESEARCH_FILTER_LABELS,
+  COGNITIO_DND_MIME,
+  type ResearchFilter,
+} from "./research";
+import { buildResearchPath } from "./research/researchPath";
 
 const CAT_ORDER: EconomyCategory[] = ["A", "B", "C", "D", "E", "F"];
 const CAT_COLOR: Record<string, string> = {
@@ -43,39 +58,6 @@ function prereqNames(
   const ids = tech.prerequisites || [];
   if (!ids.length) return "—";
   return ids.map((id) => byId.get(id)?.name ?? id).join(", ");
-}
-
-function formatEffects(
-  effects: TechnologyDef["effects"] | TechUpgrade["effects"],
-): string {
-  const parts: string[] = [];
-  for (const e of effects || []) {
-    if (e.effect === "unlock_tech_tier") {
-      const cat = String(e.args.category ?? "");
-      const to = e.args.to;
-      const label = CAT_NAME[cat] ?? cat;
-      parts.push(`${label} → T${to}`);
-    } else if (e.effect === "unlock_property") {
-      parts.push(`свойство «${e.args.property}»`);
-    } else if (e.effect === "production_mult") {
-      parts.push(`+${Math.round((Number(e.args.mult) - 1) * 100)}% выход`);
-    } else if (e.effect === "upkeep_mult") {
-      parts.push(`${Math.round(Number(e.args.mult) * 100)}% апкип`);
-    } else if (e.effect === "stat_mult") {
-      parts.push(
-        `${e.args.stat} ×${e.args.mult}`,
-      );
-    } else if (e.effect === "research_cost_mult") {
-      parts.push(
-        `наука ×${e.args.mult}${e.args.category ? ` (${e.args.category})` : ""}`,
-      );
-    } else if (e.effect === "unit_upgrade") {
-      parts.push(`апгрейд ${e.args.from} → ${e.args.to}`);
-    } else {
-      parts.push(e.effect);
-    }
-  }
-  return parts.join(" · ") || "—";
 }
 
 function lockLabel(tech: TechnologyDef): string | null {
@@ -163,7 +145,7 @@ function buildingsUnlockedByTech(
   tech: TechnologyDef,
   tiers: Record<string, number>,
   unlockedProperties: string[],
-): string[] {
+): { name: string; id: string }[] {
   const buildings = Object.values(getCachedContent()?.buildings || {});
   if (!buildings.length) return [];
 
@@ -182,18 +164,18 @@ function buildingsUnlockedByTech(
 
   const before = { techTiers: tiers, unlockedProperties };
   const after = { techTiers: nextTiers, unlockedProperties: nextProps };
-  const names: string[] = [];
+  const out: { name: string; id: string }[] = [];
   for (const b of buildings) {
     if (canBuildWithTech(before, b).ok) continue;
-    if (canBuildWithTech(after, b).ok) names.push(b.name);
+    if (canBuildWithTech(after, b).ok) out.push({ name: b.name, id: b.id });
   }
-  return names;
+  return out;
 }
 
 type NextBuy = { tech: TechnologyDef; cost: number };
 
 /**
- * Research room: radial tech wheel (6 spokes) + detail rail.
+ * Research room: radial tech wheel (6 spokes) + queue + detail rail.
  */
 export function ResearchPanel({
   eco,
@@ -201,24 +183,49 @@ export function ResearchPanel({
   factionId,
   onResearch,
   onResearchUpgrade,
+  onSetQueue,
+  onAccelerate,
   busy,
   msg,
   asRoom,
   branch: branchProp,
   onBranchChange,
+  highlightTechId,
+  cognitioIncome = 0,
+  categoryIncome = 0,
+  categoryDemand = 0,
+  onOpenBuilding,
+  onTechMapDrag,
+  onEffectNavigate,
 }: {
   eco: ViewerPayload["economy"];
   world?: ViewerPayload["world"];
   factionId?: string;
   onResearch: (techId: string) => void;
   onResearchUpgrade?: (techId: string, upgradeId: string) => void;
+  onSetQueue?: (queue: string[]) => void;
+  onAccelerate?: (techId: string) => void;
   busy?: boolean;
   msg?: string | null;
   asRoom?: boolean;
   branch?: EconomyCategory | null;
   onBranchChange?: (c: EconomyCategory | null) => void;
+  highlightTechId?: string | null;
+  cognitioIncome?: number;
+  categoryIncome?: number;
+  categoryDemand?: number;
+  onOpenBuilding?: (buildingId: string) => void;
+  onTechMapDrag?: (techId: string) => void;
+  onEffectNavigate?: (target: import("./research/EffectsList").EffectNavigateTarget) => void;
 }) {
   const [branchLocal, setBranchLocal] = useState<EconomyCategory | null>(null);
+  const [filter, setFilter] = useState<ResearchFilter>("all");
+  const [search, setSearch] = useState("");
+  const [nodeRing, setNodeRing] = useState<{
+    techId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const focusBranch =
     branchProp !== undefined ? branchProp : branchLocal;
   const setFocusBranch = (c: EconomyCategory | null) => {
@@ -231,6 +238,7 @@ export function ResearchPanel({
   const [successId, setSuccessId] = useState<string | null>(null);
   const [pendingUpgradeId, setPendingUpgradeId] = useState<string | null>(null);
   const branchSpot = useSpotlight();
+  const detailSpot = useSpotlight();
 
   const { byCat, byId } = useMemo(() => {
     const dict = getCachedContent()?.technologies || {};
@@ -260,9 +268,27 @@ export function ResearchPanel({
     () => new Set(eco?.unlockedUpgrades || []),
     [eco?.unlockedUpgrades],
   );
+  const queue = eco?.researchQueue || [];
+  const queueSet = useMemo(() => new Set(queue), [queue]);
   const cognitio = eco?.stocks?.["currency.cognitio"] ?? 0;
   const tiers = eco?.techTiers || {};
   const unlockedProps = eco?.unlockedProperties || [];
+
+  const income =
+    cognitioIncome ||
+    (() => {
+      const spark = cognitioSparkFromRecent(eco?.recent, 1);
+      return spark[0] ?? 0;
+    })();
+
+  const forecasts = useMemo(
+    () => buildQueueForecasts(queue, byId, cognitio, income),
+    [queue, byId, cognitio, income],
+  );
+  const spark = useMemo(
+    () => cognitioSparkFromRecent(eco?.recent, 10),
+    [eco?.recent],
+  );
 
   useEffect(() => {
     if (busy) return;
@@ -279,6 +305,16 @@ export function ResearchPanel({
       setPendingUpgradeId(null);
     }
   }, [busy, pendingId, pendingUpgradeId, msg]);
+
+  useEffect(() => {
+    if (highlightTechId && byId.has(highlightTechId)) {
+      setSelectedId(highlightTechId);
+      const tech = byId.get(highlightTechId);
+      if (tech && CAT_ORDER.includes(tech.category as EconomyCategory)) {
+        setFocusBranch(tech.category as EconomyCategory);
+      }
+    }
+  }, [highlightTechId, byId]);
 
   // Auto-select first affordable / next in focus branch
   useEffect(() => {
@@ -338,6 +374,22 @@ export function ResearchPanel({
     );
     const upgrades = selected.upgrades || [];
     const upgradeDone = upgrades.filter((u) => unlockedUpgrades.has(u.id)).length;
+    const inQueue = queueSet.has(selected.id);
+    const canQueue =
+      !done &&
+      !inQueue &&
+      prereqOk &&
+      !lockBlocked &&
+      queue.length < QUEUE_MAX &&
+      !!onSetQueue &&
+      !busy;
+    const availability: "available" | "queueable" | "blocked" = done
+      ? "blocked"
+      : canBuy
+        ? "available"
+        : canQueue
+          ? "queueable"
+          : "blocked";
     return {
       done,
       prereqOk,
@@ -349,6 +401,9 @@ export function ResearchPanel({
       upgradeDone,
       lock,
       lockBlocked,
+      inQueue,
+      canQueue,
+      availability,
     };
   }, [
     selected,
@@ -360,6 +415,9 @@ export function ResearchPanel({
     unlockedProps,
     world,
     factionId,
+    queueSet,
+    queue.length,
+    onSetQueue,
   ]);
 
   const requestResearch = (techId: string) => {
@@ -375,12 +433,35 @@ export function ResearchPanel({
     onResearchUpgrade(techId, upgradeId);
   };
 
+  const changeQueue = (next: string[]) => {
+    onSetQueue?.(next.slice(0, QUEUE_MAX));
+  };
+
+  const addToQueue = (techId: string) => {
+    if (!onSetQueue) return;
+    if (unlocked.has(techId)) return;
+    if (queue.includes(techId)) return;
+    if (queue.length >= QUEUE_MAX) return;
+    const tech = byId.get(techId);
+    if (!tech) return;
+    if (!(tech.prerequisites || []).every((p) => unlocked.has(p))) return;
+    if (lockBlocksResearch(tech, world, factionId)) return;
+    changeQueue([...queue, techId]);
+  };
+
+  const selectedPath = useMemo(() => {
+    if (!selected) return null;
+    return buildResearchPath(selected.id, byId, unlocked);
+  }, [selected, byId, unlocked]);
+
   const jumpToNextBuy = () => {
     if (!nextBuy) return;
     const cat = nextBuy.tech.category as EconomyCategory;
     if (CAT_ORDER.includes(cat)) setFocusBranch(cat);
     setSelectedId(nextBuy.tech.id);
   };
+
+  const buildingNames = selectedState?.buildings.map((b) => b.name) ?? [];
 
   const body = (
     <>
@@ -389,7 +470,26 @@ export function ResearchPanel({
         {asRoom === false && <h3>Исследования</h3>}
         <div className="research-stock-row">
           <p className="hint research-stock">
-            Знание: <strong className="tabular">{cognitio}</strong>
+            Знание:{" "}
+            <strong
+              className="tabular research-cognitio-chip"
+              draggable={!busy && cognitio > 0}
+              title="Перетащите на технологию — изучить или ускорить"
+              onDragStart={(e) => {
+                e.dataTransfer.setData(COGNITIO_DND_MIME, "currency.cognitio");
+                e.dataTransfer.setData("text/plain", "currency.cognitio");
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+            >
+              {cognitio}
+            </strong>
+            {income !== 0 ? (
+              <span className="tabular">
+                {" "}
+                ({income > 0 ? "+" : ""}
+                {income}/ход)
+              </span>
+            ) : null}
             {affordable.length > 0 ? (
               <span className="research-stock-hot">
                 {" "}
@@ -411,6 +511,29 @@ export function ResearchPanel({
           </ul>
         </div>
       </header>
+
+      {onSetQueue ? (
+        <ResearchQueue
+          queue={queue}
+          byId={byId}
+          cognitio={cognitio}
+          income={income}
+          selectedId={selectedId}
+          busy={busy}
+          forecasts={forecasts}
+          onSelect={setSelectedId}
+          onChangeQueue={changeQueue}
+          onAccelerate={onAccelerate}
+        />
+      ) : null}
+
+      <CognitioForecast
+        cognitio={cognitio}
+        income={income}
+        forecasts={forecasts}
+        byId={byId}
+        spark={spark}
+      />
 
       {nextBuy && (
         <button
@@ -443,6 +566,28 @@ export function ResearchPanel({
           </div>
         </button>
       )}
+
+      <div className="research-filters" role="toolbar" aria-label="Фильтры">
+        {(Object.keys(RESEARCH_FILTER_LABELS) as ResearchFilter[]).map((f) => (
+          <button
+            key={f}
+            type="button"
+            className={`research-filter-btn ${filter === f ? "on" : ""}`}
+            onClick={() => setFilter(f)}
+          >
+            {RESEARCH_FILTER_LABELS[f]}
+          </button>
+        ))}
+        <label className="research-search">
+                          <span className="sr-only">Поиск</span>
+          <input
+            type="search"
+            placeholder="геол…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+      </div>
 
       <div
         className="research-branch-tabs anim-tabs"
@@ -477,7 +622,12 @@ export function ResearchPanel({
               role="tab"
               aria-selected={focusBranch === c}
               className={`research-branch-tab fx-spotlight ${focusBranch === c ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
-              style={{ borderColor: CAT_COLOR[c], "--fx-spot-color": CAT_COLOR[c] } as React.CSSProperties}
+              style={
+                {
+                  borderColor: CAT_COLOR[c],
+                  "--fx-spot-color": CAT_COLOR[c],
+                } as React.CSSProperties
+              }
               onClick={() => {
                 setFocusBranch(c);
                 const next = techs.find(
@@ -512,9 +662,85 @@ export function ResearchPanel({
           focusBranch={focusBranch}
           busy={busy}
           onSelect={setSelectedId}
+          filter={filter}
+          search={search}
+          highlightId={highlightTechId}
+          queueIds={queueSet}
+          onNodeDragStart={onTechMapDrag}
+          isTechBlocked={(tech) =>
+            lockBlocksResearch(tech, world, factionId)
+          }
+          onCognitioDrop={(techId) => {
+            const tech = byId.get(techId);
+            if (!tech || busy) return;
+            if (queueSet.has(techId) && onAccelerate) {
+              onAccelerate(techId);
+              return;
+            }
+            onResearch(techId);
+          }}
+          onNodeLongPress={(techId, x, y) => {
+            setSelectedId(techId);
+            setNodeRing({ techId, x, y });
+          }}
         />
 
-        <aside className="research-detail" aria-live="polite">
+        {nodeRing ? (
+          <ActionRing
+            open
+            x={nodeRing.x}
+            y={nodeRing.y}
+            onClose={() => setNodeRing(null)}
+            items={[
+              {
+                id: "research",
+                label: "Изучить",
+                onSelect: () => {
+                  onResearch(nodeRing.techId);
+                  setNodeRing(null);
+                },
+              },
+              ...(onSetQueue
+                ? [
+                    {
+                      id: "queue",
+                      label: "В очередь",
+                      onSelect: () => {
+                        addToQueue(nodeRing.techId);
+                        setNodeRing(null);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onAccelerate && queueSet.has(nodeRing.techId)
+                ? [
+                    {
+                      id: "rush",
+                      label: "Ускорить",
+                      onSelect: () => {
+                        onAccelerate(nodeRing.techId);
+                        setNodeRing(null);
+                      },
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ) : null}
+
+        <aside
+          className={`research-detail fx-spotlight ${selected?.isBreakthrough ? "fx-glow" : ""}`}
+          style={
+            selected
+              ? ({
+                  "--fx-spot-color": CAT_COLOR[selected.category],
+                  "--fx-glow-color": CAT_COLOR[selected.category],
+                } as React.CSSProperties)
+              : undefined
+          }
+          aria-live="polite"
+          {...detailSpot.bind}
+        >
           {!selected || !selectedState ? (
             <p className="hint">Выберите технологию на колесе.</p>
           ) : (
@@ -545,6 +771,7 @@ export function ResearchPanel({
                   {selectedState.done && selectedState.upgrades.length > 0
                     ? ` · ★${selectedState.upgradeDone}/${selectedState.upgrades.length}`
                     : ""}
+                  {selectedState.inQueue ? " · в очереди" : ""}
                 </span>
               </header>
 
@@ -552,9 +779,45 @@ export function ResearchPanel({
                 <p className="hint research-lock-hint">{selectedState.lock}</p>
               ) : null}
 
-              <p className="research-detail-effect">
-                {formatEffects(selected.effects)}
-              </p>
+              {selectedPath && selectedPath.steps.length > 1 && !selectedState.done ? (
+                <div className="research-path-planner" aria-label="Путь исследования">
+                  <strong>Путь</strong>
+                  <ol>
+                    {selectedPath.steps.map((s) => (
+                      <li key={s.techId}>
+                        <button
+                          type="button"
+                          className="linkish"
+                          onClick={() => setSelectedId(s.techId)}
+                        >
+                          {s.name}
+                        </button>
+                        <span className="tabular hint"> · {s.cost}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="hint">
+                    Итого {selectedPath.totalCognitio} cognitio ·{" "}
+                    {selectedPath.steps.length} шагов
+                  </p>
+                </div>
+              ) : null}
+
+              <EffectsList
+                effects={selected.effects}
+                buildings={buildingNames}
+                onBuildingClick={
+                  onOpenBuilding
+                    ? (name) => {
+                        const hit = selectedState.buildings.find(
+                          (b) => b.name === name,
+                        );
+                        if (hit) onOpenBuilding(hit.id);
+                      }
+                    : undefined
+                }
+                onEffectNavigate={onEffectNavigate}
+              />
 
               <dl className="research-detail-meta">
                 <div>
@@ -595,16 +858,6 @@ export function ResearchPanel({
                 </div>
               ) : null}
 
-              {selectedState.buildings.length > 0 ? (
-                <p className="hint research-impact">
-                  Откроет: {selectedState.buildings.join(", ")}
-                </p>
-              ) : (
-                <p className="hint">
-                  Прямых зданий нет — повышает тир ветки / свойства.
-                </p>
-              )}
-
               <div className="research-detail-cta">
                 <StatefulButton
                   className={`btn ${selectedState.canBuy ? "primary fx-moving-border" : ""}`}
@@ -619,70 +872,59 @@ export function ResearchPanel({
                 >
                   {selectedState.done ? "Исследовано" : "Исследовать"}
                 </StatefulButton>
+                {!selectedState.done && onSetQueue ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={!selectedState.canQueue}
+                    onClick={() => addToQueue(selected.id)}
+                  >
+                    {selectedState.inQueue ? "В очереди" : "В очередь"}
+                  </button>
+                ) : null}
+                {!selectedState.done && onTechMapDrag ? (
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    title="Подсветить системы на карте"
+                    onClick={() => onTechMapDrag(selected.id)}
+                  >
+                    На карту
+                  </button>
+                ) : null}
               </div>
 
               {selectedState.done && selectedState.upgrades.length > 0 ? (
-                <div className="research-upgrades">
-                  <h4>Улучшения</h4>
-                  <ul>
-                    {selectedState.upgrades.map((u) => {
-                      const uDone = unlockedUpgrades.has(u.id);
-                      const uCost = cognitioCost(u);
-                      const preOk = (u.prerequisites || []).every(
-                        (p) => unlocked.has(p) || unlockedUpgrades.has(p),
-                      );
-                      const canUp =
-                        !uDone &&
-                        preOk &&
-                        cognitio >= uCost &&
-                        !busy &&
-                        !!onResearchUpgrade;
-                      return (
-                        <li
-                          key={u.id}
-                          className={uDone ? "is-done" : canUp ? "is-hot" : ""}
-                        >
-                          <div className="research-upgrade-head">
-                            <strong>
-                              {uDone ? "★ " : ""}
-                              {u.name}
-                            </strong>
-                            <span className="hint tabular">
-                              {uDone ? "изучено" : `${uCost} / ${cognitio}`}
-                            </span>
-                          </div>
-                          <p className="hint">{formatEffects(u.effects)}</p>
-                          {!uDone ? (
-                            <StatefulButton
-                              className={`btn sm ${canUp ? "primary" : ""}`}
-                              disabled={!canUp}
-                              busy={busy && pendingUpgradeId === u.id}
-                              success={successId === u.id}
-                              successLabel="Улучшено"
-                              onClick={() => {
-                                if (!canUp) return;
-                                requestUpgrade(selected.id, u.id);
-                              }}
-                            >
-                              Улучшить
-                            </StatefulButton>
-                          ) : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+                <UpgradesComparison
+                  tech={selected}
+                  unlockedUpgrades={unlockedUpgrades}
+                  unlockedTechs={unlocked}
+                  cognitio={cognitio}
+                  busy={busy}
+                  pendingUpgradeId={pendingUpgradeId}
+                  successId={successId}
+                  categoryIncome={categoryIncome}
+                  categoryDemand={categoryDemand}
+                  onResearchUpgrade={
+                    onResearchUpgrade
+                      ? (techId, upgradeId) =>
+                          requestUpgrade(techId, upgradeId)
+                      : undefined
+                  }
+                />
               ) : null}
             </>
           )}
           {msg && (
             <p
-              className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") ? "is-ok" : "is-err"}`}
+              className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") || msg.startsWith("Очередь") ? "is-ok" : "is-err"}`}
               role="status"
             >
               {msg}
             </p>
           )}
+
+          <ResearchTimeline recent={eco?.recent} />
         </aside>
       </div>
     </>

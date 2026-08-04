@@ -1,0 +1,13 @@
+{
+  "tech.khanate.market": {
+    "id": "tech.khanate.market",
+    "name": "Базар Ханства",
+    "listings": [
+      {
+        "techId": "tech.geology",
+        "price": { "currency.metal": 80, "currency.cognitio": 20 },
+        "minRelation": "trade"
+      }
+    ]
+  }
+}

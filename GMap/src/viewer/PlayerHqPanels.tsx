@@ -496,6 +496,7 @@ export function PlayerHqHome({
   onOpenMap,
   onOpenResearch,
   onOpenMarket,
+  onOpenEconomy,
   affordableResearch,
   tradePartnerCount,
   marketMyOffers,
@@ -525,6 +526,7 @@ export function PlayerHqHome({
   onOpenMap: () => void;
   onOpenResearch?: () => void;
   onOpenMarket?: () => void;
+  onOpenEconomy?: () => void;
   affordableResearch?: number;
   tradePartnerCount?: number;
   marketMyOffers?: number;
@@ -630,6 +632,16 @@ export function PlayerHqHome({
                 ? `можно: ${affordableResearch}`
                 : "дерево A–F"}
             </span>
+          </button>
+        )}
+        {onOpenEconomy && (
+          <button
+            type="button"
+            className="hq-signal-chip"
+            onClick={onOpenEconomy}
+          >
+            <strong>Экономика</strong>
+            <span className="hint">производство · склад</span>
           </button>
         )}
         {onOpenMarket && (

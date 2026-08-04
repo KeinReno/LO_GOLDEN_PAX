@@ -15,14 +15,27 @@ import {
   PlanetRadialSlots,
   type PlanetRadialInspect,
 } from "./PlanetRadialSlots";
-import { raceIdsFromComposition } from "../state/buildingAccess";
+import {
+  canFactionBuildDef,
+  raceIdsFromComposition,
+} from "../state/buildingAccess";
 import { BuildingSlotsPanel } from "./BuildingSlotsPanel";
 import { BuildingKindIcon } from "./BuildingKindIcon";
 import { FloatingPanel } from "../ui/FloatingPanel";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
 import type { MapResourceDef } from "../state/contentCatalog";
-import type { TechEcoSlice } from "../state/techGate";
+import { canBuildWithTech, type TechEcoSlice } from "../state/techGate";
 import { InlineRename } from "../ui/InlineRename";
+import { BuildDeck } from "./BuildDeck";
+import {
+  BuildPreview,
+  BuildQueue,
+  PlanetListSlots,
+  planetsThatCanBuildCategory,
+  type BuildPreviewResult,
+  type BuildQueueItem,
+  type SlotViewMode,
+} from "./system";
 
 export type BuildingSlotDef = {
   role: string;
@@ -47,7 +60,6 @@ export type BuildingDef = {
   effects?: Array<{ effect: string; args: Record<string, unknown> }>;
 };
 
-/** Resolve catalog def for a planet building instance (id is runtime, not def id). */
 function resolveBuildingDef(
   buildings: Record<string, BuildingDef>,
   b: PlanetBuilding,
@@ -102,6 +114,11 @@ function normalizeColonyType(t?: string | null): string {
   return t;
 }
 
+function preferListView(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 768px)").matches;
+}
+
 export function PlayerPlanetManage({
   system,
   planet,
@@ -117,6 +134,12 @@ export function PlayerPlanetManage({
   message,
   onAction,
   onBack,
+  onOpenResearch,
+  buildQueue,
+  onChangeBuildQueue,
+  onPreviewBuild,
+  highlightCategory,
+  onShowInEconomy,
 }: {
   system: StarSystem;
   planet: Planet;
@@ -132,6 +155,12 @@ export function PlayerPlanetManage({
   message?: string | null;
   onAction: (req: PlanetActionRequest) => void;
   onBack: () => void;
+  onOpenResearch?: (techId: string) => void;
+  buildQueue?: BuildQueueItem[];
+  onChangeBuildQueue?: (next: BuildQueueItem[]) => void;
+  onPreviewBuild?: (buildingId: string) => Promise<BuildPreviewResult | null>;
+  highlightCategory?: string | null;
+  onShowInEconomy?: (category: string) => void;
 }) {
   const habit = classifyPlanet(planet);
   const ownerId = planet.ownerFactionId || system.ownerFactionId || null;
@@ -150,17 +179,34 @@ export function PlayerPlanetManage({
   const surfaceMax = planet.surfaceSlots ?? 8;
   const orbitalMax = planet.orbitalSlots ?? 4;
 
-  const colonyOptions = useMemo(
-    () => Object.values(colonies),
-    [colonies],
-  );
-
+  const colonyOptions = useMemo(() => Object.values(colonies), [colonies]);
   const apLeft = Math.max(0, apMax - reservedAp);
   const [inspect, setInspect] = useState<PlanetRadialInspect | null>(null);
+  const [viewMode, setViewMode] = useState<SlotViewMode>(() =>
+    preferListView() ? "list" : "radial",
+  );
+  const [preview, setPreview] = useState<BuildPreviewResult | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [listDeckZone, setListDeckZone] = useState<"surface" | "orbital" | null>(
+    null,
+  );
 
   useEffect(() => {
     setInspect(null);
+    setPreview(null);
+    setListDeckZone(null);
   }, [planet.id]);
+
+  const highlightBuildingIds = useMemo(() => {
+    if (!highlightCategory) return [];
+    const match = planetsThatCanBuildCategory(
+      system,
+      factionId,
+      highlightCategory,
+      buildings,
+    ).find((m) => m.planetId === planet.id);
+    return match?.buildingIds ?? [];
+  }, [highlightCategory, system, factionId, buildings, planet.id]);
 
   const inspectBuilding = useMemo(() => {
     if (!inspect) return null;
@@ -170,6 +216,16 @@ export function PlayerPlanetManage({
     const def = resolveBuildingDef(buildings, inst);
     return { inst, def };
   }, [inspect, surface, orbital, buildings]);
+
+  const requestPreview = async (buildingId: string) => {
+    if (!onPreviewBuild) return;
+    setPreviewLoading(true);
+    try {
+      setPreview(await onPreviewBuild(buildingId));
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   return (
     <div className="planet-detail planet-detail--manage">
@@ -198,7 +254,10 @@ export function PlayerPlanetManage({
         )}
       </h3>
 
-      <div className="planet-manage-metrics planet-manage-metrics--slim" aria-label="Сводка планеты">
+      <div
+        className="planet-manage-metrics planet-manage-metrics--slim"
+        aria-label="Сводка планеты"
+      >
         <div className="planet-manage-metric">
           <span className="hint">Тип</span>
           <strong>
@@ -222,6 +281,16 @@ export function PlayerPlanetManage({
           </strong>
         </div>
       </div>
+
+      {highlightCategory && (
+        <div className="sys-eco-hint fx-glow" role="status">
+          <strong>Дефицит категории {highlightCategory}</strong>
+          <em>
+            Подсвечены слоты, где можно построить производство{" "}
+            {highlightCategory}
+          </em>
+        </div>
+      )}
 
       {message && <p className="hint planet-manage-msg">{message}</p>}
 
@@ -297,26 +366,150 @@ export function PlayerPlanetManage({
             <div className="planet-detail-head" style={{ marginBottom: 8 }}>
               <h4 style={{ margin: 0 }}>Строительство</h4>
               <div className="planet-radial-stats">
-                <span className="hint">AP {reservedAp}/{apMax}{apLeft === 0 ? " · нет AP" : ""}</span>
-                <span className="hint">пов. {surface.length}/{surfaceMax} · орб. {orbital.length}/{orbitalMax}</span>
+                <span className="hint">
+                  AP {reservedAp}/{apMax}
+                  {apLeft === 0 ? " · нет AP" : ""}
+                </span>
+                <div
+                  className="sys-view-toggle"
+                  role="group"
+                  aria-label="Вид слотов"
+                >
+                  <button
+                    type="button"
+                    className={viewMode === "radial" ? "is-on" : ""}
+                    onClick={() => setViewMode("radial")}
+                  >
+                    Радиал
+                  </button>
+                  <button
+                    type="button"
+                    className={viewMode === "list" ? "is-on" : ""}
+                    onClick={() => setViewMode("list")}
+                  >
+                    Список
+                  </button>
+                </div>
               </div>
             </div>
 
-            <PlanetRadialSlots
-              planet={planet}
-              systemId={system.id}
-              planetId={planet.id}
-              factionId={factionId}
-              raceIds={raceIdsFromComposition(planet.raceComposition)}
-              buildings={buildings}
-              stocks={stocks}
-              reservedAp={reservedAp}
-              apMax={apMax}
-              techEco={techEco}
-              busy={busy}
-              onAction={onAction}
-              onInspect={setInspect}
-            />
+            {onChangeBuildQueue && (
+              <BuildQueue
+                queue={buildQueue ?? []}
+                buildings={buildings}
+                systemId={system.id}
+                planetId={planet.id}
+                stocks={stocks}
+                busy={busy}
+                onChangeQueue={onChangeBuildQueue}
+              />
+            )}
+
+            {(preview || previewLoading) && (
+              <BuildPreview
+                preview={preview}
+                loading={previewLoading}
+                stocks={stocks}
+                onCancel={() => setPreview(null)}
+              />
+            )}
+
+            {viewMode === "radial" ? (
+              <PlanetRadialSlots
+                planet={planet}
+                systemId={system.id}
+                planetId={planet.id}
+                factionId={factionId}
+                raceIds={raceIdsFromComposition(planet.raceComposition)}
+                buildings={buildings}
+                stocks={stocks}
+                reservedAp={reservedAp}
+                apMax={apMax}
+                techEco={techEco}
+                busy={busy}
+                onAction={onAction}
+                onInspect={setInspect}
+                onOpenResearch={onOpenResearch}
+                highlightCategory={highlightCategory}
+                highlightBuildingIds={highlightBuildingIds}
+                onSelectBuilding={(id) => void requestPreview(id)}
+              />
+            ) : (
+              <PlanetListSlots
+                planet={planet}
+                systemId={system.id}
+                planetId={planet.id}
+                buildings={buildings}
+                busy={busy}
+                highlightCategory={highlightCategory}
+                highlightBuildingIds={highlightBuildingIds}
+                onAction={onAction}
+                onInspect={(instanceId, kind) => {
+                  const all = [...surface, ...orbital];
+                  const inst = all.find((b) => b.id === instanceId);
+                  setInspect({
+                    instanceId,
+                    name: inst?.name ?? kind,
+                    kind,
+                    zone: inst?.zone === "orbital" ? "orbital" : "surface",
+                  });
+                }}
+                onRequestBuild={(zone) => setListDeckZone(zone)}
+              />
+            )}
+
+            {viewMode === "list" && listDeckZone && (
+              <FloatingPanel
+                open
+                onClose={() => setListDeckZone(null)}
+                title={`Колода · ${listDeckZone === "orbital" ? "Орбита" : "Поверхность"}`}
+                storageKey="gmap-planet-build-deck-list"
+                defaultGeom={{ x: 20, y: 120, w: 270, h: 420 }}
+                minW={220}
+                minH={200}
+                zIndex={370}
+                className="gmap-float-panel--build-deck"
+              >
+                <BuildDeck
+                  embedded
+                  defs={Object.values(buildings).filter(
+                    (b) =>
+                      (listDeckZone === "orbital"
+                        ? b.zone === "orbital"
+                        : b.zone !== "orbital") &&
+                      canFactionBuildDef(b, factionId, {
+                        raceIds: raceIdsFromComposition(planet.raceComposition),
+                      }) &&
+                      canBuildWithTech(techEco, b).ok,
+                  )}
+                  stocks={stocks}
+                  apLeft={apLeft}
+                  techEco={techEco}
+                  busy={busy}
+                  selectedId={null}
+                  dragId={null}
+                  zoneLabel={
+                    listDeckZone === "orbital" ? "Орбита" : "Поверхность"
+                  }
+                  slotArmed
+                  highlightCategory={highlightCategory}
+                  highlightBuildingIds={highlightBuildingIds}
+                  onSelect={(id) => void requestPreview(id)}
+                  onHoldBuild={(id) => {
+                    onAction({
+                      action: "build",
+                      systemId: system.id,
+                      planetId: planet.id,
+                      buildingId: id,
+                    });
+                    setListDeckZone(null);
+                  }}
+                  onDragStart={(id) => void requestPreview(id)}
+                  onClose={() => setListDeckZone(null)}
+                  onOpenResearch={onOpenResearch}
+                />
+              </FloatingPanel>
+            )}
           </section>
 
           {inspectBuilding?.def && inspectBuilding.inst && (
@@ -343,6 +536,18 @@ export function PlayerPlanetManage({
                   </div>
                 </div>
               </div>
+              {inspectBuilding.def.category && onShowInEconomy && (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  style={{ marginBottom: 8 }}
+                  onClick={() =>
+                    onShowInEconomy(String(inspectBuilding.def!.category))
+                  }
+                >
+                  В экономике ({inspectBuilding.def.category})
+                </button>
+              )}
               <p className="hint">
                 Слоты ресурсов: tier режет узкое место. Тап по кольцу выбирает
                 постройку.

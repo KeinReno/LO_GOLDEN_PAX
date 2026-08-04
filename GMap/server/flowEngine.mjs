@@ -87,16 +87,34 @@ export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
 export function resolveBuildingDef(content, buildingInst) {
   const c = content || getContent();
   const buildings = c.buildings || {};
-  if (buildingInst.buildingId && buildings[buildingInst.buildingId]) {
-    return buildings[buildingInst.buildingId];
+  const id = buildingInst.buildingId;
+  if (id && buildings[id]) {
+    const raw = buildings[id];
+    if (raw.base && buildings[raw.base]) {
+      // Lazy merge to avoid circular import with variantResolver at top-level cycles
+      return {
+        ...buildings[raw.base],
+        ...raw,
+        id: raw.id,
+        effects: [
+          ...(buildings[raw.base].effects || []),
+          ...(raw.extra_effects || []),
+          ...(raw.effects || []),
+        ],
+        cost: raw.cost || buildings[raw.base].cost,
+      };
+    }
+    return raw;
   }
+  const baseId = buildingInst.baseBuildingId;
+  if (baseId && buildings[baseId]) return buildings[baseId];
   const zone = buildingInst.zone || "surface";
   const kind = buildingInst.kind;
   const match = Object.values(buildings).find(
-    (d) => d.kind === kind && (d.zone || "surface") === zone,
+    (d) => d.kind === kind && (d.zone || "surface") === zone && !d.base,
   );
   if (match) return match;
-  return Object.values(buildings).find((d) => d.kind === kind) || null;
+  return Object.values(buildings).find((d) => d.kind === kind && !d.base) || null;
 }
 
 function effectiveTierFromFills(buildingInst, content, fallbackTier) {
@@ -140,6 +158,10 @@ export function applyFlowConvert(flows, args, opts = {}) {
 
   const throughput = Number(args?.amount ?? opts.throughput ?? 2);
   let produced = Math.min(inRate, throughput);
+  const pBoost = Number(opts.priorityBoost ?? 1);
+  if (pBoost > 1 && produced > 0) {
+    produced = Math.min(inRate, produced * pBoost);
+  }
 
   if (fromCat === "B" && toCat === "C") {
     const scale = opts.biosScale != null ? opts.biosScale : 1;
@@ -190,11 +212,17 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
       if (!args.secondary && args.from?.category && args.to?.category) {
         args.secondary = inferSecondary(args.from.category, args.to.category, tier);
       }
+      const fromC = args.from?.category;
+      const toC = args.to?.category;
+      const pri = opts.priorityEdge;
+      const boost =
+        pri && fromC === pri.from && toC === pri.to ? Number(opts.priorityBoost ?? 1.35) : 1;
       applyFlowConvert(flows, args, {
         buildingTier: tier,
         biosScale: opts.biosScale,
         rateScale,
         throughput: Number(e.args?.amount) || Math.max(1, Math.ceil(tier / 2) + 1),
+        priorityBoost: boost,
       });
     } else if (e.effect === "capacity_add") {
       const cc = e.args?.category;

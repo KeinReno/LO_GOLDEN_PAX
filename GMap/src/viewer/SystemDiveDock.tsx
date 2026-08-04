@@ -18,6 +18,14 @@ import { ResourceIcon } from "../ui/ResourceIcon";
 import { InlineRename } from "../ui/InlineRename";
 import { systemMineInfo, systemMineLabel } from "./depositMining";
 import { planetContributionChips } from "./planetContributions";
+import {
+  SystemFlows,
+  SystemHistory,
+  calculateSystemFlows,
+  planetsThatCanBuildCategory,
+} from "./system";
+import type { EconomyFlowBreakdown } from "./economyFlowTypes";
+import type { BuildingDef } from "./PlayerPlanetManage";
 
 function formatPop(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -61,6 +69,10 @@ type Props = {
   previewPlanetId?: string | null;
   message?: string | null;
   busy?: boolean;
+  flowData?: EconomyFlowBreakdown | null;
+  buildings?: Record<string, BuildingDef>;
+  highlightCategory?: string | null;
+  onHighlightCategory?: (letter: string | null) => void;
   onPreviewPlanet: (id: string) => void;
   onDrillPlanet: (id: string) => void;
   onArmBelt: () => void;
@@ -95,6 +107,10 @@ export function SystemDiveDock({
   previewPlanetId,
   message,
   busy,
+  flowData,
+  buildings,
+  highlightCategory,
+  onHighlightCategory,
   onPreviewPlanet,
   onDrillPlanet,
   onArmBelt,
@@ -114,6 +130,23 @@ export function SystemDiveDock({
     isOwnSettled(p, system, factionId),
   ).length;
   const beltRes = system.resources ?? [];
+
+  const flowRows = useMemo(
+    () => calculateSystemFlows(system, factionId, flowData),
+    [system, factionId, flowData],
+  );
+
+  const highlightPlanets = useMemo(() => {
+    if (!highlightCategory || !buildings) return new Set<string>();
+    return new Set(
+      planetsThatCanBuildCategory(
+        system,
+        factionId,
+        highlightCategory,
+        buildings,
+      ).map((m) => m.planetId),
+    );
+  }, [highlightCategory, buildings, system, factionId]);
 
   const visible = ordered.filter((p) => {
     if (filter === "own") return isOwnSettled(p, system, factionId);
@@ -177,6 +210,12 @@ export function SystemDiveDock({
           </span>
         </div>
       </div>
+
+      <SystemFlows
+        rows={flowRows}
+        highlightCategory={highlightCategory}
+        onCategoryClick={(letter) => onHighlightCategory?.(letter)}
+      />
 
       {/* Actionable alert — Stellaris situation log style */}
       {mine.status === "none" && beltRes.length > 0 && canBuildBelt && (
@@ -362,6 +401,7 @@ export function SystemDiveDock({
               : [];
             const res = (p.resources ?? []).slice(0, 4);
             const minedLocal = planetHasMine(p);
+            const ecoHot = highlightPlanets.has(p.id);
 
             return (
               <li key={p.id}>
@@ -372,6 +412,7 @@ export function SystemDiveDock({
                     own && "is-own",
                     selected && "is-selected",
                     hasFocus && !selected && "is-dim",
+                    ecoHot && "is-eco-hot",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -487,6 +528,8 @@ export function SystemDiveDock({
           })}
         </ul>
       </div>
+
+      <SystemHistory history={system.history} />
     </div>
   );
 }

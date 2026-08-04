@@ -103,9 +103,10 @@ function mergeChannels(specific, wildcard) {
   };
 }
 
-function collectFactionEffects(world, factionId, eco, content) {
+function collectFactionEffects(world, factionId, eco, content, turn = 0) {
   const effects = [];
   const faction = world.factions?.find((f) => f.id === factionId) ?? null;
+  const raceOpts = { factionId, turn };
 
   for (const [slot, tierId] of Object.entries(eco.taxes || {})) {
     const def = content.taxes?.[slot];
@@ -126,6 +127,7 @@ function collectFactionEffects(world, factionId, eco, content) {
         ...collectRaceEffects(
           content.races,
           resolvePlanetRaceComposition(p, faction),
+          raceOpts,
         ),
       );
     }
@@ -373,6 +375,8 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
     const prodScale = logisticsProductionMult(sys, c);
+    const pri =
+      eco?.flowPriorities?.[sys.id] || eco?.flowPriorities?._faction || null;
     for (const p of sys.planets ?? []) {
       for (const b of planetBuildingList(p)) {
         if (b.disabled) continue;
@@ -382,6 +386,7 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
           biosScale: labor,
           maxTiers,
           rateScale: prodScale,
+          priorityEdge: pri,
         });
       }
     }
@@ -440,7 +445,7 @@ export function runEconomyTick(world, turn) {
   for (const fac of world.factions ?? []) {
     const eco = ensureFactionEco(ledger, fac.id);
 
-    const effects = collectFactionEffects(world, fac.id, eco, content);
+    const effects = collectFactionEffects(world, fac.id, eco, content, turn);
     const stack = buildModifierStack(effects, {
       mergeOrder: content.rules?.economyMergeOrder,
     });
@@ -670,7 +675,10 @@ export function runEconomyTick(world, turn) {
 
       const growthEffects = [
         ...collectSystemPoiEffects(sys, content),
-        ...collectRaceEffects(content.races, composition),
+        ...collectRaceEffects(content.races, composition, {
+          factionId: owner || undefined,
+          turn,
+        }),
       ];
       const growthStack = buildModifierStack(growthEffects, {
         mergeOrder: content.rules?.economyMergeOrder,

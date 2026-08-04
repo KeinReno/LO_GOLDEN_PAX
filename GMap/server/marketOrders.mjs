@@ -7,6 +7,7 @@ import path from "node:path";
 import { DATA_DIR, readJson, writeJson } from "./tableStore.mjs";
 import { readLedger, writeLedger, ensureFactionEco, adjustStock } from "./ledger.mjs";
 import { hasTradeChannel } from "./factionIntel.mjs";
+import { setKnowledgeLevel } from "./intel.mjs";
 import { isCommonMarketMember } from "./marketMembership.mjs";
 
 export const MARKET_ORDERS_PATH = path.join(DATA_DIR, "market-orders.json");
@@ -337,6 +338,16 @@ function executePartialMatch(ledger, offerA, offerB, turn, journal) {
     fillGive,
     fillWant,
   );
+
+  // Real trade → mutual economy intel floor (faction level 2)
+  setKnowledgeLevel(offerA.factionId, "faction", offerB.factionId, 2, {
+    source: "trade",
+    turn,
+  });
+  setKnowledgeLevel(offerB.factionId, "faction", offerA.factionId, 2, {
+    source: "trade",
+    turn,
+  });
 
   return true;
 }

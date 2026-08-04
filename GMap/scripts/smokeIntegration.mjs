@@ -13,6 +13,20 @@ import { runOpinionTick, getRelation, computeTargetOpinion } from "../server/opi
 import { rollYearlyQuests, resolveQuestChoice, expireQuests } from "../server/questEngine.mjs";
 import { rollDice, rollSuccess } from "../server/dice.mjs";
 import { shouldOfferCardBattle } from "../server/cardBattle.mjs";
+import {
+  applyRaceStateModifier,
+  writeRaceStates,
+  readRaceStates,
+  expireRaceStateModifiers,
+} from "../server/raceStates.mjs";
+import { collectRaceEffects } from "../server/modifierStack.mjs";
+import {
+  transferTech,
+  factionCanAccessTech,
+  listTechMarket,
+  markTechsHistorical,
+} from "../server/techPool.mjs";
+import { ensureFactionEco } from "../server/ledger.mjs";
 
 let failures = 0;
 function check(label, cond, detail = "") {
@@ -114,8 +128,12 @@ check("content.races loaded", Object.keys(content.races || {}).length >= 7, `${O
 check("intent.throw_quest_dice defined", !!content.intents?.["intent.throw_quest_dice"]);
 check("intent.give_npc_task defined", !!content.intents?.["intent.give_npc_task"]);
 check("intent.research_upgrade defined", !!content.intents?.["intent.research_upgrade"]);
+check("intent.set_research_queue defined", !!content.intents?.["intent.set_research_queue"]);
+check("tech_icons loaded", Object.keys(content.tech_icons || {}).length >= 5, `${Object.keys(content.tech_icons || {}).length} icons`);
 check("intent.play_card defined", !!content.intents?.["intent.play_card"]);
 check("intent.request_card_battle defined", !!content.intents?.["intent.request_card_battle"]);
+check("intent.scout_world defined", !!content.intents?.["intent.scout_world"]);
+check("intent.espionage defined", !!content.intents?.["intent.espionage"]);
 
 // --- Dice (A9) ---
 const d = rollDice({ count: 2, sides: 6 });
@@ -219,6 +237,174 @@ check("legacy world: faction.npcs default []", Array.isArray(legacyWorld.faction
 check("legacy world: planet.loyalty default 50", legacyWorld.systems[0].planets[0].loyalty === 50);
 check("legacy world: quest.type assigned", typeof legacyWorld.quests[0].type === "string", legacyWorld.quests[0].type);
 check("legacy world: quest.history is array", Array.isArray(legacyWorld.quests[0].history));
+
+// --- Intel Fog ---
+const {
+  setKnowledgeLevel,
+  getLevel,
+  maskEntityByLevel,
+  maskFactionForIntel,
+  levelFromProgress,
+  approximateStat,
+  updateIntelFromDiplomacy,
+  publicIntelPayload,
+  ensureFactionIntel,
+  readIntelStore,
+  writeIntelStore,
+} = await import("../server/intel.mjs");
+
+// Isolate smoke from campaign intel file (deep clone — store rows are mutated in place)
+const intelBackup = JSON.parse(JSON.stringify(readIntelStore()));
+writeIntelStore({ factions: {} });
+
+const smokeViewer = "smoke_intel_f1";
+const smokeTarget = "smoke_intel_f2";
+ensureFactionIntel(smokeViewer);
+check("intel: own faction seeds to store", getLevel(smokeViewer, "faction", smokeViewer) === 4);
+const bumped = setKnowledgeLevel(smokeViewer, "faction", smokeTarget, 2, {
+  source: "fleet",
+  turn: 5,
+});
+check(
+  "intel: setKnowledgeLevel raises target to 2",
+  bumped && getLevel(smokeViewer, "faction", smokeTarget) === 2,
+  `bumped=${bumped} lv=${getLevel(smokeViewer, "faction", smokeTarget)}`,
+);
+const noDown = setKnowledgeLevel(smokeViewer, "faction", smokeTarget, 1, {
+  source: "gm",
+  turn: 5,
+});
+check(
+  "intel: levels are monotonic (no decrease)",
+  !noDown && getLevel(smokeViewer, "faction", smokeTarget) === 2,
+);
+check("intel: levelFromProgress thresholds", levelFromProgress(1) === 1 && levelFromProgress(6) === 3);
+check("intel: approximateStat is honest band", typeof approximateStat(12) === "string");
+const masked1 = maskEntityByLevel(
+  { id: "x", name: "Probe", category: "ship", stats: { power: 12 }, cost: 5 },
+  1,
+);
+check("intel: mask L1 strips stats", masked1 && masked1.stats == null && masked1.name === "Probe");
+const masked2 = maskEntityByLevel(
+  { id: "x", name: "Probe", category: "ship", stats: { power: 12 }, cost: 5 },
+  2,
+);
+check("intel: mask L2 approximates stats", masked2 && masked2.stats && masked2.cost == null);
+const maskedFac = maskFactionForIntel(
+  { id: smokeTarget, name: "Beta", color: "#0ff", password: "secret", notes: "hidden" },
+  1,
+  smokeViewer,
+);
+check("intel: maskFaction L1 hides notes/password", maskedFac && maskedFac.notes == null && maskedFac.password === "••••");
+updateIntelFromDiplomacy(world, smokeViewer, smokeTarget, "alliance", { turn: 5 });
+check("intel: alliance bumps faction ≥3", getLevel(smokeViewer, "faction", smokeTarget) >= 3);
+const pub = publicIntelPayload(smokeViewer);
+check("intel: public payload has knownFactions", typeof pub.knownFactions === "object");
+
+// --- Race states folded into economy/growth ---
+const raceStateBackup = readRaceStates();
+try {
+  writeRaceStates({});
+  applyRaceStateModifier(
+    "race_human",
+    {
+      id: "mod.smoke.pop_growth_boost",
+      source: "smoke",
+      turn_applied: 5,
+      permanent: true,
+      effects: [{ effect: "pop_growth_mult", args: { mult: 1.5 } }],
+    },
+    { factionId: "f1" },
+  );
+  const withState = collectRaceEffects(
+    getContent().races,
+    [{ raceId: "race_human", percent: 100 }],
+    { factionId: "f1", turn: 5 },
+  );
+  const withoutState = collectRaceEffects(
+    getContent().races,
+    [{ raceId: "race_human", percent: 100 }],
+  );
+  const stateHits = withState.filter(
+    (e) => e.source?.kind === "race_state" && e.effect === "pop_growth_mult",
+  );
+  check(
+    "race_states: collectRaceEffects folds state when opts set",
+    stateHits.length === 1 && Number(stateHits[0].args?.mult) === 1.5,
+  );
+  check(
+    "race_states: without opts state is ignored",
+    !withoutState.some((e) => e.source?.kind === "race_state"),
+  );
+  applyRaceStateModifier(
+    "race_human",
+    {
+      id: "mod.smoke.expired",
+      source: "smoke",
+      turn_applied: 1,
+      expires: 3,
+      effects: [{ effect: "production_mult", args: { mult: 2 } }],
+    },
+    { factionId: "f1" },
+  );
+  const expired = expireRaceStateModifiers(5);
+  check(
+    "race_states: expire drops past-expires mods",
+    expired.expired.some((id) => id.includes("mod.smoke.expired")),
+  );
+} finally {
+  writeRaceStates(raceStateBackup);
+}
+
+// --- Tech pool / trade / historical / market ---
+{
+  const fromLedger = { factions: {} };
+  const toLedger = { factions: {} };
+  const fromEco = ensureFactionEco(fromLedger, "f1");
+  const toEco = ensureFactionEco(toLedger, "f2");
+  fromEco.unlockedTechs = ["tech.geology"];
+  const traded = transferTech(fromEco, toEco, "tech.geology", {
+    turn: 5,
+    fromFactionId: "f1",
+    source: "trade",
+  });
+  check("techPool: transferTech grants unlocked + acquired", traded.ok && toEco.unlockedTechs.includes("tech.geology"));
+  check(
+    "techPool: acquired source=trade",
+    toEco.acquiredTechs.some((a) => a.techId === "tech.geology" && a.source === "trade"),
+  );
+  markTechsHistorical(toEco, ["tech.geology"], 5, "heritage");
+  const hist = toEco.acquiredTechs.find((a) => a.techId === "tech.geology");
+  check("techPool: markTechsHistorical sets non-transferable", hist?.source === "historical" && hist?.transferable === false);
+  const blocked = transferTech(toEco, fromEco, "tech.geology", { turn: 6 });
+  check("techPool: historical cannot re-trade", !blocked.ok);
+  const listings = listTechMarket(getContent());
+  check("techPool: tech_market has listings", listings.length >= 1);
+  const fac = { id: "f1", availableRaces: ["race_human"] };
+  const worldMini = { factions: [fac] };
+  const gate = factionCanAccessTech(
+    { id: "tech.x", tags: ["race_swarm"] },
+    "f1",
+    { unlockedTechs: [], acquiredTechs: [] },
+    getContent(),
+    worldMini,
+  );
+  check("techPool: race tag outside pool blocked", !gate.ok);
+  const viaAcquired = factionCanAccessTech(
+    { id: "tech.x", tags: ["race_swarm"] },
+    "f1",
+    { unlockedTechs: [], acquiredTechs: [{ techId: "tech.x", source: "trade" }] },
+    getContent(),
+    worldMini,
+  );
+  check("techPool: acquired bypasses race pool", viaAcquired.ok && viaAcquired.via === "acquired");
+}
+
+// Restore prior campaign intel (strip smoke leftovers)
+const restored = intelBackup?.factions ? intelBackup : { factions: {} };
+delete restored.factions?.[smokeViewer];
+delete restored.factions?.[smokeTarget];
+writeIntelStore(restored);
 
 console.log("--------------------------------------------------------");
 console.log(failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`);

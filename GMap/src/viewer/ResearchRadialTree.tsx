@@ -3,10 +3,13 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { TechnologyDef, EconomyCategory } from "../state/contentCatalog";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
+import type { ResearchFilter } from "./research/constants";
+import { TECH_DND_MIME, COGNITIO_DND_MIME } from "./research/constants";
 
 const CAT_ORDER: EconomyCategory[] = ["A", "B", "C", "D", "E", "F"];
 const CAT_COLOR: Record<string, string> = {
@@ -63,7 +66,10 @@ export type RadialNode = {
   r: number;
   done: boolean;
   locked: boolean;
+  /** Instant research affordable now. */
   canBuy: boolean;
+  /** Prereqs met; can enter queue even if cognitio short. */
+  canQueue: boolean;
   cost: number;
   upgradeStars: number;
   upgradeTotal: number;
@@ -110,6 +116,14 @@ export function ResearchRadialTree({
   focusBranch,
   busy,
   onSelect,
+  filter = "all",
+  search = "",
+  highlightId = null,
+  queueIds,
+  onNodeDragStart,
+  isTechBlocked,
+  onCognitioDrop,
+  onNodeLongPress,
 }: {
   byCat: Map<EconomyCategory, TechnologyDef[]>;
   unlocked: Set<string>;
@@ -119,6 +133,16 @@ export function ResearchRadialTree({
   focusBranch: EconomyCategory | null;
   busy?: boolean;
   onSelect: (techId: string) => void;
+  filter?: ResearchFilter;
+  search?: string;
+  highlightId?: string | null;
+  queueIds?: Set<string>;
+  onNodeDragStart?: (techId: string) => void;
+  /** Race/trait/property lock — blocks buy & queue (red). */
+  isTechBlocked?: (tech: TechnologyDef) => boolean;
+  /** Drop cognitio chip onto node → research / accelerate. */
+  onCognitioDrop?: (techId: string) => void;
+  onNodeLongPress?: (techId: string, x: number, y: number) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -129,6 +153,18 @@ export function ResearchRadialTree({
     ox: number;
     oy: number;
   } | null>(null);
+  const longPressRef = useRef<{
+    timer: number | null;
+    techId: string | null;
+  }>({ timer: null, techId: null });
+
+  const clearLongPress = () => {
+    if (longPressRef.current.timer != null) {
+      window.clearTimeout(longPressRef.current.timer);
+      longPressRef.current.timer = null;
+    }
+    longPressRef.current.techId = null;
+  };
 
   const maxDepth = useMemo(() => {
     let m = 1;
@@ -163,7 +199,10 @@ export function ResearchRadialTree({
           unlocked.has(p),
         );
         const cost = cognitioCost(tech);
-        const canBuy = !done && prereqOk && cognitio >= cost && !busy;
+        const lockBlocked = !!isTechBlocked?.(tech);
+        const canQueue =
+          !done && prereqOk && !lockBlocked && !busy;
+        const canBuy = canQueue && cognitio >= cost;
         const upgradeTotal = (tech.upgrades || []).length;
         const upgradeStars = (tech.upgrades || []).filter((u) =>
           ups.has(u.id),
@@ -175,8 +214,9 @@ export function ResearchRadialTree({
           angle,
           r,
           done,
-          locked: !prereqOk && !done,
+          locked: (!prereqOk || lockBlocked) && !done,
           canBuy,
+          canQueue,
           cost,
           upgradeStars,
           upgradeTotal,
@@ -219,7 +259,30 @@ export function ResearchRadialTree({
     );
 
     return { nodes: nodeList, edges: edgeList, rings: ringRs };
-  }, [byCat, unlocked, unlockedUpgrades, cognitio, busy, maxDepth]);
+  }, [byCat, unlocked, unlockedUpgrades, cognitio, busy, maxDepth, isTechBlocked]);
+
+  const searchLc = search.trim().toLowerCase();
+
+  const nodeVisible = (n: RadialNode): boolean => {
+    if (filter === "available") {
+      if (n.done || n.locked || !(n.canBuy || n.canQueue)) return false;
+    } else if (filter === "exclusive") {
+      if (!n.exclusive) return false;
+    } else if (filter === "breakthrough") {
+      if (!n.breakthrough) return false;
+    } else if (filter === "researched") {
+      if (!n.done) return false;
+    }
+    if (searchLc) {
+      const name = n.tech.name.toLowerCase();
+      if (!name.includes(searchLc) && !n.tech.id.toLowerCase().includes(searchLc)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const hasSearch = searchLc.length > 0;
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -386,29 +449,81 @@ export function ResearchRadialTree({
         </div>
 
         {nodes.map((n) => {
+          const visible = nodeVisible(n);
           const dim =
-            focusBranch != null && focusBranch !== n.tech.category
+            (focusBranch != null && focusBranch !== n.tech.category) ||
+            (!visible && (filter !== "all" || hasSearch))
               ? "is-dim"
               : "";
           const selected = selectedId === n.tech.id;
+          const highlighted = highlightId === n.tech.id;
+          const searchHit =
+            hasSearch &&
+            visible &&
+            n.tech.name.toLowerCase().includes(searchLc);
+          const inQueue = queueIds?.has(n.tech.id);
           const label = n.locked ? scramble(n.tech.name) : n.tech.name;
           const stars =
             n.done && n.upgradeTotal > 0
               ? "★".repeat(n.upgradeStars) +
                 "☆".repeat(Math.max(0, n.upgradeTotal - n.upgradeStars))
               : "";
+
+          const onDragStart = (e: ReactDragEvent) => {
+            if (n.done || n.locked || busy) {
+              e.preventDefault();
+              return;
+            }
+            e.dataTransfer.setData(TECH_DND_MIME, n.tech.id);
+            e.dataTransfer.setData("text/plain", n.tech.id);
+            e.dataTransfer.effectAllowed = "copyMove";
+            onNodeDragStart?.(n.tech.id);
+          };
+
+          const onDragOver = (e: ReactDragEvent) => {
+            if (!onCognitioDrop || n.done || n.locked || busy) return;
+            const types = Array.from(e.dataTransfer.types || []);
+            if (
+              types.includes(COGNITIO_DND_MIME) ||
+              types.includes("text/plain")
+            ) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }
+          };
+
+          const onDrop = (e: ReactDragEvent) => {
+            if (!onCognitioDrop || n.done || n.locked || busy) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const fromCognitio =
+              e.dataTransfer.getData(COGNITIO_DND_MIME) ||
+              e.dataTransfer.getData("text/plain");
+            if (
+              fromCognitio === "cognitio" ||
+              fromCognitio === "currency.cognitio"
+            ) {
+              onCognitioDrop(n.tech.id);
+            }
+          };
+
           return (
             <button
               key={n.tech.id}
               type="button"
+              draggable={!n.done && !n.locked && !busy}
               className={[
                 "research-radial-node",
                 n.done && "is-done",
                 n.locked && "is-locked",
                 n.canBuy && "is-affordable",
+                !n.canBuy && n.canQueue && "is-queueable",
                 selected && "is-selected",
                 n.breakthrough && "is-breakthrough",
                 n.exclusive && "is-exclusive",
+                highlighted && "is-highlight",
+                searchHit && "is-search-hit",
+                inQueue && "is-queued",
                 dim,
               ]
                 .filter(Boolean)
@@ -421,12 +536,36 @@ export function ResearchRadialTree({
                   : CAT_COLOR[n.tech.category],
               }}
               onClick={() => onSelect(n.tech.id)}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              onPointerDown={(e) => {
+                if (!onNodeLongPress || n.done || busy) return;
+                const { clientX, clientY } = e;
+                clearLongPress();
+                longPressRef.current.techId = n.tech.id;
+                longPressRef.current.timer = window.setTimeout(() => {
+                  if (longPressRef.current.techId === n.tech.id) {
+                    onNodeLongPress(n.tech.id, clientX, clientY);
+                  }
+                  clearLongPress();
+                }, 420);
+              }}
+              onPointerUp={clearLongPress}
+              onPointerLeave={clearLongPress}
+              onPointerCancel={clearLongPress}
               title={
                 n.locked
                   ? "Закрыто"
-                  : `${n.tech.name} · ${n.cost} Знание${
-                      n.exclusive ? " · эксклюзив" : ""
-                    }${n.breakthrough ? " · брейкро" : ""}`
+                  : n.canBuy
+                    ? `${n.tech.name} · ${n.cost} Знание · доступно`
+                    : n.canQueue
+                      ? `${n.tech.name} · ${n.cost} Знание · в очередь`
+                      : `${n.tech.name} · ${n.cost} Знание${
+                          n.exclusive ? " · эксклюзив" : ""
+                        }${n.breakthrough ? " · брейкро" : ""}${
+                          inQueue ? " · в очереди" : ""
+                        }`
               }
             >
               <span className="research-radial-node-top">

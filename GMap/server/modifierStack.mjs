@@ -1,6 +1,8 @@
 /**
  * ModifierStack — collect → merge flats then mults → explain (P1.3).
  */
+import { resolveRace } from "./raceRegistry.mjs";
+import { collectRaceStateEffects } from "./raceStates.mjs";
 
 /**
  * @typedef {{ effect: string, args?: Record<string, unknown>, source?: { kind: string, id: string, label?: string } }} EffectInstance
@@ -205,13 +207,18 @@ export function resolvePlanetRaceComposition(planet, faction = null) {
 
 /**
  * Collect race trait effects weighted by percent (0-100).
+ * Uses Race Registry resolveRace (parent/fork composition).
+ * Optional opts: factionId, turn — also folds race_states.json modifiers.
  * @param {object} racesContent
  * @param {{ raceId: string, percent: number }[]} composition
+ * @param {{ factionId?: string, turn?: number }} [opts]
  */
-export function collectRaceEffects(racesContent, composition) {
+export function collectRaceEffects(racesContent, composition, opts = {}) {
+  const foldState = opts.factionId != null || opts.turn != null;
   const out = [];
   for (const share of composition || []) {
-    const race = racesContent?.[share.raceId];
+    const race =
+      resolveRace(share.raceId, racesContent) || racesContent?.[share.raceId];
     if (!race) continue;
     const w = (share.percent ?? 0) / 100;
     if (w <= 0) continue;
@@ -225,6 +232,14 @@ export function collectRaceEffects(racesContent, composition) {
             id: `${race.id}:${trait.id}`,
             label: race.name,
           },
+        });
+      }
+    }
+    if (foldState) {
+      for (const eff of collectRaceStateEffects(share.raceId, opts)) {
+        out.push({
+          ...eff,
+          args: scaleArgs(eff.effect, eff.args || {}, w),
         });
       }
     }

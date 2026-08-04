@@ -77,6 +77,16 @@ export type PlayerPlanetManageProps = {
   busy?: boolean;
   message?: string | null;
   onAction: (req: PlanetActionRequest) => void;
+  onOpenResearch?: (techId: string) => void;
+  buildQueue?: import("../viewer/system").BuildQueueItem[];
+  onChangeBuildQueue?: (
+    next: import("../viewer/system").BuildQueueItem[],
+  ) => void;
+  onPreviewBuild?: (
+    buildingId: string,
+  ) => Promise<import("../viewer/system").BuildPreviewResult | null>;
+  highlightCategory?: string | null;
+  onShowInEconomy?: (category: string) => void;
 };
 
 export type PlayerSystemManageProps = {
@@ -90,6 +100,10 @@ export type PlayerSystemManageProps = {
   busy?: boolean;
   message?: string | null;
   onAction: (req: SystemActionRequest) => void;
+  flowData?: import("../viewer/economyFlowTypes").EconomyFlowBreakdown | null;
+  buildings?: Record<string, BuildingDef>;
+  highlightCategory?: string | null;
+  onHighlightCategory?: (letter: string | null) => void;
 };
 
 /** Full drill-down: Galaxy → System schematic → Planet card. */
@@ -610,6 +624,12 @@ export function SystemView({
                 busy={planetManage.busy}
                 message={planetManage.message}
                 onAction={planetManage.onAction}
+                onOpenResearch={planetManage.onOpenResearch}
+                buildQueue={planetManage.buildQueue}
+                onChangeBuildQueue={planetManage.onChangeBuildQueue}
+                onPreviewBuild={planetManage.onPreviewBuild}
+                highlightCategory={planetManage.highlightCategory}
+                onShowInEconomy={planetManage.onShowInEconomy}
                 onBack={() => {
                   setPreviewPlanetId(drilledPlanet.id);
                   goSystem(system.id);
@@ -820,6 +840,10 @@ export function SystemView({
               legionsCount={legionsHere.length}
               canBuildBelt={canBuildBelt}
               previewPlanetId={previewPlanetId}
+              flowData={systemManage.flowData}
+              buildings={systemManage.buildings ?? planetManage?.buildings}
+              highlightCategory={systemManage.highlightCategory}
+              onHighlightCategory={systemManage.onHighlightCategory}
               onPreviewPlanet={(id) => {
                 if (applyPlanetTool(id)) return;
                 setPreviewPlanetId(id);

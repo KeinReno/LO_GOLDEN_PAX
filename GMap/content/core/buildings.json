@@ -93,7 +93,63 @@
       }
     ],
     "signature": "D→E: Energia → Bios T1–T3 (пища)",
-    "tradeoff": "занимает плодородную землю (-1 Materia cap)"
+    "tradeoff": "занимает плодородную землю (-1 Materia cap)",
+    "variant_base": true,
+    "variants": [
+      "building.farm.barial",
+      "building.farm.lord_dust"
+    ]
+  },
+  "building.farm.barial": {
+    "id": "building.farm.barial",
+    "base": "building.farm",
+    "kind": "farm",
+    "zone": "surface",
+    "name": "Агрокомплекс (бариальский)",
+    "tags": ["race_human_barial"],
+    "cost_mult": 0.85,
+    "extra_effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 1.1
+        }
+      }
+    ],
+    "flavor": "Бариальские контракты удешевляют агрологистику"
+  },
+  "building.farm.lord_dust": {
+    "id": "building.farm.lord_dust",
+    "base": "building.farm",
+    "kind": "farm",
+    "zone": "surface",
+    "name": "Агрокомплекс (лордов праха)",
+    "tags": ["race_lord_dust"],
+    "cost": {
+      "currency.metal": 12,
+      "currency.supply": 6,
+      "currency.energia": 3
+    },
+    "extra_effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.bios",
+          "amount": 1
+        }
+      }
+    ],
+    "upkeep_effects": [
+      {
+        "effect": "upkeep_flat",
+        "args": {
+          "resource": "currency.bios",
+          "amount": 1
+        }
+      }
+    ],
+    "flavor": "Призраки выращивают биомассу, но половину забирают себе"
   },
   "building.mine": {
     "id": "building.mine",
@@ -104,6 +160,7 @@
     "category": "A",
     "tier": 3,
     "faction": "generic",
+    "variant_base": true,
     "cost": {
       "currency.metal": 12,
       "currency.supply": 3
@@ -138,7 +195,68 @@
       }
     ],
     "signature": "Добывает Extracta T1–T3",
-    "tradeoff": "-1 Bios cap"
+    "tradeoff": "-1 Bios cap",
+    "variants": [
+      "building.mine.barial",
+      "building.mine.lord_dust"
+    ]
+  },
+  "building.mine.barial": {
+    "id": "building.mine.barial",
+    "base": "building.mine",
+    "kind": "mine",
+    "zone": "surface",
+    "name": "Шахта (бариальская)",
+    "tags": ["race_human_barial"],
+    "cost_mult": 0.85,
+    "extra_effects": [
+      {
+        "effect": "yield_flat",
+        "args": {
+          "currency": "currency.extracta",
+          "amount": 1
+        }
+      }
+    ],
+    "flavor": "Бариальцы удешевляют добычу за счёт коммерческих контрактов"
+  },
+  "building.mine.lord_dust": {
+    "id": "building.mine.lord_dust",
+    "base": "building.mine",
+    "kind": "mine",
+    "zone": "surface",
+    "name": "Шахта (лордов праха)",
+    "tags": ["race_lord_dust"],
+    "cost": {
+      "currency.metal": 18,
+      "currency.supply": 5
+    },
+    "extra_effects": [
+      {
+        "effect": "yield_flat",
+        "args": {
+          "currency": "currency.extracta",
+          "amount": 3
+        }
+      }
+    ],
+    "upkeep_effects": [
+      {
+        "effect": "upkeep_flat",
+        "args": {
+          "resource": "currency.bios",
+          "amount": 1
+        }
+      }
+    ],
+    "requires": [
+      {
+        "resource": "currency.energia",
+        "min_amount": 1,
+        "reason": "лорды праха размножаются только при энергии/бруннатите"
+      }
+    ],
+    "flavor": "Призрачные лорды извлекают сырьё из ткани реальности"
   },
   "building.factory": {
     "id": "building.factory",
@@ -242,7 +360,48 @@
       }
     ],
     "signature": "E→F: Bios → Cognitio T1–T3 (базовая наука)",
-    "tradeoff": "-1 E upkeep (учёные едят)"
+    "tradeoff": "-1 E upkeep (учёные едят)",
+    "variant_base": true,
+    "variants": [
+      "building.lab.narburi",
+      "building.lab.barial"
+    ]
+  },
+  "building.lab.narburi": {
+    "id": "building.lab.narburi",
+    "base": "building.lab",
+    "kind": "lab",
+    "zone": "surface",
+    "name": "Лаборатория (нарбури)",
+    "tags": ["race_horn_narburi"],
+    "extra_effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.cognitio",
+          "mult": 1.15
+        }
+      }
+    ],
+    "flavor": "Хорны-нарбури усиливают прирост знания"
+  },
+  "building.lab.barial": {
+    "id": "building.lab.barial",
+    "base": "building.lab",
+    "kind": "lab",
+    "zone": "surface",
+    "name": "Лаборатория (бариальская)",
+    "tags": ["race_human_barial"],
+    "cost_mult": 0.9,
+    "extra_effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "flavor": "Бариальские гранты удешевляют исследования"
   },
   "building.barracks": {
     "id": "building.barracks",

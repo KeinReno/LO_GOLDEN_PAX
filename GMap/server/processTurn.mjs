@@ -32,19 +32,44 @@ import {
 import { runOpinionTick, breakTreaty, bumpOpinion } from "./opinionTick.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { runLoyaltyPhase } from "./loyalty.mjs";
+import { expireRaceStateModifiers } from "./raceStates.mjs";
 import {
   processSystemTimers,
   applyRefugeeConvoy,
   applyGiveNpcTask,
   processNpcTasks,
 } from "./narrative.mjs";
-import { researchUpgrade } from "./techActions.mjs";
+import { researchUpgrade, researchTech, setResearchQueue } from "./techActions.mjs";
+import { transferTech } from "./techPool.mjs";
+import {
+  applyPlanetAction,
+  setBuildQueue,
+  pushSystemHistory,
+  BUILD_QUEUE_MAX,
+} from "./planetActions.mjs";
+import {
+  readLedger,
+  writeLedger,
+  ensureFactionEco,
+  ensureAllFactions,
+  adjustStock,
+} from "./ledger.mjs";
 import { hopPath, linkAllowsTravel } from "./pathfinding.mjs";
 import {
   getKnownFactionIds,
   getTradePartnerIds,
   refreshAllFactionContacts,
 } from "./factionIntel.mjs";
+import {
+  bumpSystemIntel,
+  canEspionage,
+  getIntelRules,
+  getLevel,
+  markEspionageUsed,
+  processIntelTick,
+  setKnowledgeLevel,
+  updateIntelFromDiplomacy,
+} from "./intel.mjs";
 import { resolveVisibleWithFog, readFog } from "./fogStore.mjs";
 import { computeAllFactionLogistics } from "./logistics.mjs";
 import { expireQuests } from "./questEngine.mjs";
@@ -335,6 +360,11 @@ function applyClaim(world, intent, journal) {
   } else {
     sys.ownerFactionId = intent.factionId;
     sys.contested = false;
+    pushSystemHistory(sys, {
+      turn: world.meta?.turn ?? 0,
+      type: "capture",
+      description: `Система захвачена`,
+    });
     journalPush(journal, {
       type: "claim_system",
       intentId: intent.id,
@@ -578,6 +608,196 @@ function applyScoutReveal(world, intent, journal) {
   return true;
 }
 
+function applyScoutWorld(world, intent, journal) {
+  const systemId =
+    intent.payload?.targetSystemId ||
+    intent.payload?.systemId ||
+    intent.payload?.toSystemId;
+  const fleetId = intent.payload?.fleetId;
+  const legionId = intent.payload?.legionId;
+  if (!systemId || !(world.systems ?? []).some((s) => s.id === systemId)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "system_missing",
+    });
+    return false;
+  }
+  const unit =
+    (fleetId && (world.fleets ?? []).find((f) => f.id === fleetId)) ||
+    (legionId && (world.legions ?? []).find((l) => l.id === legionId));
+  if (!unit || unit.factionId !== intent.factionId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "unit_required",
+    });
+    return false;
+  }
+  if (unit.systemId !== systemId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "unit_not_in_system",
+    });
+    return false;
+  }
+  const rules = getIntelRules();
+  const turn = world.meta?.turn ?? 0;
+  bumpSystemIntel(world, intent.factionId, systemId, rules.scoutWorldIntel, {
+    source: "scout",
+    turn,
+  });
+  journalPush(journal, {
+    type: "scout_world",
+    intentId: intent.id,
+    systemId,
+    factionId: intent.factionId,
+    intel: rules.scoutWorldIntel,
+  });
+  return true;
+}
+
+const ESPIONAGE_CATEGORIES = new Set([
+  "tech",
+  "building",
+  "unit",
+  "faction",
+  "race",
+]);
+
+function applyEspionage(world, intent, journal) {
+  const targetFactionId = intent.payload?.targetFactionId;
+  const category = String(intent.payload?.intelCategory || "faction");
+  if (!targetFactionId || targetFactionId === intent.factionId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "target_required",
+    });
+    return false;
+  }
+  if (!ESPIONAGE_CATEGORIES.has(category)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "bad_category",
+    });
+    return false;
+  }
+  const turn = world.meta?.turn ?? 0;
+  if (!canEspionage(intent.factionId, targetFactionId, turn)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "espionage_cooldown",
+    });
+    return false;
+  }
+  const rules = getIntelRules();
+  const ledger = ensureAllFactions(readLedger(), world);
+  const eco = ensureFactionEco(ledger, intent.factionId);
+  const cost = rules.espionageCognitioCost ?? 10;
+  const have = eco.stocks?.["currency.cognitio"] ?? 0;
+  if (have < cost) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "need_cognitio",
+    });
+    return false;
+  }
+  adjustStock(ledger, intent.factionId, "currency.cognitio", -cost, {
+    turn,
+    reason: "espionage",
+    intentId: intent.id,
+  });
+  writeLedger(ledger);
+
+  const detected = Math.random() < rules.espionageDetectionChance;
+  markEspionageUsed(intent.factionId, targetFactionId, turn);
+
+  // Raise knowledge for category entities related to target
+  const curFactionLevel = getLevel(intent.factionId, "faction", targetFactionId);
+  setKnowledgeLevel(
+    intent.factionId,
+    "faction",
+    targetFactionId,
+    Math.max(curFactionLevel, 1) + (category === "faction" ? 1 : 0),
+    { source: "espionage", turn },
+  );
+
+  if (category === "tech") {
+    const partnerEco = ensureFactionEco(readLedger(), targetFactionId);
+    for (const tid of partnerEco.unlockedTechs ?? []) {
+      const lv = getLevel(intent.factionId, "tech", tid);
+      setKnowledgeLevel(intent.factionId, "tech", tid, lv + 1, {
+        source: "espionage",
+        turn,
+      });
+    }
+  } else if (category === "race") {
+    const partner = (world.factions ?? []).find((f) => f.id === targetFactionId);
+    for (const r of partner?.races ?? []) {
+      const rid = typeof r === "string" ? r : r?.id;
+      if (!rid) continue;
+      const lv = getLevel(intent.factionId, "race", rid);
+      setKnowledgeLevel(intent.factionId, "race", rid, lv + 1, {
+        source: "espionage",
+        turn,
+      });
+    }
+  } else if (category === "unit") {
+    for (const f of world.fleets ?? []) {
+      if (f.factionId !== targetFactionId) continue;
+      const uid = f.unitDefId ?? f.templateId ?? f.classId;
+      if (!uid) continue;
+      const lv = getLevel(intent.factionId, "unit", uid);
+      setKnowledgeLevel(intent.factionId, "unit", uid, lv + 1, {
+        source: "espionage",
+        turn,
+      });
+    }
+  } else if (category === "building") {
+    for (const sys of world.systems ?? []) {
+      if (sys.ownerFactionId !== targetFactionId) continue;
+      for (const p of sys.planets ?? []) {
+        for (const b of p.buildings ?? []) {
+          const bid = typeof b === "string" ? b : b?.buildingId ?? b?.id;
+          if (!bid) continue;
+          const lv = getLevel(intent.factionId, "building", bid);
+          setKnowledgeLevel(intent.factionId, "building", bid, lv + 1, {
+            source: "espionage",
+            turn,
+          });
+        }
+      }
+    }
+  }
+
+  if (detected) {
+    const target = (world.factions ?? []).find((f) => f.id === targetFactionId);
+    const spy = (world.factions ?? []).find((f) => f.id === intent.factionId);
+    if (target) {
+      bumpOpinion(target, intent.factionId, -12, turn, "Разоблачённый шпионаж");
+    }
+    if (spy) {
+      bumpOpinion(spy, targetFactionId, -4, turn, "Провал шпионажа");
+    }
+  }
+
+  journalPush(journal, {
+    type: "espionage",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    targetFactionId,
+    category,
+    detected,
+    cognitioSpent: cost,
+  });
+  return true;
+}
+
 function applySetTax(world, intent, journal) {
   const slot = intent.payload?.taxSlot;
   const tierId = intent.payload?.tierId;
@@ -597,6 +817,143 @@ function applySetTax(world, intent, journal) {
     taxSlot: slot,
     tierId,
     note: "применится со следующего тика",
+  });
+  return true;
+}
+
+const FLOW_CATS = new Set(["A", "B", "C", "D", "E", "F"]);
+
+function applySetFlowPriority(world, intent, journal) {
+  const from = String(intent.payload?.from || "").toUpperCase();
+  const to = String(intent.payload?.to || "").toUpperCase();
+  const systemId = intent.payload?.systemId
+    ? String(intent.payload.systemId)
+    : "_faction";
+  if (!FLOW_CATS.has(from) || !FLOW_CATS.has(to) || from === to) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "нужны разные категории A–F (from→to)",
+    });
+    return false;
+  }
+  if (systemId !== "_faction") {
+    const sys = (world.systems ?? []).find((s) => s.id === systemId);
+    if (!sys || sys.ownerFactionId !== intent.factionId) {
+      journalPush(journal, {
+        type: "reject",
+        intentId: intent.id,
+        reason: "система не принадлежит фракции",
+      });
+      return false;
+    }
+  }
+  const ledger = ensureAllFactions(readLedger(), world);
+  const eco = ensureFactionEco(ledger, intent.factionId);
+  if (!eco.flowPriorities) eco.flowPriorities = {};
+  eco.flowPriorities[systemId] = { from, to, edge: `${from}->${to}` };
+  writeLedger(ledger);
+  journalPush(journal, {
+    type: "set_flow_priority",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    systemId,
+    from,
+    to,
+  });
+  return true;
+}
+
+const ECONOMIC_POLICY_PRESETS = {
+  military: {
+    label: "Военная экономика",
+    taxes: { "tax.industry": "high", "tax.supply": "low" },
+  },
+  trade: {
+    label: "Торговая экспансия",
+    taxes: { "tax.industry": "low", "tax.supply": "none" },
+  },
+  growth: {
+    label: "Мирный рост",
+    taxes: { "tax.industry": "none", "tax.supply": "none" },
+  },
+};
+
+function applyReserveStock(world, intent, journal) {
+  const currencyId = String(intent.payload?.currencyId || "");
+  const amount = Math.floor(Number(intent.payload?.amount) || 0);
+  const label = String(intent.payload?.label || "резерв").slice(0, 48);
+  if (!currencyId || amount < 0) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "нужны currencyId и amount ≥ 0",
+    });
+    return false;
+  }
+  const ledger = ensureAllFactions(readLedger(), world);
+  const eco = ensureFactionEco(ledger, intent.factionId);
+  const stock = Number(eco.stocks?.[currencyId] ?? 0);
+  if (!eco.stockReserves) eco.stockReserves = {};
+  if (amount === 0) {
+    delete eco.stockReserves[currencyId];
+  } else {
+    if (amount > stock) {
+      journalPush(journal, {
+        type: "reject",
+        intentId: intent.id,
+        reason: `недостаточно запаса (есть ${stock})`,
+      });
+      return false;
+    }
+    eco.stockReserves[currencyId] = { amount, label };
+  }
+  writeLedger(ledger);
+  journalPush(journal, {
+    type: "reserve_stock",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    currencyId,
+    amount,
+    label,
+  });
+  return true;
+}
+
+function applySetEconomicPolicy(world, intent, journal) {
+  const policyId = String(intent.payload?.policyId || "");
+  const preset = ECONOMIC_POLICY_PRESETS[policyId];
+  if (!preset) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "неизвестная доктрина (military|trade|growth)",
+    });
+    return false;
+  }
+  for (const [slot, tierId] of Object.entries(preset.taxes)) {
+    const result = queueTaxChange(intent.factionId, slot, tierId);
+    if (!result.ok) {
+      journalPush(journal, {
+        type: "reject",
+        intentId: intent.id,
+        reason: result.error || `налог ${slot}`,
+      });
+      return false;
+    }
+  }
+  const ledger = ensureAllFactions(readLedger(), world);
+  const eco = ensureFactionEco(ledger, intent.factionId);
+  eco.economicPolicy = policyId;
+  writeLedger(ledger);
+  journalPush(journal, {
+    type: "set_economic_policy",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    policyId,
+    label: preset.label,
+    taxes: preset.taxes,
+    note: "налоги в очереди на следующий тик",
   });
   return true;
 }
@@ -821,6 +1178,237 @@ function applyResearchUpgrade(world, intent, journal) {
   return true;
 }
 
+function applySetResearchQueue(world, intent, journal) {
+  const queue = intent.payload?.queue;
+  if (!Array.isArray(queue)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "queue_required",
+    });
+    return false;
+  }
+  const result = setResearchQueue(intent.factionId, queue);
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "set_research_queue",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    queue: result.eco?.researchQueue ?? [],
+  });
+  return true;
+}
+
+function applyTradeTech(world, intent, journal) {
+  const techId = intent.payload?.techId;
+  const targetFactionId = intent.payload?.targetFactionId;
+  const price = intent.payload?.price || {};
+  if (!techId || !targetFactionId) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "techId_and_target_required",
+    });
+    return false;
+  }
+  const turn = world.meta?.turn ?? 0;
+  const ledger = ensureAllFactions(readLedger(), world);
+  const fromEco = ensureFactionEco(ledger, intent.factionId);
+  const toEco = ensureFactionEco(ledger, targetFactionId);
+
+  // Buyer (target) pays price to seller (intent faction) if price set
+  for (const [cur, amt] of Object.entries(price)) {
+    const n = Number(amt || 0);
+    if (!n) continue;
+    const buyerStock = toEco.stocks?.[cur] ?? 0;
+    if (buyerStock < n) {
+      journalPush(journal, {
+        type: "reject",
+        intentId: intent.id,
+        reason: `buyer_cannot_afford_${cur}`,
+      });
+      return false;
+    }
+  }
+
+  const result = transferTech(fromEco, toEco, techId, {
+    turn,
+    fromFactionId: intent.factionId,
+    source: "trade",
+  });
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+
+  for (const [cur, amt] of Object.entries(price)) {
+    const n = Number(amt || 0);
+    if (!n) continue;
+    adjustStock(ledger, targetFactionId, cur, -n, {
+      turn,
+      reason: "tech_trade_pay",
+      intentId: intent.id,
+    });
+    adjustStock(ledger, intent.factionId, cur, n, {
+      turn,
+      reason: "tech_trade_recv",
+      intentId: intent.id,
+    });
+  }
+  writeLedger(ledger);
+  journalPush(journal, {
+    type: "trade_tech",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    targetFactionId,
+    techId,
+  });
+  // Buyer learns tech fully; seller already owns it
+  setKnowledgeLevel(targetFactionId, "tech", techId, 4, {
+    source: "trade",
+    turn,
+  });
+  setKnowledgeLevel(intent.factionId, "tech", techId, 4, {
+    source: "own",
+    turn,
+  });
+  updateIntelFromDiplomacy(world, intent.factionId, targetFactionId, "trade", {
+    turn,
+  });
+  updateIntelFromDiplomacy(world, targetFactionId, intent.factionId, "trade", {
+    turn,
+  });
+  return true;
+}
+
+function applySetBuildQueue(world, intent, journal) {
+  const queue = intent.payload?.queue;
+  if (!Array.isArray(queue)) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "queue_required",
+    });
+    return false;
+  }
+  if (queue.length > BUILD_QUEUE_MAX) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: "queue_too_long",
+    });
+    return false;
+  }
+  const result = setBuildQueue(intent.factionId, queue);
+  if (!result.ok) {
+    journalPush(journal, {
+      type: "reject",
+      intentId: intent.id,
+      reason: result.error,
+    });
+    return false;
+  }
+  journalPush(journal, {
+    type: "set_build_queue",
+    intentId: intent.id,
+    factionId: intent.factionId,
+    queue: result.eco?.buildQueue ?? [],
+  });
+  return true;
+}
+
+/**
+ * After economy tick: try to build the first queued building per faction.
+ * Leaves queue unchanged if unaffordable / blocked.
+ */
+function applyAllBuildQueues(world, turn, journal) {
+  const content = getContent();
+  const apMax = content.rules?.apPerTurn ?? 3;
+
+  for (const fac of world.factions ?? []) {
+    const ledger = ensureAllFactions(readLedger(), world);
+    const eco = ensureFactionEco(ledger, fac.id);
+    const queue = eco.buildQueue || [];
+    if (queue.length === 0) continue;
+    const first = queue[0];
+    if (!first?.systemId || !first?.planetId || !first?.buildingId) {
+      eco.buildQueue = queue.slice(1);
+      writeLedger(ledger);
+      continue;
+    }
+    const result = applyPlanetAction({
+      world,
+      factionId: fac.id,
+      action: "build",
+      systemId: first.systemId,
+      planetId: first.planetId,
+      buildingId: first.buildingId,
+      note: `queue:${fac.id}`,
+      apMax,
+    });
+    if (!result.ok) continue;
+    const led = readLedger();
+    const ecoAfter = ensureFactionEco(led, fac.id);
+    const q = ecoAfter.buildQueue || [];
+    if (
+      q[0]?.systemId === first.systemId &&
+      q[0]?.planetId === first.planetId &&
+      q[0]?.buildingId === first.buildingId
+    ) {
+      ecoAfter.buildQueue = q.slice(1);
+    } else {
+      ecoAfter.buildQueue = q.slice(1);
+    }
+    writeLedger(led);
+    journalPush(journal, {
+      type: "build_queue",
+      factionId: fac.id,
+      systemId: first.systemId,
+      planetId: first.planetId,
+      buildingId: first.buildingId,
+      buildingName: result.building?.name ?? first.buildingId,
+    });
+  }
+}
+
+/**
+ * After economy tick: try to research the first queued tech per faction.
+ * Leaves queue unchanged if unaffordable / blocked.
+ */
+function applyAllResearchQueues(world, turn, journal) {
+  const ledger = ensureAllFactions(readLedger(), world);
+  for (const fac of world.factions ?? []) {
+    const eco = ensureFactionEco(ledger, fac.id);
+    const queue = eco.researchQueue || [];
+    if (queue.length === 0) continue;
+    const firstTechId = queue[0];
+    const result = researchTech(fac.id, firstTechId, {
+      turn,
+      world,
+      intentId: firstTechId,
+    });
+    if (result.ok) {
+      journalPush(journal, {
+        type: "research_queue",
+        factionId: fac.id,
+        techId: firstTechId,
+        techName: result.tech?.name ?? firstTechId,
+      });
+    }
+  }
+}
+
 const APPLIERS = {
   "intent.move_fleet": applyMoveFleet,
   "intent.move_legion": applyMoveLegion,
@@ -832,7 +1420,12 @@ const APPLIERS = {
   "intent.request_card_battle": applyRequestCardBattle,
   "intent.play_card": applyPlayCard,
   "intent.scout_reveal": applyScoutReveal,
+  "intent.scout_world": applyScoutWorld,
+  "intent.espionage": applyEspionage,
   "intent.set_tax": applySetTax,
+  "intent.set_flow_priority": applySetFlowPriority,
+  "intent.reserve_stock": applyReserveStock,
+  "intent.set_economic_policy": applySetEconomicPolicy,
   "intent.transfer": applyTransfer,
   "intent.break_treaty": applyBreakTreaty,
   "intent.market_convert": applyMarketConvert,
@@ -841,6 +1434,9 @@ const APPLIERS = {
   "intent.refugee_convoy": applyRefugeeConvoyIntent,
   "intent.give_npc_task": applyGiveNpcTask,
   "intent.research_upgrade": applyResearchUpgrade,
+  "intent.set_research_queue": applySetResearchQueue,
+  "intent.set_build_queue": applySetBuildQueue,
+  "intent.trade_tech": applyTradeTech,
   "intent.throw_quest_dice": applyThrowQuestDice,
   "intent.resolve_quest_choice": applyResolveQuestChoice,
   "intent.resolve_quest_dice": applyResolveQuestDice,
@@ -946,6 +1542,9 @@ export function processTurn(opts = {}) {
   refreshAllFactionContacts(world, (w, fid) =>
     resolveVisibleWithFog(w, fid, readFog()),
   );
+  processIntelTick(world, (w, fid) =>
+    resolveVisibleWithFog(w, fid, readFog()),
+  );
 
   // S4 logistics before combat + economy so combatDefMult / production use this tick's graph.
   computeAllFactionLogistics(world, getContent());
@@ -1018,8 +1617,21 @@ export function processTurn(opts = {}) {
   const opinion = runOpinionTick(world, turn, getContent());
   for (const e of opinion.journal) journalPush(journal, e);
 
+  const raceStateExpiry = expireRaceStateModifiers(turn);
+  for (const id of raceStateExpiry.expired) {
+    journalPush(journal, {
+      type: "race_state_expired",
+      turn,
+      modifierId: id,
+      description: `Истёк расовый модификатор ${id}`,
+    });
+  }
+
   const econ = runEconomyTick(world, turn);
   for (const e of econ.journal) journalPush(journal, e);
+
+  applyAllResearchQueues(world, turn, journal);
+  applyAllBuildQueues(world, turn, journal);
 
   const loyalty = runLoyaltyPhase(world, getContent());
   for (const e of loyalty.journal) journalPush(journal, e);

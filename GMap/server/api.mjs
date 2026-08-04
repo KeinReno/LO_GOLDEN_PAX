@@ -69,6 +69,7 @@ import {
   publicEconomyPayload,
   readLedger,
   ensureAllFactions,
+  ensureFactionEco,
   writeLedger,
 } from "./ledger.mjs";
 import { queueTaxChange } from "./economyTick.mjs";
@@ -86,6 +87,15 @@ import {
   getTradePartnerIds,
   getDiplomacyRelation,
 } from "./factionIntel.mjs";
+import {
+  bootstrapOwnKnowledge,
+  ensureFactionIntel,
+  getLevel,
+  maskFactionForIntel,
+  publicIntelPayload,
+  approximateStat,
+  setKnowledgeLevel,
+} from "./intel.mjs";
 import {
   getDiploOffersForFaction,
   createDiploOffer,
@@ -162,8 +172,12 @@ function authenticatePlayerFaction(body, world) {
 }
 
 function playerSessionPayload(world, faction) {
-  const filtered = filterWorldForFaction(world, faction.id);
   const eco = getFactionPublicEco(faction.id);
+  bootstrapOwnKnowledge(world, faction.id, {
+    turn: world.meta?.turn ?? 0,
+    unlockedTechs: eco.unlockedTechs,
+  });
+  const filtered = filterWorldForFaction(world, faction.id);
   const apMax = eco.rules?.apPerTurn
     ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
     : resolveApMax(getContent().rules?.apPerTurn ?? 3, buildModifierStack([]));
@@ -177,50 +191,151 @@ function playerSessionPayload(world, faction) {
     economy: publicEconomyPayload(eco),
     briefing: getFactionBriefing(faction.id, world),
     diploOffers,
+    intel: publicIntelPayload(faction.id),
     ...filtered,
   };
+}
+
+function maskFleetOrLegion(unit, viewerFactionId, intelRow) {
+  if (!unit) return null;
+  if (unit.factionId === viewerFactionId) return unit;
+  const uid = unit.unitDefId ?? unit.templateId ?? unit.classId;
+  const unitLevel = uid
+    ? Number(intelRow.knownUnits?.[uid] ?? 0)
+    : Number(intelRow.knownFactions?.[unit.factionId] ?? 1);
+  const factionLevel = Number(intelRow.knownFactions?.[unit.factionId] ?? 0);
+  const level = Math.max(unitLevel, Math.min(factionLevel, 2), 1);
+
+  if (level >= 4) {
+    const { gmNotes: _g, ...rest } = unit;
+    return rest;
+  }
+  if (level >= 3) {
+    const { gmNotes: _g, hiddenProperties: _h, ...rest } = unit;
+    return rest;
+  }
+  if (level >= 2) {
+    return {
+      id: unit.id,
+      name: unit.name,
+      factionId: unit.factionId,
+      systemId: unit.systemId,
+      classId: unit.classId,
+      unitDefId: unit.unitDefId,
+      templateId: unit.templateId,
+      stance: unit.stance,
+      power:
+        unit.power != null ? approximateStat(unit.power) : undefined,
+      level: 2,
+    };
+  }
+  return {
+    id: unit.id,
+    name: unit.name,
+    factionId: unit.factionId,
+    systemId: unit.systemId,
+    classId: unit.classId,
+    level: 1,
+  };
+}
+
+function maskPlanetBuildings(planet, viewerFactionId, systemOwnerId, intelRow) {
+  if (!planet) return planet;
+  const buildings = (planet.buildings ?? []).map((b) => {
+    const bid = typeof b === "string" ? b : b?.buildingId ?? b?.id;
+    const owned =
+      systemOwnerId === viewerFactionId ||
+      (typeof b === "object" && b?.factionId === viewerFactionId);
+    if (owned) return b;
+    const level = bid ? Number(intelRow.knownBuildings?.[bid] ?? 1) : 1;
+    if (typeof b === "string") {
+      return level >= 1 ? b : null;
+    }
+    if (level >= 3) {
+      const { hiddenProperties: _h, gmNotes: _g, ...rest } = b;
+      return rest;
+    }
+    if (level >= 2) {
+      return {
+        id: b.id,
+        buildingId: b.buildingId ?? bid,
+        name: b.name,
+        tier: b.tier,
+        level: 2,
+      };
+    }
+    return {
+      id: b.id,
+      buildingId: b.buildingId ?? bid,
+      name: b.name,
+      level: 1,
+    };
+  }).filter(Boolean);
+  return { ...planet, buildings };
 }
 
 function filterWorldForFaction(world, factionId) {
   const visible = getVisibleSystemIds(world, factionId);
   const knownIds = getKnownFactionIds(world, factionId, [...visible]);
   const tradePartnerIds = getTradePartnerIds(world, factionId, knownIds);
-  const systems = (world.systems ?? []).filter((s) => visible.has(s.id));
+  ensureFactionIntel(factionId);
+  bootstrapOwnKnowledge(world, factionId, {
+    turn: world.meta?.turn ?? 0,
+  });
+  const intelRow = ensureFactionIntel(factionId);
+
+  const systems = (world.systems ?? [])
+    .filter((s) => visible.has(s.id))
+    .map((s) => {
+      const { notes, gmNotes, timers, ...rest } = s;
+      const planets = (rest.planets ?? []).map((p) =>
+        maskPlanetBuildings(p, factionId, s.ownerFactionId, intelRow),
+      );
+      return { ...rest, planets };
+    });
   const systemSet = new Set(systems.map((s) => s.id));
   const links = (world.links ?? []).filter(
     (l) => systemSet.has(l.fromId) && systemSet.has(l.toId),
   );
-  const fleets = (world.fleets ?? []).filter(
-    (f) => f.factionId === factionId || systemSet.has(f.systemId),
-  );
-  const legions = (world.legions ?? []).filter(
-    (l) => l.factionId === factionId || systemSet.has(l.systemId),
-  );
+  const fleets = (world.fleets ?? [])
+    .filter((f) => f.factionId === factionId || systemSet.has(f.systemId))
+    .map((f) => maskFleetOrLegion(f, factionId, intelRow))
+    .filter(Boolean);
+  const legions = (world.legions ?? [])
+    .filter((l) => l.factionId === factionId || systemSet.has(l.systemId))
+    .map((l) => maskFleetOrLegion(l, factionId, intelRow))
+    .filter(Boolean);
   const playerOrders = readJson(ORDERS_PATH, []).filter(
     (o) => o.factionId === factionId,
   );
+
+  // Factions: known boolean ∪ intel level ≥ 1; mask by level
   const factions = (world.factions ?? [])
-    .filter((f) => knownIds.has(f.id))
     .map((f) => {
-      const { gmNotes: _fgm, ...rest } = f;
-      const npcs = (f.npcs ?? []).map((n) => {
-        const { gmNotes: _ngm, ...nRest } = n;
-        if (f.id !== factionId && n.status === "hidden") return null;
-        return nRest;
-      }).filter(Boolean);
-      return {
-        ...rest,
-        password: f.id === factionId ? f.password : "••••",
-        // Other polities: hide court details; own faction keeps public court.
-        notes: f.id === factionId ? f.notes : undefined,
-        npcs: f.id === factionId ? npcs : undefined,
-      };
-    });
+      if (f.id === factionId) {
+        const { gmNotes: _fgm, ...rest } = f;
+        const npcs = (f.npcs ?? [])
+          .map((n) => {
+            const { gmNotes: _ngm, ...nRest } = n;
+            return nRest;
+          })
+          .filter(Boolean);
+        return { ...rest, npcs };
+      }
+      const level = getLevel(factionId, "faction", f.id);
+      if (level < 1 && !knownIds.has(f.id)) return null;
+      const effective = level < 1 && knownIds.has(f.id) ? 1 : level;
+      return maskFactionForIntel(f, effective, factionId);
+    })
+    .filter(Boolean);
+
   const diplomacy = (world.diplomacy ?? []).filter((d) => {
     const touchesSelf = d.aId === factionId || d.bId === factionId;
     if (!touchesSelf) return false;
     const other = d.aId === factionId ? d.bId : d.aId;
-    return knownIds.has(other);
+    return (
+      knownIds.has(other) || getLevel(factionId, "faction", other) >= 1
+    );
   });
 
   return {
@@ -229,10 +344,7 @@ function filterWorldForFaction(world, factionId) {
     tradePartnerIds,
     world: {
       ...world,
-      systems: systems.map((s) => {
-        const { notes, gmNotes, timers, ...rest } = s;
-        return rest;
-      }),
+      systems,
       links,
       fleets,
       legions,
@@ -680,6 +792,36 @@ export function createApiMiddleware() {
         const fog = addPermanentReveal(body.factionId, body.systemId);
         bumpTableRevision();
         sendJson(res, 200, { ok: true, fog });
+        return;
+      }
+
+      if (url.pathname === "/api/intel/set" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        if (!body?.factionId || !body?.entityType || !body?.entityId) {
+          sendJson(res, 400, {
+            error: "factionId + entityType + entityId + level",
+          });
+          return;
+        }
+        const world = readLiveBoard();
+        const turn = world?.meta?.turn ?? 0;
+        const changed = setKnowledgeLevel(
+          body.factionId,
+          body.entityType,
+          body.entityId,
+          body.level ?? 1,
+          { source: body.source || "gm", turn },
+        );
+        bumpTableRevision();
+        sendJson(res, 200, {
+          ok: true,
+          changed,
+          intel: publicIntelPayload(body.factionId),
+        });
         return;
       }
 
@@ -1300,6 +1442,201 @@ export function createApiMiddleware() {
           tech: result.tech,
           economy: getFactionPublicEco(body.factionId),
         });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/research-queue" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!Array.isArray(body.queue)) {
+          sendJson(res, 400, { error: "queue required (array of techId)" });
+          return;
+        }
+        const { setResearchQueue } = await import("./techActions.mjs");
+        const result = setResearchQueue(body.factionId, body.queue);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          queue: result.eco?.researchQueue ?? [],
+          economy: getFactionPublicEco(body.factionId),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/research-accelerate" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!body.techId) {
+          sendJson(res, 400, { error: "techId required" });
+          return;
+        }
+        const { accelerateResearch } = await import("./techActions.mjs");
+        const result = accelerateResearch(body.factionId, body.techId, {
+          world,
+          turn: world.meta?.turn ?? null,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          tech: result.tech,
+          cost: result.cost,
+          economy: getFactionPublicEco(body.factionId),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/research-path" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body.techId) {
+          sendJson(res, 400, { error: "techId required" });
+          return;
+        }
+        const ledger = readLedger();
+        const eco = ensureFactionEco(ledger, body.factionId || "");
+        const { researchPathTo } = await import("./techActions.mjs");
+        const path = researchPathTo(
+          body.techId,
+          eco.unlockedTechs || [],
+          getContent(),
+        );
+        sendJson(res, 200, { ok: true, ...path });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/tech-market" && req.method === "GET") {
+        const { listTechMarket } = await import("./techPool.mjs");
+        const listings = listTechMarket(getContent());
+        sendJson(res, 200, { ok: true, listings });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/build-queue" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!Array.isArray(body.queue)) {
+          sendJson(res, 400, { error: "queue required (array)" });
+          return;
+        }
+        const { setBuildQueue } = await import("./planetActions.mjs");
+        const result = setBuildQueue(body.factionId, body.queue);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          queue: result.eco?.buildQueue ?? [],
+          economy: getFactionPublicEco(body.factionId),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/preview-build" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!body.systemId || !body.planetId || !body.buildingId) {
+          sendJson(res, 400, {
+            error: "systemId, planetId, buildingId required",
+          });
+          return;
+        }
+        const { previewBuild } = await import("./planetActions.mjs");
+        const result = await previewBuild({
+          world,
+          factionId: body.factionId,
+          systemId: body.systemId,
+          planetId: body.planetId,
+          buildingId: body.buildingId,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (url.pathname === "/api/planet/building-variants" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Карта ещё не опубликована" });
+          return;
+        }
+        if (!body.systemId || !body.planetId || !body.buildingId) {
+          sendJson(res, 400, {
+            error: "systemId, planetId, buildingId required",
+          });
+          return;
+        }
+        const { listBuildingVariantsForPlanet } = await import(
+          "./planetActions.mjs"
+        );
+        const result = listBuildingVariantsForPlanet(
+          world,
+          body.systemId,
+          body.planetId,
+          body.buildingId,
+        );
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, result);
         return;
       }
 

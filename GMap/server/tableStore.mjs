@@ -78,6 +78,7 @@ export function backupTurnSnapshot(turn, reason = "manual") {
   copyIf(path.join(DATA_DIR, "diplo-offers.json"), "diplo-offers.json");
   copyIf(path.join(DATA_DIR, "market-membership.json"), "market-membership.json");
   copyIf(path.join(DATA_DIR, "market-history.json"), "market-history.json");
+  copyIf(path.join(DATA_DIR, "race_states.json"), "race_states.json");
   writeJson(path.join(dir, "backup-meta.json"), {
     turn: turn ?? null,
     reason,

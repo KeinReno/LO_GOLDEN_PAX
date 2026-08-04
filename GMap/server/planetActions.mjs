@@ -14,6 +14,14 @@ import { resolveAlias } from "./normalizeWorld.mjs";
 import { canBuild as canBuildSlots, resolveSlots, resourceMatchesRequire } from "./slotResolver.mjs";
 import { canBuildWithTech, factionHasProperty } from "./techActions.mjs";
 import { canFactionBuildDef, raceIdsFromComposition } from "./buildingAccess.mjs";
+import { CATEGORIES } from "./flowEngine.mjs";
+import {
+  listAvailableVariants,
+  resolveVariant,
+} from "./variantResolver.mjs";
+
+export const BUILD_QUEUE_MAX = 5;
+const SYSTEM_HISTORY_MAX = 40;
 
 function normalizeColonyType(type) {
   if (!type || type === "none") return "none";
@@ -49,6 +57,72 @@ function canColonizePlanet(system, planet, factionId) {
 
 function buildingDefs(content) {
   return content.buildings || {};
+}
+
+/**
+ * Available building variants for a planet's race composition.
+ */
+export function listBuildingVariantsForPlanet(
+  world,
+  systemId,
+  planetId,
+  buildingId,
+) {
+  const content = getContent();
+  const found = findSystemPlanet(world, systemId, planetId);
+  if (found.error) return { ok: false, error: found.error };
+  const composition = found.planet.raceComposition || [];
+  const listed = listAvailableVariants(
+    "buildings",
+    buildingId,
+    composition,
+    content,
+    content.rules,
+  );
+  return {
+    ok: true,
+    baseId: listed.baseId,
+    threshold: listed.threshold,
+    variants: listed.available.map((a) => ({
+      id: a.id,
+      name: a.def?.name,
+      raceTag: a.raceTag,
+      cost: a.def?.cost,
+      flavor: a.def?.flavor,
+      legacy: !!a.legacy,
+    })),
+  };
+}
+
+/**
+ * Resolve a building id that may be a racial variant.
+ */
+function resolveBuildingDef(content, buildingId, composition) {
+  const resolved = resolveVariant("buildings", buildingId, content, {
+    composition,
+    rules: content.rules,
+  });
+  if (resolved?.def) return resolved;
+  const raw = buildingDefs(content)[buildingId];
+  if (!raw) return null;
+  return { id: buildingId, def: raw, baseId: buildingId };
+}
+
+/**
+ * Append a soft history row on a star system (mutates system).
+ */
+export function pushSystemHistory(system, entry) {
+  if (!system || !entry) return;
+  const row = {
+    turn: Number(entry.turn) || 0,
+    type: entry.type || "build",
+    description: String(entry.description || ""),
+  };
+  if (entry.planetId) row.planetId = entry.planetId;
+  if (entry.buildingId) row.buildingId = entry.buildingId;
+  const list = Array.isArray(system.history) ? system.history : [];
+  list.push(row);
+  system.history = list.slice(-SYSTEM_HISTORY_MAX);
 }
 
 function colonyDefs(content) {
@@ -198,8 +272,29 @@ export function applyPlanetAction({
     if ((planet.population ?? 0) <= 0 && normalizeColonyType(planet.colonyType) === "none") {
       return { ok: false, error: "Сначала колонизируйте планету" };
     }
-    const def = buildingDefs(content)[buildingId];
-    if (!def) return { ok: false, error: "Неизвестное здание" };
+    const resolved = resolveBuildingDef(
+      content,
+      buildingId,
+      planet.raceComposition || [],
+    );
+    if (!resolved?.def) return { ok: false, error: "Неизвестное здание" };
+    const def = resolved.def;
+    // Variant must be available for this planet's race mix
+    if (def.base && def.base !== buildingId) {
+      const listed = listAvailableVariants(
+        "buildings",
+        def.base,
+        planet.raceComposition || [],
+        content,
+        content.rules,
+      );
+      if (!listed.available.some((a) => a.id === buildingId || a.id === resolved.id)) {
+        return {
+          ok: false,
+          error: "Этот расовый вариант недоступен при текущем составе населения",
+        };
+      }
+    }
     if (
       !canFactionBuildDef(def, factionId, {
         raceIds: raceIdsFromComposition(planet.raceComposition),
@@ -246,7 +341,8 @@ export function applyPlanetAction({
 
     const building = {
       id: `bld_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      buildingId,
+      buildingId: resolved.id || buildingId,
+      baseBuildingId: resolved.baseId || buildingId,
       name: def.name,
       kind: def.kind,
       zone,
@@ -266,6 +362,13 @@ export function applyPlanetAction({
     });
     spendCost(ledger, factionId, cost, turn, intent.id, "build");
     writeLedger(ledger);
+    pushSystemHistory(system, {
+      turn,
+      type: "build",
+      planetId,
+      buildingId,
+      description: `Построено: ${def.name} на ${planet.name}`,
+    });
     writeLiveBoard(world, { backup: false, reason: "planet_build" });
     // New economy model: surface slot requirements (advisory, non-blocking)
     let slotInfo = null;
@@ -309,6 +412,13 @@ export function applyPlanetAction({
       note,
       turn,
       apCost,
+    });
+    pushSystemHistory(system, {
+      turn,
+      type: "demolish",
+      planetId,
+      buildingId: removed.buildingId || removed.id,
+      description: `Снесено: ${removed.name || removed.kind} на ${planet.name}`,
     });
     writeLiveBoard(world, { backup: false, reason: "planet_demolish" });
     return { ok: true, intent, world, planet, removed };
@@ -360,6 +470,12 @@ export function applyPlanetAction({
     });
     spendCost(ledger, factionId, cost, turn, intent.id, "colonize");
     writeLedger(ledger);
+    pushSystemHistory(system, {
+      turn,
+      type: "colonize",
+      planetId,
+      description: `Колонизирована планета ${planet.name} (${targetType})`,
+    });
     writeLiveBoard(world, { backup: false, reason: "planet_colonize" });
     return { ok: true, intent, world, planet, cost };
   }
@@ -608,4 +724,134 @@ export function collectPlanetYields(system, content) {
     }
   }
   return yields;
+}
+
+function diffTotals(before, after) {
+  const delta = {};
+  for (const cat of CATEGORIES) {
+    const b = before?.[cat]?.net ?? 0;
+    const a = after?.[cat]?.net ?? 0;
+    delta[cat] = {
+      before: b,
+      after: a,
+      delta: a - b,
+      rateBefore: before?.[cat]?.rate ?? 0,
+      rateAfter: after?.[cat]?.rate ?? 0,
+    };
+  }
+  return delta;
+}
+
+/**
+ * Non-mutating preview of flow totals if a building were constructed.
+ */
+export async function previewBuild({
+  world,
+  factionId,
+  systemId,
+  planetId,
+  buildingId,
+}) {
+  const content = getContent();
+  const def = buildingDefs(content)[buildingId];
+  if (!def) return { ok: false, error: "Неизвестное здание" };
+
+  const found = findSystemPlanet(world, systemId, planetId);
+  if (found.error) return { ok: false, error: found.error };
+
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const { computeFlowBreakdown } = await import("./economyTick.mjs");
+
+  const beforeBreak = computeFlowBreakdown(world, factionId, content, eco);
+  const before = beforeBreak.totals || {};
+
+  const listKey = def.zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
+  const virtual = {
+    id: `preview_${buildingId}`,
+    buildingId,
+    name: def.name,
+    kind: def.kind,
+    zone: def.zone || "surface",
+    slotFills: {},
+  };
+
+  const clonedWorld = {
+    ...world,
+    systems: (world.systems ?? []).map((sys) => {
+      if (sys.id !== systemId) return sys;
+      return {
+        ...sys,
+        planets: (sys.planets ?? []).map((p) => {
+          if (p.id !== planetId) return p;
+          return {
+            ...p,
+            [listKey]: [...(p[listKey] ?? []), virtual],
+          };
+        }),
+      };
+    }),
+  };
+
+  const afterBreak = computeFlowBreakdown(clonedWorld, factionId, content, eco);
+  const after = afterBreak.totals || {};
+  const cost = scaledCost(def.cost, buildCostMult(factionId));
+
+  return {
+    ok: true,
+    building: {
+      id: def.id,
+      name: def.name,
+      kind: def.kind,
+      category: def.category ?? null,
+      tier: def.tier ?? null,
+      zone: def.zone || "surface",
+      ap: def.ap ?? 1,
+      cost,
+    },
+    before,
+    after,
+    delta: diffTotals(before, after),
+    buildTurns: 1,
+  };
+}
+
+/**
+ * Replace faction build queue (planned builds, max BUILD_QUEUE_MAX).
+ */
+export function setBuildQueue(factionId, queue) {
+  const content = getContent();
+  const buildings = buildingDefs(content);
+  if (!Array.isArray(queue)) {
+    return { ok: false, error: "queue must be an array" };
+  }
+  if (queue.length > BUILD_QUEUE_MAX) {
+    return { ok: false, error: `Очередь максимум ${BUILD_QUEUE_MAX}` };
+  }
+
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const clean = [];
+
+  for (const raw of queue) {
+    if (!raw || typeof raw !== "object") continue;
+    const systemId = String(raw.systemId || "");
+    const planetId = String(raw.planetId || "");
+    const buildingId = String(raw.buildingId || "");
+    if (!systemId || !planetId || !buildingId) continue;
+    if (!buildings[buildingId]) {
+      return { ok: false, error: `Неизвестное здание: ${buildingId}` };
+    }
+    clean.push({ systemId, planetId, buildingId });
+  }
+
+  eco.buildQueue = clean;
+  writeLedger(ledger);
+  return {
+    ok: true,
+    eco: {
+      buildQueue: [...clean],
+      researchQueue: [...(eco.researchQueue || [])],
+    },
+  };
 }

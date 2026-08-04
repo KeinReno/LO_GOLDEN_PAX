@@ -12,6 +12,7 @@ import { WorkbenchShell } from "../ui/WorkbenchShell";
 import { StatusStrip } from "../ui/StatusStrip";
 import {
   BookMarked,
+  BookOpen,
   Coins,
   Flag,
   FlaskConical,
@@ -78,15 +79,21 @@ import { useWorldStore } from "../state/worldStore";
 import { EmpireResourceStrip } from "./EmpireResourceStrip";
 import { PlayerHqHome, PlayerOrdersPanel } from "./PlayerHqPanels";
 import { MarketPanel, type MarketBookStats, type MarketTab } from "./MarketPanel";
+import { EconomyPanel } from "./economy";
+import { CodexPanel } from "./codex";
 import {
   countAffordableResearch,
   RESEARCH_BRANCH_BY_DIGIT,
   ResearchPanel,
 } from "./ResearchPanel";
+import {
+  findPlanetForBuilding,
+  systemsForTechHighlight,
+} from "./research";
 import type { EconomyCategory } from "../state/contentCatalog";
 import { ViewerDiploPanel } from "./ViewerDiploPanel";
 import type { DiploOffer } from "./DealDesk";
-import { ForcesArmory } from "./ForcesArmory";
+import { ForcesDeck } from "./forces/ForcesDeck";
 import {
   COMBAT_STANCE_LABELS,
   countOpenEngagements,
@@ -140,11 +147,13 @@ type PlayerView =
   | "forces"
   | "orders"
   | "research"
+  | "economy"
   | "market"
   | "diplomacy"
   | "quests"
   | "map"
-  | "rp";
+  | "rp"
+  | "codex";
 
 /** Sub-tabs when биржа room is open (1–4). */
 const MARKET_TAB_BY_DIGIT: Record<string, MarketTab> = {
@@ -356,6 +365,19 @@ export function ViewerPage() {
     Record<string, { id: string; name: string; tier?: number; faction?: string }>
   >({});
   const [systemBusy, setSystemBusy] = useState(false);
+  const [flowPriorityBusy, setFlowPriorityBusy] = useState(false);
+  const [stockBusy, setStockBusy] = useState(false);
+  const [policyBusy, setPolicyBusy] = useState(false);
+  const [marketPrefillCurrency, setMarketPrefillCurrency] = useState<
+    string | null
+  >(null);
+  /** System opened from Economy panel (master–detail highlight). */
+  const [economyLinkedSystemId, setEconomyLinkedSystemId] = useState<
+    string | null
+  >(null);
+  const [ecoHighlightCategory, setEcoHighlightCategory] = useState<
+    string | null
+  >(null);
   const [systemMsg, setSystemMsg] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -364,6 +386,18 @@ export function ViewerPage() {
   const [marketTab, setMarketTab] = useState<MarketTab>("quotes");
   const [researchBranch, setResearchBranch] =
     useState<EconomyCategory | null>(null);
+  const [researchHighlightTechId, setResearchHighlightTechId] = useState<
+    string | null
+  >(null);
+  const [techMapHighlightIds, setTechMapHighlightIds] = useState<string[]>(
+    [],
+  );
+  const [economyFocusCategory, setEconomyFocusCategory] = useState<
+    string | null
+  >(null);
+  const [forcesHighlightDefIds, setForcesHighlightDefIds] = useState<
+    string[] | null
+  >(null);
   const [marketBookStats, setMarketBookStats] = useState<MarketBookStats>({
     myOffers: 0,
     peerLots: 0,
@@ -867,6 +901,7 @@ export function ViewerPage() {
     setRpFloatOpen(v === "rp");
     if (v !== "map") setSheetOpen(false);
     setTouchMoveArmed(false);
+    if (v !== "economy") setEconomyLinkedSystemId(null);
     writeStoredStart(v === "map" ? "map" : "hq");
   };
 
@@ -939,33 +974,145 @@ export function ViewerPage() {
 
   const setTax = async (taxSlot: string, tierId: string) => {
     if (!payload) return;
+    setPolicyBusy(true);
     const taxLabels: Record<string, Record<string, string>> = {
       "tax.industry": { none: "0%", low: "10%", mid: "20%", high: "35%" },
       "tax.supply": { none: "0%", low: "10%", mid: "20%" },
     };
     const label = taxLabels[taxSlot]?.[tierId] ?? tierId;
-    await submitPlayerIntent(
-      "intent.set_tax",
-      { taxSlot, tierId },
-      `Налог в очереди: ${label}`,
-      () => {
-        setPayload({
-          ...payload,
-          economy: {
-            ...payload.economy!,
-            stocks: payload.economy?.stocks ?? {},
-            taxes: payload.economy?.taxes ?? {},
-            pendingPolicy: {
-              ...(payload.economy?.pendingPolicy ?? {}),
-              taxes: {
-                ...(payload.economy?.pendingPolicy?.taxes || {}),
-                [taxSlot]: tierId,
+    try {
+      await submitPlayerIntent(
+        "intent.set_tax",
+        { taxSlot, tierId },
+        `Налог в очереди: ${label}`,
+        () => {
+          setPayload({
+            ...payload,
+            economy: {
+              ...payload.economy!,
+              stocks: payload.economy?.stocks ?? {},
+              taxes: payload.economy?.taxes ?? {},
+              pendingPolicy: {
+                ...(payload.economy?.pendingPolicy ?? {}),
+                taxes: {
+                  ...(payload.economy?.pendingPolicy?.taxes || {}),
+                  [taxSlot]: tierId,
+                },
               },
             },
-          },
+          });
+        },
+      );
+    } finally {
+      setPolicyBusy(false);
+    }
+  };
+
+  const setFlowPriority = async (opts: {
+    from: string;
+    to: string;
+    systemId?: string | null;
+  }) => {
+    if (!payload) return;
+    setFlowPriorityBusy(true);
+    const key = opts.systemId || "_faction";
+    const ok = await submitPlayerIntent(
+      "intent.set_flow_priority",
+      {
+        from: opts.from,
+        to: opts.to,
+        ...(opts.systemId ? { systemId: opts.systemId } : {}),
+      },
+      `Приоритет ${opts.from}→${opts.to}`,
+      () => {
+        setPayload((prev) => {
+          if (!prev?.economy) return prev;
+          return {
+            ...prev,
+            economy: {
+              ...prev.economy,
+              flowPriorities: {
+                ...(prev.economy.flowPriorities ?? {}),
+                [key]: {
+                  from: opts.from,
+                  to: opts.to,
+                  edge: `${opts.from}->${opts.to}`,
+                },
+              },
+            },
+          };
         });
       },
     );
+    setFlowPriorityBusy(false);
+    if (!ok) setOrderMsg("Не удалось задать приоритет");
+  };
+
+  const reserveStock = async (
+    currencyId: string,
+    amount: number,
+    label?: string,
+  ) => {
+    if (!payload) return;
+    setStockBusy(true);
+    const ok = await submitPlayerIntent(
+      "intent.reserve_stock",
+      { currencyId, amount, ...(label ? { label } : {}) },
+      amount > 0
+        ? `Резерв ${amount} · ${currencyId.replace(/^currency\./, "")}`
+        : `Резерв снят · ${currencyId.replace(/^currency\./, "")}`,
+      () => {
+        setPayload((prev) => {
+          if (!prev?.economy) return prev;
+          const next = { ...(prev.economy.stockReserves ?? {}) };
+          if (amount <= 0) delete next[currencyId];
+          else next[currencyId] = { amount, label: label || "резерв" };
+          return {
+            ...prev,
+            economy: { ...prev.economy, stockReserves: next },
+          };
+        });
+      },
+    );
+    setStockBusy(false);
+    if (!ok) setOrderMsg("Резерв не применён");
+  };
+
+  const setEconomicPolicy = async (policyId: string) => {
+    if (!payload) return;
+    setPolicyBusy(true);
+    const ok = await submitPlayerIntent(
+      "intent.set_economic_policy",
+      { policyId },
+      `Доктрина: ${policyId}`,
+      () => {
+        setPayload((prev) => {
+          if (!prev?.economy) return prev;
+          const presets: Record<string, Record<string, string>> = {
+            military: { "tax.industry": "high", "tax.supply": "low" },
+            trade: { "tax.industry": "low", "tax.supply": "none" },
+            growth: { "tax.industry": "none", "tax.supply": "none" },
+          };
+          const taxes = presets[policyId] ?? {};
+          return {
+            ...prev,
+            economy: {
+              ...prev.economy,
+              economicPolicy: policyId,
+              pendingPolicy: {
+                ...(prev.economy.pendingPolicy ?? {}),
+                taxes: {
+                  ...(prev.economy.pendingPolicy?.taxes || {}),
+                  ...taxes,
+                },
+              },
+            },
+          };
+        });
+      },
+    );
+    setPolicyBusy(false);
+    if (!ok) setOrderMsg("Доктрина не применена");
   };
 
   const submitTransfer = async (
@@ -1219,6 +1366,166 @@ export function ViewerPage() {
       setResearchBusy(false);
     }
   };
+
+  const setResearchQueue = async (queue: string[]) => {
+    if (!payload) return;
+    setResearchBusy(true);
+    setResearchMsg(null);
+    try {
+      const res = await fetch("/api/economy/research-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          queue,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.economy) {
+        setPayload({
+          ...payload,
+          economy: { ...payload.economy, ...data.economy },
+        });
+      }
+      setResearchMsg(
+        `Очередь: ${(data.queue as string[] | undefined)?.length ?? 0} слотов`,
+      );
+    } catch (err) {
+      setResearchMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResearchBusy(false);
+    }
+  };
+
+  const accelerateResearch = async (techId: string) => {
+    if (!payload) return;
+    setResearchBusy(true);
+    setResearchMsg(null);
+    try {
+      const res = await fetch("/api/economy/research-accelerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          techId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.economy) {
+        setPayload({
+          ...payload,
+          economy: { ...payload.economy, ...data.economy },
+        });
+      }
+      setResearchMsg(`Ускорено: ${data.tech?.name ?? techId}`);
+    } catch (err) {
+      setResearchMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResearchBusy(false);
+    }
+  };
+
+  const setBuildQueue = async (
+    queue: Array<{ systemId: string; planetId: string; buildingId: string }>,
+  ) => {
+    if (!payload) return;
+    setPlanetBusy(true);
+    setPlanetMsg(null);
+    try {
+      const res = await fetch("/api/economy/build-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          queue,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.economy) {
+        setPayload({
+          ...payload,
+          economy: { ...payload.economy, ...data.economy },
+        });
+      }
+      setPlanetMsg(
+        `Очередь строительства: ${(data.queue as unknown[] | undefined)?.length ?? 0}`,
+      );
+    } catch (err) {
+      setPlanetMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPlanetBusy(false);
+    }
+  };
+
+  const previewBuild = async (opts: {
+    systemId: string;
+    planetId: string;
+    buildingId: string;
+  }) => {
+    if (!payload) return null;
+    try {
+      const res = await fetch("/api/economy/preview-build", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          ...opts,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data.error || res.statusText };
+      return data;
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  };
+
+  const openResearchWithTech = useCallback((techId: string) => {
+    setResearchHighlightTechId(techId);
+    goView("research");
+  }, []);
+
+  const highlightSystemsForTech = useCallback(
+    (techId: string) => {
+      if (!payload) return;
+      const tech = getCachedContent()?.technologies?.[techId];
+      if (!tech) {
+        setResearchMsg("Неизвестная технология");
+        return;
+      }
+      const ids = systemsForTechHighlight(
+        tech,
+        payload.world.systems || [],
+        payload.factionId,
+        {
+          techTiers: payload.economy?.techTiers,
+          unlockedProperties: payload.economy?.unlockedProperties,
+        },
+      );
+      setTechMapHighlightIds(ids);
+      goView("map");
+      if (ids[0]) {
+        setSelectedSystemId(ids[0]);
+        window.setTimeout(() => mapApiRef.current?.focusSystem(ids[0]), 80);
+      }
+      setResearchMsg(
+        ids.length
+          ? `Подсвечено систем: ${ids.length} · «${tech.name}» (Esc — сброс)`
+          : "Нет подходящих систем",
+      );
+    },
+    [payload],
+  );
 
   const runPlanetAction = async (req: PlanetActionRequest) => {
     if (!payload) return;
@@ -1813,8 +2120,35 @@ export function ViewerPage() {
     });
   }, []);
 
+  const openBuildingFromResearch = useCallback(
+    (buildingId: string) => {
+      if (!payload) return;
+      const def = buildingsCatalog[buildingId];
+      const hit = findPlanetForBuilding(
+        buildingId,
+        payload.world.systems || [],
+        payload.factionId,
+      );
+      if (!hit) {
+        setResearchMsg("Нет своей планеты для постройки");
+        return;
+      }
+      setTechMapHighlightIds([hit.systemId]);
+      goView("map");
+      openPlayerSystem(hit.systemId);
+      openPlayerPlanet(hit.systemId, hit.planetId);
+      setResearchMsg(
+        def
+          ? `Открыта «${hit.systemName}» для «${def.name}»`
+          : `Открыта система ${hit.systemName}`,
+      );
+    },
+    [payload, buildingsCatalog, openPlayerSystem, openPlayerPlanet],
+  );
+
   const closePlayerSystem = useCallback(() => {
     setSystemFocusId(null);
+    setEconomyLinkedSystemId(null);
     closeSystemView();
     useWorldStore.setState({
       dossierSystemId: null,
@@ -2008,16 +2342,17 @@ export function ViewerPage() {
   };
 
   // Hooks must run before any early return (login screen).
-  /** Slim edge panel: HQ / quests only. */
-  const desktopGlass =
-    !mobile && (viewMode === "hq" || viewMode === "quests");
-  /** Full workbench modal: diplo / market / research / forces. */
+  /** Slim edge panel: HQ only. */
+  const desktopGlass = !mobile && viewMode === "hq";
+  /** Full workbench modal: diplo / market / research / forces / quests. */
   const desktopWorkbench =
     !mobile &&
     (viewMode === "forces" ||
       viewMode === "research" ||
       viewMode === "market" ||
-      viewMode === "diplomacy");
+      viewMode === "diplomacy" ||
+      viewMode === "quests" ||
+      viewMode === "codex");
   const mobileRoom =
     mobile &&
     (viewMode === "hq" ||
@@ -2025,11 +2360,13 @@ export function ViewerPage() {
       viewMode === "research" ||
       viewMode === "market" ||
       viewMode === "diplomacy" ||
-      viewMode === "quests");
+      viewMode === "quests" ||
+      viewMode === "codex");
   // Map-first: workbenches keep the map mounted underneath.
   const showMapLayer =
     !!payload &&
     (viewMode === "map" ||
+      viewMode === "economy" ||
       desktopGlass ||
       desktopWorkbench ||
       mobileRoom ||
@@ -2134,14 +2471,24 @@ export function ViewerPage() {
     return buildEconomySystemSignals(payload, flowData);
   }, [payload, flowData]);
 
-  const economyBottleneckSystemIds = useMemo(
-    () => severeBottleneckSystemIds(economySystemSignals),
-    [economySystemSignals],
-  );
+  const economyBottleneckSystemIds = useMemo(() => {
+    const bn = severeBottleneckSystemIds(economySystemSignals);
+    if (!techMapHighlightIds.length) return bn;
+    return [...new Set([...bn, ...techMapHighlightIds])];
+  }, [economySystemSignals, techMapHighlightIds]);
 
   useEffect(() => {
     bump();
   }, [flowData, economyBottleneckSystemIds]);
+
+  useEffect(() => {
+    if (!techMapHighlightIds.length) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTechMapHighlightIds([]);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [techMapHighlightIds]);
 
   const viewerAlertItems = useMemo(() => {
     if (!payload) return [];
@@ -2411,6 +2758,7 @@ export function ViewerPage() {
       onOpenMap={() => goView("map")}
       onOpenResearch={() => goView("research")}
       onOpenMarket={() => goView("market")}
+      onOpenEconomy={() => goView("economy")}
       affordableResearch={affordableResearch}
       tradePartnerCount={tradePartnerCount}
       marketMyOffers={marketBookStats.myOffers}
@@ -2436,10 +2784,48 @@ export function ViewerPage() {
       onResearchUpgrade={(techId, upgradeId) =>
         void researchUpgrade(techId, upgradeId)
       }
+      onSetQueue={(queue) => void setResearchQueue(queue)}
+      onAccelerate={(id) => void accelerateResearch(id)}
       busy={researchBusy}
       msg={researchMsg}
       branch={researchBranch}
       onBranchChange={setResearchBranch}
+      highlightTechId={researchHighlightTechId}
+      cognitioIncome={flowData?.totals?.F?.net ?? 0}
+      categoryIncome={
+        researchBranch
+          ? (flowData?.totals?.[researchBranch]?.net ?? 0)
+          : (flowData?.totals?.F?.net ?? 0)
+      }
+      categoryDemand={
+        researchBranch
+          ? (flowData?.totals?.[researchBranch]?.demand ?? 0)
+          : (flowData?.totals?.F?.demand ?? 0)
+      }
+      onOpenBuilding={openBuildingFromResearch}
+      onTechMapDrag={highlightSystemsForTech}
+      onEffectNavigate={(target) => {
+        if (target.kind === "economy_production") {
+          setEconomyFocusCategory(target.category ?? null);
+          goView("economy");
+          setOrderMsg(
+            target.category
+              ? `Производство · фильтр ${target.category}`
+              : "Производство",
+          );
+        } else if (target.kind === "forces") {
+          const ids = [target.fromDefId, target.toDefId].filter(
+            Boolean,
+          ) as string[];
+          setForcesHighlightDefIds(ids.length ? ids : null);
+          goView("forces");
+          setOrderMsg(
+            ids.length
+              ? `Силы · подсветка ${ids.join(" → ")}`
+              : "Силы",
+          );
+        }
+      }}
       asRoom={false}
     />
   ) : (
@@ -2466,6 +2852,7 @@ export function ViewerPage() {
       mapSelectedSystemId={selectedSystemId}
       tab={marketTab}
       onTabChange={setMarketTab}
+      prefillSellCurrency={marketPrefillCurrency}
       onOpenDiplomacy={() => goView("diplomacy")}
       onBookStats={setMarketBookStats}
       onConvert={(from, to, amt) => void submitMarketConvert(from, to, amt)}
@@ -2527,16 +2914,33 @@ export function ViewerPage() {
   const questsPanel = (
     <ViewerQuestPanel
       payload={payload}
-      onSelectQuest={(id) => setOpenQuestId(id)}
+      onFocusSystem={(systemId) => {
+        setSelectedSystemId(systemId);
+        goView("map");
+        window.setTimeout(() => mapApiRef.current?.focusSystem(systemId), 80);
+      }}
       actions={{
         onThrowYearlyDice: async () => {
           const res = await submitQuestAction("throw_quest_dice");
-          if (!res.ok) return { ok: false };
+          if (!res.ok) {
+            return {
+              ok: false,
+              error:
+                (res.error as string | undefined) ||
+                "Не удалось бросить ежеходный кубик",
+            };
+          }
           setOrderMsg(res.message || `Ежходные квесты: ${res.count ?? 0}`);
+          const spawned = Array.isArray(res.quests)
+            ? (res.quests as { id?: string }[])
+                .map((q) => q?.id)
+                .filter((id): id is string => Boolean(id))
+            : [];
           return {
             ok: true,
             roll: res.roll as number | undefined,
             message: res.message as string | undefined,
+            questIds: spawned,
           };
         },
         onResolveChoice: async (questId, choiceId) => {
@@ -2553,7 +2957,12 @@ export function ViewerPage() {
             specIndex,
             choiceId,
           });
-          if (!res.ok) return { ok: false };
+          if (!res.ok) {
+            return {
+              ok: false,
+              error: (res.error as string | undefined) || "Бросок не удался",
+            };
+          }
           setOrderMsg((res.message as string) || "Бросок записан");
           return {
             ok: true,
@@ -2562,12 +2971,30 @@ export function ViewerPage() {
             message: res.message as string | undefined,
           };
         },
+        onGiveNpcTask: async (npcId, opts) => {
+          await submitPlayerIntent(
+            "intent.give_npc_task",
+            {
+              npcId,
+              taskLabel: opts.taskLabel,
+              etaTurn: opts.etaTurn,
+              linkedQuestId: opts.linkedQuestId,
+            },
+            "Поручение для двора принято",
+          );
+        },
+        onSendChat: async (questId, text) => {
+          setOrderMsg(`Квест ${questId}: ход отправлен агенту`);
+          void text;
+        },
       }}
     />
   );
 
+  const codexPanel = <CodexPanel payload={payload} />;
+
   const forcesPanel = (
-    <ForcesArmory
+    <ForcesDeck
       payload={payload}
       selectedFleetId={selectedFleetId}
       selectedLegionId={selectedLegionId}
@@ -2598,9 +3025,27 @@ export function ViewerPage() {
         setSelectedLegionId(null);
         setOrderType("move_fleet");
         const fleet = payload.world.fleets.find((f) => f.id === id);
-        if (fleet) setSelectedSystemId(fleet.systemId);
-        setQueueOpen(true);
-        goView("map");
+        if (fleet) {
+          setSelectedSystemId(fleet.systemId);
+          goView("map");
+          window.setTimeout(() => {
+            mapApiRef.current?.focusSystem(fleet.systemId);
+            openFleetOrderRing({
+              screenX: window.innerWidth / 2,
+              screenY: window.innerHeight / 2,
+              worldX: 0,
+              worldY: 0,
+              systemId: fleet.systemId,
+              fleetId: fleet.id,
+              legionId: null,
+              linkId: null,
+              fromFleetHit: true,
+            });
+          }, 100);
+        } else {
+          setQueueOpen(true);
+          goView("map");
+        }
       }}
       onOrderWithLegion={(id) => {
         setSelectedLegionId(id);
@@ -2611,6 +3056,51 @@ export function ViewerPage() {
         setQueueOpen(true);
         goView("map");
       }}
+      onFleetComposition={(fleetId, composition) => {
+        setPayload((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            world: {
+              ...prev.world,
+              fleets: prev.world.fleets.map((f) =>
+                f.id === fleetId ? { ...f, composition } : f,
+              ),
+            },
+          };
+        });
+      }}
+      onLegionComposition={(legionId, composition) => {
+        setPayload((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            world: {
+              ...prev.world,
+              legions: prev.world.legions.map((l) =>
+                l.id === legionId ? { ...l, composition } : l,
+              ),
+            },
+          };
+        });
+      }}
+      onStocksPatch={(patch) => {
+        setPayload((prev) => {
+          if (!prev?.economy) return prev;
+          return {
+            ...prev,
+            economy: {
+              ...prev.economy,
+              stocks: {
+                ...prev.economy.stocks,
+                ...patch,
+              },
+            },
+          };
+        });
+      }}
+      onToast={(msg) => setOrderMsg(msg)}
+      highlightDefIds={forcesHighlightDefIds}
     />
   );
 
@@ -2652,9 +3142,11 @@ export function ViewerPage() {
             ? diplomacyPanel
             : viewMode === "quests"
               ? questsPanel
-              : viewMode === "hq"
-                ? hqPanel
-                : null;
+              : viewMode === "codex"
+                ? codexPanel
+                : viewMode === "hq"
+                  ? hqPanel
+                  : null;
 
   const roomTitle =
     viewMode === "forces"
@@ -2667,7 +3159,9 @@ export function ViewerPage() {
             ? "Дипломатия"
             : viewMode === "quests"
               ? "Квесты"
-              : "Штаб";
+              : viewMode === "codex"
+                ? "Справочник"
+                : "Штаб";
 
   const workbenchSubtitle =
     viewMode === "diplomacy"
@@ -2678,7 +3172,11 @@ export function ViewerPage() {
           ? "Колесо A–F · ветви 1–6 · drag/zoom."
           : viewMode === "forces"
             ? "Флоты, легионы и каталог юнитов со статами."
-            : undefined;
+            : viewMode === "quests"
+              ? "Сюжет · сайды · фракции · ежеходные. СКМ — перевернуть карту."
+              : viewMode === "codex"
+                ? "Расы · государства · постройки · юниты · технологии — по уровню знания."
+                : undefined;
 
   const factionCss = {
     ["--faction" as string]: faction?.color ?? "#c9a227",
@@ -2952,8 +3450,13 @@ export function ViewerPage() {
                 onClose={() => setEconomyPopover(null)}
                 signals={economySystemSignals}
                 onFocusSystem={(systemId) => {
+                  const sig = economySystemSignals.find(
+                    (s) => s.systemId === systemId,
+                  );
+                  if (sig?.category) setEcoHighlightCategory(sig.category);
                   mapApiRef.current?.focusSystem(systemId);
                   setSelectedSystemId(systemId);
+                  openPlayerSystem(systemId);
                   bump();
                 }}
                 onOpenHq={() => {
@@ -3251,7 +3754,9 @@ export function ViewerPage() {
           viewMode === "diplomacy" ||
           viewMode === "forces" ||
           viewMode === "market" ||
-          viewMode === "research"
+          viewMode === "research" ||
+          viewMode === "quests" ||
+          viewMode === "codex"
         }
         badge={
           viewMode === "diplomacy" && diploIncoming.length > 0 ? (
@@ -3262,6 +3767,99 @@ export function ViewerPage() {
       >
         {roomPanel}
       </WorkbenchShell>
+
+      {payload && (
+        <EconomyPanel
+          open={viewMode === "economy"}
+          payload={payload}
+          flowData={flowData}
+          factionName={faction?.name}
+          linkedSystemId={economyLinkedSystemId}
+          priorityBusy={flowPriorityBusy}
+          onClose={() => {
+            setEconomyLinkedSystemId(null);
+            goView("map");
+          }}
+          onOpenSystem={(systemId) => {
+            setEconomyLinkedSystemId(systemId);
+            openPlayerSystem(systemId);
+          }}
+          onFocusDeficit={(letter, systemId) => {
+            setEcoHighlightCategory(letter);
+            if (systemId) {
+              setEconomyLinkedSystemId(systemId);
+              openPlayerSystem(systemId);
+              return;
+            }
+            const sig = economySystemSignals.find(
+              (s) => s.category === letter && s.systemId,
+            );
+            if (sig?.systemId) {
+              setEconomyLinkedSystemId(sig.systemId);
+              openPlayerSystem(sig.systemId);
+            } else {
+              goView("map");
+            }
+          }}
+          onFocusSystemOnMap={(systemId) => {
+            setEconomyLinkedSystemId(null);
+            setSelectedSystemId(systemId);
+            goView("map");
+            window.setTimeout(
+              () => mapApiRef.current?.focusSystem(systemId),
+              80,
+            );
+          }}
+          onSetFlowPriority={(opts) => void setFlowPriority(opts)}
+          onSetTax={(slot, tier) => void setTax(slot, tier)}
+          onSetDoctrine={(id) => void setEconomicPolicy(id)}
+          onReserveStock={(id, amount, label) =>
+            void reserveStock(id, amount, label)
+          }
+          onSellFromStock={(currencyId) => {
+            setMarketPrefillCurrency(currencyId);
+            setMarketTab("trade");
+            goView("market");
+          }}
+          onCaravanHint={(currencyId, systemId) => {
+            if (systemId) {
+              setEconomyLinkedSystemId(systemId);
+              openPlayerSystem(systemId);
+              setOrderMsg(
+                `Караван: ${currencyId.replace(/^currency\./, "")} → система (заказ на карте)`,
+              );
+              return;
+            }
+            setOrderMsg("Караваны — укажите систему drop-зоной или приказом на карте.");
+            goView("map");
+          }}
+          onStockAlert={(currencyId) => {
+            setOrderMsg(
+              `Алерт: следите за ${currencyId.replace(/^currency\./, "")}`,
+            );
+          }}
+          stockBusy={stockBusy}
+          policyBusy={policyBusy}
+          focusProductionCategory={economyFocusCategory}
+          onOpenResearch={() => {
+            goView("research");
+            setOrderMsg("Наука — нарастите cognitio / изучите добычу F");
+          }}
+          onFocusBuild={() => {
+            const owned = payload.world.systems.find(
+              (s) => s.ownerFactionId === payload.factionId,
+            );
+            goView("map");
+            if (owned) {
+              setSelectedSystemId(owned.id);
+              window.setTimeout(
+                () => mapApiRef.current?.focusSystem(owned.id),
+                80,
+              );
+            }
+          }}
+        />
+      )}
 
       <BottomSheet
         open={Boolean(mobileRoom && roomPanel)}
@@ -3578,6 +4176,16 @@ export function ViewerPage() {
           >
             Наука
             {affordableResearch > 0 ? ` · ${affordableResearch} доступно` : ""}
+          </button>
+          <button
+            type="button"
+            className="btn ghost block"
+            onClick={() => {
+              setMenuOpen(false);
+              goView("economy");
+            }}
+          >
+            Экономика
           </button>
           <button
             type="button"
@@ -4044,6 +4652,17 @@ export function ViewerPage() {
         </button>
         <button
           type="button"
+          className={`viewer-dock-btn ${viewMode === "economy" ? "active" : ""}`}
+          onClick={() => goView("economy")}
+          title="Экономика"
+        >
+          <span className="viewer-dock-icon" aria-hidden>
+            <Coins size={18} strokeWidth={2} />
+          </span>
+          Эконом
+        </button>
+        <button
+          type="button"
           className={`viewer-dock-btn ${viewMode === "market" ? "active" : ""}`}
           onClick={() => goView("market")}
           title="Биржа · 4"
@@ -4135,6 +4754,17 @@ export function ViewerPage() {
             </span>
           )}
         </button>
+        <button
+          type="button"
+          className={`viewer-dock-btn ${viewMode === "codex" ? "active" : ""}`}
+          onClick={() => goView("codex")}
+          title="Справочник"
+        >
+          <span className="viewer-dock-icon" aria-hidden>
+            <BookOpen size={18} strokeWidth={2} />
+          </span>
+          Справ.
+        </button>
       </nav>
       {eraBanner != null && (
         <div className="viewer-era-cinematic" role="status" aria-live="polite">
@@ -4215,7 +4845,11 @@ export function ViewerPage() {
       })()}
       {systemFocusId && focusedSystem && payload && (
         <div
-          className="viewer-system-layer"
+          className={`viewer-system-layer ${
+            economyLinkedSystemId === focusedSystem.id
+              ? "viewer-system-layer--docked-right"
+              : ""
+          }`}
           role="region"
           aria-label={focusedSystem.name}
         >
@@ -4225,10 +4859,24 @@ export function ViewerPage() {
               className="btn viewer-system-back"
               onClick={closePlayerSystem}
             >
-              ← Галактика
+              {economyLinkedSystemId === focusedSystem.id
+                ? "← Экономика"
+                : "← Галактика"}
               <span className="viewer-system-back-kbd">Esc</span>
             </button>
-            <h2 className="viewer-system-title">{focusedSystem.name}</h2>
+            <h2 className="viewer-system-title">
+              {economyLinkedSystemId === focusedSystem.id ? (
+                <span className="viewer-system-crumbs">
+                  <span className="hint">Экономика</span>
+                  <span className="hint" aria-hidden>
+                    →
+                  </span>
+                  <span>{focusedSystem.name}</span>
+                </span>
+              ) : (
+                focusedSystem.name
+              )}
+            </h2>
             <button
               type="button"
               className="btn ghost"
@@ -4288,6 +4936,28 @@ export function ViewerPage() {
                 busy: planetBusy,
                 message: planetMsg,
                 onAction: (req) => void runPlanetAction(req),
+                onOpenResearch: openResearchWithTech,
+                buildQueue: payload.economy?.buildQueue ?? [],
+                onChangeBuildQueue: (next) => void setBuildQueue(next),
+                onPreviewBuild: (buildingId) => {
+                  const planetId =
+                    mapFocus.level === "planet" &&
+                    mapFocus.systemId === focusedSystem.id
+                      ? mapFocus.planetId
+                      : "";
+                  if (!planetId) return Promise.resolve(null);
+                  return previewBuild({
+                    systemId: focusedSystem.id,
+                    planetId,
+                    buildingId,
+                  });
+                },
+                highlightCategory: ecoHighlightCategory,
+                onShowInEconomy: (category) => {
+                  setEcoHighlightCategory(category);
+                  setEconomyLinkedSystemId(focusedSystem.id);
+                  goView("economy");
+                },
               }}
               systemManage={{
                 factionId: payload.factionId,
@@ -4305,6 +4975,10 @@ export function ViewerPage() {
                 busy: systemBusy,
                 message: systemMsg,
                 onAction: (req) => void runSystemAction(req),
+                flowData,
+                buildings: buildingsCatalog,
+                highlightCategory: ecoHighlightCategory,
+                onHighlightCategory: setEcoHighlightCategory,
               }}
             />
           </div>

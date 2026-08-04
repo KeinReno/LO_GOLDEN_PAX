@@ -64,6 +64,12 @@ export type TechnologyDef = {
   effects?: EffectInstance[];
   prerequisites?: string[];
   upgrades?: TechUpgrade[];
+  /** Icon key → content/core/tech_icons.json */
+  iconTag?: string;
+  /** Short lore blurb (≤200). */
+  flavor?: string;
+  /** Availability tags: general | race_* | faction_*_unique | trait.* */
+  tags?: string[];
   /** Only researchable when faction pop share of this race ≥ 30%. */
   raceLock?: string;
   /** Requires matching Faction.traits id. */
@@ -141,6 +147,7 @@ export type PublicContent = {
   };
   economy_schema?: EconomySchema;
   technologies?: Record<string, TechnologyDef>;
+  tech_icons?: Record<string, { glyph: string; label: string }>;
   pois?: Record<string, { label?: string; name?: string }>;
   rules?: {
     apPerTurn?: number;
@@ -167,6 +174,7 @@ export type PublicContent = {
       faction?: string;
       signature?: string;
       tradeoff?: string;
+      biome_restrictions?: string[];
       slots?: Array<{
         role: string;
         require: { category?: string; tier?: string; properties?: string[] };
