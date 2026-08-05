@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { syncNpcPassiveEffects } from "./courtGovernance.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ALIASES_PATH = path.resolve(
@@ -286,22 +287,163 @@ export function normalizeWorld(raw) {
       defaultCultureId: f?.defaultCultureId ?? "culture.baseline",
       primaryFaith: f?.primaryFaith ?? "faith.secular",
       dominantIdeology: f?.dominantIdeology ?? undefined,
+      fxCurrencyId: f?.fxCurrencyId ?? null,
+      treasuryPeg: f?.treasuryPeg ?? null,
       activeEffects: Array.isArray(f?.activeEffects) ? f.activeEffects : [],
       diplomacy: diplo,
       npcs: Array.isArray(f?.npcs)
-        ? f.npcs.map((n) => ({
-            ...n,
-            currentTask: n.currentTask ?? undefined,
-            relationships:
-              n.relationships && typeof n.relationships === "object"
-                ? n.relationships
+        ? f.npcs.map((n) => {
+            const postingRaw = n.posting;
+            const postingKind =
+              postingRaw &&
+              typeof postingRaw === "object" &&
+              ["court", "governor", "commander", "admiral"].includes(
+                postingRaw.kind,
+              )
+                ? postingRaw.kind
+                : "court";
+            const posting = {
+              kind: postingKind,
+              sinceTurn:
+                typeof postingRaw?.sinceTurn === "number"
+                  ? postingRaw.sinceTurn
+                  : (meta?.turn ?? 0),
+              ...(postingKind === "governor" && postingRaw?.systemId
+                ? { systemId: postingRaw.systemId }
+                : {}),
+              ...(postingKind === "commander" && postingRaw?.legionId
+                ? { legionId: postingRaw.legionId }
+                : {}),
+              ...(postingKind === "admiral" && postingRaw?.fleetId
+                ? { fleetId: postingRaw.fleetId }
+                : {}),
+            };
+            return {
+              ...n,
+              traitIds: Array.isArray(n.traitIds)
+                ? n.traitIds.filter((id) => typeof id === "string")
+                : [],
+              posting,
+              councilSeat:
+                typeof n.councilSeat === "string" && n.councilSeat
+                  ? n.councilSeat
+                  : null,
+              blocId:
+                typeof n.blocId === "string" && n.blocId ? n.blocId : null,
+              isBlocLeader: n.isBlocLeader === true,
+              isPlayerRuler: n.isPlayerRuler === true,
+              raceLeadership:
+                n.raceLeadership &&
+                typeof n.raceLeadership === "object" &&
+                typeof n.raceLeadership.raceId === "string" &&
+                n.raceLeadership.raceId
+                  ? {
+                      raceId: n.raceLeadership.raceId,
+                      ...(typeof n.raceLeadership.title === "string" &&
+                      n.raceLeadership.title
+                        ? { title: n.raceLeadership.title }
+                        : {}),
+                    }
+                  : null,
+              currentTask: n.currentTask ?? undefined,
+              relationships:
+                n.relationships && typeof n.relationships === "object"
+                  ? n.relationships
+                  : undefined,
+            };
+          })
+        : [],
+      rulerNpcId:
+        typeof f?.rulerNpcId === "string" && f.rulerNpcId
+          ? f.rulerNpcId
+          : null,
+      internalBlocs: Array.isArray(f?.internalBlocs)
+        ? f.internalBlocs.map((b) => ({
+            id: String(b.id || ""),
+            name: String(b.name || b.id || ""),
+            color: typeof b.color === "string" ? b.color : undefined,
+            kind: [
+              "house",
+              "church",
+              "military",
+              "guild",
+              "race_caucus",
+              "guest",
+            ].includes(b.kind)
+              ? b.kind
+              : undefined,
+            stance: ["loyal", "ambitious", "hostile", "neutral"].includes(
+              b.stance,
+            )
+              ? b.stance
+              : "neutral",
+            agenda: typeof b.agenda === "string" ? b.agenda : undefined,
+            description:
+              typeof b.description === "string" ? b.description : undefined,
+            raceIds: Array.isArray(b.raceIds)
+              ? b.raceIds.filter((id) => typeof id === "string")
+              : undefined,
+            leaderNpcId:
+              typeof b.leaderNpcId === "string" && b.leaderNpcId
+                ? b.leaderNpcId
+                : null,
+            homeSystemId:
+              typeof b.homeSystemId === "string" ? b.homeSystemId : undefined,
+            homeSystemName:
+              typeof b.homeSystemName === "string"
+                ? b.homeSystemName
                 : undefined,
+            influence: Math.max(0, Math.min(100, Number(b.influence) || 0)),
+            support: Math.max(0, Math.min(100, Number(b.support) || 0)),
+            threat: Math.max(0, Math.min(100, Number(b.threat) || 0)),
           }))
         : [],
+      council:
+        f?.council && typeof f.council === "object"
+          ? {
+              unlockedSeatIds: Array.isArray(f.council.unlockedSeatIds)
+                ? f.council.unlockedSeatIds.filter((id) => typeof id === "string")
+                : [],
+              lockedSeatIds: Array.isArray(f.council.lockedSeatIds)
+                ? f.council.lockedSeatIds.filter((id) => typeof id === "string")
+                : [],
+              seatLabels:
+                f.council.seatLabels && typeof f.council.seatLabels === "object"
+                  ? Object.fromEntries(
+                      Object.entries(f.council.seatLabels).filter(
+                        ([k, v]) => typeof k === "string" && typeof v === "string",
+                      ),
+                    )
+                  : undefined,
+              seatPortfolios:
+                f.council.seatPortfolios &&
+                typeof f.council.seatPortfolios === "object"
+                  ? Object.fromEntries(
+                      Object.entries(f.council.seatPortfolios).filter(
+                        ([k, v]) => typeof k === "string" && typeof v === "string",
+                      ),
+                    )
+                  : undefined,
+              extraSeats: Array.isArray(f.council.extraSeats)
+                ? f.council.extraSeats
+                    .filter((s) => s && typeof s.id === "string")
+                    .map((s) => ({
+                      id: s.id,
+                      label:
+                        typeof s.label === "string" && s.label
+                          ? s.label
+                          : "Советник",
+                      roles: Array.isArray(s.roles) ? s.roles : undefined,
+                      angleDeg:
+                        typeof s.angleDeg === "number" ? s.angleDeg : undefined,
+                    }))
+                : undefined,
+            }
+          : undefined,
     };
   });
 
-  return {
+  const out = {
     ...raw,
     meta,
     systems,
@@ -332,6 +474,15 @@ export function normalizeWorld(raw) {
         : {},
     _aliasesVersion: aliases.version ?? 1,
   };
+
+  // Rebuild scoped NPC passives + bloc influence (idempotent).
+  try {
+    syncNpcPassiveEffects(out);
+  } catch {
+    // content may be unavailable in some CLI contexts
+  }
+
+  return out;
 }
 
 /**

@@ -21,6 +21,8 @@ import {
   getTradePartnerIds,
 } from "./factionIntel.mjs";
 import { isCommonMarketMember } from "./marketMembership.mjs";
+import { intentApCosts } from "./apBudget.mjs";
+import { checkMoveRange } from "./forceMovement.mjs";
 
 const VISION_GATED_INTENTS = new Set([
   "intent.move_fleet",
@@ -113,19 +115,33 @@ export function getPendingForFaction(factionId, turn) {
   );
 }
 
-export function reservedAp(factionId, turn) {
-  // Pending + already-applied instant actions (build/colonize) spend AP this turn.
-  return readIntents()
-    .filter(
-      (i) =>
-        i.factionId === factionId &&
-        (turn == null || i.turn === turn) &&
-        (i.status === "pending" || i.status === "applied"),
-    )
-    .reduce((sum, i) => sum + (i.apCost ?? 0), 0);
+function intentsSpendingAp(factionId, turn) {
+  return readIntents().filter(
+    (i) =>
+      i.factionId === factionId &&
+      (turn == null || i.turn === turn) &&
+      (i.status === "pending" ||
+        i.status === "applied" ||
+        i.status === "resolved"),
+  );
 }
 
-function validateIntentGates(world, factionId, defId, payload) {
+export function reservedAp(factionId, turn) {
+  // Empire OD: pending + applied/resolved spends this turn.
+  return intentsSpendingAp(factionId, turn).reduce(
+    (sum, i) => sum + (i.apCost ?? 0),
+    0,
+  );
+}
+
+export function reservedForceAp(factionId, turn) {
+  return intentsSpendingAp(factionId, turn).reduce(
+    (sum, i) => sum + (i.forceApCost ?? 0),
+    0,
+  );
+}
+
+export function validateIntentGates(world, factionId, defId, payload) {
   const content = getContent();
   const ledger = readLedger();
   const eco = ensureFactionEco(ledger, factionId);
@@ -171,8 +187,36 @@ function validateIntentGates(world, factionId, defId, payload) {
       world,
       factionId,
       payload.toSystemId,
+      payload,
     );
     if (!depot.ok) return depot;
+  }
+
+  const MOVE_RANGE_INTENTS = {
+    "intent.move_fleet": "fleet",
+    "intent.move_legion": "legion",
+    "intent.blockade": "fleet",
+    "intent.fortify": "fleet",
+  };
+  const moveMode = MOVE_RANGE_INTENTS[defId];
+  if (moveMode && payload.toSystemId) {
+    const unitId =
+      moveMode === "legion" ? payload.legionId : payload.fleetId;
+    const unit =
+      moveMode === "legion"
+        ? (world.legions ?? []).find((l) => l.id === unitId)
+        : (world.fleets ?? []).find((f) => f.id === unitId);
+    const fromId = unit?.systemId ?? payload.fromSystemId;
+    if (fromId && fromId !== payload.toSystemId) {
+      const range = checkMoveRange(
+        world,
+        content,
+        fromId,
+        payload.toSystemId,
+        moveMode,
+      );
+      if (!range.ok) return range;
+    }
   }
 
   if (VISION_GATED_INTENTS.has(defId)) {
@@ -180,12 +224,13 @@ function validateIntentGates(world, factionId, defId, payload) {
     if (toSystemId) {
       const visible = resolveVisibleWithFog(world, factionId, readFog());
       if (!visible.has(toSystemId)) {
-        // scout_reveal: allow if owned fleet/legion is in/adjacent even without fog vision
-        if (
-          defId === "intent.scout_reveal" &&
-          factionHasScoutPresence(world, factionId, toSystemId)
-        ) {
-          // ok
+        const ownForcesNearby =
+          defId === "intent.scout_reveal" ||
+          defId === "intent.attack_system"
+            ? factionHasScoutPresence(world, factionId, toSystemId)
+            : false;
+        if (ownForcesNearby) {
+          // ok — разведка / удар сил в системе или с соседней
         } else {
           return { ok: false, error: "Цель вне радиуса обзора" };
         }
@@ -238,18 +283,26 @@ export function submitIntent({
   source,
   turn,
   apMax,
+  forceApMax = 0,
   world,
 }) {
   const content = getContent();
   const def = content.intents?.[defId];
   if (!def) return { ok: false, error: `Неизвестный intent: ${defId}` };
 
-  const apCost = def.ap ?? 0;
+  const { apCost, forceApCost } = intentApCosts(def);
   const used = reservedAp(factionId, turn);
-  if (used + apCost > apMax) {
+  if (apCost > 0 && used + apCost > apMax) {
     return {
       ok: false,
-      error: `Недостаточно AP (занято ${used}/${apMax}, нужно ещё ${apCost})`,
+      error: `Недостаточно ОД (занято ${used}/${apMax}, нужно ещё ${apCost})`,
+    };
+  }
+  const usedForce = reservedForceAp(factionId, turn);
+  if (forceApCost > 0 && usedForce + forceApCost > forceApMax) {
+    return {
+      ok: false,
+      error: `Недостаточно ОД сил (занято ${usedForce}/${forceApMax}, нужно ещё ${forceApCost})`,
     };
   }
 
@@ -265,6 +318,7 @@ export function submitIntent({
     turn,
     status: "pending",
     apCost,
+    forceApCost,
     payload: payload || {},
     note: note || "",
     submittedAt: new Date().toISOString(),

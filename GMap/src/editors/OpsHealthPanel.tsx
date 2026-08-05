@@ -779,6 +779,15 @@ export function OpsHealthPanel() {
         <span>Сменить мастер-токен (→ data/master-token.txt)</span>
 
         <input
+          type="text"
+          name="username"
+          autoComplete="username"
+          style={{ display: "none" }}
+          value="admin"
+          readOnly
+        />
+
+        <input
 
           type="password"
 

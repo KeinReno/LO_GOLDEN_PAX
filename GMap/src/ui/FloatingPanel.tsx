@@ -1,5 +1,11 @@
 import { useDrag } from "@use-gesture/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { Minus, Square, X } from "lucide-react";
 
@@ -26,7 +32,7 @@ function readGeom(key: string, fallback: Geom, minW: number, minH: number): Geom
 }
 
 /**
- * Generic draggable floating panel (deck / inspect / produce / economy).
+ * Generic draggable floating panel (deck / inspect / produce).
  * Position persisted under storageKey. Optional edge/corner resize.
  */
 export function FloatingPanel({
@@ -61,6 +67,7 @@ export function FloatingPanel({
   /** Snap panel to the left edge (master–detail with system layer). */
   snapLeft?: boolean;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState<Geom>(() =>
     readGeom(storageKey, defaultGeom, minW, minH),
   );
@@ -95,13 +102,30 @@ export function FloatingPanel({
     }
   }, [geom, storageKey]);
 
+  // Blur focused descendants before unmount (avoids aria-hidden focus trap).
+  useLayoutEffect(() => {
+    if (!open) return;
+    return () => {
+      const root = rootRef.current;
+      const active = document.activeElement;
+      if (root && active instanceof HTMLElement && root.contains(active)) {
+        active.blur();
+      }
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
+      if (e.key !== "Escape") return;
+      // Nested overlays (ActionRing, doctrine modal) own Escape first.
+      if (
+        document.querySelector(".action-ring, .eco-doctrine-modal")
+      ) {
+        return;
       }
+      e.stopPropagation();
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -160,10 +184,12 @@ export function FloatingPanel({
     { filterTaps: true, pointer: { touch: true } },
   );
 
-  if (!open || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
+  if (!open) return null;
 
   return createPortal(
     <div
+      ref={rootRef}
       className={[
         "gmap-float-panel",
         minimized ? "is-minimized" : "",
@@ -209,7 +235,9 @@ export function FloatingPanel({
           </button>
         </div>
       </header>
-      {!minimized && <div className="gmap-float-panel__body">{children}</div>}
+      {!minimized && (
+        <div className="gmap-float-panel__body">{children}</div>
+      )}
       {resizable && !minimized && (
         <>
           <div

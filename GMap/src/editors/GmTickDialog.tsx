@@ -16,9 +16,11 @@ export function GmTickDialog({
   const { masterToken, onAdvanceTurn, setSyncMsg } = useCampaignSessionCtx();
   const [pending, setPending] = useState<IntentRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const [tickError, setTickError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setTickError(null);
     let cancelled = false;
     void (async () => {
       try {
@@ -45,7 +47,7 @@ export function GmTickDialog({
 
   if (!open) return null;
 
-  const lines = pending.map((i) => {
+  const previewRows = pending.map((i) => {
     const fac =
       world.factions.find((f) => f.id === i.factionId)?.name ?? i.factionId;
     const toId = i.payload?.toSystemId || i.payload?.systemId;
@@ -61,7 +63,7 @@ export function GmTickDialog({
       toName ? `→ ${toName}` : null,
       i.apCost != null ? `${i.apCost} AP` : null,
     ].filter(Boolean);
-    return `${fac}: ${bits.join(" · ")}`;
+    return { id: i.id, line: `${fac}: ${bits.join(" · ")}` };
   });
 
   return (
@@ -79,16 +81,21 @@ export function GmTickDialog({
         </p>
         <div className="gm-tick-preview">
           <p className="hq-stat-label">Применится</p>
-          {lines.length === 0 ? (
+          {previewRows.length === 0 ? (
             <p className="hint">Нет pending — тик всё равно сдвинет ход.</p>
           ) : (
             <ul>
-              {lines.map((line) => (
-                <li key={line}>{line}</li>
+              {previewRows.map((row) => (
+                <li key={row.id}>{row.line}</li>
               ))}
             </ul>
           )}
         </div>
+        {tickError && (
+          <p className="hint planet-manage-msg" role="alert">
+            {tickError}
+          </p>
+        )}
         <div className="gm-tick-actions">
           <button type="button" className="btn ghost" onClick={onClose}>
             Отмена
@@ -100,11 +107,14 @@ export function GmTickDialog({
             onClick={() => {
               void (async () => {
                 setBusy(true);
+                setTickError(null);
                 try {
                   await onAdvanceTurn();
                   onClose();
                 } catch (e) {
-                  setSyncMsg(e instanceof Error ? e.message : String(e));
+                  const msg = e instanceof Error ? e.message : String(e);
+                  setTickError(msg);
+                  setSyncMsg(msg);
                 } finally {
                   setBusy(false);
                 }

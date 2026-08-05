@@ -10,6 +10,7 @@ import {
 } from "./modifierStack.mjs";
 import { spawnRefugees } from "./narrative.mjs";
 import { readLedger, ensureFactionEco } from "./ledger.mjs";
+import { npcLoyaltyDeltaForSystem } from "./courtGovernance.mjs";
 
 const BASE_LOYALTY = 50;
 const LOYALTY_MIN = 0;
@@ -45,7 +46,7 @@ function raceHasTrait(race, traitSuffix) {
 
 function systemHasPropaganda(system) {
   const tags = [
-    ...(system.spaceObjects || []).map((o) => o.kind || o.tag || o.id),
+    ...(system.spaceObjects || []).map((o) => typeof o === "string" ? o : (o.kind || o.tag || o.id || o)),
     system.poi,
     ...(system.poiTags || []),
   ]
@@ -238,6 +239,9 @@ export function computePlanetLoyalty(world, system, planet, content) {
   }
   loyalty = (loyalty + flat) * mult;
 
+  // NPC governors / traits scoped to this system (+ ungoverned penalty)
+  loyalty += npcLoyaltyDeltaForSystem(world, system, ownerId);
+
   return clampLoyalty(loyalty);
 }
 
@@ -353,7 +357,7 @@ export function checkRevolt(world, system, planet, content) {
     systemId: system.id,
     strength: Math.max(1, Math.round(lostPop / 5)),
     status: "idle",
-    raceId: composition[0]?.raceId,
+    raceId: composition[0]?.raceId || "race_human",
     composition: [
       {
         defId: "unit.generic_line",

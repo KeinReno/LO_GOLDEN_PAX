@@ -93,3 +93,17 @@ export function formatHopTurns(hops: number): string {
     word = "хода";
   return `${n} ${word}`;
 }
+
+/** Russian: hop distance label (instant move — not turn cost). */
+export function formatHopDistance(hops: number): string {
+  if (!Number.isFinite(hops)) return "нет пути";
+  if (hops === 0) return "здесь";
+  const n = Math.abs(Math.trunc(hops));
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  let word = "прыжков";
+  if (mod10 === 1 && mod100 !== 11) word = "прыжок";
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+    word = "прыжка";
+  return `${n} ${word}`;
+}

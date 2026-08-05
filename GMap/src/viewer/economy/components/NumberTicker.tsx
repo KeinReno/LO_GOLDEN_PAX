@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { fmtInt } from "../../../state/numberFormat";
 
 type Props = {
   value: number;
@@ -14,7 +15,7 @@ type Props = {
 export function NumberTicker({
   value,
   className,
-  format = (n) => String(Math.round(n)),
+  format = (n) => fmtInt(n),
   durationMs = 420,
 }: Props) {
   const [display, setDisplay] = useState(value);
@@ -22,6 +23,9 @@ export function NumberTicker({
   const reduced =
     typeof window !== "undefined" &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  const displayRef = useRef(display);
+  displayRef.current = display;
 
   useEffect(() => {
     if (reduced) {
@@ -37,12 +41,17 @@ export function NumberTicker({
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
       const eased = 1 - (1 - t) ** 3;
-      setDisplay(from + (to - from) * eased);
+      const next = from + (to - from) * eased;
+      setDisplay(next);
       if (t < 1) raf = requestAnimationFrame(tick);
       else fromRef.current = to;
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      // Keep interrupted mid-animation as the next from — avoids jumps.
+      fromRef.current = displayRef.current;
+    };
   }, [value, durationMs, reduced]);
 
   return (

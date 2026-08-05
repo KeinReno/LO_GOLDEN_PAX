@@ -1,4 +1,117 @@
 {
+  "unit.militia": {
+    "id": "unit.militia",
+    "name": "Ополчение",
+    "faction": "generic",
+    "tier": 1,
+    "roles": [
+      "infantry",
+      "militia"
+    ],
+    "stats": {
+      "damage": 8,
+      "defense": 8,
+      "hp": 70,
+      "speed": 4
+    },
+    "targeting": "infantry_first",
+    "theaterMult": {
+      "ground": 1,
+      "assault": 0.85,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=1"
+        },
+        "count": 2
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 2
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Стартовый десант; дёшев",
+    "tradeoff": "слаб против гарнизона",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "defense": 1.15
+        },
+        "name": "Легион Белатора"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "speed": 1.2
+        },
+        "name": "Синт-дрон"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Колониальная пехота"
+      },
+      "race_karned": {
+        "statsMult": {
+          "defense": 1.2,
+          "speed": 0.9
+        },
+        "name": "Каменная когорта"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.15,
+          "hp": 0.9
+        },
+        "name": "Пси-кадр"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Роевая биомасса"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Войд-скитальцы"
+      }
+    }
+  },
   "unit.generic_line": {
     "id": "unit.generic_line",
     "name": "Линейная пехота",
@@ -109,117 +222,6 @@
       }
     }
   },
-  "unit.breach_cadre": {
-    "id": "unit.breach_cadre",
-    "name": "Штурмовой кадр",
-    "faction": "generic",
-    "tier": 4,
-    "roles": [
-      "assault",
-      "infantry"
-    ],
-    "stats": {
-      "damage": 22,
-      "defense": 14,
-      "hp": 100,
-      "speed": 6
-    },
-    "targeting": "garrison_first",
-    "theaterMult": {
-      "ground": 1,
-      "assault": 1.2,
-      "space": 0
-    },
-    "slots": [
-      {
-        "role": "hull",
-        "require": {
-          "properties": [
-            "strong"
-          ],
-          "tier": ">=3"
-        },
-        "count": 4
-      },
-      {
-        "role": "weapon",
-        "require": {
-          "properties": [
-            "weapon_amp"
-          ],
-          "tier": ">=3"
-        },
-        "count": 3
-      },
-      {
-        "role": "crew",
-        "require": {
-          "category": "E",
-          "tier": ">=3"
-        },
-        "count": 4
-      }
-    ],
-    "upkeep_slots": [
-      {
-        "require": {
-          "category": "E",
-          "tier": ">=3"
-        },
-        "count": 1,
-        "per": "turn"
-      }
-    ],
-    "raceVariants": {
-      "race_belator": {
-        "statsMult": {
-          "defense": 1.15
-        },
-        "name": "Легион Белатора · штурм"
-      },
-      "race_synth": {
-        "statsMult": {
-          "hp": 0.9,
-          "speed": 1.2
-        },
-        "name": "Синт-дрон · штурм"
-      },
-      "race_human": {
-        "statsMult": {
-          "damage": 1.05
-        },
-        "name": "Колониальная пехота · штурм"
-      },
-      "race_karned": {
-        "statsMult": {
-          "defense": 1.2,
-          "speed": 0.9
-        },
-        "name": "Каменная когорта · штурм"
-      },
-      "race_psionic": {
-        "statsMult": {
-          "damage": 1.15,
-          "hp": 0.9
-        },
-        "name": "Пси-кадр · штурм"
-      },
-      "race_swarm": {
-        "statsMult": {
-          "hp": 0.85,
-          "damage": 1.1
-        },
-        "name": "Роевая биомасса · штурм"
-      },
-      "race_voidborn": {
-        "statsMult": {
-          "accuracy": 1.1,
-          "hp": 0.95
-        },
-        "name": "Войд-скитальцы · штурм"
-      }
-    }
-  },
   "unit.garrison": {
     "id": "unit.garrison",
     "name": "Гарнизон",
@@ -286,48 +288,48 @@
         "statsMult": {
           "defense": 1.15
         },
-        "name": "Легион Белатора · гарнизон"
+        "name": "Легион Белатора"
       },
       "race_synth": {
         "statsMult": {
           "hp": 0.9,
           "speed": 1.2
         },
-        "name": "Синт-дрон · гарнизон"
+        "name": "Синт-дрон"
       },
       "race_human": {
         "statsMult": {
           "damage": 1.05
         },
-        "name": "Колониальная пехота · гарнизон"
+        "name": "Колониальная пехота"
       },
       "race_karned": {
         "statsMult": {
           "defense": 1.2,
           "speed": 0.9
         },
-        "name": "Каменная когорта · гарнизон"
+        "name": "Каменная когорта"
       },
       "race_psionic": {
         "statsMult": {
           "damage": 1.15,
           "hp": 0.9
         },
-        "name": "Пси-кадр · гарнизон"
+        "name": "Пси-кадр"
       },
       "race_swarm": {
         "statsMult": {
           "hp": 0.85,
           "damage": 1.1
         },
-        "name": "Роевая биомасса · гарнизон"
+        "name": "Роевая биомасса"
       },
       "race_voidborn": {
         "statsMult": {
           "accuracy": 1.1,
           "hp": 0.95
         },
-        "name": "Войд-скитальцы · гарнизон"
+        "name": "Войд-скитальцы"
       }
     }
   },
@@ -337,8 +339,10 @@
     "faction": "generic",
     "tier": 3,
     "roles": [
-      "garrison"
+      "garrison",
+      "emplacement"
     ],
+    "stationary": true,
     "stats": {
       "damage": 18,
       "defense": 30,
@@ -351,7 +355,253 @@
       "assault": 1,
       "space": 0
     },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=2"
+        },
+        "count": 4
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=2"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "D",
+          "tier": ">=2"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "defense": 1.15
+        },
+        "name": "Легион Белатора · Планетарное орудие"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "speed": 1.2
+        },
+        "name": "Синт-дрон · Планетарное орудие"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Колониальная пехота · Планетарное орудие"
+      },
+      "race_karned": {
+        "statsMult": {
+          "defense": 1.2,
+          "speed": 0.9
+        },
+        "name": "Каменная когорта · Планетарное орудие"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.15,
+          "hp": 0.9
+        },
+        "name": "Пси-кадр · Планетарное орудие"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Роевая биомасса · Планетарное орудие"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Войд-скитальцы · Планетарное орудие"
+      }
+    }
+  },
+  "unit.bunker": {
+    "id": "unit.bunker",
+    "name": "Бункер",
+    "faction": "generic",
+    "tier": 3,
+    "roles": [
+      "garrison",
+      "fortification"
+    ],
     "stationary": true,
+    "stats": {
+      "damage": 6,
+      "defense": 40,
+      "hp": 260,
+      "speed": 0
+    },
+    "targeting": "assault_first",
+    "theaterMult": {
+      "ground": 1.2,
+      "assault": 0.7,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=2"
+        },
+        "count": 6
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "defense": 1.15
+        },
+        "name": "Легион Белатора · Бункер"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "speed": 1.2
+        },
+        "name": "Синт-дрон · Бункер"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Колониальная пехота · Бункер"
+      },
+      "race_karned": {
+        "statsMult": {
+          "defense": 1.2,
+          "speed": 0.9
+        },
+        "name": "Каменная когорта · Бункер"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.15,
+          "hp": 0.9
+        },
+        "name": "Пси-кадр · Бункер"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Роевая биомасса · Бункер"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Войд-скитальцы · Бункер"
+      }
+    }
+  },
+  "unit.breach_cadre": {
+    "id": "unit.breach_cadre",
+    "name": "Штурмовой кадр",
+    "faction": "generic",
+    "tier": 4,
+    "roles": [
+      "assault",
+      "infantry"
+    ],
+    "stats": {
+      "damage": 22,
+      "defense": 14,
+      "hp": 100,
+      "speed": 6
+    },
+    "targeting": "garrison_first",
+    "theaterMult": {
+      "ground": 1,
+      "assault": 1.2,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=3"
+        },
+        "count": 3
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
     "raceVariants": {
       "race_belator": {
         "statsMult": {
@@ -408,22 +658,186 @@
     "faction": "generic",
     "tier": 4,
     "roles": [
-      "garrison"
+      "garrison",
+      "fortification"
+    ],
+    "stationary": true,
+    "stats": {
+      "damage": 4,
+      "defense": 50,
+      "hp": 300,
+      "speed": 0
+    },
+    "targeting": "assault_first",
+    "theaterMult": {
+      "ground": 1.15,
+      "assault": 0.6,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 5
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "D",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "defense": 1.15
+        },
+        "name": "Легион Белатора · Щитовой купол"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "speed": 1.2
+        },
+        "name": "Синт-дрон · Щитовой купол"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Колониальная пехота · Щитовой купол"
+      },
+      "race_karned": {
+        "statsMult": {
+          "defense": 1.2,
+          "speed": 0.9
+        },
+        "name": "Каменная когорта · Щитовой купол"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.15,
+          "hp": 0.9
+        },
+        "name": "Пси-кадр · Щитовой купол"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Роевая биомасса · Щитовой купол"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Войд-скитальцы · Щитовой купол"
+      }
+    }
+  },
+  "unit.armor_cadre": {
+    "id": "unit.armor_cadre",
+    "name": "Бронекадр",
+    "faction": "generic",
+    "tier": 5,
+    "roles": [
+      "vehicle",
+      "assault"
     ],
     "stats": {
-      "damage": 0,
-      "defense": 10,
-      "shields": 80,
-      "hp": 150,
-      "speed": 0
+      "damage": 28,
+      "defense": 26,
+      "hp": 160,
+      "speed": 5
     },
     "targeting": "garrison_first",
     "theaterMult": {
-      "ground": 1,
-      "assault": 1,
+      "ground": 1.05,
+      "assault": 1.15,
       "space": 0
     },
-    "stationary": true,
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=4"
+        },
+        "count": 6
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=3"
+        },
+        "count": 3
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=4"
+        },
+        "count": 3
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "D",
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Мобильная броня; outfitable",
+    "tradeoff": "дороже пехоты того же тира",
     "raceVariants": {
       "race_belator": {
         "statsMult": {
@@ -474,27 +888,75 @@
       }
     }
   },
-  "unit.bunker": {
-    "id": "unit.bunker",
-    "name": "Бункер",
+  "unit.heavy_legion": {
+    "id": "unit.heavy_legion",
+    "name": "Тяжёлый легион",
     "faction": "generic",
-    "tier": 3,
+    "tier": 6,
     "roles": [
-      "garrison"
+      "infantry",
+      "line"
     ],
     "stats": {
-      "damage": 8,
-      "defense": 50,
-      "hp": 300,
-      "speed": 0
+      "damage": 32,
+      "defense": 28,
+      "hp": 180,
+      "speed": 4
     },
-    "targeting": "assault_first",
+    "targeting": "infantry_first",
     "theaterMult": {
-      "ground": 1,
-      "assault": 1,
+      "ground": 1.1,
+      "assault": 1.05,
       "space": 0
     },
-    "stationary": true,
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=5"
+        },
+        "count": 7
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=5"
+        },
+        "count": 4
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=4"
+        },
+        "count": 5
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=3"
+        },
+        "count": 1
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=4"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
     "raceVariants": {
       "race_belator": {
         "statsMult": {

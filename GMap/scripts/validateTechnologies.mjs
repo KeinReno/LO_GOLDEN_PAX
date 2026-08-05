@@ -11,13 +11,27 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const strict = process.argv.includes("--strict");
 
-const ERA_COST = {
-  1: [8, 20],
-  2: [18, 36],
-  3: [30, 60],
-  4: [100, 180],
-  5: [120, 480],
+let ERA_COST = {
+  1: [12, 16],
+  2: [24, 32],
+  3: [42, 58],
+  4: [144, 180],
+  5: [180, 220],
 };
+let PREMIUM_MAX = 1.35;
+try {
+  const bal = JSON.parse(
+    readFileSync(join(root, "content/core/economy_balance.json"), "utf8"),
+  );
+  if (bal?.tech?.eraRange) {
+    ERA_COST = Object.fromEntries(
+      Object.entries(bal.tech.eraRange).map(([k, v]) => [Number(k), v]),
+    );
+  }
+  if (bal?.tech?.premiumMaxMult) PREMIUM_MAX = bal.tech.premiumMaxMult;
+} catch {
+  /* keep defaults */
+}
 
 const KNOWN_EFFECTS = new Set([
   "unlock_tech_tier",
@@ -88,8 +102,24 @@ for (const def of byId.values()) {
     err(`${def.id}: missing currency.cognitio cost`);
   } else {
     const range = ERA_COST[def.era];
-    if (range && (cogn < range[0] || cogn > range[1])) {
-      warn(`${def.id}: cost ${cogn} outside era ${def.era} band ${range[0]}–${range[1]}`);
+    if (range) {
+      const tags = def.tags || [];
+      const premium =
+        def.raceLock ||
+        def.factionTraitLock ||
+        tags.some(
+          (t) =>
+            String(t).startsWith("race_") ||
+            String(t).startsWith("faction_") ||
+            String(t).startsWith("trait.") ||
+            t === "breakthrough",
+        );
+      const hi = Math.round(range[1] * (premium ? PREMIUM_MAX : 1));
+      if (cogn < range[0] || cogn > hi) {
+        warn(
+          `${def.id}: cost ${cogn} outside era ${def.era} band ${range[0]}–${hi}`,
+        );
+      }
     }
   }
   if (!Array.isArray(def.effects) || def.effects.length < 1) {

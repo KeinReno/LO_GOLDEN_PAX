@@ -83,6 +83,22 @@ export type TechnologyDef = {
   /** Required race_hybrid.* lineage (or population gate). */
   requiresLineage?: string;
   balanceBudget?: number;
+  /** Granted only via alchemy laboratory (not normal research queue). */
+  alchemyOnly?: boolean;
+  alchemyOf?: string[];
+};
+
+export type TechRecipeDef = {
+  id: string;
+  name: string;
+  ingredients: string[];
+  results: string[];
+  era?: number;
+  tags?: string[];
+  flavor?: string;
+  discoverableBlind?: boolean;
+  catalogPending?: boolean;
+  costOverride?: number | null;
 };
 
 export type PublicContent = {
@@ -121,9 +137,18 @@ export type PublicContent = {
       pegLabel?: string;
       strength?: string;
       blurb?: string;
+      issuerFactionIds?: string[];
       lastUc?: number;
     }
   >;
+  faction_currency_bindings?: {
+    bindings?: Record<
+      string,
+      { fxCurrencyId?: string; treasuryPeg?: string | null }
+    >;
+    defaultFx?: string;
+    seedStocks?: Record<string, Record<string, number>>;
+  };
   market_quote_seed?: {
     meta?: {
       turnStart?: number;
@@ -152,19 +177,45 @@ export type PublicContent = {
     >;
   };
   economy_schema?: EconomySchema;
+  economy_balance?: Record<string, unknown>;
   technologies?: Record<string, TechnologyDef>;
+  tech_combos?: Record<string, TechnologyDef>;
+  tech_recipes?: Record<string, TechRecipeDef>;
   tech_icons?: Record<string, { glyph: string; label: string }>;
   pois?: Record<string, { label?: string; name?: string }>;
   rules?: {
     apPerTurn?: number;
+    forceAp?: {
+      base?: number;
+      perFleet?: number;
+      perLegion?: number;
+      max?: number;
+    };
     tax?: {
       pressureThresholds?: Array<{
         min: number;
         effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
       }>;
     };
+    alchemy?: {
+      attemptsPerTurn?: number;
+      baseCost?: number;
+      eraGapCost?: number;
+      blindHit?: number;
+      duplicateRefund?: number;
+      comboCostFactor?: number;
+    };
+    intel?: Record<string, number>;
+    cardBattle?: {
+      handSize?: number;
+      energyPerRound?: number;
+      maxFront?: number;
+      maxRounds?: number;
+      stanceOrderCooldownRounds?: number;
+    };
   };
-  intents?: Record<string, { ap?: number }>;
+  combat_matchups?: Record<string, Record<string, number>>;
+  intents?: Record<string, { ap?: number; forceAp?: number }>;
   buildings?: Record<
     string,
     {
@@ -285,6 +336,95 @@ export type PublicContent = {
       }
     >;
   };
+  npc_traits?: {
+    meta?: { version?: number; description?: string };
+    traits?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        description?: string;
+        scope?: "faction" | "both" | "posting";
+        effects?: EffectInstance[];
+        postingEffects?: EffectInstance[];
+      }
+    >;
+  };
+  npc_postings?: {
+    meta?: { version?: number; description?: string };
+    postings?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        description?: string;
+        target?: string;
+        effects?: EffectInstance[];
+        systemEffects?: EffectInstance[];
+        legionEffects?: EffectInstance[];
+        fleetEffects?: EffectInstance[];
+        factionEffects?: EffectInstance[];
+        ungovernedLoyaltyPenalty?: number;
+      }
+    >;
+  };
+  court_tasks?: {
+    meta?: { version?: number; description?: string };
+    tasks?: Record<
+      string,
+      {
+        id: string;
+        label: string;
+        etaTurns?: number;
+        roles?: string[];
+        effects?: EffectInstance[];
+      }
+    >;
+  };
+  council_seats?: {
+    meta?: { version?: number; description?: string };
+    portfolios?: Record<
+      string,
+      {
+        id: string;
+        label: string;
+        roles?: string[];
+        factionEffects?: EffectInstance[];
+      }
+    >;
+    seats?: Record<
+      string,
+      {
+        id: string;
+        label: string;
+        kind?: "ruler" | "advisor" | string;
+        roles?: string[];
+        angleDeg?: number;
+        defaultUnlocked?: boolean;
+        defaultPortfolio?: string;
+        unlockHint?: string;
+        factionEffects?: EffectInstance[];
+      }
+    >;
+  };
+  internal_blocs?: {
+    meta?: { version?: number; description?: string };
+    blocs?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        color?: string;
+        kind?: string;
+        stance?: string;
+        agenda?: string;
+        description?: string;
+        raceIds?: string[];
+        homeSystemId?: string;
+        homeSystemName?: string;
+      }
+    >;
+  };
   faiths?: {
     meta?: { version?: number };
     faiths?: Record<
@@ -313,7 +453,9 @@ export type PublicContent = {
       name: string;
       summary?: string;
       detail?: string;
-      filterBy?: string[];
+      category?: string;
+      neutral?: boolean;
+      filterBy?: Record<string, unknown>;
       choices?: Array<{
         id: string;
         label: string;
@@ -325,6 +467,24 @@ export type PublicContent = {
       }>;
     }
   >;
+  story_quests?: {
+    meta?: { version?: number; description?: string };
+    quests?: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        summary?: string;
+        detail?: string;
+        kind?: string;
+        hasChoices?: boolean;
+        choices?: unknown[];
+        placement?: Record<string, unknown>;
+        audience?: Record<string, unknown>;
+        completion?: Record<string, unknown>;
+      }
+    >;
+  };
   diplomacy_stances?: Record<
     string,
     {
@@ -390,9 +550,34 @@ export function poiLabels(): Record<string, string> {
 }
 
 export function apPerTurn(): number {
-  return cached?.rules?.apPerTurn ?? 3;
+  return cached?.rules?.apPerTurn ?? 9;
 }
 
 export function intentApCost(defId: string): number {
   return cached?.intents?.[defId]?.ap ?? 0;
+}
+
+export function intentForceApCost(defId: string): number {
+  return cached?.intents?.[defId]?.forceAp ?? 0;
+}
+
+/** Client-side estimate of force OD cap from owned fleets/legions. */
+export function estimateForceApMax(
+  fleets: Array<{ factionId?: string }> | undefined,
+  legions: Array<{ factionId?: string }> | undefined,
+  factionId: string | null | undefined,
+): number {
+  if (!factionId) return 0;
+  const cfg = cached?.rules?.forceAp;
+  const base = Number(cfg?.base ?? 2);
+  const perFleet = Number(cfg?.perFleet ?? 1);
+  const perLegion = Number(cfg?.perLegion ?? 1);
+  const max = Number(cfg?.max ?? 8);
+  const nFleets = (fleets ?? []).filter((f) => f.factionId === factionId).length;
+  const nLegions = (legions ?? []).filter((l) => l.factionId === factionId)
+    .length;
+  return Math.max(
+    0,
+    Math.min(max, Math.floor(base + nFleets * perFleet + nLegions * perLegion)),
+  );
 }

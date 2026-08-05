@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { fmtInt } from "../../../state/numberFormat";
 import type { ExpenseSlice, LedgerRow } from "../chartData";
 import { currencyShortLabel, rowsForReason } from "../chartData";
 
@@ -21,7 +22,7 @@ function Tip({
   return (
     <div className="eco-chart-tip">
       <strong>{p.name}</strong>
-      <div>−{p.value}</div>
+      <div>−{fmtInt(p.value ?? 0)}</div>
     </div>
   );
 }
@@ -32,9 +33,13 @@ export function ExpenseDonut({
   title = "Расходы по статьям",
 }: Props) {
   const [activeReason, setActiveReason] = useState<string | null>(null);
+  const sliceTurn = slices[0]?.turn ?? null;
   const detail = useMemo(
-    () => (activeReason ? rowsForReason(recent, activeReason) : []),
-    [activeReason, recent],
+    () =>
+      activeReason
+        ? rowsForReason(recent, activeReason, { turn: sliceTurn })
+        : [],
+    [activeReason, recent, sliceTurn],
   );
 
   if (slices.length === 0) {
@@ -114,7 +119,7 @@ export function ExpenseDonut({
                   style={{ background: s.fill }}
                 />
                 <span className="eco-donut-legend__label">{s.label}</span>
-                <span className="tabular-nums">−{s.amount}</span>
+                <span className="tabular-nums">−{fmtInt(s.amount)}</span>
               </button>
             </li>
           ))}
@@ -131,7 +136,7 @@ export function ExpenseDonut({
                   ход {r.turn ?? "—"} · {currencyShortLabel(r.currencyId)}
                 </span>
                 <strong className="tabular-nums is-down">
-                  {r.delta}
+                  {r.delta > 0 ? `+${fmtInt(r.delta)}` : fmtInt(r.delta)}
                 </strong>
               </li>
             ))

@@ -2,7 +2,7 @@ import type { WorldState } from "../state/types";
 import { SYSTEM_ACTIVITY_LABELS } from "../state/defaults";
 import { systemKindLabel } from "../state/displayLabels";
 import { censusPlanets } from "../state/planets";
-import { captureMapPngDataUrl } from "./mapExportBridge";
+import { captureMapPngDataUrl, type MapPngExportOptions } from "./mapExportBridge";
 
 /** Human-readable campaign brief for notes / Discord / wiki. */
 export function exportCampaignMarkdown(world: WorldState): string {
@@ -110,8 +110,11 @@ export function downloadText(text: string, filename: string, mime: string): void
 }
 
 /** Export map via Pixi extract (avoids black WebGL canvas dumps). */
-export async function exportMapPng(filename: string): Promise<boolean> {
-  const url = await captureMapPngDataUrl();
+export async function exportMapPng(
+  filename: string,
+  opts?: MapPngExportOptions,
+): Promise<boolean> {
+  const url = await captureMapPngDataUrl(opts);
   if (!url) return false;
   const a = document.createElement("a");
   a.href = url;
@@ -122,12 +125,21 @@ export async function exportMapPng(filename: string): Promise<boolean> {
 
 /**
  * Poster: map PNG + title / turn stamp chrome (P8.4).
+ * scope=playerVisible — только системы в зоне видимости фракции, с fit по ним.
  */
 export async function exportMapPosterPng(
   world: WorldState,
-  opts?: { filename?: string; subtitle?: string },
+  opts?: {
+    filename?: string;
+    subtitle?: string;
+    scope?: MapPngExportOptions["scope"];
+    factionId?: string | null;
+  },
 ): Promise<boolean> {
-  const mapUrl = await captureMapPngDataUrl();
+  const mapUrl = await captureMapPngDataUrl({
+    scope: opts?.scope ?? "viewport",
+    factionId: opts?.factionId,
+  });
   if (!mapUrl) return false;
 
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -187,4 +199,39 @@ export async function exportMapPosterPng(
     `${(world.meta.name || "campaign").replace(/\s+/g, "_")}_turn${world.meta.turn}.png`;
   a.click();
   return true;
+}
+
+function slugify(name: string): string {
+  return (name || "campaign").replace(/\s+/g, "_");
+}
+
+/** Плакат только по видимой игроку области (активная фракция + fog mask). */
+export async function exportMapPlayerPosterPng(
+  world: WorldState,
+  opts?: {
+    filename?: string;
+    factionId?: string | null;
+    factionName?: string;
+  },
+): Promise<boolean> {
+  const facLabel = opts?.factionName?.trim() || "игрок";
+  return exportMapPosterPng(world, {
+    scope: "playerVisible",
+    factionId: opts?.factionId,
+    subtitle: `вид ${facLabel}`,
+    filename:
+      opts?.filename ??
+      `${slugify(world.meta.name)}_ход${world.meta.turn}_${slugify(facLabel)}_вид.png`,
+  });
+}
+
+/** PNG без рамки — только видимая игроку область. */
+export async function exportMapPlayerPng(
+  filename: string,
+  opts?: { factionId?: string | null },
+): Promise<boolean> {
+  return exportMapPng(filename, {
+    scope: "playerVisible",
+    factionId: opts?.factionId,
+  });
 }

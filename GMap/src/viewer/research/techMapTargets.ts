@@ -1,6 +1,10 @@
 import type { TechnologyDef } from "../../state/contentCatalog";
 import { getCachedContent } from "../../state/contentCatalog";
 import { canBuildWithTech, type TechEcoSlice } from "../../state/techGate";
+import {
+  planetMatchesBiome,
+  planetAllowsBuildingBiome,
+} from "../../state/biomeMatch";
 import type { Planet, StarSystem } from "../../state/types";
 
 type BuildingLike = {
@@ -45,22 +49,6 @@ export function buildingsUnlockedByTech(
   return buildings.filter(
     (b) => !canBuildWithTech(before, b).ok && canBuildWithTech(after, b).ok,
   );
-}
-
-function planetMatchesBiome(planet: Planet, restriction: string): boolean {
-  const r = restriction.toLowerCase();
-  const type = String(planet.type || "").toLowerCase();
-  const climate = String(planet.climate || "").toLowerCase();
-  if (type === r || climate === r) return true;
-  if (r === "gas_giant" && (type === "gas" || type === "gas_giant")) return true;
-  if (r === "ruin" && type === "artifact") return true;
-  if (r === "artifact" && type === "artifact") return true;
-  if (r === "mountainous" && type === "rocky") return true;
-  if (r === "volcanic" && (climate === "infernal" || climate === "hot"))
-    return true;
-  if (r === "swamp" && (type === "ocean" || type === "toxic")) return true;
-  if (r === "anomaly" && type === "toxic") return true;
-  return false;
 }
 
 function planetHasFreeSlot(planet: Planet, zone?: string): boolean {
@@ -122,9 +110,7 @@ export function systemsForTechHighlight(
       for (const p of s.planets || []) {
         if ((p.ownerFactionId || s.ownerFactionId) !== factionId) continue;
         for (const b of unlocked) {
-          const biomeOk =
-            !b.biome_restrictions?.length ||
-            b.biome_restrictions.some((r) => planetMatchesBiome(p, r));
+          const biomeOk = planetAllowsBuildingBiome(p, b.biome_restrictions);
           if (!biomeOk) continue;
           if (!planetHasFreeSlot(p, b.zone)) continue;
           score += 1;
@@ -164,9 +150,7 @@ export function findPlanetForBuilding(
       };
       if (!fallback) fallback = cand;
       if (!def) return cand;
-      const biomeOk =
-        !def.biome_restrictions?.length ||
-        def.biome_restrictions.some((r) => planetMatchesBiome(p, r));
+      const biomeOk = planetAllowsBuildingBiome(p, def.biome_restrictions);
       if (biomeOk && planetHasFreeSlot(p, def.zone)) return cand;
     }
   }

@@ -9,39 +9,45 @@ import {
   ensureFactionEco,
   adjustStock,
 } from "./ledger.mjs";
-import { reservedAp, readIntents, writeIntents } from "./intents.mjs";
+import { reservedAp, reservedForceAp, readIntents, writeIntents } from "./intents.mjs";
 import { writeLiveBoard } from "./tableStore.mjs";
+import {
+  produceForceCost,
+  produceForceAp,
+  stationCost,
+} from "./forceEconomy.mjs";
+import { intentApCosts } from "./apBudget.mjs";
 
 const STATION_DEFS = {
   mining: {
     kind: "mining",
     name: "Добывающая станция",
     ap: 1,
-    cost: { "currency.metal": 24, "currency.supply": 6 },
+    cost: { "currency.metal": 24, "currency.supply": 10 },
   },
   military: {
     kind: "military",
     name: "Оборонная платформа",
     ap: 2,
-    cost: { "currency.metal": 36, "currency.supply": 12 },
+    cost: { "currency.metal": 36, "currency.supply": 15 },
   },
   science: {
     kind: "science",
     name: "Научная станция",
     ap: 1,
-    cost: { "currency.metal": 18, "currency.supply": 10 },
+    cost: { "currency.metal": 22, "currency.supply": 9 },
   },
   trade: {
     kind: "trade",
     name: "Торговый узел",
     ap: 1,
-    cost: { "currency.metal": 22, "currency.supply": 8 },
+    cost: { "currency.metal": 24, "currency.supply": 10 },
   },
   relay: {
     kind: "relay",
     name: "Релейный маяк",
     ap: 1,
-    cost: { "currency.metal": 28, "currency.supply": 6 },
+    cost: { "currency.metal": 20, "currency.supply": 8 },
   },
 };
 
@@ -59,19 +65,29 @@ function ownsSystem(system, factionId) {
 
 function canAfford(eco, cost) {
   for (const [cur, amt] of Object.entries(cost || {})) {
-    if ((eco.stocks?.[cur] ?? 0) < amt) {
-      return { ok: false, error: `Не хватает ${cur} (нужно ${amt})` };
+    const numAmt = Number(amt || 0);
+    if (numAmt < 0) return { ok: false, error: "Отрицательная стоимость недопустима" };
+    if ((eco.stocks?.[cur] ?? 0) < numAmt) {
+      return { ok: false, error: `Не хватает ${cur} (нужно ${numAmt})` };
     }
   }
   return { ok: true };
 }
 
-function pay(factionId, cost, apNeed, apMax, turn) {
+function pay(factionId, cost, apNeed, apMax, turn, opts = {}) {
   const ledger = readLedger();
   const eco = ensureFactionEco(ledger, factionId);
-  const used = reservedAp(factionId, turn);
-  if (used + apNeed > apMax) {
-    return { ok: false, error: `Не хватает AP (нужно ${apNeed}, свободно ${Math.max(0, apMax - used)})` };
+  const force = !!opts.force;
+  const used = force
+    ? reservedForceAp(factionId, turn)
+    : reservedAp(factionId, turn);
+  const cap = force ? opts.forceApMax ?? 0 : apMax;
+  if (apNeed > 0 && used + apNeed > cap) {
+    const label = force ? "ОД сил" : "ОД";
+    return {
+      ok: false,
+      error: `Не хватает ${label} (нужно ${apNeed}, свободно ${Math.max(0, cap - used)})`,
+    };
   }
   const aff = canAfford(eco, cost);
   if (!aff.ok) return aff;
@@ -82,11 +98,17 @@ function pay(factionId, cost, apNeed, apMax, turn) {
     });
   }
   writeLedger(ledger);
-  return { ok: true, cost, ap: apNeed };
+  return {
+    ok: true,
+    cost,
+    ap: force ? 0 : apNeed,
+    forceAp: force ? apNeed : 0,
+  };
 }
 
-function recordIntent(factionId, defId, payload, note, turn, cost) {
+function recordIntent(factionId, defId, payload, note, turn, cost, apMeta = {}) {
   const intents = readIntents();
+  const fromDef = intentApCosts(getContent().intents?.[defId]);
   const intent = {
     id: randomUUID(),
     factionId,
@@ -97,6 +119,8 @@ function recordIntent(factionId, defId, payload, note, turn, cost) {
     payload,
     note: note || "",
     cost: cost || null,
+    apCost: apMeta.apCost ?? fromDef.apCost,
+    forceApCost: apMeta.forceApCost ?? fromDef.forceApCost,
     source: "system",
   };
   intents.push(intent);
@@ -129,18 +153,34 @@ function systemHasBarracks(system, factionId) {
   return false;
 }
 
-function produceCost(def, count) {
-  const tier = Number(def.tier ?? 1);
-  const n = Math.max(1, count | 0);
-  return {
-    "currency.metal": Math.ceil((8 + tier * 6) * n),
-    "currency.supply": Math.ceil((4 + tier * 2) * n),
-  };
+function produceCost(def, count, kind = "ship") {
+  return produceForceCost(kind, def, count);
 }
 
 function produceAp(def, count) {
-  const tier = Number(def.tier ?? 1);
-  return Math.max(1, Math.ceil((tier >= 4 ? 2 : 1) * Math.max(1, count | 0) * 0.5));
+  return produceForceAp(def, count);
+}
+
+function resolveStationDef(kind) {
+  const fromContent = getContent().stations?.[kind];
+  if (fromContent) {
+    return {
+      kind: fromContent.kind ?? kind,
+      name: fromContent.name,
+      ap: Number(fromContent.ap ?? 1),
+      cost:
+        fromContent.cost ??
+        stationCost(kind) ??
+        STATION_DEFS[kind]?.cost ??
+        {},
+    };
+  }
+  const fallback = STATION_DEFS[kind];
+  if (!fallback) return null;
+  return {
+    ...fallback,
+    cost: stationCost(kind) ?? fallback.cost,
+  };
 }
 
 /**
@@ -171,6 +211,7 @@ export function applySystemAction({
   name,
   note,
   apMax,
+  forceApMax = 0,
 }) {
   const found = findSystem(world, systemId);
   if (found.error) return { ok: false, error: found.error };
@@ -182,7 +223,7 @@ export function applySystemAction({
   const n = Math.max(1, Math.min(20, Number(count) || 1));
 
   if (action === "build_station") {
-    const def = STATION_DEFS[stationKind];
+    const def = resolveStationDef(stationKind);
     if (!def) return { ok: false, error: "Неизвестный тип станции" };
     system.stations = system.stations ?? [];
     if (system.stations.length >= MAX_STATIONS) {
@@ -222,6 +263,7 @@ export function applySystemAction({
       note,
       turn,
       paid.cost,
+      { apCost: paid.ap, forceApCost: 0 },
     );
     return { ok: true, intent, station };
   }
@@ -278,9 +320,12 @@ export function applySystemAction({
     const content = getContent();
     const def = content.ships?.[shipId];
     if (!def) return { ok: false, error: "Неизвестный корабль" };
-    const cost = produceCost(def, n);
+    const cost = produceCost(def, n, "ship");
     const ap = produceAp(def, n);
-    const paid = pay(factionId, cost, ap, apMax, turn);
+    const paid = pay(factionId, cost, ap, apMax, turn, {
+      force: true,
+      forceApMax,
+    });
     if (!paid.ok) return paid;
 
     let fleet = (world.fleets ?? []).find(
@@ -327,6 +372,7 @@ export function applySystemAction({
       note,
       turn,
       paid.cost,
+      { apCost: 0, forceApCost: paid.forceAp },
     );
     return { ok: true, intent, fleet };
   }
@@ -338,9 +384,12 @@ export function applySystemAction({
     const content = getContent();
     const def = content.units?.[unitId];
     if (!def) return { ok: false, error: "Неизвестный юнит" };
-    const cost = produceCost(def, n);
+    const cost = produceCost(def, n, "unit");
     const ap = produceAp(def, n);
-    const paid = pay(factionId, cost, ap, apMax, turn);
+    const paid = pay(factionId, cost, ap, apMax, turn, {
+      force: true,
+      forceApMax,
+    });
     if (!paid.ok) return paid;
 
     let legion = (world.legions ?? []).find(
@@ -380,6 +429,7 @@ export function applySystemAction({
       note,
       turn,
       paid.cost,
+      { apCost: 0, forceApCost: paid.forceAp },
     );
     return { ok: true, intent, legion };
   }
@@ -388,5 +438,10 @@ export function applySystemAction({
 }
 
 export function listStationCatalog() {
-  return Object.values(STATION_DEFS);
+  const content = getContent();
+  const kinds = new Set([
+    ...Object.keys(content.stations || {}),
+    ...Object.keys(STATION_DEFS),
+  ]);
+  return [...kinds].map((kind) => resolveStationDef(kind)).filter(Boolean);
 }

@@ -26,6 +26,9 @@ export default defineConfig({
     clearScreen: false,
     // Cloudflare / ngrok tunnels change subdomain each run
     allowedHosts: true,
+    hmr: {
+      clientPort: 5173,
+    },
   },
   preview: {
     port: 4173,

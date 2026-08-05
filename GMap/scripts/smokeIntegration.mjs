@@ -127,6 +127,40 @@ check("content.diplomacy_stances loaded", Object.keys(content.diplomacy_stances 
 check("content.races loaded", Object.keys(content.races || {}).length >= 7, `${Object.keys(content.races || {}).length} races`);
 check("intent.throw_quest_dice defined", !!content.intents?.["intent.throw_quest_dice"]);
 check("intent.give_npc_task defined", !!content.intents?.["intent.give_npc_task"]);
+check("intent.assign_npc_posting defined", !!content.intents?.["intent.assign_npc_posting"]);
+check("intent.recall_npc_posting defined", !!content.intents?.["intent.recall_npc_posting"]);
+check("intent.seat_npc_council defined", !!content.intents?.["intent.seat_npc_council"]);
+check("intent.unseat_npc_council defined", !!content.intents?.["intent.unseat_npc_council"]);
+check(
+  "content.council_seats.seats loaded",
+  Object.keys(content.council_seats?.seats || {}).length >= 5,
+  `${Object.keys(content.council_seats?.seats || {}).length} seats`,
+);
+check(
+  "content.internal_blocs.blocs loaded",
+  Object.keys(content.internal_blocs?.blocs || {}).length >= 3,
+  `${Object.keys(content.internal_blocs?.blocs || {}).length} blocs`,
+);
+check(
+  "governor has systemEffects",
+  Array.isArray(content.npc_postings?.postings?.governor?.systemEffects) &&
+    content.npc_postings.postings.governor.systemEffects.length > 0,
+);
+check(
+  "content.npc_traits.traits loaded",
+  Object.keys(content.npc_traits?.traits || {}).length >= 3,
+  `${Object.keys(content.npc_traits?.traits || {}).length} npc traits`,
+);
+check(
+  "content.npc_postings.postings loaded",
+  Object.keys(content.npc_postings?.postings || {}).length >= 3,
+  `${Object.keys(content.npc_postings?.postings || {}).length} postings`,
+);
+check(
+  "content.court_tasks.tasks loaded",
+  Object.keys(content.court_tasks?.tasks || {}).length >= 3,
+  `${Object.keys(content.court_tasks?.tasks || {}).length} court tasks`,
+);
 check("intent.research_upgrade defined", !!content.intents?.["intent.research_upgrade"]);
 check("intent.set_research_queue defined", !!content.intents?.["intent.set_research_queue"]);
 check("tech_icons loaded", Object.keys(content.tech_icons || {}).length >= 5, `${Object.keys(content.tech_icons || {}).length} icons`);

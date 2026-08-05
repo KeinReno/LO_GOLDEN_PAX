@@ -12,6 +12,8 @@ export type NpcPanelProps = {
     npcId: string,
     project: string,
   ) => void | Promise<boolean | void>;
+  /** Full-page mode inside quests center (no slide dock). */
+  embedded?: boolean;
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -52,6 +54,7 @@ export function NpcPanel({
   tasks,
   turn,
   onAssign,
+  embedded = false,
 }: NpcPanelProps) {
   const [npcId, setNpcId] = useState("");
   const [project, setProject] = useState("");
@@ -80,150 +83,167 @@ export function NpcPanel({
     }
   };
 
-  return (
-    <AnimatePresence>
-      {open ? (
-        <motion.aside
-          key="npc"
-          className="quest-npc-panel"
-          initial={{ x: "100%", opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: "100%", opacity: 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 36 }}
-          aria-label="NPC и поручения"
-        >
-          <header className="quest-npc-panel__head">
-            <div>
-              <p className="dossier-kicker">Двор</p>
-              <h3>Поручения</h3>
-              <p className="hint quest-npc-panel__stats">
-                {tasks.length} лиц · {working} в работе
-                {done ? ` · ${done} готово` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={onClose}
-              aria-label="Закрыть"
-            >
-              <X size={16} />
-            </button>
-          </header>
+  if (!open) return null;
 
-          <ul className="quest-npc-list">
-            {tasks.length === 0 ? (
-              <li className="quest-npc-empty">
-                <UserRound size={28} aria-hidden />
-                <p>Нет известных лиц при дворе.</p>
-                <p className="hint">Их назначает мастер / появляются в сюжете.</p>
-              </li>
-            ) : (
-              tasks.map((t) => (
-                <li key={t.id} className={`quest-npc-row is-${t.status}`}>
-                  <Avatar task={t} />
-                  <div className="quest-npc-row__body">
-                    <div className="quest-npc-row__top">
-                      <div>
-                        <strong>{t.npcName}</strong>
-                        {(t.title || t.role) && (
-                          <p className="quest-npc-row__role hint">
-                            {[t.title, t.role ? ROLE_LABEL[t.role] || t.role : null]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        )}
-                      </div>
-                      <span className={`quest-npc-pill is-${t.status}`}>
-                        {STATUS_LABEL[t.status]}
-                      </span>
-                    </div>
+  const content = (
+    <>
+      <header className="quest-npc-panel__head">
+        <div>
+          <p className="dossier-kicker">Двор</p>
+          <h3>Поручения</h3>
+          <p className="hint quest-npc-panel__stats">
+            {tasks.length} лиц · {working} в работе
+            {done ? ` · ${done} готово` : ""}
+          </p>
+        </div>
+        {!embedded ? (
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={onClose}
+            aria-label="Закрыть"
+          >
+            <X size={16} />
+          </button>
+        ) : null}
+      </header>
 
-                    {t.status === "idle" ? (
-                      <button
-                        type="button"
-                        className="btn ghost sm quest-npc-row__assign-btn"
-                        onClick={() => {
-                          setAssignFor(t.npcId);
-                          setNpcId(t.npcId);
-                        }}
-                      >
-                        Дать поручение
-                      </button>
-                    ) : (
-                      <>
-                        <p className="quest-npc-row__project">{t.project}</p>
-                        <div
-                          className="quest-npc-bar"
-                          role="progressbar"
-                          aria-valuenow={t.progress}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                        >
-                          <span style={{ width: `${t.progress}%` }} />
-                        </div>
-                        <div className="quest-npc-row__meta hint">
-                          <span>{t.progress}%</span>
-                          {t.etaTurn != null ? (
-                            <span>
-                              ETA {t.etaTurn}
-                              {t.status === "working" ? ` · ход ${turn}` : ""}
-                            </span>
-                          ) : null}
-                        </div>
-                      </>
+      <ul className="quest-npc-list">
+        {tasks.length === 0 ? (
+          <li className="quest-npc-empty">
+            <UserRound size={28} aria-hidden />
+            <p>Нет известных лиц при дворе.</p>
+            <p className="hint">Их назначает мастер / появляются в сюжете.</p>
+          </li>
+        ) : (
+          tasks.map((t) => (
+            <li key={t.id} className={`quest-npc-row is-${t.status}`}>
+              <Avatar task={t} />
+              <div className="quest-npc-row__body">
+                <div className="quest-npc-row__top">
+                  <div>
+                    <strong>{t.npcName}</strong>
+                    {(t.title || t.role) && (
+                      <p className="quest-npc-row__role hint">
+                        {[t.title, t.role ? ROLE_LABEL[t.role] || t.role : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     )}
                   </div>
-                </li>
-              ))
-            )}
-          </ul>
+                  <span className={`quest-npc-pill is-${t.status}`}>
+                    {STATUS_LABEL[t.status]}
+                  </span>
+                </div>
 
-          {(assignFor || idleNpcs.length > 0) && (
-            <form className="quest-npc-assign" onSubmit={(e) => void submit(e)}>
-              <h4>Новое поручение</h4>
-              <label>
-                <span className="hint">Кому</span>
-                <select
-                  value={assignFor || npcId}
-                  onChange={(e) => {
-                    setNpcId(e.target.value);
-                    setAssignFor(e.target.value || null);
-                  }}
-                  disabled={busy || idleNpcs.length === 0}
-                >
-                  <option value="">— выбрать —</option>
-                  {idleNpcs.map((n) => (
-                    <option key={n.npcId} value={n.npcId}>
-                      {n.npcName}
-                      {n.title ? ` · ${n.title}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className="hint">Задача</span>
-                <input
-                  type="text"
-                  value={project}
-                  onChange={(e) => setProject(e.target.value)}
-                  placeholder="Разведка, переговоры, саботаж…"
-                  disabled={busy}
-                />
-              </label>
-              <button
-                type="submit"
-                className="btn primary sm"
-                disabled={
-                  busy || !(assignFor || npcId) || !project.trim()
-                }
-              >
-                Назначить · ETA +2 хода
-              </button>
-            </form>
-          )}
-        </motion.aside>
-      ) : null}
+                {t.status === "idle" ? (
+                  <button
+                    type="button"
+                    className="btn ghost sm quest-npc-row__assign-btn"
+                    onClick={() => {
+                      setAssignFor(t.npcId);
+                      setNpcId(t.npcId);
+                    }}
+                  >
+                    Дать поручение
+                  </button>
+                ) : (
+                  <>
+                    <p className="quest-npc-row__project">{t.project}</p>
+                    <div
+                      className="quest-npc-bar"
+                      role="progressbar"
+                      aria-valuenow={t.progress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <span style={{ width: `${t.progress}%` }} />
+                    </div>
+                    <div className="quest-npc-row__meta hint">
+                      <span>{t.progress}%</span>
+                      {t.etaTurn != null ? (
+                        <span>
+                          ETA {t.etaTurn}
+                          {t.status === "working" ? ` · ход ${turn}` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
+            </li>
+          ))
+        )}
+      </ul>
+
+      {(assignFor || idleNpcs.length > 0) && (
+        <form className="quest-npc-assign" onSubmit={(e) => void submit(e)}>
+          <h4>Новое поручение</h4>
+          <label>
+            <span className="hint">Кому</span>
+            <select
+              value={assignFor || npcId}
+              onChange={(e) => {
+                setNpcId(e.target.value);
+                setAssignFor(e.target.value || null);
+              }}
+              disabled={busy || idleNpcs.length === 0}
+            >
+              <option value="">— выбрать —</option>
+              {idleNpcs.map((n) => (
+                <option key={n.npcId} value={n.npcId}>
+                  {n.npcName}
+                  {n.title ? ` · ${n.title}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="hint">Задача</span>
+            <input
+              type="text"
+              value={project}
+              onChange={(e) => setProject(e.target.value)}
+              placeholder="Разведка, переговоры, саботаж…"
+              disabled={busy}
+            />
+          </label>
+          <button
+            type="submit"
+            className="btn primary sm"
+            disabled={busy || !(assignFor || npcId) || !project.trim()}
+          >
+            Назначить · ETA +2 хода
+          </button>
+        </form>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section
+        className="quest-npc-panel quest-npc-panel--embedded"
+        aria-label="NPC и поручения"
+      >
+        {content}
+      </section>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      <motion.aside
+        key="npc"
+        className="quest-npc-panel"
+        initial={{ x: "100%", opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: "100%", opacity: 0 }}
+        transition={{ type: "spring", stiffness: 380, damping: 36 }}
+        aria-label="NPC и поручения"
+      >
+        {content}
+      </motion.aside>
     </AnimatePresence>
   );
 }

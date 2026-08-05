@@ -26,6 +26,10 @@ import { recomputeUnlocksFromTechs } from "./techActions.mjs";
 import { applyUnitUpgradeEffectsToWorld } from "./combatResolve.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { updateIntelFromDiplomacy } from "./intel.mjs";
+import {
+  ensureAlchemyState,
+  transferRecipe,
+} from "./alchemyActions.mjs";
 
 export const DIPLO_OFFERS_PATH = path.join(DATA_DIR, "diplo-offers.json");
 
@@ -41,6 +45,54 @@ const TREATIES = new Set([
   "migration_treaty",
   "embargo",
 ]);
+
+/**
+ * Mutual treaties — only via pending offer (other player must accept).
+ * Unilateral stances (war / embargo / break) apply immediately — never as a deal.
+ */
+export const MUTUAL_TREATIES = new Set([
+  "trade",
+  "alliance",
+  "nap",
+  "research_pact",
+  "migration_treaty",
+  "truce",
+  "vassal",
+]);
+
+/** Hostile / withdrawing actions — fait accompli, no counterparty consent. */
+export const UNILATERAL_STANCES = new Set(["war", "embargo", "break"]);
+
+function getEdgeRelation(world, aId, bId) {
+  const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
+  return (
+    (world.diplomacy ?? []).find((d) => d.aId === x && d.bId === y)?.relation ??
+    "neutral"
+  );
+}
+
+function cancelPendingOffersBetween(aId, bId, turn, reason) {
+  const store = readDiploOffers();
+  let changed = false;
+  for (let i = 0; i < store.offers.length; i++) {
+    const o = store.offers[i];
+    if (o.status !== "pending") continue;
+    const pair =
+      (o.fromFactionId === aId && o.toFactionId === bId) ||
+      (o.fromFactionId === bId && o.toFactionId === aId);
+    if (!pair) continue;
+    refundEscrow(o, turn, reason);
+    store.offers[i] = {
+      ...o,
+      status: "cancelled",
+      resolvedAt: new Date().toISOString(),
+      escrowed: false,
+      cancelReason: reason,
+    };
+    changed = true;
+  }
+  if (changed) writeDiploOffers(store);
+}
 
 /** Techs with race/trait locks or non-transferable acquired records stay private. */
 function isShareableTechId(techId, eco, content) {
@@ -102,9 +154,112 @@ function normalizeItems(items) {
       const treaty = String(raw.treaty || "");
       if (!TREATIES.has(treaty)) continue;
       out.push({ kind: "treaty", treaty });
+    } else if (raw.kind === "tech") {
+      const techId = String(raw.techId || "");
+      if (!techId) continue;
+      out.push({ kind: "tech", techId });
+    } else if (raw.kind === "fleet") {
+      const fleetId = String(raw.fleetId || "");
+      if (!fleetId) continue;
+      out.push({ kind: "fleet", fleetId });
+    } else if (raw.kind === "legion") {
+      const legionId = String(raw.legionId || "");
+      if (!legionId) continue;
+      out.push({ kind: "legion", legionId });
+    } else if (raw.kind === "system") {
+      const systemId = String(raw.systemId || "");
+      if (!systemId) continue;
+      out.push({ kind: "system", systemId });
     }
   }
   return out;
+}
+
+/** Validate asset ownership (fleets / legions / systems / shareable techs). */
+function validateAssets(world, factionId, items, ledger) {
+  const content = getContent();
+  const eco = ledger ? ensureFactionEco(ledger, factionId) : null;
+  for (const item of items || []) {
+    if (item.kind === "fleet") {
+      const f = (world.fleets || []).find((x) => x.id === item.fleetId);
+      if (!f || f.factionId !== factionId) {
+        return { ok: false, error: `флот недоступен: ${item.fleetId}` };
+      }
+    } else if (item.kind === "legion") {
+      const l = (world.legions || []).find((x) => x.id === item.legionId);
+      if (!l || l.factionId !== factionId) {
+        return { ok: false, error: `легион недоступен: ${item.legionId}` };
+      }
+    } else if (item.kind === "system") {
+      const s = (world.systems || []).find((x) => x.id === item.systemId);
+      if (!s || s.ownerFactionId !== factionId) {
+        return { ok: false, error: `система недоступна: ${item.systemId}` };
+      }
+    } else if (item.kind === "tech") {
+      if (!eco || !isShareableTechId(item.techId, eco, content)) {
+        return { ok: false, error: `технологию нельзя передать: ${item.techId}` };
+      }
+      if (!(eco.unlockedTechs || []).includes(item.techId)) {
+        return { ok: false, error: `нет технологии: ${item.techId}` };
+      }
+    } else if (item.kind === "recipe") {
+      const recipeId = item.recipeId;
+      if (!recipeId || !content.tech_recipes?.[recipeId]) {
+        return { ok: false, error: `неизвестный рецепт: ${recipeId}` };
+      }
+      if (!eco) return { ok: false, error: `экономика недоступна: ${recipeId}` };
+      const al = ensureAlchemyState(eco);
+      if (!(al.discoveredRecipes || []).includes(recipeId)) {
+        return { ok: false, error: `нет рецепта: ${recipeId}` };
+      }
+    }
+  }
+  return { ok: true };
+}
+
+function transferAssets(world, fromId, toId, items, ledger) {
+  const content = getContent();
+  for (const item of items || []) {
+    if (item.kind === "fleet") {
+      const f = (world.fleets || []).find((x) => x.id === item.fleetId);
+      if (f && f.factionId === fromId) f.factionId = toId;
+    } else if (item.kind === "legion") {
+      const l = (world.legions || []).find((x) => x.id === item.legionId);
+      if (l && l.factionId === fromId) l.factionId = toId;
+    } else if (item.kind === "system") {
+      const s = (world.systems || []).find((x) => x.id === item.systemId);
+      if (s && s.ownerFactionId === fromId) s.ownerFactionId = toId;
+    } else if (item.kind === "tech" && ledger) {
+      const fromEco = ensureFactionEco(ledger, fromId);
+      const toEco = ensureFactionEco(ledger, toId);
+      if (!isShareableTechId(item.techId, fromEco, content)) continue;
+      if (!(fromEco.unlockedTechs || []).includes(item.techId)) continue;
+      if (!(toEco.unlockedTechs || []).includes(item.techId)) {
+        toEco.unlockedTechs = [...(toEco.unlockedTechs || []), item.techId];
+        toEco.acquiredTechs = [
+          ...(toEco.acquiredTechs || []),
+          {
+            techId: item.techId,
+            source: "diplo_trade",
+            transferable: true,
+            tradedWith: fromId,
+          },
+        ];
+        recomputeUnlocksFromTechs(toEco, content, toId, world);
+        const effects =
+          content.technologies?.[item.techId]?.effects ||
+          content.tech_combos?.[item.techId]?.effects ||
+          [];
+        if (effects.length) {
+          applyUnitUpgradeEffectsToWorld(world, toId, effects, content);
+        }
+      }
+    } else if (item.kind === "recipe" && ledger) {
+      const fromEco = ensureFactionEco(ledger, fromId);
+      const toEco = ensureFactionEco(ledger, toId);
+      transferRecipe(fromEco, toEco, item.recipeId, content);
+    }
+  }
 }
 
 function publicOffer(o) {
@@ -165,9 +320,29 @@ export function createDiploOffer({
     return { ok: false, error: "добавьте хотя бы один пункт сделки" };
   }
 
+  const treatyItems = [...giveItems, ...wantItems].filter(
+    (i) => i.kind === "treaty",
+  );
+  for (const t of treatyItems) {
+    if (!MUTUAL_TREATIES.has(t.treaty)) {
+      return {
+        ok: false,
+        error:
+          t.treaty === "war" || t.treaty === "embargo"
+            ? `«${t.treaty}» — одностороннее действие, не сделка. Используйте кнопку в панели «Действия».`
+            : `договор «${t.treaty}» нельзя предложить как сделку`,
+      };
+    }
+  }
+
   // Escrow giver resources immediately so they can't double-spend.
   const ledger = readLedger();
   ensureFactionEco(ledger, fromFactionId);
+  const world = readLiveBoard();
+  if (world) {
+    const assetCheck = validateAssets(world, fromFactionId, giveItems, ledger);
+    if (!assetCheck.ok) return assetCheck;
+  }
   for (const item of giveItems) {
     if (item.kind !== "resource") continue;
     const have = ledger.factions[fromFactionId].stocks[item.currencyId] ?? 0;
@@ -245,6 +420,129 @@ function setDiplomacyRelation(world, aId, bId, relation, turn) {
 }
 
 /**
+ * Unilateral diplomatic act — applies immediately (no accept/reject).
+ * stance: "war" | "embargo" | "break" (→ neutral, tears current treaty)
+ *
+ * @returns {{ ok: true, relation, previous } | { ok: false, error: string }}
+ */
+export function applyUnilateralStance({
+  fromFactionId,
+  toFactionId,
+  stance,
+  turn,
+  knownOk,
+}) {
+  if (!fromFactionId || !toFactionId || fromFactionId === toFactionId) {
+    return { ok: false, error: "некорректный адресат" };
+  }
+  if (knownOk === false) {
+    return { ok: false, error: "держава неизвестна — нет контакта" };
+  }
+  const action = String(stance || "");
+  if (!UNILATERAL_STANCES.has(action)) {
+    return { ok: false, error: "неизвестное одностороннее действие" };
+  }
+
+  const world = readLiveBoard();
+  if (!world) return { ok: false, error: "карта не опубликована" };
+
+  const previous = getEdgeRelation(world, fromFactionId, toFactionId);
+  let nextRelation = null;
+  let opinionDelta = 0;
+  let historyLabel = "";
+
+  if (action === "war") {
+    if (previous === "war") {
+      return { ok: false, error: "война уже объявлена" };
+    }
+    nextRelation = "war";
+    opinionDelta = -20;
+    historyLabel =
+      previous === "alliance"
+        ? "Объявлена война (союз разорван)"
+        : previous === "trade" || previous === "nap" || previous === "research_pact"
+          ? `Объявлена война (договор ${previous} разорван)`
+          : "Объявлена война";
+  } else if (action === "embargo") {
+    if (previous === "war") {
+      return { ok: false, error: "при войне эмбарго избыточно" };
+    }
+    if (previous === "embargo") {
+      return { ok: false, error: "эмбарго уже действует" };
+    }
+    nextRelation = "embargo";
+    opinionDelta = -10;
+    historyLabel = "Введено эмбарго";
+  } else if (action === "break") {
+    if (
+      previous === "neutral" ||
+      previous === "war" ||
+      previous === "embargo"
+    ) {
+      return {
+        ok: false,
+        error: "нечего разрывать — нет дружественного договора",
+      };
+    }
+    nextRelation = "neutral";
+    const stances = getContent()?.diplomacy_stances || {};
+    const decay = Number(stances[previous]?.trustDecayOnBreak ?? 10);
+    opinionDelta = -Math.max(5, decay);
+    historyLabel = `Разорван договор: ${previous}`;
+  } else {
+    return { ok: false, error: "неизвестное действие" };
+  }
+
+  setDiplomacyRelation(
+    world,
+    fromFactionId,
+    toFactionId,
+    nextRelation,
+    turn ?? 0,
+  );
+
+  // Pending mutual deals between the pair become moot under hostility / break.
+  cancelPendingOffersBetween(
+    fromFactionId,
+    toFactionId,
+    turn,
+    `diplo_unilateral_${action}`,
+  );
+
+  const fromFac = world.factions?.find((f) => f.id === fromFactionId);
+  const toFac = world.factions?.find((f) => f.id === toFactionId);
+  if (fromFac && toFac) {
+    ensureFactionDiplomacy(fromFac);
+    ensureFactionDiplomacy(toFac);
+    bumpOpinion(toFac, fromFactionId, opinionDelta, turn, historyLabel);
+    bumpOpinion(
+      fromFac,
+      toFactionId,
+      Math.floor(opinionDelta / 2),
+      turn,
+      historyLabel,
+    );
+  }
+
+  updateIntelFromDiplomacy(world, fromFactionId, toFactionId, nextRelation, {
+    turn,
+  });
+  updateIntelFromDiplomacy(world, toFactionId, fromFactionId, nextRelation, {
+    turn,
+  });
+
+  writeLiveBoard(world, { backup: false, reason: `diplo_${action}` });
+  bumpTableRevision();
+
+  return {
+    ok: true,
+    relation: nextRelation,
+    previous,
+    message: historyLabel,
+  };
+}
+
+/**
  * @returns {{ ok: true, offer } | { ok: false, error: string }}
  */
 export function respondDiploOffer({
@@ -296,6 +594,40 @@ export function respondDiploOffer({
     }
   }
 
+  const worldPre = readLiveBoard();
+  if (worldPre) {
+    const giveOk = validateAssets(
+      worldPre,
+      offer.fromFactionId,
+      offer.give || [],
+      ledger,
+    );
+    if (!giveOk.ok) return giveOk;
+    const wantOk = validateAssets(
+      worldPre,
+      offer.toFactionId,
+      offer.want || [],
+      ledger,
+    );
+    if (!wantOk.ok) return wantOk;
+  }
+
+  const treatyItem = [...(offer.give || []), ...(offer.want || [])].find(
+    (i) => i.kind === "treaty",
+  );
+  if (
+    treatyItem &&
+    (treatyItem.treaty === "war" ||
+      treatyItem.treaty === "embargo" ||
+      treatyItem.treaty === "neutral")
+  ) {
+    return {
+      ok: false,
+      error:
+        "это предложение устарело (война/эмбарго не оформляются как сделка). Отклоните его.",
+    };
+  }
+
   // Deliver escrowed give → toFaction; take want from to → from.
   for (const item of offer.give || []) {
     if (item.kind !== "resource") continue;
@@ -320,10 +652,6 @@ export function respondDiploOffer({
   }
   writeLedger(ledger);
 
-  const treatyItem = [...(offer.give || []), ...(offer.want || [])].find(
-    (i) => i.kind === "treaty",
-  );
-
   // Research pact: share only transferable / non-exclusive techs (not race/trait locks).
   let researchPactNewTechs = null;
   if (treatyItem?.treaty === "research_pact") {
@@ -342,8 +670,8 @@ export function respondDiploOffer({
     ];
     fromEco.unlockedTechs = fromNext;
     toEco.unlockedTechs = toNext;
-    recomputeUnlocksFromTechs(fromEco, content);
-    recomputeUnlocksFromTechs(toEco, content);
+    recomputeUnlocksFromTechs(fromEco, content, offer.fromFactionId, world);
+    recomputeUnlocksFromTechs(toEco, content, offer.toFactionId, world);
     writeLedger(ledger);
     researchPactNewTechs = {
       content,
@@ -356,6 +684,22 @@ export function respondDiploOffer({
 
   const world = readLiveBoard();
   if (world) {
+    transferAssets(
+      world,
+      offer.fromFactionId,
+      offer.toFactionId,
+      offer.give || [],
+      ledger,
+    );
+    transferAssets(
+      world,
+      offer.toFactionId,
+      offer.fromFactionId,
+      offer.want || [],
+      ledger,
+    );
+    writeLedger(ledger);
+
     if (researchPactNewTechs) {
       const { content, fromPrev, toPrev, fromNext, toNext } =
         researchPactNewTechs;

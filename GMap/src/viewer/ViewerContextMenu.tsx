@@ -1,6 +1,8 @@
 import type { MapContextPick } from "../renderers/MapCanvas";
 import type { ViewerPayload } from "../state/types";
-import { formatHopTurns, hopDistance } from "../state/pathfinding";
+import { canAttackSystem } from "../state/combatEligibility";
+import { formatHopDistance, hopDistance } from "../state/pathfinding";
+import { isWithinMoveRange } from "../state/movementRange";
 import { FloatingPopover } from "../ui/FloatingPopover";
 
 type MenuItem =
@@ -30,7 +32,7 @@ type Props = {
   ) => void;
   onOrderType: (
     kind: "attack_system" | "claim_system",
-    opts: { fleetId?: string; systemId?: string },
+    opts: { fleetId?: string; legionId?: string; systemId?: string },
   ) => void;
   onOpenOrders: () => void;
   onOpenRp: () => void;
@@ -38,6 +40,8 @@ type Props = {
   scoutApCost?: number;
   reservedAp?: number;
   apMax?: number;
+  reservedForceAp?: number;
+  forceApMax?: number;
 };
 
 /** Player-facing RMB menu — Floating UI flip/shift, action-at-source. */
@@ -56,7 +60,7 @@ export function ViewerContextMenu({
   onScoutReveal,
   scoutApCost = 1,
   reservedAp = 0,
-  apMax = 3,
+  apMax = 15,
 }: Props) {
   if (!menu) return null;
 
@@ -92,15 +96,20 @@ export function ViewerContextMenu({
     });
     if (system && system.id !== ownFleet.systemId) {
       const hops = hopDistance(world, ownFleet.systemId, system.id, "fleet");
-      const pathOk = Number.isFinite(hops) && hops > 0;
+      const pathOk =
+        Number.isFinite(hops) &&
+        hops > 0 &&
+        isWithinMoveRange(world, ownFleet.systemId, system.id, "fleet");
       const inVision = visibleSet.has(system.id);
       items.push({
         type: "action",
         label: !inVision
           ? "вне обзора"
           : pathOk
-            ? `Идти сюда (${formatHopTurns(hops)})`
-            : "Идти сюда (нет пути)",
+            ? `Идти сюда (${formatHopDistance(hops)})`
+            : Number.isFinite(hops) && hops > 0
+              ? "вне радиуса"
+              : "Идти сюда (нет пути)",
         disabled: !inVision || !pathOk,
         run: () => {
           if (pathOk && inVision) onMoveUnit("fleet", ownFleet.id, system.id, hops);
@@ -117,6 +126,22 @@ export function ViewerContextMenu({
               systemId: system.id,
             });
           }
+        },
+      });
+    } else if (
+      system &&
+      system.id === ownFleet.systemId &&
+      canAttackSystem(world, factionId, system.id).eligible
+    ) {
+      items.push({
+        type: "action",
+        label: "Атаковать в системе",
+        danger: true,
+        run: () => {
+          onOrderType("attack_system", {
+            fleetId: ownFleet.id,
+            systemId: system.id,
+          });
         },
       });
     }
@@ -139,18 +164,52 @@ export function ViewerContextMenu({
     });
     if (system && system.id !== ownLegion.systemId) {
       const hops = hopDistance(world, ownLegion.systemId, system.id, "legion");
-      const pathOk = Number.isFinite(hops) && hops > 0;
+      const pathOk =
+        Number.isFinite(hops) &&
+        hops > 0 &&
+        isWithinMoveRange(world, ownLegion.systemId, system.id, "legion");
       const inVision = visibleSet.has(system.id);
       items.push({
         type: "action",
         label: !inVision
           ? "вне обзора"
           : pathOk
-            ? `Марш сюда (${formatHopTurns(hops)})`
-            : "Марш сюда (нет пути)",
+            ? `Марш сюда (${formatHopDistance(hops)})`
+            : Number.isFinite(hops) && hops > 0
+              ? "вне радиуса"
+              : "Марш сюда (нет пути)",
         disabled: !inVision || !pathOk,
         run: () => {
           if (pathOk && inVision) onMoveUnit("legion", ownLegion.id, system.id, hops);
+        },
+      });
+      items.push({
+        type: "action",
+        label: inVision ? "Атаковать систему" : "вне обзора",
+        disabled: !inVision,
+        run: () => {
+          if (inVision) {
+            onOrderType("attack_system", {
+              legionId: ownLegion.id,
+              systemId: system.id,
+            });
+          }
+        },
+      });
+    } else if (
+      system &&
+      system.id === ownLegion.systemId &&
+      canAttackSystem(world, factionId, system.id).eligible
+    ) {
+      items.push({
+        type: "action",
+        label: "Атаковать в системе",
+        danger: true,
+        run: () => {
+          onOrderType("attack_system", {
+            legionId: ownLegion.id,
+            systemId: system.id,
+          });
         },
       });
     }
@@ -186,12 +245,15 @@ export function ViewerContextMenu({
       run: () => onSelectSystem(system.id),
     });
     if (onScoutReveal) {
-      const scoutBlocked = reservedAp + scoutApCost > apMax;
+      const scoutBlocked =
+        scoutApCost > 0 && reservedAp + scoutApCost > apMax;
       items.push({
         type: "action",
         label: scoutBlocked
-          ? `Разведка (${scoutApCost} AP — нет AP)`
-          : `Разведка · открыть (${scoutApCost} AP)`,
+          ? `Разведка (${scoutApCost} ОД — не хватает ОД)`
+          : scoutApCost > 0
+            ? `Разведка · открыть (${scoutApCost} ОД)`
+            : "Разведка · открыть",
         disabled: scoutBlocked,
         run: () => onScoutReveal(system.id),
       });

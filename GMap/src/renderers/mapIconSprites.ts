@@ -386,7 +386,11 @@ export class MapIconOverlay {
       if (!sp) continue;
       if (slot.selected) {
         this.plates.circle(slot.x, slot.y, slot.size * 0.72);
-        this.plates.stroke({ width: 1.5, color: 0xe8c547, alpha: 0.85 });
+        this.plates.stroke({
+          width: 1.5,
+          color: 0xe8c547,
+          alpha: 0.85,
+        });
       }
       this.plates.circle(slot.x, slot.y + slot.size * 0.35, slot.size * 0.38);
       this.plates.fill({ color: 0x000000, alpha: 0.28 });

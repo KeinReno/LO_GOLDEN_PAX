@@ -83,7 +83,7 @@ export function PlanetSocietyPanel({
       {managed && onFoundHybrid && candidates.length > 0 && (
         <>
           <p className="hint">
-            Смешанная колония: зажми, чтобы основать линейдж (2 AP,{" "}
+            Смешанная колония: зажми, чтобы основать смешанный род (2 ОД,{" "}
             {resolveResourceOrCurrencyLabel("currency.cognitio")} +{" "}
             {resolveResourceOrCurrencyLabel("currency.bios")}). Нужно ≥{minShare}
             % каждой расы на планете.
@@ -118,7 +118,7 @@ export function PlanetSocietyPanel({
                       {label} · {cost["currency.cognitio"] ?? 40}{" "}
                       {resolveResourceOrCurrencyLabel("currency.cognitio")} ·{" "}
                       {cost["currency.bios"] ?? 8}{" "}
-                      {resolveResourceOrCurrencyLabel("currency.bios")} · 2 AP
+                      {resolveResourceOrCurrencyLabel("currency.bios")} · 2 ОД
                       {unlocked ? " · открыт" : ""}
                     </span>
                   </HoldRevealButton>

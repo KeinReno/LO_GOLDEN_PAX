@@ -136,8 +136,32 @@ export function listTechMarket(content) {
   const listings = [];
   for (const [marketId, market] of Object.entries(markets)) {
     for (const row of market.listings || []) {
-      listings.push({ marketId, ...row });
+      listings.push({
+        marketId,
+        listingId:
+          row.listingId ||
+          row.id ||
+          `${marketId}:${row.techId || row.recipeId || "row"}`,
+        ...row,
+      });
     }
   }
   return listings;
+}
+
+/** Resolve a market listing by marketId + listingId/techId/recipeId. */
+export function findTechMarketListing(marketId, listingKey, content) {
+  const c = content || getContent();
+  const market = c.tech_market?.[marketId];
+  if (!market) return null;
+  const rows = market.listings || [];
+  return (
+    rows.find(
+      (r) =>
+        r.listingId === listingKey ||
+        r.id === listingKey ||
+        r.techId === listingKey ||
+        r.recipeId === listingKey,
+    ) || null
+  );
 }

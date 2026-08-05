@@ -8,6 +8,7 @@ import {
   Factory,
   Orbit,
 } from "lucide-react";
+import { formatOdMeter } from "../state/playerUiTerms";
 import {
   planetContributionChips,
   systemContributionChips,
@@ -123,7 +124,7 @@ export function SystemStatusStrip({
         ))}
         {apMax != null && (
           <span className="system-status-strip__chip system-status-strip__chip--ap">
-            AP {reservedAp ?? 0}/{apMax}
+            {formatOdMeter(reservedAp ?? 0, apMax)}
             {metal != null ? ` · M${metal}` : ""}
             {supply != null ? ` · S${supply}` : ""}
           </span>

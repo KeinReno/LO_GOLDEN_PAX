@@ -1,8 +1,5 @@
 import type { ShipGroup } from "../../state/types";
-import { getCachedContent } from "../../state/contentCatalog";
 import type { UnitCardModel } from "./UnitCard";
-
-const DEFAULT_XP_THRESHOLDS = [0, 100, 250, 500, 900, 1500];
 
 function cloneGroup(g: UnitCardModel): ShipGroup {
   return {
@@ -124,32 +121,35 @@ export function disbandAt(
   return { next, removed };
 }
 
+/** @deprecated Buy-level removed — veterancy only from battles. Prefer repairAt. */
 export function upgradeAt(
   composition: UnitCardModel[],
   index: number,
+): { ok: true; next: ShipGroup[] } | { ok: false; reason: string } {
+  void composition;
+  void index;
+  return {
+    ok: false,
+    reason: "Ранг только из боёв — используйте ремонт HP",
+  };
+}
+
+/** Restore stack HP to catalog max (veterancy-aware). Metal cost applied by caller. */
+export function repairAt(
+  composition: UnitCardModel[],
+  index: number,
+  maxHp: number,
 ): { ok: true; next: ShipGroup[] } | { ok: false; reason: string } {
   if (index < 0 || index >= composition.length) {
     return { ok: false, reason: "Карта не найдена" };
   }
   const next = composition.map(cloneGroup);
-  const level = next[index].level ?? 0;
-  if (level >= 5) {
-    return { ok: false, reason: "Максимальный ранг" };
+  const cur = next[index];
+  const max = Math.max(1, Math.floor(maxHp) || 100);
+  if (cur.hp == null || cur.hp >= max - 0.5) {
+    return { ok: false, reason: "Уже на полной прочности" };
   }
-  const nextLevel = level + 1;
-  next[index].level = nextLevel;
-  const thresholds =
-    (
-      getCachedContent()?.rules as
-        | { veterancy?: { thresholds?: number[] } }
-        | undefined
-    )?.veterancy?.thresholds ?? DEFAULT_XP_THRESHOLDS;
-  const nextThreshold =
-    thresholds[nextLevel] ??
-    thresholds[thresholds.length - 1] ??
-    DEFAULT_XP_THRESHOLDS[nextLevel] ??
-    0;
-  next[index].xp = Math.max(next[index].xp ?? 0, nextThreshold);
+  cur.hp = max;
   return { ok: true, next };
 }
 

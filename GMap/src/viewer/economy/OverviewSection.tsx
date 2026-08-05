@@ -5,6 +5,7 @@ import {
   buildCategorySnapshots,
   computeMetrics,
   hasAnyProduction,
+  resolveFactionTreasuryCurrency,
 } from "./economyMath";
 import {
   buildExpenseSlices,
@@ -18,6 +19,11 @@ import { TreasuryChart } from "./components/TreasuryChart";
 import { ExpenseDonut } from "./components/ExpenseDonut";
 import { FlowBars } from "./components/FlowBars";
 import { EmptyState } from "./components/EmptyState";
+import { fmtInt } from "../../state/numberFormat";
+import { BUILD_METAL, BUILD_SUPPLY } from "../../state/economyLabels";
+import { categoryNameOnly } from "./ecoCopy";
+import { currencyShortLabel } from "./chartData";
+import { readStockAlerts } from "./stockAlerts";
 
 type Props = {
   payload: ViewerPayload;
@@ -28,6 +34,7 @@ type Props = {
   onFocusBuild?: () => void;
   onFocusDeficit?: (letter: string, systemId?: string) => void;
   onOpenResearch?: (hint?: string) => void;
+  onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
 };
 
 export function OverviewSection({
@@ -39,23 +46,52 @@ export function OverviewSection({
   onFocusBuild,
   onFocusDeficit,
   onOpenResearch,
+  onConvert,
 }: Props) {
   const eco = payload.economy;
+  const treasuryCurrencyId = useMemo(
+    () => resolveFactionTreasuryCurrency(payload),
+    [payload],
+  );
+  const treasuryHint = currencyShortLabel(treasuryCurrencyId);
   const metrics = useMemo(
-    () => (eco ? computeMetrics(eco) : null),
-    [eco],
+    () =>
+      eco
+        ? computeMetrics(
+            eco,
+            payload.world?.meta?.turn ?? null,
+            treasuryCurrencyId,
+          )
+        : null,
+    [eco, payload.world?.meta?.turn, treasuryCurrencyId],
   );
   const cats = useMemo(
     () => (eco ? buildCategorySnapshots(eco, flowData) : []),
     [eco, flowData],
   );
   const treasury = useMemo(
-    () => (eco ? buildTreasurySeries(eco, 5) : null),
-    [eco],
+    () =>
+      eco
+        ? buildTreasurySeries(
+            eco,
+            5,
+            payload.world?.meta?.turn ?? null,
+            treasuryCurrencyId,
+          )
+        : null,
+    [eco, payload.world?.meta?.turn, treasuryCurrencyId],
   );
   const expenseSlices = useMemo(
-    () => (eco ? buildExpenseSlices(eco) : []),
-    [eco],
+    // Match metric cards: treasury peg spend (not all category currencies).
+    () =>
+      eco
+        ? buildExpenseSlices(
+            eco,
+            treasuryCurrencyId,
+            payload.world?.meta?.turn ?? null,
+          )
+        : [],
+    [eco, payload.world?.meta?.turn, treasuryCurrencyId],
   );
   const flowBars = useMemo(() => buildFlowBars(flowData), [flowData]);
   const sparks = useMemo(() => {
@@ -78,23 +114,33 @@ export function OverviewSection({
 
   const producing = hasAnyProduction(payload, flowData);
   const pressure = eco.pressure ?? 0;
-  const warnings: { text: string; action?: () => void; actionLabel?: string }[] =
-    [];
+  const warnings: { 
+    text: string; 
+    action?: () => void; 
+    actionLabel?: string;
+    actionSecondary?: () => void;
+    actionSecondaryLabel?: string;
+  }[] = [];
 
   for (const c of cats) {
     if (c.status === "deficit") {
+      const metalStock = eco.stocks?.[BUILD_METAL.id] ?? 0;
+      const canBuy = metalStock >= 5; // Assumed minimum
+      
       warnings.push({
         text:
           c.bottleneckDeficit > 0
-            ? `Дефицит ${c.name}: узкое место −${c.bottleneckDeficit}`
-            : `Дефицит ${c.name}: запас ${c.stock}${
-                c.net != null ? `, ${c.net}/ход` : ""
+            ? `Дефицит ${c.name}: узкое место −${fmtInt(c.bottleneckDeficit)}`
+            : `Дефицит ${c.name}: запас ${fmtInt(c.stock)}${
+                c.net != null ? `, ${fmtInt(c.net)}/ход` : ""
               }`,
         action: () =>
           onFocusDeficit
             ? onFocusDeficit(c.letter)
             : onOpenProduction?.(c.letter),
         actionLabel: onFocusDeficit ? "К системе" : "Решить",
+        actionSecondary: canBuy && onConvert ? () => onConvert(BUILD_METAL.id, c.id, 5) : undefined,
+        actionSecondaryLabel: canBuy ? "Купить на бирже (5M)" : undefined,
       });
     }
   }
@@ -107,7 +153,7 @@ export function OverviewSection({
   }
   if (pressure >= 3) {
     warnings.push({
-      text: `Высокое давление экономики: ${pressure}`,
+      text: `Высокое давление экономики: ${fmtInt(pressure)}`,
       action: () => onOpenPolicies?.(),
       actionLabel: "Политики",
     });
@@ -115,14 +161,28 @@ export function OverviewSection({
   const fCat = cats.find((c) => c.letter === "F");
   if (fCat?.status === "deficit" && onOpenResearch) {
     warnings.push({
-      text: "Нехватка Знания (F) — нужна наука или добыча категории F",
-      action: () => onOpenResearch("cognitio"),
+      text: `Не хватает «${categoryNameOnly("F")}» — усильте науку или добычу знания`,
+      action: () => onOpenResearch("F"),
       actionLabel: "Наука",
     });
   }
 
-  if (!producing) {
-    // Keep A–F / warnings visible; empty CTA is secondary, not a full replace.
+  for (const currencyId of readStockAlerts()) {
+    const stock = eco.stocks?.[currencyId] ?? 0;
+    const cat = cats.find((c) => c.id === currencyId);
+    const net = cat?.net ?? null;
+    const low =
+      stock <= 0 ||
+      (net != null && net < 0 && stock <= Math.abs(net) * 2) ||
+      (currencyId === BUILD_METAL.id && stock < 20) ||
+      (currencyId === treasuryCurrencyId && stock < 20) ||
+      (currencyId === BUILD_SUPPLY.id && stock < 10);
+    if (!low) continue;
+    warnings.push({
+      text: `Слежение: низкий запас «${currencyShortLabel(currencyId)}» (${fmtInt(stock)})`,
+      action: () => onOpenProduction?.(cat?.letter),
+      actionLabel: "Производство",
+    });
   }
 
   return (
@@ -132,27 +192,27 @@ export function OverviewSection({
           label="Казна"
           value={metrics.treasury}
           tone="gold"
-          hint="металл"
-          tip="Металл в казне · клик по категориям ниже — к производству"
+          hint={treasuryHint.toLowerCase()}
+          tip={`${treasuryHint} в казне (пег валюты) · клик по категориям ниже — к производству`}
         />
         <MetricCard
           label="Доход/ход"
           value={metrics.income}
           tone="income"
-          tip="Сумма положительных проводок по металлу за последний ход журнала"
+          tip={`Сумма положительных проводок по «${treasuryHint}» за последний ход журнала`}
         />
         <MetricCard
           label="Расход/ход"
           value={metrics.expense}
           tone="expense"
-          tip="Сумма списаний по металлу за последний ход журнала"
+          tip={`Сумма списаний по «${treasuryHint}» за последний ход журнала`}
         />
       </div>
 
       {!producing ? (
         <EmptyState
           title="Производство ещё не запущено"
-          body="Постройте первую шахту, чтобы запустить поток A–F."
+          body="Постройте шахту или добывающую станцию — запустятся потоки ресурсов."
           action={
             onFocusBuild ? (
               <button
@@ -167,7 +227,7 @@ export function OverviewSection({
         />
       ) : null}
 
-      <div className="eco-bento" aria-label="Категории A–F">
+      <div className="eco-bento" aria-label="Шесть категорий ресурсов">
         {cats.map((c) => (
           <CategoryCard
             key={c.id}
@@ -192,6 +252,15 @@ export function OverviewSection({
                   {w.actionLabel}
                 </button>
               )}
+              {w.actionSecondary && w.actionSecondaryLabel && (
+                <button
+                  type="button"
+                  className="btn sm ghost"
+                  onClick={w.actionSecondary}
+                >
+                  {w.actionSecondaryLabel}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -205,7 +274,13 @@ export function OverviewSection({
             avgNet={treasury.avgNet}
           />
         )}
-        <ExpenseDonut slices={expenseSlices} recent={eco.recent ?? []} />
+        <ExpenseDonut
+          slices={expenseSlices}
+          recent={(eco.recent ?? []).filter(
+            (r) => r.currencyId === "currency.metal",
+          )}
+          title="Расход металла по статьям"
+        />
         <FlowBars rows={flowBars} onSelectCategory={onOpenProduction} />
       </div>
     </div>

@@ -23,10 +23,10 @@ const SECTIONS: { id: CodexSection; label: string }[] = [
 
 const LEVEL_FILTERS: { id: KnowledgeLevel | "all"; label: string }[] = [
   { id: "all", label: "Все" },
-  { id: 1, label: "≥1" },
-  { id: 2, label: "≥2" },
-  { id: 3, label: "≥3" },
-  { id: 4, label: "4" },
+  { id: 1, label: "от 1" },
+  { id: 2, label: "от 2" },
+  { id: 3, label: "от 3" },
+  { id: 4, label: "полностью" },
 ];
 
 export function CodexPanel({ payload }: { payload: ViewerPayload }) {
@@ -145,7 +145,7 @@ export function CodexPanel({ payload }: { payload: ViewerPayload }) {
           aria-labelledby={`codex-tab-${section}`}
         >
           Нет известных записей
-          {minLevel !== "all" ? ` (уровень ≥ ${minLevel})` : ""}.
+          {minLevel !== "all" ? ` (знание от ${minLevel})` : ""}.
           Собирайте intel флотом, дипломатией или шпионажем.
         </p>
       ) : (

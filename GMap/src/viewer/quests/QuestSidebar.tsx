@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BookOpen, Dices, Users } from "lucide-react";
+import { BookOpen, Dices, LayoutList } from "lucide-react";
 import { StatefulButton } from "../../ui/StatefulButton";
-import type { NpcTaskView, Quest, QuestKind } from "./types";
+import type { Quest, QuestKind } from "./types";
 import {
   KIND_ORDER,
   QUEST_KIND_META,
@@ -13,14 +13,15 @@ export type QuestSidebarProps = {
   quests: Quest[];
   activeQuestId: string | null;
   onSelect: (id: string) => void;
+  onShowInbox: () => void;
+  /** Collapsed-rail shortcut only — main dice lives in AttentionInbox. */
   onRollPerTurn: () => void;
-  onOpenNpc: () => void;
-  npcTasks: NpcTaskView[];
   perTurnRolled?: boolean;
   perTurnBusy?: boolean;
   droppingIds?: string[];
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  attentionCount?: number;
 };
 
 type ArcBucket = {
@@ -122,21 +123,19 @@ export function QuestSidebar({
   quests,
   activeQuestId,
   onSelect,
+  onShowInbox,
   onRollPerTurn,
-  onOpenNpc,
-  npcTasks,
   perTurnRolled = false,
   perTurnBusy = false,
   droppingIds = [],
   collapsed = false,
   onToggleCollapse,
+  attentionCount = 0,
 }: QuestSidebarProps) {
   const groups = useMemo(() => groupByKind(quests), [quests]);
   const [openKinds, setOpenKinds] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(KIND_ORDER.map((k) => [k, true])),
   );
-
-  const workingNpc = npcTasks.filter((t) => t.status === "working").length;
 
   if (collapsed) {
     return (
@@ -149,6 +148,14 @@ export function QuestSidebar({
           title="Список квестов"
         >
           ▸
+        </button>
+        <button
+          type="button"
+          className="quest-rail__expand"
+          onClick={onShowInbox}
+          title="Обзор"
+        >
+          <LayoutList size={14} />
         </button>
         {!perTurnRolled ? (
           <button
@@ -181,23 +188,36 @@ export function QuestSidebar({
         ) : null}
       </header>
 
-      {!perTurnRolled ? (
-        <div className="quest-rail__dice-cta">
-          <div>
-            <strong>Ежеходный кубик</strong>
-            <p className="hint">1d6 → столько событий упадёт в этот ход</p>
-          </div>
+      <div className="quest-rail__inbox-link">
+        <button
+          type="button"
+          className={`quest-nav-item ${activeQuestId == null ? "is-active" : ""}`}
+          onClick={onShowInbox}
+        >
+          <LayoutList size={14} aria-hidden />
+          <span className="quest-nav-item__body">
+            <span className="quest-nav-item__title">Обзор хода</span>
+            <span className="hint">
+              {attentionCount > 0
+                ? `${attentionCount} требуют внимания`
+                : "Очередь решений"}
+            </span>
+          </span>
+          {attentionCount > 0 ? (
+            <span className="quest-group-count">{attentionCount}</span>
+          ) : null}
+        </button>
+        {!perTurnRolled ? (
           <StatefulButton
-            className="btn primary sm"
+            className="btn ghost sm quest-rail__dice-mini"
             busy={perTurnBusy}
             onClick={onRollPerTurn}
+            title="Ежеходный кубик"
           >
-            <Dices size={14} aria-hidden /> Бросить
+            <Dices size={14} aria-hidden />
           </StatefulButton>
-        </div>
-      ) : (
-        <p className="quest-rail__dice-done hint">Ежеходный кубик уже брошен</p>
-      )}
+        ) : null}
+      </div>
 
       <div className="quest-rail__scroll">
         {groups.map(({ kind, items }) => {
@@ -274,20 +294,6 @@ export function QuestSidebar({
           );
         })}
       </div>
-
-      <footer className="quest-rail__foot">
-        <button
-          type="button"
-          className="btn block ghost quest-rail__npc-btn"
-          onClick={onOpenNpc}
-        >
-          <Users size={14} aria-hidden />
-          Двор и поручения
-          {workingNpc > 0 ? (
-            <span className="quest-group-count">{workingNpc}</span>
-          ) : null}
-        </button>
-      </footer>
     </aside>
   );
 }

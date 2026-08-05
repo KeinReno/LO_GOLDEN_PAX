@@ -3,6 +3,32 @@ import type { ViewerPayload } from "../../state/types";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
 import { ECO_CATEGORY_NAMES } from "../economyFlowTypes";
 
+export type FactionBottleneck = { letter: string; name: string; deficit: number };
+
+/** Faction-level bottlenecks for a single banner (not per-system rows). */
+export function listFactionBottlenecks(
+  flowData?: EconomyFlowBreakdown | null,
+  economyBottlenecks?: Record<string, unknown> | null,
+): FactionBottleneck[] {
+  const bn = flowData?.bottlenecks ?? economyBottlenecks ?? {};
+  const out: FactionBottleneck[] = [];
+  for (const [cat, raw] of Object.entries(bn)) {
+    let deficit = 0;
+    if (typeof raw === "number") deficit = raw;
+    else if (raw && typeof raw === "object" && "deficit" in raw) {
+      deficit = Number((raw as { deficit?: number }).deficit ?? 0);
+    }
+    if (deficit > 0) {
+      out.push({
+        letter: cat,
+        name: ECO_CATEGORY_NAMES[cat] ?? cat,
+        deficit,
+      });
+    }
+  }
+  return out.sort((a, b) => b.deficit - a.deficit);
+}
+
 export type ProductionSystemRow = {
   systemId: string;
   name: string;
@@ -19,7 +45,7 @@ export type ProductionSystemRow = {
 /** Estimate system production from resources + buildings + flow totals share. */
 export function buildProductionSystemRows(
   payload: ViewerPayload,
-  flowData?: EconomyFlowBreakdown | null,
+  _flowData?: EconomyFlowBreakdown | null,
   filterCategory?: string | null,
 ): ProductionSystemRow[] {
   const content = getCachedContent();
@@ -29,7 +55,6 @@ export function buildProductionSystemRows(
       (payload.visibleSystemIds?.includes(s.id) ?? true),
   );
 
-  const bn = flowData?.bottlenecks ?? payload.economy?.bottlenecks ?? {};
   const rows: ProductionSystemRow[] = [];
 
   for (const sys of owned) {
@@ -72,22 +97,7 @@ export function buildProductionSystemRows(
 
     if (filterCategory && !cats.has(filterCategory)) continue;
 
-    let bottleneck = false;
-    let bottleneckReason: string | undefined;
-    for (const cat of cats) {
-      const raw = (bn as Record<string, unknown>)[cat];
-      let deficit = 0;
-      if (typeof raw === "number") deficit = raw;
-      else if (raw && typeof raw === "object" && "deficit" in raw) {
-        deficit = Number((raw as { deficit?: number }).deficit ?? 0);
-      }
-      if (deficit > 0) {
-        bottleneck = true;
-        bottleneckReason = `${ECO_CATEGORY_NAMES[cat] ?? cat} −${deficit}`;
-        break;
-      }
-    }
-
+    // Faction-wide bottlenecks are shown once as a banner — not painted on every system.
     rows.push({
       systemId: sys.id,
       name: sys.name,
@@ -96,16 +106,14 @@ export function buildProductionSystemRows(
       categories: [...cats].sort(),
       ratePerTurn: Math.max(0, Math.round(rate)),
       rateIsEstimate: true,
-      bottleneck,
-      bottleneckReason,
+      bottleneck: false,
+      bottleneckReason: undefined,
     });
   }
 
   return rows.sort(
     (a, b) =>
-      Number(b.bottleneck) - Number(a.bottleneck) ||
-      b.ratePerTurn - a.ratePerTurn ||
-      a.name.localeCompare(b.name, "ru"),
+      b.ratePerTurn - a.ratePerTurn || a.name.localeCompare(b.name, "ru"),
   );
 }
 
@@ -118,6 +126,8 @@ export function edgeKey(from: string, to: string): string {
 export function isAdjacentRps(from: string, to: string): boolean {
   const i = RPS_CHAIN.indexOf(from as (typeof RPS_CHAIN)[number]);
   const j = RPS_CHAIN.indexOf(to as (typeof RPS_CHAIN)[number]);
-  if (i < 0 || j < 0) return false;
-  return (i + 1) % RPS_CHAIN.length === j;
+  if (i < 0 || j < 0 || i === j) return false;
+  const len = RPS_CHAIN.length;
+  // Forward or reverse neighbour on the cycle.
+  return (i + 1) % len === j || (j + 1) % len === i;
 }

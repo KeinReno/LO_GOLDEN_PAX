@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "version": 2,
+    "description": "Шаблоны внутренних клик/домов. Инстансы — Faction.internalBlocs; NPC: blocId, isBlocLeader, raceLeadership."
+  },
+  "blocs": {
+    "bloc.elegantia": {
+      "id": "bloc.elegantia",
+      "name": "Дом Элегантия",
+      "kind": "house",
+      "color": "#c9a0dc",
+      "stance": "ambitious",
+      "agenda": "faith",
+      "raceIds": ["race_nagaar"],
+      "description": "Нагааритяне и дом правления Элегантии. Престол после Танет — вакантен."
+    },
+    "bloc.radimon": {
+      "id": "bloc.radimon",
+      "name": "Дом Рэдимон",
+      "kind": "house",
+      "color": "#b85c38",
+      "stance": "loyal",
+      "agenda": "militarize",
+      "raceIds": ["race_radimon"],
+      "description": "Матриархат клинка и строя. Честь службы."
+    },
+    "bloc.boreal": {
+      "id": "bloc.boreal",
+      "name": "Дом Бореал",
+      "kind": "house",
+      "color": "#5b8def",
+      "stance": "ambitious",
+      "agenda": "trade",
+      "raceIds": ["race_boreal"],
+      "description": "Кронхаймеры и рынок. Конкуренция и клиринг."
+    },
+    "bloc.norburia": {
+      "id": "bloc.norburia",
+      "name": "Норбурия",
+      "kind": "house",
+      "color": "#6b8f71",
+      "stance": "loyal",
+      "agenda": "stability",
+      "raceIds": ["race_horn_narburi"],
+      "description": "Дая-Чина и норбурийская линия регентства."
+    },
+    "bloc.sul_canon": {
+      "id": "bloc.sul_canon",
+      "name": "Канон Сула",
+      "kind": "church",
+      "color": "#8b9cff",
+      "stance": "loyal",
+      "agenda": "faith",
+      "description": "Жречество Сула при дворе."
+    },
+    "bloc.lords_dust": {
+      "id": "bloc.lords_dust",
+      "name": "Лорды Праха",
+      "kind": "military",
+      "color": "#6a7a8a",
+      "stance": "ambitious",
+      "agenda": "intrigue",
+      "raceIds": ["race_lord_dust"],
+      "description": "Тень провинций и Ритм-Горн."
+    },
+    "bloc.elanor": {
+      "id": "bloc.elanor",
+      "name": "Эланор",
+      "kind": "race_caucus",
+      "color": "#e8d5a3",
+      "stance": "loyal",
+      "agenda": "stability",
+      "raceIds": ["race_elanor"],
+      "description": "Народ Эланор в составе Карнеда. Военный и светский контур."
+    },
+    "bloc.black_sun": {
+      "id": "bloc.black_sun",
+      "name": "Церковь Чёрного Солнца",
+      "kind": "church",
+      "color": "#2a2a32",
+      "stance": "ambitious",
+      "agenda": "faith",
+      "raceIds": ["race_elanor"],
+      "description": "Внутренняя фракция государства и расы Эланор."
+    },
+    "bloc.secret_order": {
+      "id": "bloc.secret_order",
+      "name": "Тайный Орден",
+      "kind": "church",
+      "color": "#4a3a5c",
+      "stance": "ambitious",
+      "agenda": "intrigue",
+      "description": "Круг Тенепляса — духовный полюс дуализма."
+    },
+    "bloc.architects": {
+      "id": "bloc.architects",
+      "name": "Архитекторы",
+      "kind": "guild",
+      "color": "#8a9e7e",
+      "stance": "neutral",
+      "agenda": "trade",
+      "description": "Полис, оборона камня, недельная застройка."
+    },
+    "bloc.crown": {
+      "id": "bloc.crown",
+      "name": "Корона",
+      "kind": "house",
+      "color": "#d4a84b",
+      "stance": "loyal",
+      "agenda": "stability",
+      "description": "Двор и регентство у трона."
+    },
+    "bloc.guest": {
+      "id": "bloc.guest",
+      "name": "Гости",
+      "kind": "guest",
+      "color": "#7a9e7e",
+      "stance": "neutral",
+      "agenda": "trade",
+      "description": "Союзники и послы при дворе."
+    }
+  }
+}

@@ -16,6 +16,7 @@ import {
 import { buildResourceIndex } from "../state/resourceIndex";
 import { fmtSigned } from "../state/numberFormat";
 import type { ViewerPayload, WorldState } from "../state/types";
+import { formatOdMeter, formatForceOdMeter, OD_TOOLTIP, FORCE_OD_TOOLTIP } from "../state/playerUiTerms";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import type { EconomyFlowBreakdown, FlowCell } from "./economyFlowTypes";
 
@@ -342,6 +343,8 @@ export function EmpireResourceStrip({
   factionId,
   reservedAp,
   apMax,
+  reservedForceAp = 0,
+  forceApMax = 0,
   fleetCount,
   legionCount,
   mapResources,
@@ -354,6 +357,8 @@ export function EmpireResourceStrip({
   factionId?: string;
   reservedAp: number;
   apMax: number;
+  reservedForceAp?: number;
+  forceApMax?: number;
   fleetCount: number;
   legionCount: number;
   mapResources?: Record<string, MapResourceDef>;
@@ -392,9 +397,15 @@ export function EmpireResourceStrip({
       <span className="empire-res-sep" aria-hidden />
       <span
         className="empire-res-pill empire-res-pill--ap"
-        title="Занято AP / лимит на ход"
+        title={OD_TOOLTIP}
       >
-        AP {reservedAp}/{apMax}
+        {formatOdMeter(reservedAp, apMax)}
+      </span>
+      <span
+        className="empire-res-pill empire-res-pill--ap"
+        title={FORCE_OD_TOOLTIP}
+      >
+        {formatForceOdMeter(reservedForceAp, forceApMax)}
       </span>
       <button
         type="button"

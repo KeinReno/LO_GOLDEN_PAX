@@ -16,7 +16,14 @@ const DEFAULT_CAMPAIGN = "golden_pax";
 const CHANNELS_CHAPTER_ID = "ch_channels";
 const OOC_EPISODE_ID = "ep_ooc_table";
 
-const MSG_TYPES = new Set(["ooc", "ic", "action", "context", "system"]);
+const MSG_TYPES = new Set([
+  "ooc",
+  "ic",
+  "action",
+  "context",
+  "system",
+  "prompt",
+]);
 
 function campaignDir(campaignId = DEFAULT_CAMPAIGN) {
   return path.join(RP_ROOT, campaignId || DEFAULT_CAMPAIGN);
@@ -94,6 +101,11 @@ function findEpisode(index, chapterId, episodeId) {
   if (!ch) return { chapter: null, episode: null };
   const ep = (ch.episodes || []).find((e) => e.id === episodeId);
   return { chapter: ch, episode: ep };
+}
+
+/** Public alias for prompt helpers. */
+export function findEpisodeExport(index, chapterId, episodeId) {
+  return findEpisode(index, chapterId, episodeId);
 }
 
 /**
@@ -214,7 +226,7 @@ export function ensurePlayerChannels(
     if (!ep) {
       ep = {
         id: hqId,
-        title: `Штаб · ${fac.name || fac.id}`,
+        title: `RP · ${fac.name || fac.id}`,
         status: "open",
         visibility: `gm_player:${fac.id}`,
         kind: "hq",
@@ -225,7 +237,7 @@ export function ensurePlayerChannels(
       ensureEpisodeFiles(campaignId, ch.id, ep.id);
       dirty = true;
     } else {
-      const wantTitle = `Штаб · ${fac.name || fac.id}`;
+      const wantTitle = `RP · ${fac.name || fac.id}`;
       if (ep.kind !== "hq") {
         ep.kind = "hq";
         dirty = true;
@@ -238,7 +250,12 @@ export function ensurePlayerChannels(
         ep.ref = `faction:${fac.id}`;
         dirty = true;
       }
-      if (ep.title !== wantTitle && String(ep.title || "").startsWith("Штаб")) {
+      // Soft-migrate legacy «Штаб · …» labels to RP.
+      if (
+        ep.title !== wantTitle &&
+        (String(ep.title || "").startsWith("Штаб") ||
+          String(ep.title || "").startsWith("RP ·"))
+      ) {
         ep.title = wantTitle;
         dirty = true;
       }
@@ -363,6 +380,12 @@ export function messageVisibleTo(msg, viewer) {
   if (viewer?.isMaster) return true;
   if (vis === "all") return true;
   if (vis === "gm_only") return false;
+  // Player whisper → GM: author still sees own line
+  if (vis === "whisper") {
+    return (
+      !!viewer?.factionId && msg.authorFactionId === viewer.factionId
+    );
+  }
   if (vis.startsWith("faction:")) {
     return vis.slice("faction:".length) === viewer?.factionId;
   }
@@ -413,6 +436,8 @@ export function appendMessage(
     visibility,
     intentPayload,
     isMaster,
+    prompt = null,
+    tone = null,
   },
   campaignId = DEFAULT_CAMPAIGN,
 ) {
@@ -425,21 +450,33 @@ export function appendMessage(
   if (episode.status === "closed" && !isMaster) {
     return { ok: false, error: "канал закрыт (только чтение)" };
   }
-  if (episode.status === "closed" && type !== "system" && type !== "context") {
+  if (
+    episode.status === "closed" &&
+    type !== "system" &&
+    type !== "context" &&
+    type !== "prompt"
+  ) {
     return { ok: false, error: "канал закрыт — только контекст / система" };
   }
 
   const t = type || "ic";
   if (!MSG_TYPES.has(t)) return { ok: false, error: "unknown message type" };
+  if (t === "prompt" && !isMaster) {
+    return { ok: false, error: "промпты только у мастера" };
+  }
 
   let vis = visibility || episode.visibility || "all";
   if (t === "context" && isMaster && !visibility) vis = "all";
-  if (!isMaster && (vis === "gm_only" || t === "system")) {
+  if (!isMaster && t === "system") {
+    return { ok: false, error: "нет прав на этот тип" };
+  }
+  if (!isMaster && vis === "gm_only") {
     return { ok: false, error: "нет прав на этот тип/видимость" };
   }
-  // Players always inherit channel visibility (no broadcast from private HQ)
+  // Players: channel vis, or explicit whisper to GM
   if (!isMaster) {
-    vis = episode.visibility || "all";
+    if (visibility === "whisper") vis = "whisper";
+    else vis = episode.visibility || "all";
   }
 
   const msg = {
@@ -453,6 +490,9 @@ export function appendMessage(
     visibility: vis,
     intentId: null,
     intentDefId: intentPayload?.defId || null,
+    tone: tone ? String(tone).slice(0, 40) : null,
+    prompt: prompt || null,
+    fromMaster: !!isMaster,
   };
 
   ensureEpisodeFiles(campaignId, chapterId, episodeId);
@@ -462,6 +502,43 @@ export function appendMessage(
     "utf8",
   );
   return { ok: true, message: msg, episode };
+}
+
+/**
+ * Patch fields on an existing message (prompt resolve, etc.).
+ */
+export function patchMessageFields(
+  chapterId,
+  episodeId,
+  messageId,
+  fields,
+  campaignId = DEFAULT_CAMPAIGN,
+) {
+  const file = messagesPath(campaignId, chapterId, episodeId);
+  if (!fs.existsSync(file)) return { ok: false, error: "no messages" };
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
+  let found = null;
+  const msgs = lines
+    .map((line) => {
+      try {
+        const m = JSON.parse(line);
+        if (m.id === messageId) {
+          found = { ...m, ...fields };
+          return found;
+        }
+        return m;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  if (!found) return { ok: false, error: "message missing" };
+  fs.writeFileSync(
+    file,
+    msgs.map((m) => JSON.stringify(m)).join("\n") + "\n",
+    "utf8",
+  );
+  return { ok: true, message: found };
 }
 
 export function patchMessageIntentId(

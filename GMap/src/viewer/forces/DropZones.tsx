@@ -1,13 +1,14 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   DROP_ZONES,
-  FORGE_METAL_COST,
   type CatalogShip,
   type DropZoneId,
 } from "./constants";
 import { filledSlotCount } from "./compositionOps";
 import { canOutfitUnit } from "./outfitRules";
 import type { UnitCardModel } from "./UnitCard";
+import { forgeMetalCostClient } from "../../state/forceEconomy";
+import { groupNeedsRepair } from "../../state/forceReadiness";
 
 type DropZonesProps = {
   active: boolean;
@@ -30,14 +31,16 @@ export function canDropZone(
   catalogItem?: CatalogShip | null,
   deckKind: "fleet" | "legion" = "fleet",
 ): { ok: boolean; reason?: string } {
+  const repairCost = forgeMetalCostClient();
   switch (zone) {
     case "forge": {
-      const level = card.level ?? 0;
-      if (level >= 5) return { ok: false, reason: "Максимальный ранг" };
-      const ok = metalStock >= FORGE_METAL_COST;
+      if (!groupNeedsRepair(card)) {
+        return { ok: false, reason: "Уже на полной прочности" };
+      }
+      const ok = metalStock >= repairCost;
       return {
         ok,
-        reason: ok ? undefined : `Нужно ${FORGE_METAL_COST} металла`,
+        reason: ok ? undefined : `Нужно ${repairCost} металла`,
       };
     }
     case "disband":
@@ -81,6 +84,7 @@ export function DropZones({
   canDrop,
 }: DropZonesProps) {
   const reduce = useReducedMotion();
+  const repairCost = forgeMetalCostClient();
 
   const zones = DROP_ZONES.filter((zone) => {
     if (zone.id !== "equip") return true;
@@ -105,7 +109,7 @@ export function DropZones({
               !ok && reason
                 ? reason
                 : zone.id === "forge"
-                  ? `${zone.hint} · −${FORGE_METAL_COST} мет. (${metalStock})`
+                  ? `${zone.hint} · −${repairCost} мет. (${Math.floor(metalStock)})`
                   : zone.id === "equip" && catalogItem
                     ? `${zone.hint} · ${filledSlotCount(draggedCard)}/${catalogItem.slots?.length ?? 0} ролей`
                     : zone.hint;
@@ -124,7 +128,6 @@ export function DropZones({
                 onPointerLeave={() => onHover(null)}
                 title={hint}
               >
-                {/* CSS reveal only — canvas effect caused drag-frame GPU/memory spikes */}
                 {isHovered && ok && !reduce && (
                   <div
                     className="forces-drop-reveal forces-drop-reveal--css"

@@ -15,11 +15,17 @@ export function ViewerQuestPanel({
   onSelectQuest,
   actions,
   onFocusSystem,
+  onOpenCourt,
+  onCloseMap,
+  compact,
 }: {
   payload: ViewerPayload;
   onSelectQuest?: (questId: string) => void;
   actions?: QuestActionHandlers;
   onFocusSystem?: (systemId: string) => void;
+  onOpenCourt?: () => void;
+  onCloseMap?: () => void;
+  compact?: boolean;
 }) {
   return (
     <QuestsSection
@@ -27,6 +33,9 @@ export function ViewerQuestPanel({
       actions={actions}
       onSelectQuest={onSelectQuest}
       onFocusSystem={onFocusSystem}
+      onOpenCourt={onOpenCourt}
+      onCloseMap={onCloseMap}
+      compact={compact}
     />
   );
 }

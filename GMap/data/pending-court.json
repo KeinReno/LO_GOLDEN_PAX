@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "proposals": [
+    {
+      "id": "courtprop_1785939206457_1xfk7",
+      "status": "accepted",
+      "createdAt": "2026-08-05T14:13:26.457Z",
+      "author": "grok",
+      "factionId": "faction_belator",
+      "summary": "Smoke: новый NPC от Grok",
+      "ops": [
+        {
+          "op": "upsert_npc",
+          "npc": {
+            "id": "npc_bel_test_grok",
+            "name": "Тест Грок",
+            "title": "Черновик",
+            "role": "other",
+            "status": "active",
+            "posting": {
+              "kind": "court",
+              "sinceTurn": 0
+            }
+          }
+        }
+      ],
+      "rationale": "проверка очереди",
+      "resolvedAt": "2026-08-05T14:13:34.577Z"
+    },
+    {
+      "id": "courtprop_1785939221983_04vt2",
+      "status": "accepted",
+      "createdAt": "2026-08-05T14:13:41.983Z",
+      "author": "gm",
+      "factionId": "faction_belator",
+      "summary": "Cleanup smoke NPC",
+      "ops": [
+        {
+          "op": "remove_npc",
+          "npcId": "npc_bel_test_grok"
+        }
+      ],
+      "resolvedAt": "2026-08-05T14:13:42.176Z"
+    }
+  ]
+}

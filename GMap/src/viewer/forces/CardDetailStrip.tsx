@@ -18,7 +18,6 @@ import {
 import type { MapResourceDef } from "../../state/contentCatalog";
 import { formatSlotRequire } from "../../state/displayLabels";
 import {
-  FORGE_METAL_COST,
   SLOT_ROLE_LABELS,
   type CatalogShip,
   type StripMode,
@@ -26,6 +25,18 @@ import {
 import type { UnitCardModel } from "./UnitCard";
 import { canOutfitUnit } from "./outfitRules";
 import { effectiveUnitStats, formatMultHint } from "./veterancy";
+import { forgeMetalCostClient } from "../../state/forceEconomy";
+import {
+  groupMaxHp,
+  groupNeedsRepair,
+  matchupLineForRole,
+} from "../../state/forceReadiness";
+import {
+  cardEnergyCost,
+  keywordForRole,
+  keywordLabel,
+  roleLabel,
+} from "../../state/cardBattleHints";
 
 type CardDetailStripProps = {
   group: UnitCardModel | ShipGroup;
@@ -37,7 +48,7 @@ type CardDetailStripProps = {
   unlockedProperties?: string[];
   metalStock: number;
   onClose: () => void;
-  onUpgrade: () => void;
+  onRepair: () => void;
   onRequestDisband: () => void;
   onConfirmDisband: () => void;
   onCancelDisband: () => void;
@@ -70,7 +81,7 @@ export function CardDetailStrip({
   unlockedProperties,
   metalStock,
   onClose,
-  onUpgrade,
+  onRepair,
   onRequestDisband,
   onConfirmDisband,
   onCancelDisband,
@@ -87,10 +98,14 @@ export function CardDetailStrip({
   const [openRole, setOpenRole] = useState<string | null>(null);
   const showOutfit = canOutfitUnit(catalogItem, deckKind);
   const eff = effectiveUnitStats(catalogItem?.stats, level);
-  const nextEff =
-    level < 5 ? effectiveUnitStats(catalogItem?.stats, level + 1) : null;
   const dmgHint = formatMultHint(eff.mult.damage);
   const defHint = formatMultHint(eff.mult.defense);
+  const role = catalogItem?.roles?.[0] ?? "line";
+  const kw = keywordForRole(role);
+  const repairCost = forgeMetalCostClient();
+  const maxHp = groupMaxHp(group, level);
+  const needsRepair = groupNeedsRepair(group);
+  const matchup = matchupLineForRole(role);
 
   const index = useMemo(
     () => buildResourceIndex(mapResources),
@@ -274,11 +289,19 @@ export function CardDetailStrip({
             <h4>
               {name} <span className="forces-detail-mul">×{group.count}</span>
             </h4>
+            <p className="forces-detail-combat">
+              {roleLabel(role)}
+              {kw ? ` · ${keywordLabel(kw)}` : ""}
+              {` · energy ${cardEnergyCost(role)}`}
+            </p>
+            {matchup ? (
+              <p className="hint forces-detail-matchup">{matchup}</p>
+            ) : null}
             <p className="forces-detail-stats">
               Урон: {eff.damage || "—"}
               {dmgHint ? ` (${dmgHint})` : ""} · Броня: {eff.armor || "—"}
-              {defHint ? ` (${defHint})` : ""} · HP: {group.hp ?? "—"}/
-              {eff.hp || catalogItem?.stats?.hp || "—"}
+              {defHint ? ` (${defHint})` : ""} · HP: {group.hp ?? maxHp}/
+              {maxHp}
             </p>
             <p className="forces-detail-vet">
               Ветеран: {"★".repeat(level)}
@@ -286,39 +309,32 @@ export function CardDetailStrip({
               {slots.length > 0
                 ? ` · слоты ${Object.keys(fills).length}/${slots.length}`
                 : ""}
+              <span className="hint"> · ранг только из боёв</span>
             </p>
-            {level < 5 && nextEff && (
-              <p className="hint forces-detail-upgrade-hint">
-                Модернизация (−{FORGE_METAL_COST} мет.): ранг {level}→{level + 1}
-                {" · "}
-                урон {eff.damage || "—"}→{nextEff.damage || "—"}
-                {" · "}
-                броня {eff.armor || "—"}→{nextEff.armor || "—"}
-              </p>
-            )}
           </div>
           <div className="forces-detail-actions">
             <button
               type="button"
               className="btn"
-              onClick={onUpgrade}
-              disabled={level >= 5 || metalStock < FORGE_METAL_COST}
+              onClick={onRepair}
+              disabled={!needsRepair || metalStock < repairCost}
               title={
-                level >= 5
-                  ? "Максимальный ранг"
-                  : metalStock < FORGE_METAL_COST
-                    ? `Нужно ${FORGE_METAL_COST} металла`
-                    : `Ветеранский ранг +1 (−${FORGE_METAL_COST} мет.). Усиливает урон/броню в бою.`
+                !needsRepair
+                  ? "Уже на полной прочности"
+                  : metalStock < repairCost
+                    ? `Нужно ${repairCost} металла`
+                    : `Ремонт (−${repairCost} мет.) → ${maxHp} HP`
               }
             >
-              <Flame size={14} aria-hidden /> Модернизировать
+              <Flame size={14} aria-hidden /> Ремонт
+              {needsRepair ? ` −${repairCost}` : ""}
             </button>
             {showOutfit && (
               <button
                 type="button"
                 className="btn ghost"
                 onClick={onOpenEquip}
-                title="Модули корабля со склада"
+                title="Модули корабля со склада — влияют на property-matchups в бою"
               >
                 <Settings2 size={14} aria-hidden /> Оснащение
               </button>

@@ -9,7 +9,7 @@ export function QuestPanel() {
   const removeQuest = useWorldStore((s) => s.removeQuest);
   const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
 
-  const quest = world.quests.find((q) => q.id === openQuestId) ?? null;
+  const quest = (world.quests ?? []).find((q) => q.id === openQuestId) ?? null;
   if (!quest) return null;
 
   const system = quest.systemId

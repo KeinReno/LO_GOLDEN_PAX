@@ -7,12 +7,15 @@ import {
   useRef,
   useState,
 } from "react";
+import { FloatingPanel } from "../ui/FloatingPanel";
 import { BottomSheet } from "../ui/BottomSheet";
 import { WorkbenchShell } from "../ui/WorkbenchShell";
 import { StatusStrip } from "../ui/StatusStrip";
 import {
   BookMarked,
   BookOpen,
+  ChevronDown,
+  ChevronUp,
   Coins,
   Flag,
   FlaskConical,
@@ -24,10 +27,12 @@ import {
   Map as MapIcon,
   Menu,
   MessageSquare,
+  MoreHorizontal,
   ScrollText,
   Settings,
   Store,
   Swords,
+  Users,
   X,
   ZoomIn,
   ZoomOut,
@@ -44,8 +49,16 @@ import type {
   ViewerPayload,
   WorldState,
 } from "../state/types";
+import { fmtInt } from "../state/numberFormat";
+import { canAttackHostileUnit, canAttackUnitAtSystem } from "../state/combatEligibility";
+import {
+  buildContactBattlePreview,
+  type ContactBattlePreview,
+} from "../state/contactBattlePreview";
+import { ContactBattleChooser } from "./ContactBattleChooser";
 import { CATEGORY_CURRENCIES } from "../state/economyLabels";
-import { formatHopTurns, hopDistance, hopPath } from "../state/pathfinding";
+import { formatHopDistance, hopDistance } from "../state/pathfinding";
+import { isWithinMoveRange } from "../state/movementRange";
 import {
   VIEWER_LAYER_CHIPS,
   LAYER_PRESET_BUTTONS,
@@ -80,6 +93,9 @@ import { EmpireResourceStrip } from "./EmpireResourceStrip";
 import { PlayerHqHome, PlayerOrdersPanel } from "./PlayerHqPanels";
 import { MarketPanel, type MarketBookStats, type MarketTab } from "./MarketPanel";
 import { EconomyPanel } from "./economy";
+import { DOCTRINE_LABELS } from "./economy/ecoCopy";
+import { currencyShortLabel } from "./economy/chartData";
+import { toggleStockAlert } from "./economy/stockAlerts";
 import { CodexPanel } from "./codex";
 import {
   countAffordableResearch,
@@ -113,6 +129,14 @@ import type {
   PlanetActionRequest,
 } from "./PlayerPlanetManage";
 import { CourtPanel } from "./CourtPanel";
+import { ChronicleRoom } from "./ChronicleRoom";
+import { MobileImmersiveRoom } from "./MobileImmersiveRoom";
+import {
+  isLikelyMobile,
+  isMobileRoomView,
+  mapGraphicsWhenPaused,
+  useViewerViewport,
+} from "./useViewerViewport";
 import { ViewerContextMenu } from "./ViewerContextMenu";
 import { buildViewerAlerts } from "./buildViewerAlerts";
 import {
@@ -125,13 +149,25 @@ import { ViewerAlertFab, type AlertFocusAnchor } from "./ViewerAlertFab";
 import { EngagementStanceRing } from "./EngagementStanceRing";
 import {
   economyCategoryLabel,
+  economyDeficitLabel,
   resolveResourceOrCurrencyLabel,
 } from "../state/displayLabels";
+import {
+  formatPlayerTreasury,
+} from "../state/economyLabels";
 import {
   fetchContent,
   getCachedContent,
   intentApCost,
+  intentForceApCost,
 } from "../state/contentCatalog";
+import {
+  formatOdCost,
+  formatOdMeter,
+  formatForceOdMeter,
+  OD_TOOLTIP,
+  FORCE_OD_TOOLTIP,
+} from "../state/playerUiTerms";
 import {
   FleetOrderRing,
   resolveFleetOrderRing,
@@ -156,10 +192,11 @@ type PlayerView =
   | "diplomacy"
   | "quests"
   | "map"
+  | "court"
   | "rp"
   | "codex";
 
-/** Sub-tabs when биржа room is open (1–4). */
+/** Sub-tabs when биржа room is open (1–4): ресурсы / валюты / общий рынок / сверхдержавы. */
 const MARKET_TAB_BY_DIGIT: Record<string, MarketTab> = {
   "1": "quotes",
   "2": "currencies",
@@ -177,6 +214,8 @@ function dockViewFromDigit(key: string, isMobile: boolean): PlayerView | null {
       "4": "economy",
       "5": "market",
       "6": "diplomacy",
+      "7": "quests",
+      "8": "codex",
     };
     return mobileMap[key] ?? null;
   }
@@ -248,17 +287,6 @@ interface FactionOption {
   color: string;
 }
 
-function isLikelyMobile(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    // Width-first: coarse pointer alone (Win touch laptops) must not
-    // force mobile chrome / bottom padding on a wide desktop window.
-    return window.matchMedia("(max-width: 900px)").matches;
-  } catch {
-    return false;
-  }
-}
-
 function readStoredPerf(): PerfMode | null {
   try {
     const v = localStorage.getItem("gmap-viewer-perf");
@@ -306,27 +334,34 @@ const PERF_OPTIONS: {
   {
     id: "quality",
     label: "Максимум",
-    hint: "Полный FX и анимации. Лучше на ПК.",
+    hint: "Все эффекты и анимации. Лучше на ПК.",
   },
   {
     id: "cinematic",
-    label: "Cinematic",
-    hint: "Макс. polish + все слои. Тяжелее — только ПК / мощный планшет.",
+    label: "Кино",
+    hint: "Максимум красоты и все слои карты. Тяжелее — только ПК или мощный планшет.",
     desktopOnly: true,
   },
 ];
 
 export function ViewerPage() {
-  const [mobile, setMobile] = useState(() => isLikelyMobile());
+  const { mobile } = useViewerViewport();
+  const [dockMoreOpen, setDockMoreOpen] = useState(false);
   useEffect(() => {
-    const sync = () => setMobile(isLikelyMobile());
-    window.addEventListener("resize", sync);
-    window.addEventListener("orientationchange", sync);
-    return () => {
-      window.removeEventListener("resize", sync);
-      window.removeEventListener("orientationchange", sync);
+    if (!dockMoreOpen) return;
+    const close = (e: PointerEvent) => {
+      const el = e.target as Element | null;
+      if (el?.closest?.(".viewer-dock-more")) return;
+      setDockMoreOpen(false);
     };
-  }, []);
+    const timer = window.setTimeout(() => {
+      window.addEventListener("pointerdown", close, true);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pointerdown", close, true);
+    };
+  }, [dockMoreOpen]);
   const [factions, setFactions] = useState<FactionOption[]>([]);
   const [factionId, setFactionId] = useState("");
   const [password, setPassword] = useState("");
@@ -346,8 +381,10 @@ export function ViewerPage() {
   const [orderType, setOrderType] = useState<OrderType>("move_fleet");
   const [orderNote, setOrderNote] = useState("");
   const [orderMsg, setOrderMsg] = useState<string | null>(null);
-  const [apMax, setApMax] = useState(3);
+  const [apMax, setApMax] = useState(9);
   const [reservedAp, setReservedAp] = useState(0);
+  const [forceApMax, setForceApMax] = useState(2);
+  const [reservedForceAp, setReservedForceAp] = useState(0);
   const [targetSystemId, setTargetSystemId] = useState<string | null>(null);
   const [pickingTarget, setPickingTarget] = useState(false);
   /** Mobile: tap system to move selected own unit (fallback to drag). */
@@ -395,6 +432,7 @@ export function ViewerPage() {
   const [systemMsg, setSystemMsg] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mapFiltersOpen, setMapFiltersOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [viewMode, setViewMode] = useState<PlayerView>("map");
   const [marketTab, setMarketTab] = useState<MarketTab>("quotes");
@@ -467,6 +505,21 @@ export function ViewerPage() {
     }
     return stored;
   });
+  const [dockCollapsed, setDockCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("gmap-viewer-dock-collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setDockCollapsedPersisted = (v: boolean) => {
+    setDockCollapsed(v);
+    try {
+      localStorage.setItem("gmap-viewer-dock-collapsed", v ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
   const [layers, setLayers] = useState<MapLayerFlags>(() => {
     try {
       const hasStored = !!localStorage.getItem("gmap-viewer-layers");
@@ -491,7 +544,27 @@ export function ViewerPage() {
   } | null>(null);
   const [cardBattleId, setCardBattleId] = useState<string | null>(null);
   const [cardBattleMinimized, setCardBattleMinimized] = useState(false);
+  const [contactBattlePreview, setContactBattlePreview] =
+    useState<ContactBattlePreview | null>(null);
+  const [contactBattleBusy, setContactBattleBusy] = useState(false);
+  const [contactBattleError, setContactBattleError] = useState<string | null>(
+    null,
+  );
+  const [contactBattleResultEng, setContactBattleResultEng] =
+    useState<ViewerEngagement | null>(null);
   const [systemFocusId, setSystemFocusId] = useState<string | null>(null);
+  const [systemPreferDeck, setSystemPreferDeck] = useState<
+    "stations" | "produce" | null
+  >(null);
+  const [systemProduceTab, setSystemProduceTab] = useState<"ships" | "units">(
+    "ships",
+  );
+  const [systemProduceFleetId, setSystemProduceFleetId] = useState<
+    string | null
+  >(null);
+  const [systemProduceLegionId, setSystemProduceLegionId] = useState<
+    string | null
+  >(null);
   const [flowData, setFlowData] = useState<EconomyFlowBreakdown | null>(null);
   const [economyPopover, setEconomyPopover] = useState<{
     x: number;
@@ -555,12 +628,25 @@ export function ViewerPage() {
 
   const activeMapMode = activeMapModePreset(layers);
 
+  const mobileRoom = isMobileRoomView(mobile, viewMode);
+  /** RP / quests — full-screen route, not a bottom sheet over the map. */
+  const mobileImmersive =
+    mobile && (viewMode === "rp" || viewMode === "quests");
+  const mobileSheetRoom = mobileRoom && !mobileImmersive;
+  const mapBackgroundPaused =
+    mobile &&
+    (mobileSheetRoom ||
+      mobileImmersive ||
+      (viewMode === "map" && sheetOpen));
+  const mapGraphics = mapGraphicsWhenPaused(graphics, mapBackgroundPaused);
+
   useEffect(() => {
     bump();
   }, [
     layers,
     perfMode,
     graphics,
+    mapBackgroundPaused,
     selectedSystemId,
     selectedFleetId,
     selectedLegionId,
@@ -666,10 +752,16 @@ export function ViewerPage() {
           briefing: data.briefing ?? prev?.briefing,
           apMax: data.apMax ?? prev?.apMax,
           reservedAp: data.reservedAp ?? prev?.reservedAp,
+          forceApMax: data.forceApMax ?? prev?.forceApMax,
+          reservedForceAp: data.reservedForceAp ?? prev?.reservedForceAp,
           intel: data.intel ?? prev?.intel,
         }));
         if (typeof data.apMax === "number") setApMax(data.apMax);
         if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+        if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
+        if (typeof data.reservedForceAp === "number") {
+          setReservedForceAp(data.reservedForceAp);
+        }
         loadWorld(data.world);
         const boardCue = `Стол обновлён · ход ${turn} · rev ${rev}`;
         setBoardRefreshToast(boardCue);
@@ -710,6 +802,7 @@ export function ViewerPage() {
             episodes?: { id: string; status?: string; kind?: string }[];
           }[];
         };
+        // Unread from this faction's private RP (HQ home).
         let chapterId = idx.home?.chapterId;
         let episodeId = idx.home?.episodeId;
         if (!chapterId || !episodeId) {
@@ -724,7 +817,10 @@ export function ViewerPage() {
             ) ?? [];
           const hq = flat.find((e) => e.kind === "hq");
           const openEp =
-            hq ?? flat.find((e) => e.status !== "closed") ?? flat[0] ?? null;
+            hq ??
+            flat.find((e) => e.status !== "closed" && e.kind !== "ooc") ??
+            flat[0] ??
+            null;
           chapterId = openEp?.chapterId;
           episodeId = openEp?.episodeId;
         }
@@ -768,7 +864,7 @@ export function ViewerPage() {
   }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt, password, rpFloatOpen]);
 
   useEffect(() => {
-    if (!payload?.factionId) {
+    if (!payload?.factionId || !password) {
       setFlowData(null);
       return;
     }
@@ -777,6 +873,12 @@ export function ViewerPage() {
       try {
         const res = await fetch(
           `/api/economy/flows?factionId=${encodeURIComponent(payload.factionId)}`,
+          {
+            headers: {
+              "X-Faction-Id": payload.factionId,
+              "X-Faction-Password": password,
+            },
+          },
         );
         if (!res.ok || cancelled) return;
         setFlowData((await res.json()) as EconomyFlowBreakdown);
@@ -788,7 +890,7 @@ export function ViewerPage() {
     return () => {
       cancelled = true;
     };
-  }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt]);
+  }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt, password]);
 
   const refreshEngagements = async (factionId: string) => {
     try {
@@ -813,14 +915,22 @@ export function ViewerPage() {
     }
     let cancelled = false;
     void refreshEngagements(payload.factionId);
+    // Fast poll while card table is open (PvP Ready sync).
+    const intervalMs = cardBattleId && !cardBattleMinimized ? 1600 : 8000;
     const id = window.setInterval(() => {
       if (!cancelled) void refreshEngagements(payload.factionId);
-    }, 8000);
+    }, intervalMs);
     return () => {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [payload?.factionId, payload?.world.meta.turn, payload?.updatedAt]);
+  }, [
+    payload?.factionId,
+    payload?.world.meta.turn,
+    payload?.updatedAt,
+    cardBattleId,
+    cardBattleMinimized,
+  ]);
 
   const loadFactions = async () => {
     setError(null);
@@ -854,13 +964,21 @@ export function ViewerPage() {
     }
   };
 
-  const login = async () => {
+  const login = async (override?: { factionId?: string; password?: string }) => {
+    const fid = override?.factionId ?? factionId;
+    const pw = override?.password ?? password;
+    if (!fid || !pw) {
+      setError("Выберите державу и введите код");
+      return;
+    }
+    setFactionId(fid);
+    setPassword(pw);
     setError(null);
     try {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ factionId, password }),
+        body: JSON.stringify({ factionId: fid, password: pw }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -869,7 +987,7 @@ export function ViewerPage() {
       const data = (await res.json()) as ViewerPayload & {
         updatedAt?: string | null;
       };
-      credsRef.current = { factionId, password };
+      credsRef.current = { factionId: fid, password: pw };
       mapStampRef.current = `${data.world.meta.turn ?? ""}|${data.tableRevision ?? data.world.meta.tableRevision ?? ""}`;
 
       const chosen = clampPerfForDevice(loginPerf);
@@ -891,12 +1009,15 @@ export function ViewerPage() {
         updatedAt: data.updatedAt ?? data.world.meta.updatedAt,
       });
       loadWorld(data.world);
-      setApMax(data.apMax ?? 3);
+      setApMax(data.apMax ?? 9);
       setReservedAp(data.reservedAp ?? 0);
+      setForceApMax(data.forceApMax ?? 2);
+      setReservedForceAp(data.reservedForceAp ?? 0);
       setSelectedSystemId(null);
       setSelectedFleetId(null);
       setSyncHint(null);
       setSettingsOpen(false);
+      setMapFiltersOpen(false);
       setMenuOpen(false);
       setSheetOpen(false);
       setRpFloatOpen(false);
@@ -907,16 +1028,54 @@ export function ViewerPage() {
       }
       modelRef.current = toModel(data.world, null, null, nextLayers);
       bump();
+      // Drop credentials from URL after successful GM preview login
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.has("f") || u.searchParams.has("p")) {
+          u.searchParams.delete("f");
+          u.searchParams.delete("p");
+          u.searchParams.delete("faction");
+          u.searchParams.delete("password");
+          u.searchParams.delete("auto");
+          window.history.replaceState({}, "", u.pathname + u.search);
+        }
+      } catch {
+        /* ignore */
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
 
+  // GM localhost preview: /view?f=<factionId>&p=<password>&auto=1
+  const autoLoginDoneRef = useRef(false);
+  useEffect(() => {
+    if (payload || autoLoginDoneRef.current) return;
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const f = q.get("f") || q.get("faction");
+      const p = q.get("p") || q.get("password");
+      if (!f || !p) return;
+      if (q.get("auto") === "0") {
+        setFactionId(f);
+        setPassword(p);
+        return;
+      }
+      autoLoginDoneRef.current = true;
+      void login({ factionId: f, password: p });
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payload]);
+
   const goView = (v: PlayerView) => {
     setViewMode(v);
     setMenuOpen(false);
     setSettingsOpen(false);
+    setMapFiltersOpen(false);
     setQueueOpen(false);
+    setDockMoreOpen(false);
     setRpFloatOpen(v === "rp");
     if (v !== "map") setSheetOpen(false);
     setTouchMoveArmed(false);
@@ -945,9 +1104,27 @@ export function ViewerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       setOrderMsg(okMsg);
+      if (typeof data.apMax === "number") setApMax(data.apMax);
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
-      else setReservedAp((r) => r + (data.intent?.apCost ?? intentApCost(defId)));
+      else {
+        const add = data.intent?.apCost ?? intentApCost(defId);
+        if (add) setReservedAp((r) => r + add);
+      }
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      } else {
+        const add =
+          data.intent?.forceApCost ?? intentForceApCost(defId);
+        if (add) setReservedForceAp((r) => r + add);
+      }
       onOk?.(data);
+      // Server-enriched economy (pending taxes / instant reserve) wins over optimistic paint.
+      if (data.economy) {
+        setPayload((prev) =>
+          prev ? { ...prev, economy: data.economy } : prev,
+        );
+      }
       return true;
     } catch (err) {
       setOrderMsg(err instanceof Error ? err.message : String(err));
@@ -983,6 +1160,10 @@ export function ViewerPage() {
         });
       }
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      }
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       return { ok: true as const, ...data };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -992,11 +1173,17 @@ export function ViewerPage() {
   };
 
   const setTax = async (taxSlot: string, tierId: string) => {
-    if (!payload) return;
+    if (!payload?.economy) return;
+    const applied = payload.economy.taxes?.[taxSlot] ?? "none";
+    const pending = payload.economy.pendingPolicy?.taxes?.[taxSlot];
+    if ((pending ?? applied) === tierId) return;
     setPolicyBusy(true);
     const taxLabels: Record<string, Record<string, string>> = {
-      "tax.industry": { none: "0%", low: "10%", mid: "20%", high: "35%" },
-      "tax.supply": { none: "0%", low: "10%", mid: "20%" },
+      "tax.materia": { none: "0%", low: "8%", mid: "15%", high: "25%" },
+      "tax.energia": { none: "0%", low: "8%", mid: "15%", high: "22%" },
+      "tax.bios": { none: "0%", low: "5%", mid: "12%", high: "18%" },
+      "tax.industry": { none: "0%", low: "8%", mid: "15%", high: "25%" },
+      "tax.supply": { none: "0%", low: "5%", mid: "12%", high: "18%" },
     };
     const label = taxLabels[taxSlot]?.[tierId] ?? tierId;
     try {
@@ -1005,20 +1192,21 @@ export function ViewerPage() {
         { taxSlot, tierId },
         `Налог в очереди: ${label}`,
         () => {
-          setPayload({
-            ...payload,
-            economy: {
-              ...payload.economy!,
-              stocks: payload.economy?.stocks ?? {},
-              taxes: payload.economy?.taxes ?? {},
-              pendingPolicy: {
-                ...(payload.economy?.pendingPolicy ?? {}),
-                taxes: {
-                  ...(payload.economy?.pendingPolicy?.taxes || {}),
-                  [taxSlot]: tierId,
+          setPayload((prev) => {
+            if (!prev?.economy) return prev;
+            return {
+              ...prev,
+              economy: {
+                ...prev.economy,
+                pendingPolicy: {
+                  ...(prev.economy.pendingPolicy ?? {}),
+                  taxes: {
+                    ...(prev.economy.pendingPolicy?.taxes || {}),
+                    [taxSlot]: tierId,
+                  },
                 },
               },
-            },
+            };
           });
         },
       );
@@ -1074,12 +1262,13 @@ export function ViewerPage() {
   ) => {
     if (!payload) return;
     setStockBusy(true);
+    const curLabel = currencyShortLabel(currencyId);
     const ok = await submitPlayerIntent(
       "intent.reserve_stock",
       { currencyId, amount, ...(label ? { label } : {}) },
       amount > 0
-        ? `Резерв ${amount} · ${currencyId.replace(/^currency\./, "")}`
-        : `Резерв снят · ${currencyId.replace(/^currency\./, "")}`,
+        ? `Резерв ${fmtInt(amount)} · ${curLabel}`
+        : `Резерв снят · ${curLabel}`,
       () => {
         setPayload((prev) => {
           if (!prev?.economy) return prev;
@@ -1103,14 +1292,26 @@ export function ViewerPage() {
     const ok = await submitPlayerIntent(
       "intent.set_economic_policy",
       { policyId },
-      `Доктрина: ${policyId}`,
+      `Доктрина: ${DOCTRINE_LABELS[policyId] ?? policyId}`,
       () => {
         setPayload((prev) => {
           if (!prev?.economy) return prev;
           const presets: Record<string, Record<string, string>> = {
-            military: { "tax.industry": "high", "tax.supply": "low" },
-            trade: { "tax.industry": "low", "tax.supply": "none" },
-            growth: { "tax.industry": "none", "tax.supply": "none" },
+            military: {
+              "tax.materia": "high",
+              "tax.energia": "low",
+              "tax.bios": "none",
+            },
+            trade: {
+              "tax.materia": "low",
+              "tax.energia": "none",
+              "tax.bios": "none",
+            },
+            growth: {
+              "tax.materia": "none",
+              "tax.energia": "none",
+              "tax.bios": "none",
+            },
           };
           const taxes = presets[policyId] ?? {};
           return {
@@ -1167,7 +1368,7 @@ export function ViewerPage() {
     giveAmount: number,
     wantCurrency: string,
     wantAmount: number,
-    venue: "common" | "contacts" = "contacts",
+    venue: "common" | "contacts" = "common",
   ) => {
     if (!payload) return false;
     return submitPlayerIntent(
@@ -1189,11 +1390,13 @@ export function ViewerPage() {
   const submitScoutReveal = async (systemId: string) => {
     if (!payload) return;
     const sys = payload.world.systems.find((s) => s.id === systemId);
-    const ap = intentApCost("intent.scout_reveal") || 1;
+    const ap = intentApCost("intent.scout_reveal");
     await submitPlayerIntent(
       "intent.scout_reveal",
       { systemId },
-      `Разведка в очереди: ${sys?.name ?? systemId} (${ap} AP)`,
+      ap > 0
+        ? `Разведка в очереди: ${sys?.name ?? systemId} (${formatOdCost(ap)})`
+        : `Разведка в очереди: ${sys?.name ?? systemId}`,
     );
   };
 
@@ -1292,10 +1495,14 @@ export function ViewerPage() {
     });
     if (data.world) loadWorld(data.world);
     if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      }
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
   };
 
   const diploOfferAction = async (
-    action: "create" | "accept" | "reject" | "cancel",
+    action: "create" | "accept" | "reject" | "cancel" | "stance",
     body: Record<string, unknown>,
     okMsg: string,
   ): Promise<boolean> => {
@@ -1314,9 +1521,13 @@ export function ViewerPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (!res.ok) throw new Error(data.error || data.message || res.statusText);
       applyDiploSession(data);
-      setDiploMsg(okMsg);
+      setDiploMsg(
+        typeof data.message === "string" && data.message
+          ? data.message
+          : okMsg,
+      );
       setFocusDiploOfferId(null);
       return true;
     } catch (err) {
@@ -1345,12 +1556,43 @@ export function ViewerPage() {
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.economy) {
         setPayload((prev) =>
-          prev
-            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
-            : prev,
+          prev ? { ...prev, economy: data.economy } : prev,
         );
       }
       setResearchMsg(`Исследовано: ${data.tech?.name ?? techId}`);
+    } catch (err) {
+      setResearchMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResearchBusy(false);
+    }
+  };
+
+  const alchemyExperiment = async (techA: string, techB: string) => {
+    if (!payload) return;
+    setResearchBusy(true);
+    setResearchMsg(null);
+    try {
+      const res = await fetch("/api/economy/alchemy/experiment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          factionId: payload.factionId,
+          password,
+          techA,
+          techB,
+          mode: "auto",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.economy) {
+        setPayload((prev) =>
+          prev
+            ? { ...prev, economy: data.economy }
+            : prev,
+        );
+      }
+      setResearchMsg(data.message || `Алхимия: ${data.outcome}`);
     } catch (err) {
       setResearchMsg(err instanceof Error ? err.message : String(err));
     } finally {
@@ -1378,7 +1620,7 @@ export function ViewerPage() {
       if (data.economy) {
         setPayload((prev) =>
           prev
-            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            ? { ...prev, economy: data.economy }
             : prev,
         );
       }
@@ -1409,7 +1651,7 @@ export function ViewerPage() {
       if (data.economy) {
         setPayload((prev) =>
           prev
-            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            ? { ...prev, economy: data.economy }
             : prev,
         );
       }
@@ -1442,7 +1684,7 @@ export function ViewerPage() {
       if (data.economy) {
         setPayload((prev) =>
           prev
-            ? { ...prev, economy: { ...prev.economy, ...data.economy } }
+            ? { ...prev, economy: data.economy }
             : prev,
         );
       }
@@ -1475,7 +1717,7 @@ export function ViewerPage() {
       if (data.economy) {
         setPayload({
           ...payload,
-          economy: { ...payload.economy, ...data.economy },
+          economy: data.economy,
         });
       }
       setPlanetMsg(
@@ -1586,15 +1828,17 @@ export function ViewerPage() {
           ...payload,
           world: data.world,
           visibleSystemIds: data.visibleSystemIds ?? payload.visibleSystemIds,
-          economy: data.economy
-            ? { ...payload.economy, ...data.economy }
-            : payload.economy,
+          economy: data.economy ?? payload.economy,
           reservedAp: data.reservedAp ?? payload.reservedAp,
           apMax: data.apMax ?? payload.apMax,
         });
         loadWorld(data.world);
       }
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      }
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       setPlanetMsg(
         `Линейдж основан: ${
           getCachedContent()?.races?.[data.lineageId]?.name ??
@@ -1631,15 +1875,18 @@ export function ViewerPage() {
           ...payload,
           world: data.world,
           visibleSystemIds: data.visibleSystemIds ?? payload.visibleSystemIds,
-          economy: data.economy
-            ? { ...payload.economy, ...data.economy }
-            : payload.economy,
+          // Prefer full server economy (enriched pending) — do not shallow-merge.
+          economy: data.economy ?? payload.economy,
           reservedAp: data.reservedAp ?? payload.reservedAp,
           apMax: data.apMax ?? payload.apMax,
         });
         loadWorld(data.world);
       }
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      }
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       if (typeof data.apMax === "number") setApMax(data.apMax);
       const labels: Record<string, string> = {
         build: "Постройка завершена",
@@ -1667,6 +1914,8 @@ export function ViewerPage() {
     planetId?: string;
     beltAngle?: number;
     name?: string;
+    fleetId?: string;
+    legionId?: string;
   }) => {
     if (!payload) return;
     setSystemBusy(true);
@@ -1688,15 +1937,17 @@ export function ViewerPage() {
           ...payload,
           world: data.world,
           visibleSystemIds: data.visibleSystemIds ?? payload.visibleSystemIds,
-          economy: data.economy
-            ? { ...payload.economy, ...data.economy }
-            : payload.economy,
+          economy: data.economy ?? payload.economy,
           reservedAp: data.reservedAp ?? payload.reservedAp,
           apMax: data.apMax ?? payload.apMax,
         });
         loadWorld(data.world);
       }
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      }
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       if (typeof data.apMax === "number") setApMax(data.apMax);
       const labels: Record<string, string> = {
         build_station: "Станция построена",
@@ -1748,10 +1999,24 @@ export function ViewerPage() {
           ),
         };
       }
-      setPayload((prev) => (prev ? { ...prev, world } : prev));
+      setPayload((prev) =>
+        prev
+          ? {
+              ...prev,
+              world,
+              ...(data.economy ? { economy: data.economy } : {}),
+            }
+          : prev,
+      );
       loadWorld(world);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
       else setReservedAp((r) => Math.max(0, r - 1));
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      } else {
+        setReservedForceAp((r) => Math.max(0, r - 1));
+      }
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       if (typeof data.apMax === "number") setApMax(data.apMax);
       setOrderMsg("Приказ отменён");
       bump();
@@ -1773,7 +2038,7 @@ export function ViewerPage() {
         sectorDraftPoints: [],
         ...layers,
         perfMode,
-        graphics,
+        graphics: mapGraphics,
       } satisfies MapViewModel;
     }
     const m: MapViewModel = {
@@ -1790,10 +2055,12 @@ export function ViewerPage() {
       showOrders: true,
       /* Capital→systems spokes clutter player map; never for viewer. */
       showSupply: false,
+      /* Faction-centroid diplomacy chords (editor politics layer); not for player map. */
+      showDiplomacy: false,
       activeFactionId: payload.factionId,
       economyBottleneckSystemIds,
       perfMode,
-      graphics,
+      graphics: mapGraphics,
     };
     modelRef.current = m;
     return m;
@@ -1830,32 +2097,44 @@ export function ViewerPage() {
       kind === "fleet"
         ? world.fleets.find((f) => f.id === unitId)?.systemId
         : world.legions.find((l) => l.id === unitId)?.systemId;
-    const path = hopPath(
-      world,
-      fromId,
-      toSystemId,
-      kind === "fleet" ? "fleet" : "legion",
-    );
-    // Mirror server: first hop this "tick" preview as full remaining path for UI.
-    const route = path.length >= 2 ? path.slice(1) : [];
+    const mode = kind === "fleet" ? "fleet" : "legion";
+    if (!fromId) return world;
+    if (fromId === toSystemId) {
+      if (kind === "fleet") {
+        return {
+          ...world,
+          fleets: world.fleets.map((f) =>
+            f.id === unitId
+              ? {
+                  ...f,
+                  route: [],
+                  stance: arriveStance,
+                  pendingArrival: undefined,
+                }
+              : f,
+          ),
+        };
+      }
+      return {
+        ...world,
+        legions: world.legions.map((l) =>
+          l.id === unitId ? { ...l, route: [] } : l,
+        ),
+      };
+    }
+    if (!isWithinMoveRange(world, fromId, toSystemId, mode)) return world;
     if (kind === "fleet") {
-      const multiHop = route.length > 1;
       return {
         ...world,
         fleets: world.fleets.map((f) =>
           f.id === unitId
             ? {
                 ...f,
-                route,
-                stance: multiHop
-                  ? ("move" as const)
-                  : route.length === 1
-                    ? ("move" as const)
-                    : arriveStance,
-                pendingArrival:
-                  route.length > 0
-                    ? { stance: arriveStance, systemId: toSystemId }
-                    : undefined,
+                lastSystemId: fromId,
+                systemId: toSystemId,
+                route: [],
+                stance: arriveStance,
+                pendingArrival: undefined,
               }
             : f,
         ),
@@ -1864,7 +2143,15 @@ export function ViewerPage() {
     return {
       ...world,
       legions: world.legions.map((l) =>
-        l.id === unitId ? { ...l, route } : l,
+        l.id === unitId
+          ? {
+              ...l,
+              lastSystemId: fromId,
+              systemId: toSystemId,
+              route: [],
+              status: "idle" as const,
+            }
+          : l,
       ),
     };
   };
@@ -1941,6 +2228,12 @@ export function ViewerPage() {
     hops: number | undefined,
     orderType: OrderType,
     noteOverride?: string,
+    contactStrike?: {
+      contactMode: "auto" | "card";
+      targetUnitKind: "fleet" | "legion";
+      targetUnitId: string;
+      targetFactionId?: string;
+    },
   ) => {
     if (!payload) return;
     const gen = sessionGenRef.current;
@@ -1953,7 +2246,26 @@ export function ViewerPage() {
     const isFleetStanceOrder =
       orderType === "blockade" || orderType === "fortify";
     const hopsLabel =
-      hops != null && Number.isFinite(hops) ? ` · ${formatHopTurns(hops)}` : "";
+      hops != null && Number.isFinite(hops)
+        ? ` · ${formatHopDistance(hops)}`
+        : "";
+    const intentDefId = orderType.startsWith("intent.")
+      ? orderType
+      : `intent.${orderType}`;
+    const apCost = intentApCost(intentDefId);
+    const forceCost = intentForceApCost(intentDefId);
+    if (apCost > 0 && reservedAp + apCost > apMax) {
+      setOrderMsg(
+        `Недостаточно ОД: занято ${reservedAp}/${apMax}, нужно ещё ${apCost} ОД`,
+      );
+      return;
+    }
+    if (forceCost > 0 && reservedForceAp + forceCost > forceApMax) {
+      setOrderMsg(
+        `Недостаточно ОД сил: занято ${reservedForceAp}/${forceApMax}, нужно ещё ${forceCost}`,
+      );
+      return;
+    }
     const body = {
       factionId: payload.factionId,
       password,
@@ -1962,6 +2274,19 @@ export function ViewerPage() {
       legionId: kind === "legion" ? unitId : undefined,
       fromSystemId,
       toSystemId,
+      ...(orderType === "attack_system"
+        ? {
+            stance: "assault" as const,
+            ...(kind === "legion" ? { theater: "assault" as const } : {}),
+          }
+        : {}),
+      ...(contactStrike
+        ? {
+            contactMode: contactStrike.contactMode,
+            targetUnitKind: contactStrike.targetUnitKind,
+            targetUnitId: contactStrike.targetUnitId,
+          }
+        : {}),
       note:
         noteOverride ??
         (isMove
@@ -1972,7 +2297,9 @@ export function ViewerPage() {
             ? `Блокада${hopsLabel}`
             : orderType === "fortify"
               ? "Оборона"
-              : `Жест · ${orderType}${hopsLabel}`),
+              : contactStrike
+                ? `Контакт · ${contactStrike.contactMode === "card" ? "карты" : "авто"}`
+                : `Жест · ${orderType}${hopsLabel}`),
     };
     try {
       const res = await fetch("/api/orders", {
@@ -1982,14 +2309,95 @@ export function ViewerPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+        if (typeof data.reservedForceAp === "number") {
+          setReservedForceAp(data.reservedForceAp);
+        }
+        if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
+        if (typeof data.apMax === "number") setApMax(data.apMax);
         throw new Error(data.error || res.statusText);
       }
       const data = await res.json();
+      const mergeEngagements = (incoming: ViewerEngagement[] | undefined) => {
+        if (!incoming?.length) return;
+        setEngagements((prev) => {
+          const ids = new Set(incoming.map((e) => e.id));
+          return [...prev.filter((e) => !ids.has(e.id)), ...incoming];
+        });
+      };
+      if (data.contactMode === "card" && data.session?.world) {
+        if (sessionGenRef.current !== gen) return;
+        setPayload((prev) => ({
+          ...data.session,
+          updatedAt:
+            data.session.updatedAt ??
+            data.session.world.meta?.updatedAt ??
+            prev?.updatedAt,
+        }));
+        loadWorld(data.session.world);
+        if (typeof data.apMax === "number") setApMax(data.apMax);
+        if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+        if (typeof data.reservedForceAp === "number") {
+          setReservedForceAp(data.reservedForceAp);
+        }
+        if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
+        mapStampRef.current = `${data.session.world.meta?.turn ?? ""}|${data.session.tableRevision ?? data.session.world.meta?.tableRevision ?? ""}`;
+        mergeEngagements(data.engagements as ViewerEngagement[] | undefined);
+        setContactBattlePreview(null);
+        setContactBattleBusy(false);
+        setContactBattleError(null);
+        const cardEng = (data.engagements as ViewerEngagement[] | undefined)?.find(
+          (e) => e.mode === "card",
+        );
+        if (cardEng) {
+          setCardBattleId(cardEng.id);
+          setCardBattleMinimized(false);
+          setOrderMsg("Карточный бой открыт");
+        } else {
+          setOrderMsg("Вызов на карточный бой отправлен");
+        }
+        bump();
+        return;
+      }
+      if (data.instantCombat && data.session?.world) {
+        if (sessionGenRef.current !== gen) return;
+        setPayload((prev) => ({
+          ...data.session,
+          updatedAt:
+            data.session.updatedAt ??
+            data.session.world.meta?.updatedAt ??
+            prev?.updatedAt,
+        }));
+        loadWorld(data.session.world);
+        if (typeof data.apMax === "number") setApMax(data.apMax);
+        if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
+        if (typeof data.reservedForceAp === "number") {
+          setReservedForceAp(data.reservedForceAp);
+        }
+        if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
+        mapStampRef.current = `${data.session.world.meta?.turn ?? ""}|${data.session.tableRevision ?? data.session.world.meta?.tableRevision ?? ""}`;
+        mergeEngagements(data.engagements as ViewerEngagement[] | undefined);
+        void refreshEngagements(payload.factionId);
+        if (contactStrike?.contactMode === "auto") {
+          const resolved = (data.engagements as ViewerEngagement[] | undefined)?.[0];
+          if (resolved) setContactBattleResultEng(resolved);
+          setContactBattleBusy(false);
+        } else {
+          setOrderMsg("Контактный бой завершён · карта обновлена");
+        }
+        bump();
+        return;
+      }
       let nextWorld = {
         ...payload.world,
         orders: [...payload.world.orders, data.order],
       };
-      if (isMove && fromSystemId) {
+      if (data.world) {
+        nextWorld = {
+          ...data.world,
+          orders: [...(data.world.orders ?? payload.world.orders), data.order],
+        };
+      } else if (isMove && fromSystemId) {
         nextWorld = applyLocalMoveRoute(nextWorld, kind, unitId, toSystemId);
       } else if (kind === "fleet" && isFleetStanceOrder) {
         nextWorld = applyLocalFleetOrder(
@@ -2004,9 +2412,15 @@ export function ViewerPage() {
       setPayload((prev) => (prev ? { ...prev, world: nextWorld } : prev));
       loadWorld(nextWorld);
       if (typeof data.apMax === "number") setApMax(data.apMax);
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
       else if (typeof data.intent?.apCost === "number") {
         setReservedAp((r) => r + data.intent.apCost);
+      }
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      } else if (typeof data.intent?.forceApCost === "number") {
+        setReservedForceAp((r) => r + data.intent.forceApCost);
       }
       const nextAp =
         typeof data.reservedAp === "number"
@@ -2018,13 +2432,19 @@ export function ViewerPage() {
           : orderType === "claim_system"
             ? "Приказ на захват принят"
             : orderType === "blockade"
-              ? "Приказ на блокаду принят"
+              ? "Блокада установлена"
               : orderType === "fortify"
-                ? "Приказ на оборону принят"
-                : "Приказ на ход принят";
-      setOrderMsg(`${verb}${hopsLabel} · AP ${nextAp}/${data.apMax ?? apMax}`);
+                ? "Оборона принята"
+                : isMove
+                  ? "Перемещён"
+                  : "Приказ принят";
+      setOrderMsg(`${verb}${hopsLabel} · ${formatOdMeter(nextAp, data.apMax ?? apMax)}`);
       bump();
     } catch (e) {
+      if (contactStrike) {
+        setContactBattleBusy(false);
+        setContactBattleError(e instanceof Error ? e.message : String(e));
+      }
       setOrderMsg(e instanceof Error ? e.message : String(e));
     }
   };
@@ -2044,6 +2464,21 @@ export function ViewerPage() {
     setTargetSystemId(toSystemId);
     setOrderType("attack_system");
     void submitUnitOrder("fleet", fleetId, toSystemId, undefined, "attack_system");
+  };
+
+  const submitDirectLegionAttack = (legionId: string, toSystemId: string) => {
+    setSelectedLegionId(legionId);
+    setSelectedFleetId(null);
+    setSelectedSystemId(toSystemId);
+    setTargetSystemId(toSystemId);
+    setOrderType("attack_system");
+    void submitUnitOrder(
+      "legion",
+      legionId,
+      toSystemId,
+      undefined,
+      "attack_system",
+    );
   };
 
   const submitDirectClaim = (toSystemId: string, fleetId?: string | null) => {
@@ -2090,16 +2525,22 @@ export function ViewerPage() {
           return { ...prev, world: nextWorld };
         });
         if (typeof data.apMax === "number") setApMax(data.apMax);
+        if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
         if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
         else if (typeof data.intent?.apCost === "number") {
           setReservedAp((r) => r + data.intent.apCost);
+        }
+        if (typeof data.reservedForceAp === "number") {
+          setReservedForceAp(data.reservedForceAp);
+        } else if (typeof data.intent?.forceApCost === "number") {
+          setReservedForceAp((r) => r + data.intent.forceApCost);
         }
         const nextAp =
           typeof data.reservedAp === "number"
             ? data.reservedAp
             : reservedAp + (data.intent?.apCost ?? 0);
         setOrderMsg(
-          `Приказ на захват принят · AP ${nextAp}/${data.apMax ?? apMax}`,
+          `Приказ на захват принят · ${formatOdMeter(nextAp, data.apMax ?? apMax)}`,
         );
         bump();
       } catch (e) {
@@ -2241,6 +2682,9 @@ export function ViewerPage() {
 
   const closePlayerSystem = useCallback(() => {
     setSystemFocusId(null);
+    setSystemPreferDeck(null);
+    setSystemProduceFleetId(null);
+    setSystemProduceLegionId(null);
     setEconomyLinkedSystemId(null);
     closeSystemView();
     useWorldStore.setState({
@@ -2346,6 +2790,34 @@ export function ViewerPage() {
       setOrderMsg("Цель вне радиуса обзора");
       return;
     }
+    if (drop.intent === "attack") {
+      const targetFac =
+        drop.targetFactionId ??
+        (drop.targetUnitId && drop.targetUnitKind
+          ? drop.targetUnitKind === "fleet"
+            ? payload.world.fleets.find((f) => f.id === drop.targetUnitId)
+                ?.factionId
+            : payload.world.legions.find((l) => l.id === drop.targetUnitId)
+                ?.factionId
+          : undefined);
+      const attackOk =
+        (targetFac &&
+          canAttackHostileUnit(
+            payload.world,
+            payload.factionId,
+            targetFac,
+            drop.toSystemId,
+          )) ||
+        canAttackUnitAtSystem(
+          payload.world,
+          payload.factionId,
+          drop.toSystemId,
+        );
+      if (!attackOk) {
+        setOrderMsg("Нельзя атаковать: нет войны или допустимой цели");
+        return;
+      }
+    }
     if (drop.kind === "fleet") {
       setSelectedFleetId(drop.unitId);
       setSelectedLegionId(null);
@@ -2363,7 +2835,70 @@ export function ViewerPage() {
     const orderType = intentToType[drop.intent ?? "move"];
     setOrderType(orderType);
     setSheetOpen(false);
+    const fromSys =
+      drop.kind === "fleet"
+        ? payload.world.fleets.find((f) => f.id === drop.unitId)?.systemId
+        : payload.world.legions.find((l) => l.id === drop.unitId)?.systemId;
+    const travelMode = drop.kind === "fleet" ? "fleet" : "legion";
+    if (
+      (drop.intent ?? "move") === "move" &&
+      fromSys &&
+      fromSys !== drop.toSystemId &&
+      !isWithinMoveRange(payload.world, fromSys, drop.toSystemId, travelMode)
+    ) {
+      setOrderMsg("Цель вне радиуса перемещения");
+      return;
+    }
+    const coLocated =
+      !!fromSys && fromSys === drop.toSystemId && (drop.hops ?? 0) === 0;
+    if (
+      drop.intent === "attack" &&
+      drop.targetUnitId &&
+      drop.targetUnitKind &&
+      coLocated
+    ) {
+      const preview = buildContactBattlePreview(
+        payload.world,
+        payload.factionId,
+        drop,
+      );
+      if (preview) {
+        setContactBattlePreview(preview);
+        setContactBattleError(null);
+        setContactBattleResultEng(null);
+        setContactBattleBusy(false);
+        return;
+      }
+    }
     void submitUnitOrder(drop.kind, drop.unitId, drop.toSystemId, drop.hops, orderType);
+  };
+
+  const closeContactBattle = () => {
+    setContactBattlePreview(null);
+    setContactBattleBusy(false);
+    setContactBattleError(null);
+    setContactBattleResultEng(null);
+  };
+
+  const runContactBattleChoice = (mode: "auto" | "card") => {
+    if (!contactBattlePreview || !payload) return;
+    const d = contactBattlePreview.drop;
+    setContactBattleBusy(true);
+    setContactBattleError(null);
+    void submitUnitOrder(
+      d.kind,
+      d.unitId,
+      d.toSystemId,
+      d.hops,
+      "attack_system",
+      undefined,
+      {
+        contactMode: mode,
+        targetUnitKind: d.targetUnitKind!,
+        targetUnitId: d.targetUnitId!,
+        targetFactionId: d.targetFactionId,
+      },
+    );
   };
 
   const submitOrder = async () => {
@@ -2417,16 +2952,22 @@ export function ViewerPage() {
       setPayload((prev) => (prev ? { ...prev, world: nextWorld } : prev));
       loadWorld(nextWorld);
       if (typeof data.apMax === "number") setApMax(data.apMax);
+      if (typeof data.forceApMax === "number") setForceApMax(data.forceApMax);
       if (typeof data.reservedAp === "number") setReservedAp(data.reservedAp);
       else if (typeof data.intent?.apCost === "number") {
         setReservedAp((r) => r + data.intent.apCost);
+      }
+      if (typeof data.reservedForceAp === "number") {
+        setReservedForceAp(data.reservedForceAp);
+      } else if (typeof data.intent?.forceApCost === "number") {
+        setReservedForceAp((r) => r + data.intent.forceApCost);
       }
       const nextAp =
         typeof data.reservedAp === "number"
           ? data.reservedAp
           : reservedAp + (data.intent?.apCost ?? 0);
       setOrderMsg(
-        `Приказ принят · AP ${nextAp}/${data.apMax ?? apMax}`,
+        `Приказ принят · ${formatOdMeter(nextAp, data.apMax ?? apMax)}`,
       );
       bump();
     } catch (e) {
@@ -2437,34 +2978,28 @@ export function ViewerPage() {
   // Hooks must run before any early return (login screen).
   /** Slim edge panel: HQ only. */
   const desktopGlass = !mobile && viewMode === "hq";
-  /** Full workbench modal: diplo / market / research / forces / quests. */
+  /** Full workbench modal: diplo / market / research / forces / economy / quests. */
   const desktopWorkbench =
     !mobile &&
     (viewMode === "forces" ||
       viewMode === "research" ||
+      viewMode === "economy" ||
       viewMode === "market" ||
       viewMode === "diplomacy" ||
       viewMode === "quests" ||
-      viewMode === "codex");
-  const mobileRoom =
-    mobile &&
-    (viewMode === "hq" ||
-      viewMode === "forces" ||
-      viewMode === "research" ||
-      viewMode === "market" ||
-      viewMode === "diplomacy" ||
-      viewMode === "quests" ||
+      viewMode === "court" ||
       viewMode === "codex");
   // Map-first: workbenches keep the map mounted underneath.
   const showMapLayer =
     !!payload &&
+    !mobileImmersive &&
     (viewMode === "map" ||
       viewMode === "economy" ||
+      viewMode === "rp" ||
       desktopGlass ||
       desktopWorkbench ||
-      mobileRoom ||
-      queueOpen ||
-      (!mobile && viewMode === "rp"));
+      mobileSheetRoom ||
+      queueOpen);
 
   const pendingCount = useMemo(
     () =>
@@ -2481,6 +3016,7 @@ export function ViewerPage() {
       setViewMode("map");
       setMenuOpen(false);
       setSettingsOpen(false);
+      setMapFiltersOpen(false);
       setRpFloatOpen(false);
       setSheetOpen(false);
       setTouchMoveArmed(false);
@@ -2504,6 +3040,7 @@ export function ViewerPage() {
       setViewMode("map");
       setMenuOpen(false);
       setSettingsOpen(false);
+      setMapFiltersOpen(false);
       setRpFloatOpen(false);
       setSheetOpen(false);
       setTouchMoveArmed(false);
@@ -2522,6 +3059,7 @@ export function ViewerPage() {
     setQueueOpen(true);
     setMenuOpen(false);
     setSettingsOpen(false);
+    setMapFiltersOpen(false);
     setRpFloatOpen(false);
     setTouchMoveArmed(false);
     writeStoredStart("map");
@@ -2532,6 +3070,7 @@ export function ViewerPage() {
     setQueueOpen(false);
     setMenuOpen(false);
     setSettingsOpen(false);
+    setMapFiltersOpen(false);
     setRpFloatOpen(false);
     setTouchMoveArmed(false);
     setViewMode("diplomacy");
@@ -2542,6 +3081,7 @@ export function ViewerPage() {
     setViewMode("rp");
     setMenuOpen(false);
     setSettingsOpen(false);
+    setMapFiltersOpen(false);
     setRpFloatOpen(true);
     setTouchMoveArmed(false);
     setRpUnread(0);
@@ -2555,6 +3095,7 @@ export function ViewerPage() {
     });
     setMenuOpen(false);
     setSettingsOpen(false);
+    setMapFiltersOpen(false);
     setRpFloatOpen(false);
     setTouchMoveArmed(false);
   }, []);
@@ -2656,6 +3197,11 @@ export function ViewerPage() {
         setQueueOpen((v) => !v);
         return;
       }
+      if (e.key === "b" || e.key === "B" || e.key === "и" || e.key === "И") {
+        e.preventDefault();
+        setDockCollapsedPersisted(!dockCollapsed);
+        return;
+      }
       if (viewMode === "market" && e.altKey) {
         const mt = MARKET_TAB_BY_DIGIT[e.key];
         if (mt) {
@@ -2681,7 +3227,7 @@ export function ViewerPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [payload, mobile, viewMode]);
+  }, [payload, mobile, viewMode, dockCollapsed]);
 
   // Era cinematic when max researched tech era advances
   useEffect(() => {
@@ -2734,7 +3280,12 @@ export function ViewerPage() {
             Обновить список
           </button>
           {factions.length > 0 && (
-            <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void login();
+              }}
+            >
               <label className="field">
                 <span>Держава / фракция</span>
                 <select
@@ -2750,6 +3301,15 @@ export function ViewerPage() {
               </label>
               <label className="field">
                 <span>Код доступа</span>
+                {/* Hidden username field for accessibility / password managers */}
+                <input
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  style={{ display: "none" }}
+                  value={factionId}
+                  readOnly
+                />
                 <input
                   type="password"
                   value={password}
@@ -2791,14 +3351,10 @@ export function ViewerPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => void login()}
-              >
+              <button type="submit" className="btn primary">
                 Войти к столу
               </button>
-            </>
+            </form>
           )}
           {error && <p className="error">{error}</p>}
         </div>
@@ -2834,6 +3390,7 @@ export function ViewerPage() {
   const hqPanel = (
     <PlayerHqHome
       payload={payload}
+      password={password}
       reservedAp={reservedAp}
       apMax={apMax}
       rpUnread={rpUnread}
@@ -2849,13 +3406,17 @@ export function ViewerPage() {
       }}
       onOpenDiplomacy={() => goView("diplomacy")}
       onOpenQuests={() => goView("quests")}
+      onOpenCourt={() => goView("court")}
       onOpenRp={() => {
         goView("rp");
         setRpUnread(0);
       }}
       onOpenMap={() => goView("map")}
       onOpenResearch={() => goView("research")}
-      onOpenMarket={() => goView("market")}
+      onOpenMarket={() => {
+        setMarketPrefillCurrency(null);
+        goView("market");
+      }}
       onOpenEconomy={() => goView("economy")}
       affordableResearch={affordableResearch}
       tradePartnerCount={tradePartnerCount}
@@ -2870,6 +3431,11 @@ export function ViewerPage() {
         void submitCombatStance(engId, stance)
       }
       onOpenStanceRing={(engId, anchor) => openStanceRing(engId, anchor)}
+      onRequestCardBattle={(engId) => void submitRequestCardBattle(engId)}
+      onOpenCardBattle={(engId) => {
+        setCardBattleMinimized(false);
+        setCardBattleId(engId);
+      }}
     />
   );
 
@@ -2884,6 +3450,7 @@ export function ViewerPage() {
       }
       onSetQueue={(queue) => void setResearchQueue(queue)}
       onAccelerate={(id) => void accelerateResearch(id)}
+      onAlchemyExperiment={(a, b) => void alchemyExperiment(a, b)}
       busy={researchBusy}
       msg={researchMsg}
       branch={researchBranch}
@@ -2932,12 +3499,13 @@ export function ViewerPage() {
         }
       }}
       asRoom={false}
+      compact={mobile}
     />
   ) : (
     <div className="hq-panel">
       <header className="hq-panel-head">
         <h2>Наука</h2>
-        <p className="hint">Нет данных экономики — перелогиньтесь после тика.</p>
+        <p className="hint">Нет данных экономики — перелогиньтесь после нового хода.</p>
       </header>
     </div>
   );
@@ -2975,7 +3543,7 @@ export function ViewerPage() {
       onEconomyPatch={(eco) => {
         if (!eco) return;
         setPayload((prev) =>
-          prev ? { ...prev, economy: { ...prev.economy, ...eco } } : prev,
+          prev ? { ...prev, economy: eco } : prev,
         );
       }}
       onSessionPatch={(data) => {
@@ -2994,7 +3562,7 @@ export function ViewerPage() {
               ? { tradePartnerIds: data.tradePartnerIds }
               : {}),
             ...(data.economy
-              ? { economy: { ...prev.economy, ...data.economy } }
+              ? { economy: data.economy }
               : {}),
             ...(data.intel ? { intel: data.intel } : {}),
             ...(data.briefing ? { briefing: data.briefing } : {}),
@@ -3020,6 +3588,9 @@ export function ViewerPage() {
       busy={diploBusy}
       msg={diploMsg}
       focusOfferId={focusDiploOfferId}
+      password={password}
+      reservedAp={reservedAp}
+      apMax={apMax}
       onCreate={({ toFactionId, give, want, note }) =>
         diploOfferAction(
           "create",
@@ -3038,12 +3609,30 @@ export function ViewerPage() {
       }
       onGift={(toId, cur, amt) => void submitTransfer(toId, cur, amt)}
       onTransfer={(toId, cur, amt) => void submitTransfer(toId, cur, amt)}
+      onStance={(toId, stance) =>
+        diploOfferAction(
+          "stance",
+          { toFactionId: toId, stance },
+          stance === "war"
+            ? "Война объявлена"
+            : stance === "embargo"
+              ? "Эмбарго введено"
+              : "Договор разорван",
+        )
+      }
+      onPlaceOffer={(side, giveCur, giveAmt, wantCur, wantAmt, venue) =>
+        submitMarketOffer(side, giveCur, giveAmt, wantCur, wantAmt, venue)
+      }
+      onCancelOffer={(offerId) => submitMarketCancel(offerId)}
     />
   );
 
   const questsPanel = (
     <ViewerQuestPanel
       payload={payload}
+      compact={mobile}
+      onCloseMap={() => goView("map")}
+      onOpenCourt={() => goView("court")}
       onFocusSystem={(systemId) => {
         setSelectedSystemId(systemId);
         goView("map");
@@ -3079,7 +3668,12 @@ export function ViewerPage() {
             choiceId,
           });
           if (res.ok) setOrderMsg("Выбор по квесту применён");
-          return res.ok;
+          return {
+            ok: res.ok,
+            error: res.ok
+              ? undefined
+              : (res.error as string | undefined) || "Выбор не применён",
+          };
         },
         onResolveDice: async (questId, specIndex, choiceId) => {
           const res = await submitQuestAction("resolve_quest_dice", {
@@ -3134,6 +3728,7 @@ export function ViewerPage() {
 
   const forcesPanel = (
     <ForcesDeck
+      compact={mobile}
       payload={payload}
       selectedFleetId={selectedFleetId}
       selectedLegionId={selectedLegionId}
@@ -3207,7 +3802,7 @@ export function ViewerPage() {
         }
       }}
       onForcesMutate={async ({ kind, id, composition, stockDeltas, forceReserve }) => {
-        if (!payload) return false;
+        if (!payload) return { ok: false, error: "Нет сессии" };
         try {
           const res = await fetch("/api/forces/mutate", {
             method: "POST",
@@ -3224,17 +3819,16 @@ export function ViewerPage() {
           });
           const data = await res.json();
           if (!res.ok) {
-            setOrderMsg(data.error || res.statusText);
-            return false;
+            const err = data.error || res.statusText;
+            setOrderMsg(err);
+            return { ok: false, error: err };
           }
           setPayload((prev) => {
             if (!prev) return prev;
             return {
               ...prev,
               world: data.world ?? prev.world,
-              economy: data.economy
-                ? { ...prev.economy, ...data.economy }
-                : prev.economy,
+              economy: data.economy ?? prev.economy,
               intel: data.intel ?? prev.intel,
               visibleSystemIds:
                 data.visibleSystemIds ?? prev.visibleSystemIds,
@@ -3242,14 +3836,46 @@ export function ViewerPage() {
           });
           if (data.world) loadWorld(data.world);
           bump();
-          return true;
+          return { ok: true };
         } catch (e) {
-          setOrderMsg(e instanceof Error ? e.message : String(e));
-          return false;
+          const err = e instanceof Error ? e.message : String(e);
+          setOrderMsg(err);
+          return { ok: false, error: err };
         }
       }}
       onToast={(msg) => setOrderMsg(msg)}
       highlightDefIds={forcesHighlightDefIds}
+      engagements={engagements}
+      onOpenEngagement={(engId) => {
+        const eng = engagements.find((e) => e.id === engId);
+        if (eng?.systemId) {
+          setSelectedSystemId(eng.systemId);
+          goView("map");
+          window.setTimeout(
+            () => mapApiRef.current?.focusSystem(eng.systemId),
+            80,
+          );
+        }
+        setOrderMsg(`Бой · ${engId}`);
+      }}
+      onOpenCardBattle={(engId) => {
+        setCardBattleMinimized(false);
+        setCardBattleId(engId);
+      }}
+      onOpenEconomy={() => goView("economy")}
+      onOpenProduce={({ systemId, tab, fleetId, legionId }) => {
+        setSystemPreferDeck("produce");
+        setSystemProduceTab(tab);
+        setSystemProduceFleetId(fleetId ?? null);
+        setSystemProduceLegionId(legionId ?? null);
+        goView("map");
+        openPlayerSystem(systemId);
+        setOrderMsg(
+          tab === "ships"
+            ? "Верфь — зажмите карту корабля, чтобы спустить со стапелей"
+            : "Казармы — зажмите карту отряда, чтобы нанять",
+        );
+      }}
     />
   );
 
@@ -3280,52 +3906,439 @@ export function ViewerPage() {
     />
   );
 
+  const economyPanelProps =
+    payload != null
+      ? {
+          payload,
+          flowData,
+          factionName: faction?.name,
+          linkedSystemId: economyLinkedSystemId,
+          priorityBusy: flowPriorityBusy,
+          onClose: () => {
+            setEconomyLinkedSystemId(null);
+            goView("map");
+          },
+          onOpenSystem: (systemId: string) => {
+            setEconomyLinkedSystemId(systemId);
+            openPlayerSystem(systemId);
+          },
+          onFocusDeficit: (letter: string, systemId?: string) => {
+            setEcoHighlightCategory(letter);
+            if (systemId) {
+              setEconomyLinkedSystemId(systemId);
+              openPlayerSystem(systemId);
+              return;
+            }
+            const sig = economySystemSignals.find(
+              (s) => s.category === letter && s.systemId,
+            );
+            if (sig?.systemId) {
+              setEconomyLinkedSystemId(sig.systemId);
+              openPlayerSystem(sig.systemId);
+            } else {
+              goView("map");
+            }
+          },
+          onFocusSystemOnMap: (systemId: string) => {
+            setEconomyLinkedSystemId(null);
+            setSelectedSystemId(systemId);
+            goView("map");
+            window.setTimeout(
+              () => mapApiRef.current?.focusSystem(systemId),
+              80,
+            );
+          },
+          onSetFlowPriority: (opts: {
+            from: string;
+            to: string;
+            systemId?: string | null;
+          }) => void setFlowPriority(opts),
+          onSetTax: (slot: string, tier: string) => void setTax(slot, tier),
+          onSetDoctrine: (id: string) => void setEconomicPolicy(id),
+          onReserveStock: (id: string, amount: number, label?: string) =>
+            void reserveStock(id, amount, label),
+          onConvert: async (fromCurrency: string, toCurrency: string, amountFrom: number) => {
+            if (!payload || !password) return false;
+            return submitPlayerIntent(
+              "intent.market_convert",
+              { fromCurrency, toCurrency, amountFrom },
+              `Обмен на рынке: ${amountFrom} ${currencyShortLabel(fromCurrency)}`,
+            );
+          },
+          onSellToMarket: (currencyId: string) => {
+            setMarketPrefillCurrency(currencyId);
+            setMarketTab("trade");
+            goView("market");
+          },
+          onCaravanHint: (currencyId: string, systemId?: string) => {
+            const curLabel = currencyShortLabel(currencyId);
+            if (systemId) {
+              setEconomyLinkedSystemId(systemId);
+              openPlayerSystem(systemId);
+              setOrderMsg(
+                `${curLabel} → система открыта. Перевозку оформите приказом на карте.`,
+              );
+              return;
+            }
+            setOrderMsg(
+              "Выберите систему в зоне сброса или на карте — отдельного приказа «караван» пока нет.",
+            );
+            goView("map");
+          },
+          onStockAlert: (currencyId: string) => {
+            const { on } = toggleStockAlert(currencyId);
+            const name = currencyShortLabel(currencyId);
+            setOrderMsg(
+              on
+                ? `Слежение: «${name}» — предупреждение на Обзоре при низком запасе`
+                : `Слежение снято: «${name}»`,
+            );
+          },
+          stockBusy,
+          policyBusy,
+          focusProductionCategory: economyFocusCategory,
+          onFocusProductionConsumed: () => setEconomyFocusCategory(null),
+          onOpenResearch: () => {
+            goView("research");
+            setOrderMsg("Наука — нарастите cognitio / изучите добычу F");
+          },
+          onFocusBuild: () => {
+            const owned = payload.world.systems.find(
+              (s) => s.ownerFactionId === payload.factionId,
+            );
+            goView("map");
+            if (owned) {
+              setSelectedSystemId(owned.id);
+              window.setTimeout(
+                () => mapApiRef.current?.focusSystem(owned.id),
+                80,
+              );
+            }
+          },
+        }
+      : null;
+
+  const courtPanel =
+    payload != null ? (
+      <CourtPanel
+        payload={payload}
+        password={password}
+        layout="fill"
+        compact={mobile}
+        factionColor={faction?.color}
+        onMsg={(m) => setOrderMsg(m)}
+        onGiveNpcTask={async (npcId, opts) => {
+          return submitPlayerIntent(
+            "intent.give_npc_task",
+            {
+              npcId,
+              taskLabel: opts.taskLabel,
+              etaTurn: opts.etaTurn,
+              linkedQuestId: opts.linkedQuestId,
+              taskId: opts.taskId,
+            },
+            `Поручение для двора принято`,
+          );
+        }}
+        onAssignPosting={async (npcId, opts) => {
+          return submitPlayerIntent(
+            "intent.assign_npc_posting",
+            {
+              npcId,
+              kind: opts.kind,
+              systemId: opts.systemId,
+              legionId: opts.legionId,
+              fleetId: opts.fleetId,
+            },
+            `Назначение принято`,
+          );
+        }}
+        onRecallPosting={async (npcId) => {
+          return submitPlayerIntent(
+            "intent.recall_npc_posting",
+            { npcId },
+            `NPC отозван ко двору`,
+          );
+        }}
+        onSeatCouncil={async (npcId, seatId) => {
+          if (seatId === "seat.ruler") return false;
+          const ok = await submitPlayerIntent(
+            "intent.seat_npc_council",
+            { npcId, seatId },
+            `Место за столом занято`,
+          );
+          if (ok) {
+            setPayload((prev) => {
+              if (!prev) return prev;
+              const factions = prev.world.factions.map((f) => {
+                if (f.id !== prev.factionId) return f;
+                const mover = (f.npcs ?? []).find((n) => n.id === npcId);
+                if (mover?.isPlayerRuler || f.rulerNpcId === npcId) return f;
+                const fromSeat =
+                  typeof mover?.councilSeat === "string" &&
+                  mover.councilSeat &&
+                  mover.councilSeat !== "seat.ruler"
+                    ? mover.councilSeat
+                    : null;
+                return {
+                  ...f,
+                  npcs: (f.npcs ?? []).map((n) => {
+                    if (n.id === npcId) return { ...n, councilSeat: seatId };
+                    if (n.councilSeat === seatId) {
+                      if (n.isPlayerRuler || f.rulerNpcId === n.id) return n;
+                      return {
+                        ...n,
+                        councilSeat:
+                          fromSeat && fromSeat !== seatId ? fromSeat : null,
+                      };
+                    }
+                    return n;
+                  }),
+                };
+              });
+              return {
+                ...prev,
+                world: { ...prev.world, factions },
+              };
+            });
+          }
+          return ok;
+        }}
+        onUnseatCouncil={async (npcId) => {
+          const ok = await submitPlayerIntent(
+            "intent.unseat_npc_council",
+            { npcId },
+            `Отправлен в пул двора`,
+          );
+          if (ok) {
+            setPayload((prev) => {
+              if (!prev) return prev;
+              const factions = prev.world.factions.map((f) => {
+                if (f.id !== prev.factionId) return f;
+                return {
+                  ...f,
+                  npcs: (f.npcs ?? []).map((n) =>
+                    n.id === npcId &&
+                    !n.isPlayerRuler &&
+                    f.rulerNpcId !== n.id
+                      ? { ...n, councilSeat: null }
+                      : n,
+                  ),
+                };
+              });
+              return {
+                ...prev,
+                world: { ...prev.world, factions },
+              };
+            });
+          }
+          return ok;
+        }}
+        onSetSeatPortfolio={async (seatId, portfolioId) => {
+          const ok = await submitPlayerIntent(
+            "intent.set_council_portfolio",
+            { seatId, portfolioId },
+            `Роль советника обновлена`,
+          );
+          if (ok) {
+            setPayload((prev) => {
+              if (!prev) return prev;
+              const factions = prev.world.factions.map((f) => {
+                if (f.id !== prev.factionId) return f;
+                const council = f.council ?? { unlockedSeatIds: [] };
+                return {
+                  ...f,
+                  council: {
+                    ...council,
+                    seatPortfolios: {
+                      ...(council.seatPortfolios ?? {}),
+                      [seatId]: portfolioId,
+                    },
+                  },
+                };
+              });
+              return {
+                ...prev,
+                world: { ...prev.world, factions },
+              };
+            });
+          }
+          return ok;
+        }}
+        onAssignBlocLeader={async (npcId, blocId) => {
+          const ok = await submitPlayerIntent(
+            "intent.assign_bloc_leader",
+            { npcId, blocId },
+            `Глава дома назначен`,
+          );
+          if (ok) {
+            setPayload((prev) => {
+              if (!prev) return prev;
+              const factions = prev.world.factions.map((f) => {
+                if (f.id !== prev.factionId) return f;
+                return {
+                  ...f,
+                  npcs: (f.npcs ?? []).map((n) => {
+                    if (n.id === npcId) {
+                      return { ...n, blocId, isBlocLeader: true };
+                    }
+                    if (n.blocId === blocId && n.isBlocLeader) {
+                      return { ...n, isBlocLeader: false };
+                    }
+                    return n;
+                  }),
+                  internalBlocs: (f.internalBlocs ?? []).map((b) =>
+                    b.id === blocId ? { ...b, leaderNpcId: npcId } : b,
+                  ),
+                };
+              });
+              return {
+                ...prev,
+                world: { ...prev.world, factions },
+              };
+            });
+          }
+          return ok;
+        }}
+        onAssignRaceLeader={async (npcId, raceId, title) => {
+          const ok = await submitPlayerIntent(
+            "intent.assign_race_leader",
+            { npcId, raceId, title },
+            `Лидер народа назначен`,
+          );
+          if (ok) {
+            setPayload((prev) => {
+              if (!prev) return prev;
+              const factions = prev.world.factions.map((f) => {
+                if (f.id !== prev.factionId) return f;
+                return {
+                  ...f,
+                  npcs: (f.npcs ?? []).map((n) => {
+                    if (n.id === npcId) {
+                      return {
+                        ...n,
+                        raceLeadership: title
+                          ? { raceId, title }
+                          : { raceId },
+                      };
+                    }
+                    if (n.raceLeadership?.raceId === raceId) {
+                      return { ...n, raceLeadership: null };
+                    }
+                    return n;
+                  }),
+                };
+              });
+              return {
+                ...prev,
+                world: { ...prev.world, factions },
+              };
+            });
+          }
+          return ok;
+        }}
+      />
+    ) : null;
+
+  const chronicleRoom =
+    payload != null ? (
+      <ChronicleRoom
+        payload={payload}
+        password={password}
+        layout="fill"
+        compact={mobile}
+        onBack={() => goView("map")}
+        factionColor={faction?.color}
+        avatarUrl={faction?.avatarUrl}
+        onMsg={(m) => setOrderMsg(m)}
+        onMessagesLoaded={(msgs) => {
+          const latest = msgs[msgs.length - 1];
+          if (latest?.at) {
+            writeRpSeenAt(payload.factionId, latest.at);
+          }
+          setRpUnread(0);
+        }}
+      />
+    ) : null;
+
+  const immersivePanel =
+    mobileImmersive && payload != null
+      ? viewMode === "rp"
+        ? chronicleRoom
+        : viewMode === "quests"
+          ? questsPanel
+          : null
+      : null;
+
   const roomPanel =
     viewMode === "forces"
       ? forcesPanel
       : viewMode === "research"
         ? researchPanel
-        : viewMode === "market"
-          ? marketPanel
-          : viewMode === "diplomacy"
-            ? diplomacyPanel
-            : viewMode === "quests"
-              ? questsPanel
-              : viewMode === "codex"
-                ? codexPanel
-                : viewMode === "hq"
-                  ? hqPanel
-                  : null;
+        : viewMode === "economy" && economyPanelProps && mobile
+          ? (
+              <EconomyPanel
+                open
+                embedded
+                compactNav={true}
+                {...economyPanelProps}
+              />
+            )
+          : viewMode === "market"
+            ? marketPanel
+            : viewMode === "diplomacy"
+              ? diplomacyPanel
+              : viewMode === "quests"
+                ? mobileImmersive
+                  ? null
+                  : questsPanel
+                : viewMode === "court"
+                  ? courtPanel
+                  : viewMode === "codex"
+                    ? codexPanel
+                    : viewMode === "hq"
+                      ? hqPanel
+                      : null;
 
   const roomTitle =
     viewMode === "forces"
       ? "Силы"
       : viewMode === "research"
         ? "Наука"
-        : viewMode === "market"
-          ? "Биржа"
-          : viewMode === "diplomacy"
-            ? "Дипломатия"
-            : viewMode === "quests"
-              ? "Квесты"
-              : viewMode === "codex"
-                ? "Справочник"
-                : "Штаб";
+        : viewMode === "economy"
+          ? "Экономика"
+          : viewMode === "market"
+            ? "Биржа"
+            : viewMode === "diplomacy"
+              ? "Дипломатия"
+              : viewMode === "quests"
+                ? "Квесты"
+                : viewMode === "court"
+                  ? "Двор"
+                  : viewMode === "codex"
+                    ? "Справочник"
+                    : viewMode === "rp"
+                      ? "RP"
+                      : "Штаб";
 
   const workbenchSubtitle =
     viewMode === "diplomacy"
-      ? "Сделка: вы ↔ условия ↔ партнёр. Входящие отсвечиваются сразу."
+      ? "Сделки — по согласию. Война и разрыв — сразу, без ответа."
       : viewMode === "market"
         ? "Стакан · динамика цен · заявки."
         : viewMode === "research"
-          ? "Колесо A–F · ветви 1–6 · drag/zoom."
-          : viewMode === "forces"
-            ? "Флоты, легионы и каталог юнитов со статами."
-            : viewMode === "quests"
-              ? "Сюжет · сайды · фракции · ежеходные. СКМ — перевернуть карту."
-              : viewMode === "codex"
-                ? "Расы · государства · постройки · юниты · технологии — по уровню знания."
-                : undefined;
+          ? "Колесо наук · 6 категорий · ветви 1–6."
+          : viewMode === "economy"
+            ? "Казна · производство · бюджет · склад · налоги. Клавиши 1–5."
+            : viewMode === "forces"
+              ? "Флоты, легионы и каталог юнитов со статами."
+              : viewMode === "quests"
+                ? "Сюжет · сайды · фракции · ежеходные. СКМ — перевернуть карту."
+                : viewMode === "court"
+                  ? "Кадровый совет · поручения · губернаторы · командующие · флотоводцы."
+                  : viewMode === "codex"
+                    ? "Расы · государства · постройки · юниты · технологии — по уровню знания."
+                    : undefined;
 
   const factionCss = {
     ["--faction" as string]: faction?.color ?? "#c9a227",
@@ -3335,7 +4348,14 @@ export function ViewerPage() {
 
   return (
     <div
-      className={`viewer-shell ${mobile ? "viewer-shell--mobile" : "viewer-shell--desktop"}`}
+      className={`viewer-shell ${
+        mobile ? "viewer-shell--mobile viewer-shell--v2" : "viewer-shell--desktop"
+      }${dockCollapsed ? " viewer-shell--dock-collapsed" : ""}${
+        mapBackgroundPaused ? " viewer-shell--map-paused" : ""
+      }${mobileImmersive ? " viewer-shell--immersive" : ""}`}
+      data-perf={perfMode}
+      data-dock={dockCollapsed ? "collapsed" : "open"}
+      data-room={mobileRoom ? viewMode : undefined}
       style={factionCss}
     >
       {faction?.emblemPath && (
@@ -3368,9 +4388,14 @@ export function ViewerPage() {
           </div>
         </div>
         {mobile ? (
-          <span className="viewer-ap-pill" title="Занято AP / лимит на ход">
-            AP {reservedAp}/{apMax}
-          </span>
+          <>
+            <span className="viewer-ap-pill" title={OD_TOOLTIP}>
+              {formatOdMeter(reservedAp, apMax)}
+            </span>
+            <span className="viewer-ap-pill" title={FORCE_OD_TOOLTIP}>
+              {formatForceOdMeter(reservedForceAp, forceApMax)}
+            </span>
+          </>
         ) : (
           <EmpireResourceStrip
             economy={payload.economy}
@@ -3379,6 +4404,8 @@ export function ViewerPage() {
             factionId={payload.factionId}
             reservedAp={reservedAp}
             apMax={apMax}
+            reservedForceAp={reservedForceAp}
+            forceApMax={forceApMax}
             fleetCount={(payload.world.fleets ?? []).filter(
               (f) => f.factionId === payload.factionId,
             ).length}
@@ -3398,6 +4425,7 @@ export function ViewerPage() {
             onClick={() => {
               setMenuOpen(false);
               setSettingsOpen(false);
+              setMapFiltersOpen(false);
               setQueueOpen((v) => !v);
             }}
           >
@@ -3412,6 +4440,23 @@ export function ViewerPage() {
             </div>
           )}
         </div>
+        {showMapLayer && viewMode === "map" && (
+          <button
+            type="button"
+            className={`viewer-icon-btn ${mapFiltersOpen ? "active" : ""}`}
+            aria-label="Фильтры карты"
+            title="Фильтры · F5–F9"
+            aria-expanded={mapFiltersOpen}
+            onClick={() => {
+              setMenuOpen(false);
+              setQueueOpen(false);
+              setSettingsOpen(false);
+              setMapFiltersOpen(true);
+            }}
+          >
+            <Layers size={18} strokeWidth={2} aria-hidden />
+          </button>
+        )}
         <button
           type="button"
           className="viewer-icon-btn"
@@ -3420,6 +4465,7 @@ export function ViewerPage() {
           onClick={() => {
             setMenuOpen(false);
             setQueueOpen(false);
+            setMapFiltersOpen(false);
             setSettingsOpen(true);
           }}
         >
@@ -3438,14 +4484,15 @@ export function ViewerPage() {
         )}
       </header>
 
-      <main className={showMapLayer ? "viewer-map" : "viewer-hq"}>
+      <main
+        className={showMapLayer ? "viewer-map" : "viewer-hq"}>
         {showMapLayer ? (
           <Suspense
             fallback={
               <div className="viewer-map-loading">
                 <div className="viewer-map-loading-pulse" aria-hidden />
                 <p>Загрузка карты…</p>
-                <p className="hint">Подготовка театра</p>
+                <p className="hint">Подключаем галактику…</p>
                 <button
                   type="button"
                   className="btn ghost"
@@ -3462,13 +4509,21 @@ export function ViewerPage() {
               apiRef={mapApiRef}
               readModel={readModel}
               onModelSubscribe={subscribe}
-              interactive={!systemFocusId}
-              hostClassName={systemFocusId ? "viewer-map--inert" : undefined}
+              interactive={!systemFocusId && !(mobile && mobileRoom)}
+              hostClassName={
+                [
+                  systemFocusId ? "viewer-map--inert" : "",
+                  mapBackgroundPaused ? "viewer-map--paused" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
               playerFactionId={payload.factionId}
               onUnitDrop={(drop) => {
                 setTouchMoveArmed(false);
                 onUnitDrop(drop);
               }}
+              onUnitDropReject={(msg) => setOrderMsg(msg)}
               onUnitDragStart={(kind, unitId) => {
                 if (kind === "fleet") {
                   setSelectedFleetId(unitId);
@@ -3567,6 +4622,7 @@ export function ViewerPage() {
                   }
                 }
                 setSelectedSystemId(id);
+                if (mobile && id && viewMode === "map") setSheetOpen(true);
                 bump();
               }}
               onFleetClick={(id) => {
@@ -3575,6 +4631,7 @@ export function ViewerPage() {
                 const fleet = payload.world.fleets.find((f) => f.id === id);
                 if (fleet) setSelectedSystemId(fleet.systemId);
                 setTouchMoveArmed(false);
+                if (mobile && viewMode === "map") setSheetOpen(true);
                 bump();
               }}
               onLegionClick={(id) => {
@@ -3583,14 +4640,17 @@ export function ViewerPage() {
                 const leg = payload.world.legions.find((l) => l.id === id);
                 if (leg) setSelectedSystemId(leg.systemId);
                 setTouchMoveArmed(false);
+                if (mobile && viewMode === "map") setSheetOpen(true);
                 bump();
               }}
             />
-            <TurnStampHud
-              turn={payload.world.meta.turn}
-              name={payload.world.meta.name}
-              enabled={graphics.turnStamp}
-            />
+            {!mobile && (
+              <TurnStampHud
+                turn={payload.world.meta.turn}
+                name={payload.world.meta.name}
+                enabled={graphics.turnStamp}
+              />
+            )}
             <ViewerAlertFab items={viewerAlertItems} unreadRp={rpUnread} />
             {economyPopover ? (
               <EconomySignalPopover
@@ -3615,25 +4675,6 @@ export function ViewerPage() {
                 }}
               />
             ) : null}
-            <div
-              className="map-layer-strip map-mode-strip"
-              role="toolbar"
-              aria-label="Режимы карты"
-            >
-              {MAP_MODE_PRESETS.map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  className={`layer-chip map-mode-chip ${activeMapMode === mode.id ? "on" : ""}`}
-                  aria-pressed={activeMapMode === mode.id}
-                  title={`${mode.hint} · ${mode.hotkey}`}
-                  onClick={() => applyPreset(mode.id)}
-                >
-                  <span>{mode.label}</span>
-                  <kbd className="map-mode-kbd">{mode.hotkey}</kbd>
-                </button>
-              ))}
-            </div>
             <ViewerContextMenu
               menu={viewerCtx}
               payload={payload}
@@ -3666,6 +4707,10 @@ export function ViewerPage() {
                   submitDirectAttack(opts.fleetId, opts.systemId);
                   return;
                 }
+                if (kind === "attack_system" && opts.legionId && opts.systemId) {
+                  submitDirectLegionAttack(opts.legionId, opts.systemId);
+                  return;
+                }
                 if (kind === "claim_system" && opts.systemId) {
                   submitDirectClaim(opts.systemId, opts.fleetId);
                   return;
@@ -3686,9 +4731,11 @@ export function ViewerPage() {
               onScoutReveal={(systemId) => {
                 void submitScoutReveal(systemId);
               }}
-              scoutApCost={intentApCost("intent.scout_reveal") || 1}
+              scoutApCost={intentApCost("intent.scout_reveal")}
               reservedAp={reservedAp}
               apMax={apMax}
+              reservedForceAp={reservedForceAp}
+              forceApMax={forceApMax}
             />
             {holdProgress && (
               <HoldRing
@@ -3703,7 +4750,13 @@ export function ViewerPage() {
                 payload={payload}
                 reservedAp={reservedAp}
                 apMax={apMax}
-                scoutApCost={intentApCost("intent.scout_reveal") || 1}
+                reservedForceAp={reservedForceAp}
+                forceApMax={forceApMax}
+                scoutApCost={intentApCost("intent.scout_reveal")}
+                scoutForceApCost={intentForceApCost("intent.scout_world")}
+                moveForceApCost={intentForceApCost("intent.move_fleet")}
+                attackEmpireApCost={intentApCost("intent.attack_system")}
+                attackForceApCost={intentForceApCost("intent.attack_system")}
                 onClose={() => setOrderRing(null)}
                 onMove={(fleetId, toSystemId, hops) => {
                   setOrderRing(null);
@@ -3818,6 +4871,7 @@ export function ViewerPage() {
                   </button>
                 </div>
               )}
+            {!mobile && (
             <div className="viewer-zoom" aria-label="Масштаб">
               <button
                 type="button"
@@ -3844,6 +4898,7 @@ export function ViewerPage() {
                 <Home size={18} strokeWidth={2} aria-hidden />
               </button>
             </div>
+            )}
             {orderMsg && viewMode === "map" && (
               <div className="viewer-toast" role="status">
                 {orderMsg}
@@ -3895,6 +4950,29 @@ export function ViewerPage() {
         ) : null}
       </main>
 
+      {viewMode === "economy" && economyPanelProps && !mobile && (
+        <FloatingPanel
+          open
+          onClose={() => {
+            setEconomyLinkedSystemId(null);
+            goView("map");
+          }}
+          title="Экономика"
+          storageKey="gmap-eco-panel-geom"
+          snapLeft={!!economyLinkedSystemId}
+          defaultGeom={{ x: 24, y: 72, w: 900, h: 600 }}
+          minW={700}
+          resizable
+        >
+          <EconomyPanel
+            open
+            embedded={false}
+            compactNav={false}
+            {...economyPanelProps}
+          />
+        </FloatingPanel>
+      )}
+
       <WorkbenchShell
         open={Boolean(desktopWorkbench && roomPanel)}
         title={roomTitle}
@@ -3905,6 +4983,7 @@ export function ViewerPage() {
           viewMode === "market" ||
           viewMode === "research" ||
           viewMode === "quests" ||
+          viewMode === "court" ||
           viewMode === "codex"
         }
         badge={
@@ -3912,117 +4991,50 @@ export function ViewerPage() {
             <span className="workbench-badge">{diploIncoming.length}</span>
           ) : undefined
         }
-        onClose={() => goView("map")}
+        onClose={() => {
+          if (viewMode === "economy") setEconomyLinkedSystemId(null);
+          goView("map");
+        }}
       >
         {roomPanel}
       </WorkbenchShell>
 
-      {payload && (
-        <EconomyPanel
-          open={viewMode === "economy"}
-          payload={payload}
-          flowData={flowData}
-          factionName={faction?.name}
-          linkedSystemId={economyLinkedSystemId}
-          priorityBusy={flowPriorityBusy}
-          onClose={() => {
-            setEconomyLinkedSystemId(null);
-            goView("map");
-          }}
-          onOpenSystem={(systemId) => {
-            setEconomyLinkedSystemId(systemId);
-            openPlayerSystem(systemId);
-          }}
-          onFocusDeficit={(letter, systemId) => {
-            setEcoHighlightCategory(letter);
-            if (systemId) {
-              setEconomyLinkedSystemId(systemId);
-              openPlayerSystem(systemId);
-              return;
-            }
-            const sig = economySystemSignals.find(
-              (s) => s.category === letter && s.systemId,
-            );
-            if (sig?.systemId) {
-              setEconomyLinkedSystemId(sig.systemId);
-              openPlayerSystem(sig.systemId);
-            } else {
-              goView("map");
-            }
-          }}
-          onFocusSystemOnMap={(systemId) => {
-            setEconomyLinkedSystemId(null);
-            setSelectedSystemId(systemId);
-            goView("map");
-            window.setTimeout(
-              () => mapApiRef.current?.focusSystem(systemId),
-              80,
-            );
-          }}
-          onSetFlowPriority={(opts) => void setFlowPriority(opts)}
-          onSetTax={(slot, tier) => void setTax(slot, tier)}
-          onSetDoctrine={(id) => void setEconomicPolicy(id)}
-          onReserveStock={(id, amount, label) =>
-            void reserveStock(id, amount, label)
-          }
-          onSellFromStock={(currencyId) => {
-            setMarketPrefillCurrency(currencyId);
-            setMarketTab("trade");
-            goView("market");
-          }}
-          onCaravanHint={(currencyId, systemId) => {
-            if (systemId) {
-              setEconomyLinkedSystemId(systemId);
-              openPlayerSystem(systemId);
-              setOrderMsg(
-                `Караван: ${currencyId.replace(/^currency\./, "")} → система (заказ на карте)`,
-              );
-              return;
-            }
-            setOrderMsg("Караваны — укажите систему drop-зоной или приказом на карте.");
-            goView("map");
-          }}
-          onStockAlert={(currencyId) => {
-            setOrderMsg(
-              `Алерт: следите за ${currencyId.replace(/^currency\./, "")}`,
-            );
-          }}
-          stockBusy={stockBusy}
-          policyBusy={policyBusy}
-          focusProductionCategory={economyFocusCategory}
-          onOpenResearch={() => {
-            goView("research");
-            setOrderMsg("Наука — нарастите cognitio / изучите добычу F");
-          }}
-          onFocusBuild={() => {
-            const owned = payload.world.systems.find(
-              (s) => s.ownerFactionId === payload.factionId,
-            );
-            goView("map");
-            if (owned) {
-              setSelectedSystemId(owned.id);
-              window.setTimeout(
-                () => mapApiRef.current?.focusSystem(owned.id),
-                80,
-              );
-            }
-          }}
-        />
-      )}
+      <MobileImmersiveRoom
+        open={Boolean(immersivePanel)}
+        onClose={() => goView("map")}
+        className={
+          viewMode === "rp"
+            ? "mobile-room--rp"
+            : viewMode === "quests"
+              ? "mobile-room--quests"
+              : undefined
+        }
+      >
+        {immersivePanel}
+      </MobileImmersiveRoom>
 
       <BottomSheet
-        open={Boolean(mobileRoom && roomPanel)}
+        open={Boolean(mobileSheetRoom && roomPanel)}
         onOpenChange={(open) => {
           if (!open) goView("map");
         }}
         title={roomTitle}
         className="viewer-sheet--room"
-        maxHeightVh={viewMode === "diplomacy" || viewMode === "forces" ? 94 : 88}
+        maxHeightVh={
+          viewMode === "diplomacy" ||
+          viewMode === "forces" ||
+          viewMode === "economy" ||
+          viewMode === "court" ||
+          viewMode === "research" ||
+          viewMode === "hq"
+            ? 92
+            : 88
+        }
       >
         {roomPanel}
       </BottomSheet>
 
-      {(menuOpen || settingsOpen) && (
+      {(menuOpen || settingsOpen || mapFiltersOpen) && (
         <button
           type="button"
           className="viewer-backdrop"
@@ -4030,6 +5042,7 @@ export function ViewerPage() {
           onClick={() => {
             setMenuOpen(false);
             setSettingsOpen(false);
+            setMapFiltersOpen(false);
           }}
         />
       )}
@@ -4050,8 +5063,8 @@ export function ViewerPage() {
           <h3>Производительность</h3>
           <p className="hint">
             Суперлайт / Лайт — легче. Качество — красиво на телефоне без
-            перерисовки каждый кадр. Максимум — полный FX (ПК). Cinematic —
-            доп. polish, только на ПК (тяжелее).
+            перерисовки каждый кадр. Максимум — все эффекты (ПК). Кино —
+            дополнительная красота, только на ПК (тяжелее).
           </p>
           <div className="viewer-perf-row">
             {PERF_OPTIONS.filter((opt) => !(mobile && opt.desktopOnly)).map(
@@ -4071,16 +5084,16 @@ export function ViewerPage() {
             )}
           </div>
           <p className="hint">
-            Смена режима подставляет пресет слоёв и графики — ниже можно
-            донастроить вручную.
+            Смена режима подставляет пресет слоёв и графики. Режимы и слои
+            карты — кнопка «Фильтры» на карте (F5–F9).
           </p>
         </section>
 
         <section>
           <h3>Графика</h3>
           <p className="hint">
-            Влияет на FPS. «Перерисовка при зуме» лучше оставить выкл.
-            Cinematic — доп. polish (звёзды, тени, пульс); тяжелее, для ПК.
+            Влияет на плавность. «Перерисовка при зуме» лучше оставить выкл.
+            Кино — звёзды, тени, пульс; тяжелее, для ПК.
           </p>
           <div className="layer-chip-grid">
             {GRAPHICS_TOGGLES.filter(
@@ -4099,14 +5112,28 @@ export function ViewerPage() {
             ))}
           </div>
         </section>
+      </aside>
+
+      <aside className={`viewer-drawer ${mapFiltersOpen ? "open" : ""}`}>
+        <div className="viewer-drawer-head">
+          <h2>Фильтры карты</h2>
+          <button
+            type="button"
+            className="viewer-icon-btn"
+            onClick={() => setMapFiltersOpen(false)}
+          >
+            <X size={18} strokeWidth={2} aria-hidden />
+          </button>
+        </div>
 
         <section>
-          <h3>Что показывать</h3>
+          <h3>Режим карты</h3>
           <p className="hint">
-            F5–F9 — режимы на карте. Ниже — точечные слои и доп. пресеты.
+            F5–F9 — быстрый выбор на карте. Ниже — доп. пресеты и отдельные
+            слои.
           </p>
           <div className="layer-preset-row">
-            {MAP_MODE_PRESETS.map((mode) => (
+            {MAP_MODE_PRESETS.filter((mode) => mode.id !== "gm").map((mode) => (
               <button
                 key={mode.id}
                 type="button"
@@ -4232,11 +5259,25 @@ export function ViewerPage() {
             className="btn ghost block"
             onClick={() => {
               setMenuOpen(false);
+              setMapFiltersOpen(false);
               setSettingsOpen(true);
             }}
           >
             Открыть настройки карты
           </button>
+          {viewMode === "map" && (
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
+                setMenuOpen(false);
+                setSettingsOpen(false);
+                setMapFiltersOpen(true);
+              }}
+            >
+              Фильтры карты
+            </button>
+          )}
         </section>
 
         <section>
@@ -4251,11 +5292,12 @@ export function ViewerPage() {
             Ход {payload.world.meta.turn} · видно систем:{" "}
             {payload.visibleSystemIds.length}
             <br />
-            AP: {reservedAp}/{apMax} (занято / лимит)
+            {formatOdMeter(reservedAp, apMax)} ·{" "}
+            {formatForceOdMeter(reservedForceAp, forceApMax)}
           </p>
           {payload.economy && (
             <div className="viewer-eco-chrome">
-              <div className="eco-cat-grid eco-cat-grid--chrome" aria-label="Казна A–F">
+              <div className="eco-cat-grid eco-cat-grid--chrome" aria-label="Шесть категорий ресурсов">
                 {CATEGORY_CURRENCIES.map((c) => (
                   <span
                     key={c.id}
@@ -4273,10 +5315,12 @@ export function ViewerPage() {
                 ))}
               </div>
               <p className="hint">
-                M{payload.economy.stocks?.["currency.metal"] ?? "—"} · S
-                {payload.economy.stocks?.["currency.supply"] ?? "—"}
+                {formatPlayerTreasury(
+                  payload.economy.stocks?.["currency.metal"] ?? 0,
+                  payload.economy.stocks?.["currency.supply"] ?? 0,
+                )}
                 <br />
-                Дефицит: {payload.economy.deficit ?? "ok"} · давление:{" "}
+                Дефицит: {economyDeficitLabel(payload.economy.deficit)} · давление:{" "}
                 {payload.economy.pressure ?? 0}
                 {payload.economy.bottlenecks &&
                 Object.keys(payload.economy.bottlenecks).length > 0
@@ -4303,7 +5347,7 @@ export function ViewerPage() {
         <section>
           <h3>Держава</h3>
           <p className="hint">
-            Карта — театр. Двойной клик / ПКМ «Провалиться» — система и планеты.
+            Карта — главный экран. Двойной клик / ПКМ «Провалиться» — система и планеты.
             Флот/легион — перетаскивание. Штаб / наука / рынок / очередь —
             нижний док. Сцена только с мастером.
           </p>
@@ -4464,13 +5508,12 @@ export function ViewerPage() {
                 type="button"
                 className="btn ghost block"
                 style={{ marginBottom: 8 }}
-                disabled={
-                  reservedAp + (intentApCost("intent.scout_reveal") || 1) > apMax
-                }
                 onClick={() => void submitScoutReveal(selectedSystem.id)}
               >
-                Разведка · открыть систему (
-                {intentApCost("intent.scout_reveal") || 1} AP)
+                Разведка · открыть систему
+                {intentApCost("intent.scout_reveal") > 0
+                  ? ` (${formatOdCost(intentApCost("intent.scout_reveal"))})`
+                  : ""}
               </button>
               {selectedSystem.planets.length > 0 && (
                 <p className="hint">
@@ -4548,9 +5591,9 @@ export function ViewerPage() {
             <div className="planet-card">
               <strong>{selectedFleet.name}</strong>
               <div className="hint">
-                {selectedFleet.composition
+                {(selectedFleet.composition ?? [])
                   .map((c) => `${c.type}×${c.count}`)
-                  .join(", ")}
+                  .join(", ") || "—"}
               </div>
               <div className="hint">Стойка: {selectedFleet.stance}</div>
               <p className="hint">
@@ -4614,64 +5657,7 @@ export function ViewerPage() {
         </div>
       </aside>
 
-      {mobile ? (
-        <>
-          {viewMode === "rp" && (
-            <button
-              type="button"
-              className="viewer-backdrop sheet"
-              aria-label="Закрыть сцену"
-              onClick={() => goView("map")}
-            />
-          )}
-          <aside
-            className={`viewer-sheet tall ${viewMode === "rp" ? "open" : ""}`}
-            aria-hidden={viewMode !== "rp"}
-          >
-            <div className="viewer-sheet-grab">
-              <p className="viewer-sheet-kicker">Двор · хроника</p>
-              <button
-                type="button"
-                className="viewer-sheet-close"
-                onClick={() => goView("map")}
-              >
-                Закрыть
-              </button>
-            </div>
-            <div className="viewer-sheet-body">
-              {viewMode === "rp" && (
-                <CourtPanel
-                  payload={payload}
-                  password={password}
-                  layout="fill"
-                  factionColor={faction?.color}
-                  avatarUrl={faction?.avatarUrl}
-                  onMsg={(m) => setOrderMsg(m)}
-                  onGiveNpcTask={async (npcId, opts) => {
-                    await submitPlayerIntent(
-                      "intent.give_npc_task",
-                      {
-                        npcId,
-                        taskLabel: opts.taskLabel,
-                        etaTurn: opts.etaTurn,
-                        linkedQuestId: opts.linkedQuestId,
-                      },
-                      `Поручение для двора принято`,
-                    );
-                  }}
-                  onMessagesLoaded={(msgs) => {
-                    const latest = msgs[msgs.length - 1];
-                    if (latest?.at) {
-                      writeRpSeenAt(payload.factionId, latest.at);
-                    }
-                    setRpUnread(0);
-                  }}
-                />
-              )}
-            </div>
-          </aside>
-        </>
-      ) : (
+      {!mobile && (
         <FloatingRpWindow
           open={viewMode === "rp" || rpFloatOpen}
           onOpenChange={(o) => {
@@ -4685,35 +5671,9 @@ export function ViewerPage() {
           }}
           unread={rpUnread}
           storageKey={`gmap-rp-float-geom-player-${payload.factionId}`}
-          title="Двор · хроника"
+          title="RP"
         >
-          <CourtPanel
-            payload={payload}
-            password={password}
-            layout="fill"
-            factionColor={faction?.color}
-            avatarUrl={faction?.avatarUrl}
-            onMsg={(m) => setOrderMsg(m)}
-            onGiveNpcTask={async (npcId, opts) => {
-              return submitPlayerIntent(
-                "intent.give_npc_task",
-                {
-                  npcId,
-                  taskLabel: opts.taskLabel,
-                  etaTurn: opts.etaTurn,
-                  linkedQuestId: opts.linkedQuestId,
-                },
-                `Поручение для двора принято`,
-              );
-            }}
-            onMessagesLoaded={(msgs) => {
-              const latest = msgs[msgs.length - 1];
-              if (latest?.at) {
-                writeRpSeenAt(payload.factionId, latest.at);
-              }
-              setRpUnread(0);
-            }}
-          />
+          {chronicleRoom}
         </FloatingRpWindow>
       )}
 
@@ -4758,106 +5718,151 @@ export function ViewerPage() {
       )}
 
       <nav
-        className={`viewer-dock viewer-dock--float ${mobile ? "viewer-dock--mobile" : "viewer-dock--desktop"}`}
+        className={`viewer-dock viewer-dock--float ${
+          mobile ? "viewer-dock--mobile viewer-dock--v2" : "viewer-dock--desktop"
+        }${dockCollapsed ? " viewer-dock--collapsed" : ""}`}
         aria-label="Навигация игрока"
+        aria-expanded={!dockCollapsed}
       >
+        <button
+          type="button"
+          className="viewer-dock-toggle"
+          aria-label={dockCollapsed ? "Показать панель" : "Скрыть панель"}
+          title={dockCollapsed ? "Показать панель · B" : "Скрыть панель · B"}
+          onClick={() => setDockCollapsedPersisted(!dockCollapsed)}
+        >
+          {dockCollapsed ? (
+            <ChevronUp size={16} strokeWidth={2.2} aria-hidden />
+          ) : (
+            <ChevronDown size={16} strokeWidth={2.2} aria-hidden />
+          )}
+          {dockCollapsed && <span className="viewer-dock-toggle__hint">Меню</span>}
+        </button>
+        <div className="viewer-dock__body">
         <button
           type="button"
           className={`viewer-dock-btn ${viewMode === "map" && !desktopGlass ? "active" : ""}`}
           onClick={() => goView("map")}
-          title="Карта · 1"
+          title={mobile ? "Карта" : "Карта · 1"}
+          aria-label="Карта"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <MapIcon size={18} strokeWidth={2} />
           </span>
           Карта
-          <kbd className="viewer-dock-kbd">1</kbd>
+          {!mobile && <kbd className="viewer-dock-kbd">1</kbd>}
         </button>
         <button
           type="button"
           className={`viewer-dock-btn ${
-            viewMode === "hq" || (mobile && viewMode === "forces") ? "active" : ""
+            viewMode === "hq" || (mobile && viewMode === "economy") ? "active" : ""
           }`}
           onClick={() => goView("hq")}
-          title="Штаб · 2"
+          title={mobile ? "Империя" : "Штаб · 2"}
+          aria-label={mobile ? "Империя" : "Штаб"}
         >
           <span className="viewer-dock-icon" aria-hidden>
             <Landmark size={18} strokeWidth={2} />
           </span>
-          Штаб
-          <kbd className="viewer-dock-kbd">2</kbd>
+          {mobile ? "Империя" : "Штаб"}
+          {!mobile && <kbd className="viewer-dock-kbd">2</kbd>}
         </button>
         <button
           type="button"
           className={`viewer-dock-btn ${viewMode === "research" ? "active" : ""}`}
           onClick={() => goView("research")}
-          title="Наука · 3"
+          title={mobile ? "Наука" : "Наука · 3"}
+          aria-label="Наука"
         >
           <span className="viewer-dock-icon" aria-hidden>
             <FlaskConical size={18} strokeWidth={2} />
           </span>
           Наука
-          <kbd className="viewer-dock-kbd">3</kbd>
+          {!mobile && <kbd className="viewer-dock-kbd">3</kbd>}
           {affordableResearch > 0 && (
             <span className="dock-badge dock-badge--hot">
               {affordableResearch > 9 ? "9+" : affordableResearch}
             </span>
           )}
         </button>
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "economy" ? "active" : ""}`}
-          onClick={() => goView("economy")}
-          title="Экономика · 4"
-        >
-          <span className="viewer-dock-icon" aria-hidden>
-            <Coins size={18} strokeWidth={2} />
-          </span>
-          Эконом
-          <kbd className="viewer-dock-kbd">4</kbd>
-        </button>
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "market" ? "active" : ""}`}
-          onClick={() => goView("market")}
-          title="Биржа · 5"
-        >
-          <span className="viewer-dock-icon" aria-hidden>
-            <Store size={18} strokeWidth={2} />
-          </span>
-          Биржа
-          <kbd className="viewer-dock-kbd">5</kbd>
-          {tradePartnerCount > 0 && (
-            <span className="dock-badge">
-              {tradePartnerCount > 9 ? "9+" : tradePartnerCount}
+        {mobile ? (
+          <button
+            type="button"
+            className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
+            onClick={() => {
+              goView("rp");
+              setRpUnread(0);
+            }}
+            title="RP"
+            aria-label="RP · ролевой чат"
+          >
+            <span className="viewer-dock-icon" aria-hidden>
+              <MessageSquare size={18} strokeWidth={2} />
             </span>
-          )}
-        </button>
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "diplomacy" ? "active" : ""} ${diploIncoming.length > 0 ? "is-alert" : ""}`}
-          onClick={() => goView("diplomacy")}
-          title="Дипломатия · 6"
-        >
-          <span className="viewer-dock-icon" aria-hidden>
-            <Handshake size={18} strokeWidth={2} />
-          </span>
-          Дипло
-          <kbd className="viewer-dock-kbd">6</kbd>
-          {(warCount > 0 || diploIncoming.length > 0) && (
-            <span
-              className={`dock-badge ${diploIncoming.length > 0 ? "dock-badge--hot" : ""}`}
-            >
-              {diploIncoming.length > 0
-                ? diploIncoming.length > 9
-                  ? "9+"
-                  : diploIncoming.length
-                : warCount}
-            </span>
-          )}
-        </button>
-        {!mobile && (
+            RP
+            {rpUnread > 0 && viewMode !== "rp" && (
+              <span className="dock-badge dock-badge--hot">
+                {rpUnread > 9 ? "9+" : rpUnread}
+              </span>
+            )}
+          </button>
+        ) : (
           <>
+            <button
+              type="button"
+              className={`viewer-dock-btn ${viewMode === "economy" ? "active" : ""}`}
+              onClick={() => goView("economy")}
+              title="Экономика · 4"
+              aria-label="Экономика"
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <Coins size={18} strokeWidth={2} />
+              </span>
+              Эконом
+              <kbd className="viewer-dock-kbd">4</kbd>
+            </button>
+            <button
+              type="button"
+              className={`viewer-dock-btn ${viewMode === "market" ? "active" : ""}`}
+              onClick={() => goView("market")}
+              title="Биржа · 5"
+              aria-label="Биржа"
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <Store size={18} strokeWidth={2} />
+              </span>
+              Биржа
+              <kbd className="viewer-dock-kbd">5</kbd>
+              {tradePartnerCount > 0 && (
+                <span className="dock-badge">
+                  {tradePartnerCount > 9 ? "9+" : tradePartnerCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`viewer-dock-btn ${viewMode === "diplomacy" ? "active" : ""} ${diploIncoming.length > 0 ? "is-alert" : ""}`}
+              onClick={() => goView("diplomacy")}
+              title="Дипломатия · 6"
+              aria-label="Дипломатия"
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <Handshake size={18} strokeWidth={2} />
+              </span>
+              Дипло
+              <kbd className="viewer-dock-kbd">6</kbd>
+              {(warCount > 0 || diploIncoming.length > 0) && (
+                <span
+                  className={`dock-badge ${diploIncoming.length > 0 ? "dock-badge--hot" : ""}`}
+                >
+                  {diploIncoming.length > 0
+                    ? diploIncoming.length > 9
+                      ? "9+"
+                      : diploIncoming.length
+                    : warCount}
+                </span>
+              )}
+            </button>
             <button
               type="button"
               className={`viewer-dock-btn ${viewMode === "forces" ? "active" : ""}`}
@@ -4875,6 +5880,7 @@ export function ViewerPage() {
               className={`viewer-dock-btn ${viewMode === "quests" ? "active" : ""}`}
               onClick={() => goView("quests")}
               title="Квесты · 8"
+              aria-label="Квесты"
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <BookMarked size={18} strokeWidth={2} />
@@ -4887,47 +5893,181 @@ export function ViewerPage() {
                 </span>
               )}
             </button>
+            <button
+              type="button"
+              className={`viewer-dock-btn ${viewMode === "court" ? "active" : ""}`}
+              onClick={() => goView("court")}
+              title="Двор · совет"
+              aria-label="Двор"
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <Users size={18} strokeWidth={2} />
+              </span>
+              Двор
+              <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
+                ·
+              </kbd>
+            </button>
+            <button
+              type="button"
+              className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
+              onClick={() => {
+                goView("rp");
+                setRpUnread(0);
+              }}
+              title="RP"
+              aria-label="RP"
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <MessageSquare size={18} strokeWidth={2} />
+              </span>
+              RP
+              <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
+                ·
+              </kbd>
+              {rpUnread > 0 && viewMode !== "rp" && (
+                <span className="dock-badge dock-badge--hot">
+                  {rpUnread > 9 ? "9+" : rpUnread}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`viewer-dock-btn ${viewMode === "codex" ? "active" : ""}`}
+              onClick={() => goView("codex")}
+              title="Справочник · 9"
+              aria-label="Справочник"
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <BookOpen size={18} strokeWidth={2} />
+              </span>
+              Справ.
+              <kbd className="viewer-dock-kbd">9</kbd>
+            </button>
           </>
         )}
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
-          onClick={() => {
-            goView("rp");
-            setRpUnread(0);
-          }}
-          title="Двор"
-        >
-          <span className="viewer-dock-icon" aria-hidden>
-            <MessageSquare size={18} strokeWidth={2} />
-          </span>
-          Двор
-          <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
-            ·
-          </kbd>
-          {rpUnread > 0 && viewMode !== "rp" && (
-            <span className="dock-badge dock-badge--hot">
-              {rpUnread > 9 ? "9+" : rpUnread}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          className={`viewer-dock-btn ${viewMode === "codex" ? "active" : ""}`}
-          onClick={() => goView("codex")}
-          title="Справочник · 9"
-        >
-          <span className="viewer-dock-icon" aria-hidden>
-            <BookOpen size={18} strokeWidth={2} />
-          </span>
-          Справ.
-          {!mobile && <kbd className="viewer-dock-kbd">9</kbd>}
-          {mobile && (
-            <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
-              ·
-            </kbd>
-          )}
-        </button>
+        {mobile && (
+          <div className="viewer-dock-more">
+            <button
+              type="button"
+              className={`viewer-dock-btn ${
+                dockMoreOpen ||
+                viewMode === "economy" ||
+                viewMode === "market" ||
+                viewMode === "diplomacy" ||
+                viewMode === "forces" ||
+                viewMode === "quests" ||
+                viewMode === "court" ||
+                viewMode === "codex"
+                  ? "active"
+                  : ""
+              } ${diploIncoming.length > 0 ? "is-alert" : ""}`}
+              onClick={() => setDockMoreOpen((v) => !v)}
+              title="Ещё"
+              aria-label="Ещё разделы"
+              aria-expanded={dockMoreOpen}
+            >
+              <span className="viewer-dock-icon" aria-hidden>
+                <MoreHorizontal size={18} strokeWidth={2} />
+              </span>
+              Ещё
+              {(diploIncoming.length > 0 ||
+                (activeQuestCount > 0 && viewMode !== "quests")) && (
+                <span className="dock-badge dock-badge--hot">
+                  {diploIncoming.length +
+                    (activeQuestCount > 0 && viewMode !== "quests" ? 1 : 0) >
+                  9
+                    ? "9+"
+                    : diploIncoming.length +
+                      (activeQuestCount > 0 && viewMode !== "quests" ? 1 : 0)}
+                </span>
+              )}
+            </button>
+            {dockMoreOpen && (
+              <div className="viewer-dock-more-menu" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "economy" ? "active" : ""}`}
+                  onClick={() => goView("economy")}
+                >
+                  <Coins size={16} strokeWidth={2} aria-hidden />
+                  Экономика
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "market" ? "active" : ""}`}
+                  onClick={() => goView("market")}
+                >
+                  <Store size={16} strokeWidth={2} aria-hidden />
+                  Биржа
+                  {tradePartnerCount > 0 && (
+                    <span className="dock-badge">
+                      {tradePartnerCount > 9 ? "9+" : tradePartnerCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "diplomacy" ? "active" : ""}`}
+                  onClick={() => goView("diplomacy")}
+                >
+                  <Handshake size={16} strokeWidth={2} aria-hidden />
+                  Дипломатия
+                  {diploIncoming.length > 0 && (
+                    <span className="dock-badge dock-badge--hot">
+                      {diploIncoming.length > 9 ? "9+" : diploIncoming.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "forces" ? "active" : ""}`}
+                  onClick={() => goView("forces")}
+                >
+                  <Swords size={16} strokeWidth={2} aria-hidden />
+                  Силы
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "quests" ? "active" : ""}`}
+                  onClick={() => goView("quests")}
+                >
+                  <BookMarked size={16} strokeWidth={2} aria-hidden />
+                  Квесты
+                  {activeQuestCount > 0 && (
+                    <span className="dock-badge">
+                      {activeQuestCount > 9 ? "9+" : activeQuestCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "court" ? "active" : ""}`}
+                  onClick={() => goView("court")}
+                >
+                  <Users size={16} strokeWidth={2} aria-hidden />
+                  Двор
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={`viewer-dock-more-item ${viewMode === "codex" ? "active" : ""}`}
+                  onClick={() => goView("codex")}
+                >
+                  <BookOpen size={16} strokeWidth={2} aria-hidden />
+                  Справочник
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        </div>
       </nav>
       {eraBanner != null && (
         <div className="viewer-era-cinematic" role="status" aria-live="polite">
@@ -4945,6 +6085,17 @@ export function ViewerPage() {
             </button>
           </div>
         </div>
+      )}
+      {contactBattlePreview && (
+        <ContactBattleChooser
+          preview={contactBattlePreview}
+          busy={contactBattleBusy}
+          error={contactBattleError}
+          resultEngagement={contactBattleResultEng}
+          onCancel={closeContactBattle}
+          onChooseAuto={() => runContactBattleChoice("auto")}
+          onChooseCard={() => runContactBattleChoice("card")}
+        />
       )}
       {stanceRing && payload && (() => {
         const eng = engagements.find((e) => e.id === stanceRing.engagementId);
@@ -5044,9 +6195,9 @@ export function ViewerPage() {
               type="button"
               className="btn ghost"
               onClick={() => openSystemHelp(focusedSystem.id)}
-              title="Досье: объекты, добыча, постройки"
+              title="Сведения: объекты, добыча, постройки"
             >
-              Досье
+              Сведения
               <kbd className="sys-codex__kbd">I</kbd>
             </button>
           </header>
@@ -5152,6 +6303,10 @@ export function ViewerPage() {
                 buildings: buildingsCatalog,
                 highlightCategory: ecoHighlightCategory,
                 onHighlightCategory: setEcoHighlightCategory,
+                preferDeck: systemPreferDeck,
+                preferProduceTab: systemProduceTab,
+                produceFleetId: systemProduceFleetId,
+                produceLegionId: systemProduceLegionId,
               }}
             />
           </div>

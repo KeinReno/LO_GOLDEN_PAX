@@ -1,4 +1,262 @@
 {
+  "ship.scout": {
+    "id": "ship.scout",
+    "name": "Разведчик",
+    "faction": "generic",
+    "tier": 1,
+    "roles": [
+      "screen"
+    ],
+    "stats": {
+      "damage": 4,
+      "armor": 4,
+      "shields": 2,
+      "hp": 22,
+      "accuracy": 65
+    },
+    "targeting": "screen_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.15,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=1"
+        },
+        "count": 2
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Стартовый экран / разведка",
+    "tradeoff": "почти без брони",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Разведчик · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Разведчик · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Разведчик · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Разведчик · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Разведчик · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Разведчик · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Разведчик · voidborn"
+      }
+    }
+  },
+  "ship.patrol": {
+    "id": "ship.patrol",
+    "name": "Патруль",
+    "faction": "generic",
+    "tier": 2,
+    "roles": [
+      "screen"
+    ],
+    "stats": {
+      "damage": 6,
+      "armor": 7,
+      "shields": 4,
+      "hp": 30,
+      "accuracy": 62
+    },
+    "targeting": "screen_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.2,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=1"
+        },
+        "count": 2
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=1"
+        },
+        "count": 2
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 2
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Патруль · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Патруль · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Патруль · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Патруль · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Патруль · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Патруль · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Патруль · voidborn"
+      }
+    }
+  },
   "ship.corvette": {
     "id": "ship.corvette",
     "name": "Корвет",
@@ -125,7 +383,7 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Корвет · voidborn"
@@ -269,10 +527,163 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Фрегат · voidborn"
+      }
+    }
+  },
+  "ship.destroyer": {
+    "id": "ship.destroyer",
+    "name": "Эсминец",
+    "faction": "generic",
+    "tier": 5,
+    "roles": [
+      "line"
+    ],
+    "stats": {
+      "damage": 20,
+      "armor": 26,
+      "shields": 18,
+      "hp": 95,
+      "accuracy": 52
+    },
+    "targeting": "line_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.5,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=4"
+        },
+        "count": 6
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=4"
+        },
+        "count": 4
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=3"
+        },
+        "count": 2
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=4"
+        },
+        "count": 2
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=3"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Средняя линия до крейсера",
+    "tradeoff": "слабее capital 1v1",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Эсминец · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Эсминец · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Эсминец · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Эсминец · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Эсминец · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Эсминец · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Эсминец · voidborn"
       }
     }
   },
@@ -439,7 +850,7 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Крейсер · voidborn"
@@ -609,7 +1020,7 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Линкор · voidborn"
@@ -748,10 +1159,166 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Носитель · voidborn"
+      }
+    }
+  },
+  "ship.psi_cruiser": {
+    "id": "ship.psi_cruiser",
+    "name": "Пси-крейсер",
+    "faction": "generic",
+    "tier": 7,
+    "roles": [
+      "line",
+      "psi"
+    ],
+    "stats": {
+      "damage": 40,
+      "armor": 30,
+      "shields": 60,
+      "hp": 150,
+      "accuracy": 55
+    },
+    "targeting": "line_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.7,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=5"
+        },
+        "count": 8
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=5"
+        },
+        "count": 3
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "psion_emit"
+          ],
+          "tier": ">=6"
+        },
+        "count": 4
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "properties": [
+            "psion_store"
+          ],
+          "tier": ">=6"
+        },
+        "count": 2
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 5
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=4"
+        },
+        "count": 1,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "properties": [
+            "psion_emit"
+          ],
+          "tier": ">=6"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Псион-щиты; specialty",
+    "tradeoff": "требует псион-ресурсы/расу",
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "armor": 1.15
+        },
+        "name": "Пси-крейсер · belator"
+      },
+      "race_synth": {
+        "statsMult": {
+          "hp": 0.9,
+          "accuracy": 1.15
+        },
+        "name": "Пси-крейсер · synth"
+      },
+      "race_human": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Пси-крейсер · human"
+      },
+      "race_karned": {
+        "statsMult": {
+          "armor": 1.2,
+          "damage": 0.95
+        },
+        "name": "Пси-крейсер · karned"
+      },
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.12,
+          "shields": 1.1
+        },
+        "name": "Пси-крейсер · psionic"
+      },
+      "race_swarm": {
+        "statsMult": {
+          "hp": 0.85,
+          "damage": 1.1
+        },
+        "name": "Пси-крейсер · swarm"
+      },
+      "race_voidborn": {
+        "statsMult": {
+          "accuracy": 1.1,
+          "hp": 0.95
+        },
+        "name": "Пси-крейсер · voidborn"
       }
     }
   },
@@ -876,7 +1443,7 @@
         "per": "turn"
       }
     ],
-    "signature": "T8 столп флота; требует антиматерия-реактор",
+    "signature": "T8 столб флота",
     "tradeoff": "огромный upkeep",
     "raceVariants": {
       "race_belator": {
@@ -921,166 +1488,10 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Дредноут · voidborn"
-      }
-    }
-  },
-  "ship.psi_cruiser": {
-    "id": "ship.psi_cruiser",
-    "name": "Пси-крейсер",
-    "faction": "generic",
-    "tier": 7,
-    "roles": [
-      "line",
-      "psi"
-    ],
-    "stats": {
-      "damage": 40,
-      "armor": 30,
-      "shields": 60,
-      "hp": 150,
-      "accuracy": 55
-    },
-    "targeting": "line_first",
-    "theaterMult": {
-      "space": 1,
-      "assault": 0.7,
-      "ground": 0
-    },
-    "slots": [
-      {
-        "role": "hull",
-        "require": {
-          "properties": [
-            "strong"
-          ],
-          "tier": ">=5"
-        },
-        "count": 8
-      },
-      {
-        "role": "weapon",
-        "require": {
-          "properties": [
-            "weapon"
-          ],
-          "tier": ">=5"
-        },
-        "count": 3
-      },
-      {
-        "role": "shield",
-        "require": {
-          "properties": [
-            "psion_emit"
-          ],
-          "tier": ">=6"
-        },
-        "count": 4
-      },
-      {
-        "role": "reactor",
-        "require": {
-          "properties": [
-            "energy"
-          ],
-          "tier": ">=5"
-        },
-        "count": 2
-      },
-      {
-        "role": "tactic",
-        "require": {
-          "properties": [
-            "psion_store"
-          ],
-          "tier": ">=6"
-        },
-        "count": 2
-      },
-      {
-        "role": "crew",
-        "require": {
-          "category": "E",
-          "tier": ">=5"
-        },
-        "count": 5
-      }
-    ],
-    "upkeep_slots": [
-      {
-        "require": {
-          "properties": [
-            "fuel"
-          ],
-          "tier": ">=4"
-        },
-        "count": 1,
-        "per": "turn"
-      },
-      {
-        "require": {
-          "properties": [
-            "psion_emit"
-          ],
-          "tier": ">=6"
-        },
-        "count": 1,
-        "per": "turn"
-      }
-    ],
-    "signature": "Псион-щиты и тактика на гриниде/зро",
-    "tradeoff": "требует псион-расу",
-    "raceVariants": {
-      "race_belator": {
-        "statsMult": {
-          "armor": 1.15
-        },
-        "name": "Пси-крейсер · belator"
-      },
-      "race_synth": {
-        "statsMult": {
-          "hp": 0.9,
-          "accuracy": 1.15
-        },
-        "name": "Пси-крейсер · synth"
-      },
-      "race_human": {
-        "statsMult": {
-          "damage": 1.05
-        },
-        "name": "Пси-крейсер · human"
-      },
-      "race_karned": {
-        "statsMult": {
-          "armor": 1.2,
-          "damage": 0.95
-        },
-        "name": "Пси-крейсер · karned"
-      },
-      "race_psionic": {
-        "statsMult": {
-          "damage": 1.12,
-          "shields": 1.1
-        },
-        "name": "Пси-крейсер · psionic"
-      },
-      "race_swarm": {
-        "statsMult": {
-          "hp": 0.85,
-          "damage": 1.1
-        },
-        "name": "Пси-крейсер · swarm"
-      },
-      "race_voidborn": {
-        "statsMult": {
-          "accuracy": 1.15,
-          "hp": 0.95
-        },
-        "name": "Пси-крейсер · voidborn"
       }
     }
   },
@@ -1204,8 +1615,8 @@
         "per": "turn"
       }
     ],
-    "signature": "T9 флагман на блакуле; разрушение материи",
-    "tradeoff": "требует блакула T8+",
+    "signature": "T9 флагман",
+    "tradeoff": "требует late tech / экзотику",
     "raceVariants": {
       "race_belator": {
         "statsMult": {
@@ -1249,7 +1660,7 @@
       },
       "race_voidborn": {
         "statsMult": {
-          "accuracy": 1.15,
+          "accuracy": 1.1,
           "hp": 0.95
         },
         "name": "Чёрное Железо · voidborn"

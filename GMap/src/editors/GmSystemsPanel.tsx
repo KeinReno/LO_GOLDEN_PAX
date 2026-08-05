@@ -64,39 +64,53 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export function GmSystemsPanel() {
-  const [tab, setTab] = useState<Tab>("quests");
+export function GmSystemsPanel({
+  forcedTab,
+  hideChrome = false,
+}: {
+  /** Lock to one tab (Live workbench domains). */
+  forcedTab?: Tab;
+  /** Skip panel chrome when embedded in GmWorkbench. */
+  hideChrome?: boolean;
+} = {}) {
+  const [tab, setTab] = useState<Tab>(forcedTab ?? "quests");
   const tabSpot = useSpotlight();
+  const active = forcedTab ?? tab;
+
   return (
-    <section className="panel gmsys-panel">
-      <header className="panel-head">
-        <div>
-          <p className="panel-kicker">ГМ · системы</p>
-          <h3>Управление миром</h3>
+    <section className={`panel gmsys-panel ${hideChrome ? "gmsys-panel--embed" : ""}`}>
+      {!hideChrome && (
+        <header className="panel-head">
+          <div>
+            <p className="panel-kicker">ГМ · системы</p>
+            <h3>Управление миром</h3>
+          </div>
+        </header>
+      )}
+      {!forcedTab && (
+        <div className="gmsys-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active === t.id}
+              className={`gmsys-tab fx-spotlight ${active === t.id ? "active" : ""}`}
+              onClick={() => setTab(t.id)}
+              title={t.hint}
+              {...tabSpot.bind}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
-      </header>
-      <div className="gmsys-tabs" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`gmsys-tab fx-spotlight ${tab === t.id ? "active" : ""}`}
-            onClick={() => setTab(t.id)}
-            title={t.hint}
-            {...tabSpot.bind}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      )}
       <div className="gmsys-body">
-        {tab === "quests" && <QuestsTab />}
-        {tab === "npc" && <NpcTab />}
-        {tab === "diplo" && <DiploTab />}
-        {tab === "dice" && <DiceTab />}
-        {tab === "overview" && <OverviewTab />}
+        {active === "quests" && <QuestsTab />}
+        {active === "npc" && <NpcTab />}
+        {active === "diplo" && <DiploTab />}
+        {active === "dice" && <DiceTab />}
+        {active === "overview" && <OverviewTab />}
       </div>
     </section>
   );
@@ -446,7 +460,7 @@ function NpcTab() {
         {allNpcs.map(({ npc, faction }) => {
           const task = npc.currentTask;
           const linkedQuest = task?.linkedQuestId
-            ? world.quests.find((q) => q.id === task.linkedQuestId)
+            ? (world.quests ?? []).find((q) => q.id === task.linkedQuestId)
             : null;
           return (
             <li key={npc.id} className="gmsys-list-row gmsys-npc-row">
@@ -509,7 +523,7 @@ function NpcTab() {
                       title="Связать с квестом"
                     >
                       <option value="">без квеста</option>
-                      {world.quests
+                      {(world.quests ?? [])
                         .filter((q) => q.status === "active")
                         .slice(0, 100)
                         .map((q) => (

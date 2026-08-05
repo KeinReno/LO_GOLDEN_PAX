@@ -27,6 +27,8 @@ export type ChroniclePanelProps = {
   headers: Record<string, string>;
   /** Player mode hides OOC. */
   mode?: "master" | "player";
+  /** Hide faction HQ channels (Chronicle is scene RP only). */
+  hideHq?: boolean;
   onOpenEpisode: (chapterId: string, episodeId: string, readOnly: boolean) => void;
   onMsg?: (m: string | null) => void;
 };
@@ -35,6 +37,7 @@ export type ChroniclePanelProps = {
 export function ChroniclePanel({
   headers,
   mode = "player",
+  hideHq = false,
   onOpenEpisode,
   onMsg,
 }: ChroniclePanelProps) {
@@ -66,11 +69,12 @@ export function ChroniclePanel({
         ...c,
         episodes: (c.episodes || []).filter((e) => {
           if (mode === "player" && e.kind === "ooc") return false;
+          if (hideHq && e.kind === "hq") return false;
           return true;
         }),
       }))
       .filter((c) => c.episodes.length > 0);
-  }, [index, mode]);
+  }, [index, mode, hideHq]);
 
   const epMeta = (ep: ChronicleEpisode) => {
     const bits: string[] = [];
@@ -104,16 +108,16 @@ export function ChroniclePanel({
   if (chapters.length === 0) {
     return (
       <div className="chronicle-panel chronicle-panel--empty">
-        <p className="hint">Хроника пуста — мастер ещё не открыл сцены.</p>
+        <p className="hint">Архив пуст — мастер ещё не открыл сцены.</p>
       </div>
     );
   }
 
   return (
-    <div className="chronicle-panel" aria-label="Хроника">
+    <div className="chronicle-panel" aria-label="Сцены кампании">
       <header className="chronicle-head">
-        <h3>Хроника</h3>
-        <p className="hint">{index?.title || "Летопись кампании"}</p>
+        <h3>Сцены</h3>
+        <p className="hint">{index?.title || "Общие эпизоды кампании"}</p>
       </header>
       <div className="chronicle-scroll">
         {chapters.map((ch) => {

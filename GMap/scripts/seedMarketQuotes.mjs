@@ -125,6 +125,7 @@ function seriesForResource(r) {
 }
 
 /** Faction / reserve currencies quoted in UC. */
+/** Canon FX desk only — do not invent new currencies here. */
 const FACTION_CURRENCIES = {
   "fx.damyl_doubloon": {
     id: "fx.damyl_doubloon",
@@ -137,6 +138,7 @@ const FACTION_CURRENCIES = {
       "Резерв Дамильских врат. Самая жёсткая валюта известного сектора — котируется редко, почти не дробит.",
     baseUc: 48,
     seriesMult: [1, 1.01, 1.02, 1.04, 1.06, 1.08, 1.09, 1.1, 1.11, 1.12],
+    issuerFactionIds: [],
   },
   "fx.terrial_credit": {
     id: "fx.terrial_credit",
@@ -149,6 +151,10 @@ const FACTION_CURRENCIES = {
       "Банковский эталон Терриала. По силе рядом с Дамильским дублоном; ликвиднее на внешних столах.",
     baseUc: 45,
     seriesMult: [1, 1.005, 1.01, 1.02, 1.03, 1.04, 1.045, 1.05, 1.055, 1.06],
+    issuerFactionIds: [
+      "faction_nomad_pax_terrialis",
+      "64928514-afb3-4cdb-b79c-23dd39cdcbd0",
+    ],
   },
   "fx.turon_credit": {
     id: "fx.turon_credit",
@@ -161,6 +167,7 @@ const FACTION_CURRENCIES = {
     baseUc: 12,
     trackResource: "map.glasssteel",
     pegRatio: 4.2,
+    issuerFactionIds: ["faction_turon", "faction_nomad_f_08a06270a3"],
   },
   "fx.elan_doubloon": {
     id: "fx.elan_doubloon",
@@ -172,18 +179,24 @@ const FACTION_CURRENCIES = {
     blurb: "Региональный твёрдый дублон Элана. Меньше резервных, но стабилен вне кризисов.",
     baseUc: 22,
     seriesMult: [1, 1.01, 1.015, 1.02, 1.03, 1.035, 1.03, 1.025, 1.03, 1.04],
+    issuerFactionIds: ["faction_nomad_f_f3466a10f0"],
   },
   "fx.belator_solarit": {
     id: "fx.belator_solarit",
     name: "Белаторский Соларит",
     short: "БС",
     peg: "map.solari",
-    pegLabel: "соларид",
+    pegLabel: "соларит",
     strength: "commodity_peg",
     blurb: "Привязка к солариту Белатора. Растёт вместе с энерго-топливным спросом.",
     baseUc: 8.5,
     trackResource: "map.solari",
     pegRatio: 1.55,
+    issuerFactionIds: [
+      "faction_belator",
+      "faction_khanate",
+      "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
+    ],
   },
   "fx.karned_trill": {
     id: "fx.karned_trill",
@@ -197,6 +210,7 @@ const FACTION_CURRENCIES = {
     baseUc: 6.2,
     trackResource: "map.blumatid",
     pegRatio: 2.15,
+    issuerFactionIds: ["faction_karned"],
   },
   "fx.aphel_ilir": {
     id: "fx.aphel_ilir",
@@ -209,6 +223,7 @@ const FACTION_CURRENCIES = {
     baseUc: 5.8,
     trackResource: "map.blumatid",
     pegRatio: 2.0,
+    issuerFactionIds: ["faction_amalfea"],
   },
   "fx.universal_credit": {
     id: "fx.universal_credit",
@@ -220,6 +235,7 @@ const FACTION_CURRENCIES = {
     blurb: "Расчётная единица общего рынка. Номинал 1.0 — все котировки в UC.",
     baseUc: 1,
     seriesMult: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    issuerFactionIds: [],
   },
 };
 
@@ -284,6 +300,9 @@ for (const [id, def] of Object.entries(FACTION_CURRENCIES)) {
     pegLabel: def.pegLabel,
     strength: def.strength,
     blurb: def.blurb,
+    issuerFactionIds: Array.isArray(def.issuerFactionIds)
+      ? def.issuerFactionIds
+      : [],
     quote: UC,
     series,
   };
@@ -317,6 +336,7 @@ for (const c of Object.values(currencies)) {
     pegLabel: c.pegLabel,
     strength: c.strength,
     blurb: c.blurb,
+    issuerFactionIds: c.issuerFactionIds ?? [],
     lastUc: c.series[c.series.length - 1],
   };
 }

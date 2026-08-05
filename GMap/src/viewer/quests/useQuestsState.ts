@@ -22,10 +22,14 @@ function saveLogs(logs: Record<string, QuestLogEntry[]>) {
   }
 }
 
+export type QuestsMode = "quests" | "court";
+
 interface QuestsUiState {
   activeQuestId: string | null;
+  mode: QuestsMode;
   flipped: boolean;
   chatOpen: boolean;
+  /** Legacy dock flag — court now uses `mode`. Kept for chat dock layout. */
   npcOpen: boolean;
   sidebarCollapsed: boolean;
   /** Quest ids that just dropped from per-turn dice (stagger anim). */
@@ -42,6 +46,8 @@ interface QuestsUiState {
   logsByQuest: Record<string, QuestLogEntry[]>;
 
   selectQuest: (id: string | null) => void;
+  clearQuest: () => void;
+  setMode: (mode: QuestsMode) => void;
   setFlipped: (v: boolean) => void;
   toggleFlip: () => void;
   openChat: () => void;
@@ -65,6 +71,7 @@ interface QuestsUiState {
 
 export const useQuestsState = create<QuestsUiState>((set, get) => ({
   activeQuestId: null,
+  mode: "quests",
   flipped: false,
   chatOpen: false,
   npcOpen: false,
@@ -76,19 +83,36 @@ export const useQuestsState = create<QuestsUiState>((set, get) => ({
   selectQuest: (id) =>
     set({
       activeQuestId: id,
+      mode: "quests",
       flipped: false,
       chatOpen: false,
       npcOpen: false,
     }),
 
+  clearQuest: () =>
+    set({
+      activeQuestId: null,
+      flipped: false,
+      chatOpen: false,
+    }),
+
+  setMode: (mode) =>
+    set({
+      mode,
+      chatOpen: false,
+      npcOpen: false,
+      ...(mode === "court" ? { activeQuestId: null } : {}),
+    }),
+
   setFlipped: (v) => set({ flipped: v }),
   toggleFlip: () => set((s) => ({ flipped: !s.flipped })),
 
-  openChat: () => set({ chatOpen: true, npcOpen: false }),
+  openChat: () => set({ chatOpen: true, npcOpen: false, mode: "quests" }),
   closeChat: () => set({ chatOpen: false }),
 
-  openNpc: () => set({ npcOpen: true, chatOpen: false }),
-  closeNpc: () => set({ npcOpen: false }),
+  openNpc: () =>
+    set({ mode: "court", npcOpen: false, chatOpen: false, activeQuestId: null }),
+  closeNpc: () => set({ mode: "quests", npcOpen: false }),
 
   toggleSidebar: () =>
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),

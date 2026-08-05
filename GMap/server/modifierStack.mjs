@@ -95,9 +95,28 @@ function isFlat(effect) {
   );
 }
 
+/** Soft caps so tech stacks cannot explode even_growth pacing. */
+export const DEFAULT_MODIFIER_CAPS = {
+  production: { min: 0.5, max: 2.0 },
+  upkeep: { min: 0.5, max: 1.5 },
+  research: { min: 0.5, max: 1.0 },
+  cost: { min: 0.75, max: 1.5 },
+  "*": { min: 0.25, max: 3.0 },
+};
+
+function clampChannelMult(key, mult, caps) {
+  const table = caps || DEFAULT_MODIFIER_CAPS;
+  const head = String(key || "").split(":")[0];
+  const band = table[head] || table["*"];
+  if (!band) return mult;
+  const lo = Number(band.min ?? 0);
+  const hi = Number(band.max ?? Infinity);
+  return Math.min(hi, Math.max(lo, mult));
+}
+
 /**
  * @param {EffectInstance[]} effects
- * @param {{ mergeOrder?: string[] }} [opts]
+ * @param {{ mergeOrder?: string[], modifierCaps?: Record<string, { min?: number, max?: number }> }} [opts]
  */
 export function buildModifierStack(effects, opts = {}) {
   const mergeOrder = opts.mergeOrder || ["flat", "mult"];
@@ -131,6 +150,7 @@ export function buildModifierStack(effects, opts = {}) {
       const n = Number(e.args?.mult ?? 1);
       if (!Number.isNaN(n)) mult *= n;
     }
+    mult = clampChannelMult(key, mult, opts.modifierCaps);
 
     let value;
     if (mergeOrder[0] === "flat") {

@@ -7,7 +7,7 @@ import {
   techHintForBuilding,
   type TechEcoSlice,
 } from "../state/techGate";
-import { getCachedContent } from "../state/contentCatalog";
+import { getCachedContent, intentApCost } from "../state/contentCatalog";
 import { BUILD_DND_MIME } from "./system/types";
 
 const ZONE_LABEL: Record<string, string> = {
@@ -105,8 +105,8 @@ export function BuildDeck({
           <p className="hint">Нет доступных построек в этой зоне.</p>
         ) : (
           defs.map((def, i) => {
-            const needAp = def.ap ?? 1;
-            const affordAp = apLeft >= needAp;
+            const needAp = intentApCost("intent.build");
+            const affordAp = needAp <= 0 || apLeft >= needAp;
             const techGate = canBuildWithTech(techEco, def);
             const hint = !techGate.ok
               ? techHintForBuilding(techEco, def, techs)
@@ -158,7 +158,7 @@ export function BuildDeck({
                     !techGate.ok
                       ? hint?.reason || techGate.error
                       : !enabled
-                        ? "Не хватает ресурсов / AP"
+                        ? "Не хватает ресурсов или ОД"
                         : slotArmed
                           ? `${def.name} — зажми, чтобы построить`
                           : `${def.name} — выбери слот, затем зажми`
@@ -190,7 +190,7 @@ export function BuildDeck({
                             : "build-deck-card__ap insufficient"
                         }
                       >
-                        {needAp} AP
+                        {needAp > 0 ? `${needAp} ОД` : "без ОД"}
                       </span>
                     </span>
                     <ResourceCostRow

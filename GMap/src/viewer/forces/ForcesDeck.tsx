@@ -11,8 +11,6 @@ import { CardDetailStrip } from "./CardDetailStrip";
 import { DropZones, canDropZone } from "./DropZones";
 import { useForcesState } from "./useForcesState";
 import {
-  DISBAND_METAL_REFUND,
-  FORGE_METAL_COST,
   METAL_CURRENCY,
   STANCE_ICONS,
   STANCE_LABELS,
@@ -27,10 +25,28 @@ import {
   mergeComposition,
   reorderComposition,
   toUnitModels,
-  upgradeAt,
+  repairAt,
 } from "./compositionOps";
 import { hitDropZone } from "./useDeckGestures";
 import { canOutfitUnit } from "./outfitRules";
+import { ForceReadinessBar } from "./ForceReadinessBar";
+import {
+  compositionUpkeep,
+  deckBattlePreview,
+  empireForceTotals,
+  engagementsForForce,
+  findProductionHubs,
+  formatUpkeepShort,
+  groupMaxHp,
+  resolveUnitDefId,
+  systemHasBarracksForFaction,
+  systemHasShipyardForFaction,
+} from "../../state/forceReadiness";
+import {
+  disbandMetalRefundClient,
+  forgeMetalCostClient,
+} from "../../state/forceEconomy";
+import type { ViewerEngagement } from "../PlayerEngagementPanel";
 
 export type ForcesMutateArgs = {
   kind: "fleet" | "legion";
@@ -50,11 +66,26 @@ export type ForcesDeckProps = {
   onOrderWithFleet?: (id: string) => void;
   onOrderWithLegion?: (id: string) => void;
   /** Persist deck mutation to server (composition + stocks + reserve). */
-  onForcesMutate?: (args: ForcesMutateArgs) => Promise<boolean>;
+  onForcesMutate?: (
+    args: ForcesMutateArgs,
+  ) => Promise<boolean | { ok: boolean; error?: string }>;
   onToast?: (msg: string) => void;
   /** Highlight unit/ship defs (from Science unit_upgrade). */
   highlightDefIds?: string[] | null;
   password?: string;
+  engagements?: ViewerEngagement[];
+  onOpenEngagement?: (engagementId: string) => void;
+  onOpenCardBattle?: (engagementId: string) => void;
+  onOpenEconomy?: () => void;
+  /** Jump to system dive with produce deck (верфь / казармы). */
+  onOpenProduce?: (opts: {
+    systemId: string;
+    tab: "ships" | "units";
+    fleetId?: string;
+    legionId?: string;
+  }) => void;
+  /** Phone sheet: tighter list layout, larger tap targets. */
+  compact?: boolean;
 };
 
 function findCatalog(
@@ -92,6 +123,12 @@ export function ForcesDeck({
   onForcesMutate,
   onToast,
   highlightDefIds,
+  engagements,
+  onOpenEngagement,
+  onOpenCardBattle,
+  onOpenEconomy,
+  onOpenProduce,
+  compact = false,
 }: ForcesDeckProps) {
   const reduce = useReducedMotion();
   const pendingStock = useRef<Record<string, number>>({});
@@ -195,11 +232,6 @@ export function ForcesDeck({
     pendingStock.current = {};
   }, [activeFleetId, activeLegionId, deckKind]);
 
-  useEffect(() => {
-    if (mutateBusy) return;
-    setLocalComp(null);
-  }, [activeFleet?.composition, activeLegion?.composition, mutateBusy]);
-
   // Hydrate reserve from server economy slice (skip while a mutate is in flight)
   useEffect(() => {
     if (mutateBusy) return;
@@ -208,15 +240,19 @@ export function ForcesDeck({
     )?.forceReserve;
     if (!Array.isArray(serverReserve)) return;
     useForcesState.setState({
-      reserve: serverReserve.map((g) => ({
-        type: g.type ?? g.defId ?? "unit",
-        count: g.count ?? 1,
-        defId: g.defId,
-        hp: g.hp,
-        filledSlots: g.filledSlots,
-        xp: g.xp,
-        level: g.level,
-      })),
+      reserve: serverReserve.map((g) => {
+        const type = g.type ?? g.defId ?? "unit";
+        const defId = resolveUnitDefId({ defId: g.defId, type }) || g.defId;
+        return {
+          type,
+          count: g.count ?? 1,
+          defId,
+          hp: g.hp,
+          filledSlots: g.filledSlots,
+          xp: g.xp,
+          level: g.level,
+        };
+      }),
     });
   }, [payload.economy, mutateBusy]);
 
@@ -242,19 +278,24 @@ export function ForcesDeck({
     mutateBusyRef.current = true;
     setMutateBusy(true);
     try {
-      const ok = await onForcesMutate({
+      const result = await onForcesMutate({
         kind,
         id,
         composition: next,
         stockDeltas,
         forceReserve,
       });
+      const ok = typeof result === "boolean" ? result : result.ok;
       if (!ok) {
+        const err =
+          typeof result === "object" && result && "error" in result
+            ? result.error
+            : undefined;
         // restore pending deltas so retry can work after user fixes stocks
         for (const [k, v] of Object.entries(stockDeltas)) {
           pendingStock.current[k] = (pendingStock.current[k] ?? 0) + v;
         }
-        notify("Не удалось сохранить состав");
+        notify(err ?? "Не удалось сохранить состав");
         return false;
       }
       return true;
@@ -282,6 +323,7 @@ export function ForcesDeck({
         setLocalComp(null);
         return;
       }
+      setLocalComp(null);
       if (successToast) notify(successToast);
     });
   };
@@ -289,37 +331,39 @@ export function ForcesDeck({
   const catalogFor = (group: UnitCardModel) =>
     findCatalog(ships, units, group);
 
-  const doForge = (index: number) => {
+  const doRepair = (index: number) => {
     const comp = getComposition();
     const card = comp[index];
     if (!card) return;
+    const cost = forgeMetalCostClient();
     const gate = canDropZone("forge", card, metalStock, catalogFor(card), deckKind);
     if (!gate.ok) {
       notify(gate.reason ?? "Недоступно");
       return;
     }
-    const res = upgradeAt(comp, index);
+    const maxHp = groupMaxHp(card);
+    const res = repairAt(comp, index, maxHp);
     if (!res.ok) {
       notify(res.reason);
       return;
     }
-    adjustStock(METAL_CURRENCY, -FORGE_METAL_COST);
-    commitComposition(res.next, `Модернизация −${FORGE_METAL_COST} мет.`);
+    adjustStock(METAL_CURRENCY, -cost);
+    commitComposition(res.next, `Ремонт −${cost} мет. → ${maxHp} HP`);
   };
 
   const doDisband = (index: number) => {
     const comp = getComposition();
     const { next, extracted: removed } = extractOneAt(comp, index);
     if (!removed) return;
-    // Refund metal + return equipped resources (slot.count units each)
-    adjustStock(METAL_CURRENCY, DISBAND_METAL_REFUND);
+    const refund = disbandMetalRefundClient();
+    adjustStock(METAL_CURRENCY, refund);
     const cat = catalogFor(removed);
     for (const [role, resId] of Object.entries(removed.filledSlots ?? {})) {
       if (typeof resId !== "string") continue;
       const slot = cat?.slots?.find((s) => s.role === role);
       adjustStock(resId, Math.max(1, slot?.count ?? 1));
     }
-    commitComposition(next, `Утиль · +${DISBAND_METAL_REFUND} мет.`);
+    commitComposition(next, `Утиль · +${refund} мет.`);
     selectCard(null);
     setStripMode("summary");
   };
@@ -403,7 +447,7 @@ export function ForcesDeck({
       return;
     }
     if (zone === "forge") {
-      doForge(index);
+      doRepair(index);
       return;
     }
     if (zone === "reserve") {
@@ -440,9 +484,9 @@ export function ForcesDeck({
         selectCard(null);
         return;
       }
-      commitComposition(
+        commitComposition(
         reorderComposition(comp, index, result.mergeIndex),
-        "Боевой порядок изменён",
+        "Порядок развёртывания изменён",
       );
       selectCard(null);
     }
@@ -456,11 +500,84 @@ export function ForcesDeck({
     selectedCardIndex != null ? composition[selectedCardIndex] ?? null : null;
   const selectedCatalog = selectedGroup ? catalogFor(selectedGroup) : null;
 
+  const hubs = useMemo(
+    () => findProductionHubs(payload.world, fid),
+    [payload.world, fid],
+  );
+
+  const buildProduceActions = (ctx?: {
+    systemId?: string;
+    fleetId?: string;
+    legionId?: string;
+  }) => {
+    if (!onOpenProduce) return null;
+    const sys =
+      ctx?.systemId != null
+        ? payload.world.systems.find((s) => s.id === ctx.systemId)
+        : null;
+    const shipyardSystemId =
+      sys && systemHasShipyardForFaction(sys, fid)
+        ? sys.id
+        : hubs.shipyardSystemId;
+    const barracksSystemId =
+      sys && systemHasBarracksForFaction(sys, fid)
+        ? sys.id
+        : hubs.barracksSystemId;
+    if (!shipyardSystemId && !barracksSystemId) {
+      return (
+        <p className="hint forces-produce-hint">
+          {sys
+            ? "В этой системе нет верфи/казарм — постройте или откройте другой мир."
+            : "Нет верфи/казарм на своих мирах — постройте, чтобы пополнять состав."}
+        </p>
+      );
+    }
+    return (
+      <div className="forces-produce-actions">
+        {shipyardSystemId && (
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() =>
+              onOpenProduce({
+                systemId: shipyardSystemId,
+                tab: "ships",
+                fleetId: ctx?.fleetId,
+              })
+            }
+          >
+            Верфь
+          </button>
+        )}
+        {barracksSystemId && (
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() =>
+              onOpenProduce({
+                systemId: barracksSystemId,
+                tab: "units",
+                legionId: ctx?.legionId,
+              })
+            }
+          >
+            Казармы
+          </button>
+        )}
+      </div>
+    );
+  };
+
   if (deckOpen) {
     const title =
       deckKind === "fleet" ? activeFleet!.name : activeLegion!.name;
     const systemId =
       deckKind === "fleet" ? activeFleet!.systemId : activeLegion!.systemId;
+    const produceActions = buildProduceActions({
+      systemId,
+      fleetId: deckKind === "fleet" ? activeFleet!.id : undefined,
+      legionId: deckKind === "legion" ? activeLegion!.id : undefined,
+    });
     const stance =
       deckKind === "fleet" ? activeFleet!.stance : activeLegion!.status;
     const StanceIcon = STANCE_ICONS[stance] ?? STANCE_ICONS.idle;
@@ -468,7 +585,9 @@ export function ForcesDeck({
 
     return (
       <motion.div
-        className="forces-deck forces-deck--open"
+        className={`forces-deck forces-deck--open${
+          compact ? " forces-deck--compact" : ""
+        }`}
         initial={reduce ? false : { opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 280, damping: 28 }}
@@ -516,6 +635,33 @@ export function ForcesDeck({
             )}
           </div>
         </header>
+
+        <ForceReadinessBar
+          preview={deckBattlePreview(composition)}
+          upkeep={compositionUpkeep(
+            composition,
+            deckKind === "fleet" ? "fleet" : "legion",
+          )}
+          engagements={
+            deckKind === "fleet" && activeFleet
+              ? engagementsForForce(engagements, {
+                  forceId: activeFleet.id,
+                  kind: "fleet",
+                  systemId: activeFleet.systemId,
+                  factionId: fid,
+                })
+              : deckKind === "legion" && activeLegion
+                ? engagementsForForce(engagements, {
+                    forceId: activeLegion.id,
+                    kind: "legion",
+                    systemId: activeLegion.systemId,
+                    factionId: fid,
+                  })
+                : []
+          }
+          onOpenEngagement={onOpenEngagement}
+          onOpenCardBattle={onOpenCardBattle}
+        />
 
         <div className="forces-fan" role="list">
           {composition.length === 0 ? (
@@ -587,7 +733,7 @@ export function ForcesDeck({
                 selectCard(null);
                 setStripMode("summary");
               }}
-              onUpgrade={() => doForge(selectedCardIndex)}
+              onRepair={() => doRepair(selectedCardIndex)}
               onRequestDisband={() => openDisbandConfirm(selectedCardIndex)}
               onConfirmDisband={() => doDisband(selectedCardIndex)}
               onCancelDisband={() => setStripMode("summary")}
@@ -614,11 +760,12 @@ export function ForcesDeck({
           }
         />
 
-        {reserve.length > 0 && (
-          <section className="forces-reserve-rail" aria-label="Резерв">
-            <header className="forces-reserve-head">
-              <Package size={14} aria-hidden /> Резерв · {reserve.length}
-            </header>
+        <section className="forces-reserve-rail" aria-label="Резерв и производство">
+          <header className="forces-reserve-head">
+            <Package size={14} aria-hidden />{" "}
+            {reserve.length > 0 ? `Резерв · ${reserve.length}` : "Пополнение"}
+          </header>
+          {reserve.length > 0 && (
             <div className="forces-reserve-list">
               {reserve.map((card, i) => {
                 const cat = catalogFor(card);
@@ -636,8 +783,9 @@ export function ForcesDeck({
                 );
               })}
             </div>
-          </section>
-        )}
+          )}
+          {produceActions}
+        </section>
 
         {toast && (
           <div className="forces-toast" role="status">
@@ -649,12 +797,33 @@ export function ForcesDeck({
   }
 
   const deckCount = tab === "fleets" ? fleets.length : legions.length;
+  const empire = empireForceTotals(payload);
+  const listProduceActions = buildProduceActions();
 
   return (
-    <div className="forces-deck forces-deck--list">
+    <div
+      className={`forces-deck forces-deck--list${
+        compact ? " forces-deck--compact" : ""
+      }`}
+    >
       <header className="forces-list-head">
-        <h2>СИЛЫ ИМПЕРИИ</h2>
-        <span className="forces-list-count">{deckCount} колод</span>
+        <div>
+          <h2>СИЛЫ ИМПЕРИИ</h2>
+          <p className="hint forces-list-tagline">
+            Loadout к бою · порядок карт = рука · ранг из боёв · приказы на карте
+          </p>
+        </div>
+        <div className="forces-list-side">
+          <span className="forces-list-count">{deckCount} колод</span>
+          <button
+            type="button"
+            className="forces-list-upkeep"
+            title="Содержание всех сил / ход"
+            onClick={() => onOpenEconomy?.()}
+          >
+            {formatUpkeepShort(empire.upkeep)}
+          </button>
+        </div>
       </header>
 
       <div className="forces-tab-switch" role="tablist">
@@ -691,6 +860,12 @@ export function ForcesDeck({
               key={fleet.id}
               fleet={fleet}
               systemName={getSystemName(fleet.systemId)}
+              engagements={engagementsForForce(engagements, {
+                forceId: fleet.id,
+                kind: "fleet",
+                systemId: fleet.systemId,
+                factionId: fid,
+              })}
               onOpen={() => {
                 onSelectFleet?.(fleet.id);
                 openFleetDeck(fleet.id);
@@ -709,6 +884,12 @@ export function ForcesDeck({
               key={legion.id}
               legion={legion}
               systemName={getSystemName(legion.systemId)}
+              engagements={engagementsForForce(engagements, {
+                forceId: legion.id,
+                kind: "legion",
+                systemId: legion.systemId,
+                factionId: fid,
+              })}
               onOpen={() => {
                 onSelectLegion?.(legion.id);
                 openLegionDeck(legion.id);
@@ -717,12 +898,15 @@ export function ForcesDeck({
           ))}
       </div>
 
-      {reserve.length > 0 && (
-        <section className="forces-reserve-rail" aria-label="Резерв">
-          <header className="forces-reserve-head">
-            <Package size={14} aria-hidden /> Резерв · {reserve.length}
+      <section className="forces-reserve-rail" aria-label="Резерв и производство">
+        <header className="forces-reserve-head">
+          <Package size={14} aria-hidden />{" "}
+          {reserve.length > 0 ? `Резерв · ${reserve.length}` : "Пополнение"}
+          {reserve.length > 0 && (
             <span className="hint"> — откройте колоду, чтобы вернуть</span>
-          </header>
+          )}
+        </header>
+        {reserve.length > 0 && (
           <div className="forces-reserve-list">
             {reserve.map((card, i) => {
               const cat = catalogFor(card);
@@ -737,8 +921,9 @@ export function ForcesDeck({
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+        {listProduceActions}
+      </section>
 
       {toast && (
         <div className="forces-toast" role="status">

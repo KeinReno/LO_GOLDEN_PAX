@@ -12,6 +12,7 @@ import {
   type Fleet,
   type FleetStance,
   type GmShellMode,
+  type GmLiveDomainId,
   type Legion,
   type Planet,
   type PlayerOrder,
@@ -42,17 +43,27 @@ import {
   type GraphicsPrefKey,
   type ViewerGraphicsPrefs,
 } from "../ui/viewerGraphics";
-
 const GM_SHELL_KEY = "gmap-gm-shell-mode";
+const GM_GESTURES_KEY = "gmap-gm-gestures";
 
 function readGmShellMode(): GmShellMode {
   try {
     const v = localStorage.getItem(GM_SHELL_KEY);
-    if (v === "prep" || v === "live") return v;
+    if (v === "atelier") return "atelier";
+    // Legacy prep/live → unified GM session
+    if (v === "gm" || v === "prep" || v === "live") return "gm";
   } catch {
     /* ignore */
   }
-  return "prep";
+  return "gm";
+}
+
+function readGmGestures(): boolean {
+  try {
+    return localStorage.getItem(GM_GESTURES_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 interface WorldStore extends UiState {
@@ -89,9 +100,15 @@ interface WorldStore extends UiState {
   toggleShowOrders: () => void;
   toggleShowDiplomacy: () => void;
   toggleShowFogPreview: () => void;
+  setShowFogPreview: (on: boolean) => void;
   toggleGmOmniscientView: () => void;
   setGmOmniscientView: (on: boolean) => void;
   setFogMaskPreview: (systemIds: string[]) => void;
+  paintFogBrush: (
+    systemIds: string[],
+    mode: "paint" | "erase",
+    masterToken: string,
+  ) => Promise<{ ok: boolean; error?: string; count?: number }>;
   activeConsequencePresetId: string | null;
   setActiveConsequencePresetId: (id: string | null) => void;
   toggleShowJumpRange: () => void;
@@ -130,6 +147,9 @@ interface WorldStore extends UiState {
   /** Open floating RP focused on a faction HQ channel (null = last / home). */
   openRpForFaction: (factionId: string | null) => void;
   setGmShellMode: (mode: GmShellMode) => void;
+  setGmLiveDomain: (domain: GmLiveDomainId | null) => void;
+  toggleGmLiveDomain: (domain: GmLiveDomainId) => void;
+  setGmGesturesEnabled: (on: boolean) => void;
   setOpenQuestId: (id: string | null) => void;
   upsertQuest: (quest: Quest) => void;
   removeQuest: (id: string) => void;
@@ -204,6 +224,8 @@ interface WorldStore extends UiState {
   deleteSector: (id: string) => void;
   reassignSectorSystems: (sectorId: string) => void;
   advanceTurn: (label?: string) => void;
+  /** GM: set calendar turn without simulating tick (e.g. lore sync). */
+  setCampaignTurn: (turn: number) => void;
   restoreTurnSnapshot: (index: number) => void;
   setDiplomacy: (aId: string, bId: string, relation: DiplomacyRelation) => void;
   addOrder: (order: Omit<PlayerOrder, "id" | "createdAt" | "status" | "turn">) => void;
@@ -409,6 +431,8 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   rpFloatOpen: false,
   rpFocusFactionId: null,
   gmShellMode: readGmShellMode(),
+  gmLiveDomain: null,
+  gmGesturesEnabled: readGmGestures(),
   contextMenu: null,
 
   setTool: (tool) =>
@@ -475,10 +499,53 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   toggleShowDiplomacy: () => set((s) => ({ showDiplomacy: !s.showDiplomacy })),
   toggleShowFogPreview: () =>
     set((s) => ({ showFogPreview: !s.showFogPreview })),
+  setShowFogPreview: (on) => set({ showFogPreview: on }),
   toggleGmOmniscientView: () =>
     set((s) => ({ gmOmniscientView: !s.gmOmniscientView })),
   setGmOmniscientView: (on: boolean) => set({ gmOmniscientView: on }),
   setFogMaskPreview: (systemIds) => set({ fogMaskPreview: systemIds }),
+
+  paintFogBrush: async (systemIds, mode, masterToken) => {
+    const { activeFactionId } = get();
+    if (!activeFactionId) {
+      return { ok: false, error: "Выберите державу в фокусе ГМ" };
+    }
+    if (!masterToken?.trim()) {
+      return { ok: false, error: "Нет мастер-токена (вкладка Сессия)" };
+    }
+    if (!systemIds.length) {
+      return { ok: false, error: "Система не выбрана" };
+    }
+    try {
+      const res = await fetch("/api/fog/paint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": masterToken.trim(),
+        },
+        body: JSON.stringify({
+          factionId: activeFactionId,
+          systemIds,
+          mode,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        fog?: { masks?: Record<string, string[]> };
+      };
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      set({
+        fogMaskPreview: data.fog?.masks?.[activeFactionId] ?? [],
+        showFogPreview: true,
+      });
+      return { ok: true, count: systemIds.length };
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  },
   setActiveConsequencePresetId: (id) =>
     set({ activeConsequencePresetId: id }),
   toggleShowJumpRange: () =>
@@ -513,7 +580,23 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     } catch {
       /* ignore */
     }
-    set({ gmShellMode: mode });
+    set({
+      gmShellMode: mode,
+      gmLiveDomain: mode === "gm" ? get().gmLiveDomain : null,
+    });
+  },
+  setGmLiveDomain: (domain) => set({ gmLiveDomain: domain }),
+  toggleGmLiveDomain: (domain) =>
+    set((s) => ({
+      gmLiveDomain: s.gmLiveDomain === domain ? null : domain,
+    })),
+  setGmGesturesEnabled: (on) => {
+    try {
+      localStorage.setItem(GM_GESTURES_KEY, on ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    set({ gmGesturesEnabled: on });
   },
   setOpenQuestId: (id) => set({ openQuestId: id }),
 
@@ -1674,6 +1757,15 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
       }),
       selectedFleetId: selectedFleetId === id ? null : selectedFleetId,
     });
+    // Живой стол: бой с этим флотом сразу завершается (не ждём Publish).
+    void fetch("/api/engagements/reconcile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Token": DEFAULT_MASTER_TOKEN,
+      },
+      body: JSON.stringify({ removedFleetIds: [id] }),
+    }).catch(() => {});
   },
 
   setFleetRouteHop: (fleetId, systemId) => {
@@ -1786,6 +1878,14 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
       }),
       selectedLegionId: selectedLegionId === id ? null : selectedLegionId,
     });
+    void fetch("/api/engagements/reconcile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Token": DEFAULT_MASTER_TOKEN,
+      },
+      body: JSON.stringify({ removedLegionIds: [id] }),
+    }).catch(() => {});
   },
 
   addOrToggleLink: (fromId, toId) => {
@@ -2042,6 +2142,18 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
         orders: world.orders.filter((o) => o.status === "pending"),
         systems: driftAnomalies(world.systems),
         caravans: advanceCaravans(world.caravans ?? []),
+      }),
+    });
+  },
+
+  setCampaignTurn: (turn) => {
+    const { world } = get();
+    const next = Math.max(0, Math.floor(Number(turn)));
+    if (!Number.isFinite(next) || next === world.meta.turn) return;
+    set({
+      world: touch({
+        ...world,
+        meta: { ...world.meta, turn: next },
       }),
     });
   },

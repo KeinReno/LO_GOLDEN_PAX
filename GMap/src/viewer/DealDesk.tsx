@@ -1,31 +1,40 @@
-import { useMemo, useState } from "react";
-import type { DiplomacyRelation, ViewerPayload } from "../state/types";
+import { useMemo, useState, type CSSProperties } from "react";
+import type { ViewerPayload } from "../state/types";
 import { DIPLOMACY_LABELS } from "../state/defaults";
 import {
   BUILD_METAL,
   BUILD_SUPPLY,
   CATEGORY_CURRENCIES,
 } from "../state/economyLabels";
+import { getCachedContent } from "../state/contentCatalog";
+import { BackgroundBeamsLite } from "../ui/BackgroundBeamsLite";
+import { useMagnetic, useRipple, useSpotlight } from "../ui/aceternityFx";
+import { AnimatedTooltip } from "../ui/AnimatedTooltip";
+import { ExpandableSection } from "../ui/ExpandableSection";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import { HoldButton } from "../ui/HoldButton";
+import { StatefulButton } from "../ui/StatefulButton";
+import {
+  DiploTimeline,
+  DiploAttitudeLabel,
+  DiploLeaderCard,
+  FactionEmblem,
+  getRelation,
+  opinionLabel,
+  opinionOf,
+  OpinionBar,
+  RelationBadge,
+} from "./diploUiShared";
+import type { DiploDealItem, DiploOffer, TradeAssetPool } from "./diploTradeTypes";
+import { diploItemLabel, TradeColumn } from "./TradeColumn";
+import { DiploSwipeOffer } from "./DiploSwipeOffer";
+import { DiploDealTray } from "./DiploDealTray";
+import { DiploCompareStrip } from "./DiploCompareStrip";
+import { ContactMarketStrip } from "./ContactMarketStrip";
 
-export type DiploDealItem =
-  | { kind: "resource"; currencyId: string; amount: number }
-  | { kind: "treaty"; treaty: DiplomacyRelation };
+export type { DiploDealItem, DiploOffer } from "./diploTradeTypes";
 
-export type DiploOffer = {
-  id: string;
-  fromFactionId: string;
-  toFactionId: string;
-  status: string;
-  give: DiploDealItem[];
-  want: DiploDealItem[];
-  note?: string;
-  createdTurn?: number;
-  createdAt?: string;
-};
-
-const CURRENCIES = [
+const GIFT_CURRENCIES = [
   ...CATEGORY_CURRENCIES.map((c) => ({
     id: c.id,
     label: `${c.name} (${c.short})`,
@@ -34,78 +43,46 @@ const CURRENCIES = [
   { id: BUILD_SUPPLY.id, label: BUILD_SUPPLY.label },
 ];
 
-const TREATY_OPTIONS: { id: DiplomacyRelation; label: string }[] = [
-  { id: "trade", label: "Торговый договор" },
-  { id: "alliance", label: "Союз" },
-  { id: "nap", label: "Пакт о ненападении" },
-  { id: "research_pact", label: "Научный пакт" },
-  { id: "migration_treaty", label: "Миграционный договор" },
-  { id: "truce", label: "Перемирие" },
-  { id: "embargo", label: "Эмбарго" },
-  { id: "war", label: "Объявление войны" },
-  { id: "neutral", label: "Нейтралитет" },
-];
-
-function getRelation(
+function buildAssetPool(
   payload: ViewerPayload,
-  a: string,
-  b: string,
-): DiplomacyRelation {
-  const [x, y] = a < b ? [a, b] : [b, a];
-  return (
-    payload.world.diplomacy.find((d) => d.aId === x && d.bId === y)?.relation ??
-    "neutral"
-  );
-}
-
-function itemLabel(item: DiploDealItem): string {
-  if (item.kind === "resource") {
-    const c = CURRENCIES.find((x) => x.id === item.currencyId);
-    return `${item.amount} ${c?.label ?? item.currencyId}`;
-  }
-  return DIPLOMACY_LABELS[item.treaty] ?? item.treaty;
-}
-
-function DealColumn({
-  title,
-  items,
-  empty,
-  onRemove,
-}: {
-  title: string;
-  items: DiploDealItem[];
-  empty: string;
-  onRemove?: (idx: number) => void;
-}) {
-  return (
-    <div className="deal-col-block">
-      <h4>{title}</h4>
-      {items.length === 0 ? (
-        <p className="hint">{empty}</p>
-      ) : (
-        <ul className="deal-item-list">
-          {items.map((item, i) => (
-            <li key={`${item.kind}-${i}`}>
-              <span>{itemLabel(item)}</span>
-              {onRemove && (
-                <button
-                  type="button"
-                  className="btn ghost sm"
-                  onClick={() => onRemove(i)}
-                >
-                  ×
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+  factionId: string,
+  visibleOnly: boolean,
+): TradeAssetPool {
+  const visible = new Set(payload.visibleSystemIds ?? []);
+  const content = getCachedContent();
+  const fleets = (payload.world.fleets ?? [])
+    .filter((f) => f.factionId === factionId)
+    .filter((f) => !visibleOnly || visible.has(f.systemId))
+    .map((f) => ({ id: f.id, name: f.name }));
+  const legions = (payload.world.legions ?? [])
+    .filter((l) => l.factionId === factionId)
+    .filter((l) => !visibleOnly || visible.has(l.systemId))
+    .map((l) => ({ id: l.id, name: l.name }));
+  const systems = (payload.world.systems ?? [])
+    .filter((s) => s.ownerFactionId === factionId)
+    .filter((s) => !visibleOnly || visible.has(s.id))
+    .map((s) => ({ id: s.id, name: s.name }));
+  const unlocked = payload.economy?.unlockedTechs ?? [];
+  const techs =
+    factionId === payload.factionId
+      ? unlocked
+          .filter((tid) => {
+            const def = content?.technologies?.[tid];
+            if (!def) return false;
+            if (def.raceLock || def.factionTraitLock) return false;
+            return true;
+          })
+          .map((tid) => ({
+            id: tid,
+            name: content?.technologies?.[tid]?.name ?? tid,
+          }))
+      : [];
+  return { fleets, legions, systems, techs };
 }
 
 /**
- * GC/ES2-style deal desk: you | proposal | them.
+ * Galactic Civilizations trade desk:
+ * leader faceoff · civ rail · You Offer | They Offer · dossier.
  */
 export function DealDesk({
   payload,
@@ -115,11 +92,18 @@ export function DealDesk({
   busy,
   msg,
   focusOfferId,
+  knownFactionIds,
   onCreate,
   onAccept,
   onReject,
   onCancel,
   onGift,
+  onStance,
+  password,
+  reservedAp = 0,
+  apMax = 0,
+  onPlaceOffer,
+  onCancelOffer,
 }: {
   payload: ViewerPayload;
   economy?: ViewerPayload["economy"];
@@ -128,6 +112,7 @@ export function DealDesk({
   busy?: boolean;
   msg?: string | null;
   focusOfferId?: string | null;
+  knownFactionIds?: string[];
   onCreate: (args: {
     toFactionId: string;
     give: DiploDealItem[];
@@ -137,47 +122,118 @@ export function DealDesk({
   onAccept: (offerId: string) => void;
   onReject: (offerId: string) => void;
   onCancel: (offerId: string) => void;
-  /** Optional one-way gift (legacy transfer intent). */
   onGift?: (toFactionId: string, currencyId: string, amount: number) => void;
+  /** Unilateral acts: war / embargo / break — apply immediately. */
+  onStance?: (
+    toFactionId: string,
+    stance: "war" | "embargo" | "break",
+  ) => void | boolean | Promise<void | boolean>;
+  password?: string;
+  reservedAp?: number;
+  apMax?: number;
+  /** Contacts-venue market offers (same as MarketPanel). */
+  onPlaceOffer?: (
+    side: "sell" | "buy",
+    giveCurrency: string,
+    giveAmount: number,
+    wantCurrency: string,
+    wantAmount: number,
+    venue: "common" | "contacts",
+  ) => void | Promise<boolean | void>;
+  onCancelOffer?: (offerId: string) => void | Promise<boolean | void>;
 }) {
-  const me = payload.factionId;
-  const others = payload.world.factions.filter((f) => f.id !== me);
-  const [partnerId, setPartnerId] = useState(
-    () => others[0]?.id ?? "",
-  );
+  const meId = payload.factionId;
+  const me = payload.world.factions.find((f) => f.id === meId);
+
+  const others = useMemo(() => {
+    const all = payload.world.factions.filter((f) => f.id !== meId);
+    const known = knownFactionIds ?? payload.knownFactionIds ?? [];
+    if (!known.length) return all;
+    const set = new Set(known);
+    return all.filter((f) => set.has(f.id));
+  }, [payload.world.factions, payload.knownFactionIds, knownFactionIds, meId]);
+
+  const [otherId, setOtherId] = useState(() => others[0]?.id ?? "");
   const [give, setGive] = useState<DiploDealItem[]>([]);
   const [want, setWant] = useState<DiploDealItem[]>([]);
   const [note, setNote] = useState("");
-  const [resCurrency, setResCurrency] = useState<string>(
-    CURRENCIES[0]?.id ?? "currency.extracta",
-  );
-  const [resAmount, setResAmount] = useState("100");
-  const [resSide, setResSide] = useState<"give" | "want">("give");
-  const [treaty, setTreaty] = useState<DiplomacyRelation>("trade");
-  const [treatySide, setTreatySide] = useState<"give" | "want">("want");
   const [giftAmount, setGiftAmount] = useState("");
   const [giftCurrency, setGiftCurrency] = useState<string>(
-    CURRENCIES[0]?.id ?? "currency.extracta",
+    GIFT_CURRENCIES[0]?.id ?? "currency.extracta",
   );
+  const [dossierTab, setDossierTab] = useState<"treaties" | "history">(
+    "treaties",
+  );
+  const [sendSuccess, setSendSuccess] = useState(false);
 
-  const partner = others.find((f) => f.id === partnerId) ?? null;
-  const relation = partner ? getRelation(payload, me, partner.id) : "neutral";
-  const myQuests = (payload.world.quests ?? []).filter(
-    (q) => q.status === "active",
-  );
-  const partnerQuests = useMemo(() => {
-    // Quests anchored in systems they own (visible) — soft signal.
-    if (!partner) return [];
+  const faceoffSpot = useSpotlight();
+  const tableSpot = useSpotlight();
+  const dossierSpot = useSpotlight();
+  const railSpot = useSpotlight();
+  const magWar = useMagnetic(0.35, 100);
+  const magBreak = useMagnetic(0.3, 90);
+  const magEmbargo = useMagnetic(0.3, 90);
+  const rippleActs = useRipple();
+
+  const other = others.find((f) => f.id === otherId) ?? null;
+  const relation = other ? getRelation(payload, meId, other.id) : "neutral";
+  const opinion = other ? opinionOf(me, other.id) : 0;
+  const intelLevel = other
+    ? Number(payload.intel?.knownFactions?.[other.id] ?? 1)
+    : 0;
+
+  const focusHistory = useMemo(() => {
+    if (!other) return [];
+    return (me?.diplomacy?.history ?? []).filter(
+      (h) => h.withFactionId === other.id,
+    );
+  }, [me?.diplomacy?.history, other]);
+
+  const activeTreaties = useMemo(() => {
+    if (!other) return [];
+    return (me?.diplomacy?.treaties ?? []).filter(
+      (t) => t.withFactionId === other.id,
+    );
+  }, [me?.diplomacy?.treaties, other]);
+
+  const otherQuests = useMemo(() => {
+    if (!other) return [];
     const owned = new Set(
       payload.world.systems
-        .filter((s) => s.ownerFactionId === partner.id)
+        .filter((s) => s.ownerFactionId === other.id)
         .map((s) => s.id),
     );
     return (payload.world.quests ?? []).filter(
-      (q) =>
-        q.status === "active" && q.systemId && owned.has(q.systemId),
+      (q) => q.status === "active" && q.systemId && owned.has(q.systemId),
     );
-  }, [partner, payload.world.quests, payload.world.systems]);
+  }, [other, payload.world.quests, payload.world.systems]);
+
+  const myAssets = useMemo(
+    () => buildAssetPool(payload, meId, false),
+    [payload, meId],
+  );
+  const theirAssets = useMemo(
+    () =>
+      other
+        ? buildAssetPool(payload, other.id, true)
+        : { fleets: [], legions: [], systems: [], techs: [] },
+    [payload, other],
+  );
+
+  const nameLookup = useMemo(() => {
+    const fleets: Record<string, string> = {};
+    const legions: Record<string, string> = {};
+    const systems: Record<string, string> = {};
+    const techs: Record<string, string> = {};
+    for (const f of payload.world.fleets ?? []) fleets[f.id] = f.name;
+    for (const l of payload.world.legions ?? []) legions[l.id] = l.name;
+    for (const s of payload.world.systems ?? []) systems[s.id] = s.name;
+    const content = getCachedContent();
+    for (const [id, def] of Object.entries(content?.technologies ?? {})) {
+      techs[id] = def.name ?? id;
+    }
+    return { fleets, legions, systems, techs };
+  }, [payload.world.fleets, payload.world.legions, payload.world.systems]);
 
   const focusedIncoming =
     focusOfferId != null
@@ -185,110 +241,93 @@ export function DealDesk({
       : null;
 
   const canSend =
-    !!partnerId &&
-    (give.length > 0 || want.length > 0) &&
-    !busy;
+    !!otherId && (give.length > 0 || want.length > 0) && !busy;
 
-  const packageHasWar = [...give, ...want].some(
-    (i) => i.kind === "treaty" && i.treaty === "war",
-  );
   const packageHasAlliance = [...give, ...want].some(
     (i) => i.kind === "treaty" && i.treaty === "alliance",
   );
-  const needsHold = packageHasWar || packageHasAlliance;
+  const needsHold = packageHasAlliance;
+
+  const canBreak =
+    !!other &&
+    relation !== "neutral" &&
+    relation !== "war" &&
+    relation !== "embargo";
+  const canWar = !!other && relation !== "war";
+  const canEmbargo =
+    !!other && relation !== "war" && relation !== "embargo";
+
+  const tradePartnerSet = useMemo(
+    () => new Set(payload.tradePartnerIds ?? []),
+    [payload.tradePartnerIds],
+  );
+  const isContactTradePartner = !!otherId && tradePartnerSet.has(otherId);
 
   const flushSend = async () => {
     if (!canSend) return;
     const ok = await onCreate({
-      toFactionId: partnerId,
+      toFactionId: otherId,
       give,
       want,
       note,
     });
     if (ok === false) return;
+    setSendSuccess(true);
     setGive([]);
     setWant([]);
     setNote("");
   };
 
-  const addResource = () => {
-    const amount = Math.floor(Number(resAmount));
-    if (!resCurrency || amount <= 0) return;
-    const item: DiploDealItem = {
-      kind: "resource",
-      currencyId: resCurrency,
-      amount,
-    };
-    if (resSide === "give") setGive((g) => [...g, item]);
-    else setWant((w) => [...w, item]);
+  const runStance = async (stance: "war" | "embargo" | "break") => {
+    if (!otherId || !onStance) return;
+    await onStance(otherId, stance);
   };
 
-  const addTreaty = () => {
-    const item: DiploDealItem = { kind: "treaty", treaty };
-    if (treatySide === "give") setGive((g) => [...g, item]);
-    else setWant((w) => [...w, item]);
-  };
+  const otherIncoming = incoming.filter((o) => o.fromFactionId === otherId);
+  const itemLabel = (item: DiploDealItem) => diploItemLabel(item, nameLookup);
 
   return (
-    <div className="deal-desk">
+    <div className="deal-desk gc-diplo">
       {(incoming.length > 0 || outgoing.length > 0) && (
-        <section className="deal-inbox" aria-label="Входящие предложения">
+        <section
+          className={`gc-diplo-inbox ${incoming.length > 0 ? "fx-glow" : ""}`}
+          style={
+            incoming.length > 0
+              ? ({
+                  "--fx-glow-color": "var(--signal-warning, #c9a227)",
+                } as CSSProperties)
+              : undefined
+          }
+          aria-label="Очередь предложений"
+        >
           {incoming.length > 0 && (
-            <div className="deal-inbox-col">
-              <h3>
-                Входящие · {incoming.length}
-              </h3>
-              <ul className="deal-inbox-list">
+            <div className="gc-diplo-inbox__col">
+              <h3>Входящие · {incoming.length}</h3>
+              <ul className="deal-inbox-list gc-swipe-inbox">
                 {incoming.map((o) => {
                   const from =
                     payload.world.factions.find((f) => f.id === o.fromFactionId)
                       ?.name ?? o.fromFactionId;
                   return (
-                    <li
+                    <DiploSwipeOffer
                       key={o.id}
-                      className={[
-                        "deal-inbox-card",
-                        focusedIncoming?.id === o.id ? "is-focus" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      <div>
-                        <strong>{from}</strong>
-                        <p className="hint">
-                          отдают:{" "}
-                          {o.give.map(itemLabel).join(", ") || "—"}
-                          {" · "}
-                          просят:{" "}
-                          {o.want.map(itemLabel).join(", ") || "—"}
-                        </p>
-                      </div>
-                      <div className="deal-inbox-actions">
-                        <button
-                          type="button"
-                          className="btn sm primary"
-                          disabled={busy}
-                          onClick={() => onAccept(o.id)}
-                        >
-                          Принять
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm ghost"
-                          disabled={busy}
-                          onClick={() => onReject(o.id)}
-                        >
-                          Отклонить
-                        </button>
-                      </div>
-                    </li>
+                      title={from}
+                      subtitle={`отдают: ${o.give.map(itemLabel).join(", ") || "—"} · просят: ${o.want.map(itemLabel).join(", ") || "—"}`}
+                      busy={busy}
+                      focused={focusedIncoming?.id === o.id}
+                      onAccept={() => {
+                        setOtherId(o.fromFactionId);
+                        onAccept(o.id);
+                      }}
+                      onReject={() => onReject(o.id)}
+                    />
                   );
                 })}
               </ul>
             </div>
           )}
           {outgoing.length > 0 && (
-            <div className="deal-inbox-col">
+            <div className="gc-diplo-inbox__col">
               <h3>Исходящие · {outgoing.length}</h3>
               <ul className="deal-inbox-list">
                 {outgoing.map((o) => {
@@ -321,39 +360,156 @@ export function DealDesk({
         </section>
       )}
 
-      <div className="deal-desk-grid">
-        <aside className="deal-rail" aria-label="Известные державы">
-          <h3>Контакты</h3>
+      {me && other && (
+        <header
+          className="gc-diplo-faceoff fx-spotlight gc-diplo-faceoff--beams"
+          aria-label="Переговоры"
+          {...faceoffSpot.bind}
+        >
+          <BackgroundBeamsLite />
+          <DiploLeaderCard faction={me} align="start" />
+          <div className="gc-diplo-status">
+            <RelationBadge relation={relation} />
+            <DiploAttitudeLabel opinion={opinion} />
+            <OpinionBar value={opinion} />
+            <span className="diplo-intel-pill">Разведка {intelLevel}/4</span>
+          </div>
+          <DiploLeaderCard faction={other} align="end" />
+        </header>
+      )}
+
+      {me && other && (
+        <DiploCompareStrip payload={payload} me={me} other={other} />
+      )}
+
+      {me && other && onStance && (
+        <section className="gc-diplo-acts" aria-label="Односторонние действия">
+          <div className="gc-diplo-acts__copy">
+            <strong>Действия</strong>
+            <p className="hint">
+              Война, эмбарго и разрыв договора вступают в силу сразу — вторая
+              сторона не подтверждает.
+            </p>
+          </div>
+          <div className="gc-diplo-acts__btns">
+            {canBreak && (
+              <span
+                className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
+                {...magBreak.bind}
+                {...rippleActs.bind}
+              >
+                <HoldButton
+                  className="btn ghost sm hold-btn--danger"
+                  ms={700}
+                  disabled={busy}
+                  holdHint="Удерживайте: разорвать договор"
+                  onConfirm={() => void runStance("break")}
+                >
+                  Разорвать договор
+                </HoldButton>
+              </span>
+            )}
+            {canEmbargo && (
+              <span
+                className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
+                {...magEmbargo.bind}
+                {...rippleActs.bind}
+              >
+                <HoldButton
+                  className="btn ghost sm hold-btn--danger"
+                  ms={700}
+                  disabled={busy}
+                  holdHint="Удерживайте: эмбарго"
+                  onConfirm={() => void runStance("embargo")}
+                >
+                  Эмбарго
+                </HoldButton>
+              </span>
+            )}
+            {canWar && (
+              <span
+                className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
+                {...magWar.bind}
+                {...rippleActs.bind}
+              >
+                <HoldButton
+                  className="btn primary sm hold-btn--danger is-war"
+                  ms={900}
+                  disabled={busy}
+                  holdHint="Удерживайте: объявить войну"
+                  onConfirm={() => void runStance("war")}
+                >
+                  Объявить войну
+                </HoldButton>
+              </span>
+            )}
+            {relation === "war" && (
+              <span className="hint">Война уже идёт · мир — через перемирие в сделке</span>
+            )}
+          </div>
+        </section>
+      )}
+
+      <div className="gc-diplo-grid deal-desk-grid">
+        <aside
+          className="deal-rail gc-diplo-rail fx-spotlight"
+          aria-label="Известные державы"
+          {...railSpot.bind}
+        >
+          <h3>Цивилизации</h3>
           {others.length === 0 ? (
             <p className="hint">
               Нет известных держав — исследуйте туман или дождитесь контакта.
             </p>
           ) : (
-            <ul className="deal-faction-list">
+            <ul
+              className={`deal-faction-list gc-diplo-civ-list${otherId ? " has-focus" : ""}`}
+            >
               {others.map((f) => {
-                const rel = getRelation(payload, me, f.id);
+                const rel = getRelation(payload, meId, f.id);
+                const op = opinionOf(me, f.id);
                 const pendingIn = incoming.some(
                   (o) => o.fromFactionId === f.id,
                 );
+                const selected = otherId === f.id;
                 return (
                   <li key={f.id}>
-                    <button
-                      type="button"
-                      className={`deal-faction-btn ${partnerId === f.id ? "on" : ""}`}
-                      onClick={() => setPartnerId(f.id)}
-                    >
-                      <span
-                        className="swatch"
-                        style={{ background: f.color }}
-                      />
-                      <span className="deal-faction-meta">
-                        <strong>{f.name}</strong>
-                        <span className="hint">
-                          {DIPLOMACY_LABELS[rel]}
-                          {pendingIn ? " · входящее!" : ""}
+                    <AnimatedTooltip
+                      side="top"
+                      content={
+                        <span>
+                          <strong>{f.name}</strong>
+                          <br />
+                          {DIPLOMACY_LABELS[rel]} · {opinionLabel(op)} ({op})
                         </span>
-                      </span>
-                    </button>
+                      }
+                    >
+                      <button
+                        type="button"
+                        className={[
+                          "deal-faction-btn",
+                          "gc-diplo-civ-btn",
+                          "fx-spotlight",
+                          selected ? "on" : "",
+                          !selected && otherId ? "is-dim" : "",
+                          `gc-diplo-civ-btn--${rel}`,
+                          pendingIn ? "is-alert" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => setOtherId(f.id)}
+                      >
+                        <FactionEmblem faction={f} size="sm" />
+                        <span className="deal-faction-meta">
+                          <strong>{f.name}</strong>
+                          <span className="hint">
+                            {DIPLOMACY_LABELS[rel]}
+                            {pendingIn ? " · входящее!" : ""}
+                          </span>
+                          <OpinionBar value={op} />
+                        </span>
+                      </button>
+                    </AnimatedTooltip>
                   </li>
                 );
               })}
@@ -361,242 +517,277 @@ export function DealDesk({
           )}
         </aside>
 
-        <section className="deal-center" aria-label="Сборка сделки">
-          <h3>Сделка</h3>
+        <section
+          className="deal-center gc-diplo-table fx-spotlight"
+          aria-label="Торговый стол"
+          {...tableSpot.bind}
+        >
+          <h3 className="gc-diplo-table__title gc-diplo-lamp-title">
+            Торговля
+          </h3>
           <p className="hint">
-            Слева — что отдаёте вы. Справа — что просите. Отправка сразу
-            отсветится у адресата.
+            Сделка требует согласия адресата. Война и разрыв договора — кнопки
+            выше, без ожидания ответа.
           </p>
 
-          <div className="deal-compose-cols">
-            <DealColumn
-              title="Вы отдаёте"
+          {otherIncoming.length > 0 && (
+            <div className="gc-diplo-counteroffer">
+              <strong>Их предложение · {other?.name}</strong>
+              <p className="hint">
+                {otherIncoming[0].give.map(itemLabel).join(", ") || "—"} ↔{" "}
+                {otherIncoming[0].want.map(itemLabel).join(", ") || "—"}
+              </p>
+            </div>
+          )}
+
+          {other && (onPlaceOffer || onCancelOffer) && (
+            <ContactMarketStrip
+              factionId={meId}
+              password={password}
+              partnerId={other.id}
+              partnerName={other.name}
+              isTradePartner={isContactTradePartner}
+              stocks={economy?.stocks}
+              factionNames={Object.fromEntries(
+                payload.world.factions.map((f) => [f.id, f.name]),
+              )}
+              reservedAp={reservedAp}
+              apMax={apMax}
+              busy={busy}
+              onPlaceOffer={onPlaceOffer}
+              onCancelOffer={onCancelOffer}
+            />
+          )}
+
+          <DiploDealTray
+            stocks={economy?.stocks}
+            disabled={!other || busy}
+            onAddGive={(item) => setGive((g) => [...g, item])}
+            onAddWant={(item) => setWant((w) => [...w, item])}
+          />
+
+          <div className="gc-trade-board">
+            <TradeColumn
+              side="you"
+              civName={me?.name ?? "Вы"}
               items={give}
-              empty="Добавьте ресурс или договор"
+              stocks={economy?.stocks}
+              assets={myAssets}
+              nameLookup={nameLookup}
+              disabled={!other || busy}
               onRemove={(i) => setGive((g) => g.filter((_, idx) => idx !== i))}
+              onAdd={(item) => setGive((g) => [...g, item])}
             />
-            <div className="deal-balance" aria-hidden>
-              <span>⇄</span>
+            <div className="gc-trade-balance" aria-hidden>
+              <span className="gc-trade-balance__icon">⇄</span>
             </div>
-            <DealColumn
-              title="Вы просите"
+            <TradeColumn
+              side="them"
+              civName={other?.name ?? "—"}
               items={want}
-              empty="Добавьте встречные условия"
+              stocks={economy?.stocks}
+              assets={theirAssets}
+              nameLookup={nameLookup}
+              disabled={!other || busy}
               onRemove={(i) => setWant((w) => w.filter((_, idx) => idx !== i))}
+              onAdd={(item) => setWant((w) => [...w, item])}
             />
           </div>
 
-          <div className="deal-adders">
-            <div className="deal-adder">
-              <span className="hq-stat-label">Ресурс</span>
-              <select
-                value={resSide}
-                onChange={(e) =>
-                  setResSide(e.target.value as "give" | "want")
-                }
-              >
-                <option value="give">Отдаю</option>
-                <option value="want">Прошу</option>
-              </select>
-              <select
-                value={resCurrency}
-                onChange={(e) => setResCurrency(e.target.value)}
-              >
-                {CURRENCIES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                    {economy?.stocks
-                      ? ` · ${economy.stocks[c.id] ?? 0}`
-                      : ""}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={1}
-                value={resAmount}
-                onChange={(e) => setResAmount(e.target.value)}
-              />
-              <button type="button" className="btn sm" onClick={addResource}>
-                +
-              </button>
-            </div>
-            <div className="deal-adder">
-              <span className="hq-stat-label">Договор</span>
-              <select
-                value={treatySide}
-                onChange={(e) =>
-                  setTreatySide(e.target.value as "give" | "want")
-                }
-              >
-                <option value="want">Предложить / потребовать</option>
-                <option value="give">В пакет как уступку</option>
-              </select>
-              <select
-                value={treaty}
-                onChange={(e) =>
-                  setTreaty(e.target.value as DiplomacyRelation)
-                }
-              >
-                {TREATY_OPTIONS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="btn sm" onClick={addTreaty}>
-                +
-              </button>
-            </div>
-          </div>
-
-          <label className="field">
-            <span>Заметка</span>
+          <label className="gc-trade-note field">
+            <span>Записка</span>
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="по желанию"
+              placeholder="необязательно"
             />
           </label>
 
           {needsHold ? (
-            <HoldButton
-              className={`btn primary block hold-btn--danger ${packageHasWar ? "is-war" : ""}`}
-              disabled={!canSend}
-              holdHint={
-                packageHasWar
-                  ? "Удерживайте: объявление войны"
-                  : "Удерживайте: союз"
-              }
-              onConfirm={flushSend}
+            <div
+              className={`gc-diplo-send-wrap ${canSend ? "fx-moving-border" : ""}`}
             >
-              {busy
-                ? "Отправка…"
-                : packageHasWar
-                  ? "Удержать · объявить войну"
-                  : "Удержать · предложить союз"}
-            </HoldButton>
+              <HoldButton
+                className="btn primary block hold-btn--danger"
+                disabled={!canSend}
+                holdHint="Удерживайте: предложить союз"
+                onConfirm={flushSend}
+              >
+                {busy ? "Отправка…" : "Удержать · предложить союз"}
+              </HoldButton>
+            </div>
           ) : (
-            <button
-              type="button"
-              className="btn primary block"
-              disabled={!canSend}
-              onClick={flushSend}
+            <div
+              className={`gc-diplo-send-wrap ${canSend ? "fx-moving-border" : ""}`}
             >
-              {busy ? "Отправка…" : "Отправить предложение"}
-            </button>
+              <StatefulButton
+                busy={busy}
+                success={sendSuccess}
+                successLabel="Отправлено"
+                onSuccessEnd={() => setSendSuccess(false)}
+                className="btn primary block gc-diplo-send"
+                disabled={!canSend}
+                onClick={() => void flushSend()}
+              >
+                Предложить сделку
+              </StatefulButton>
+            </div>
           )}
           {msg && <p className="hint">{msg}</p>}
         </section>
 
-        <aside className="deal-partner" aria-label="Выбранная держава">
-          {partner ? (
+        <aside
+          className="deal-partner gc-diplo-dossier fx-spotlight"
+          aria-label={other ? `Досье · ${other.name}` : "Досье"}
+          {...dossierSpot.bind}
+        >
+          {other ? (
             <>
               <div className="deal-partner-head">
-                <span
-                  className="swatch"
-                  style={{ background: partner.color }}
-                />
+                <FactionEmblem faction={other} size="md" />
                 <div>
-                  <h3>{partner.name}</h3>
+                  <h3>{other.name}</h3>
                   <p className="hint">{DIPLOMACY_LABELS[relation]}</p>
                 </div>
               </div>
-              {partner.notes ? (
-                <p className="hint" style={{ whiteSpace: "pre-wrap" }}>
-                  {partner.notes}
-                </p>
+              {other.notes ? (
+                <p className="hint gc-diplo-notes">{other.notes}</p>
+              ) : null}
+
+              <div className="gc-diplo-tabs anim-tabs" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={dossierTab === "treaties"}
+                  className={dossierTab === "treaties" ? "on" : ""}
+                  onClick={() => setDossierTab("treaties")}
+                >
+                  Договоры
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={dossierTab === "history"}
+                  className={dossierTab === "history" ? "on" : ""}
+                  onClick={() => setDossierTab("history")}
+                >
+                  Хроника
+                </button>
+              </div>
+
+              {dossierTab === "treaties" ? (
+                activeTreaties.length === 0 ? (
+                  <p className="hint">Нет активных договоров.</p>
+                ) : (
+                  <ul className="diplo-treaty-list">
+                    {activeTreaties.map((t) => (
+                      <li key={t.id}>
+                        {DIPLOMACY_LABELS[t.type] ?? t.type}
+                        {t.expiresTurn != null
+                          ? ` · до хода ${t.expiresTurn}`
+                          : " · бессрочно"}
+                      </li>
+                    ))}
+                  </ul>
+                )
               ) : (
-                <p className="hint">Публичных заметок нет.</p>
+                <DiploTimeline events={focusHistory} />
               )}
-              <h4>Их поручения на карте</h4>
-              {partnerQuests.length === 0 ? (
-                <p className="hint">
-                  Нет видимых квестов на их территориях (или квесты ещё не
-                  выданы).
-                </p>
-              ) : (
-                <ul className="deal-quest-list">
-                  {partnerQuests.map((q) => (
-                    <li key={q.id}>
-                      <strong>{q.name}</strong>
-                      <span className="hint"> · {q.summary}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <h4>Ваши активные</h4>
-              {myQuests.length === 0 ? (
-                <p className="hint">Нет активных квестов.</p>
-              ) : (
-                <ul className="deal-quest-list">
-                  {myQuests.slice(0, 5).map((q) => (
-                    <li key={q.id}>
-                      <strong>{q.name}</strong>
-                    </li>
-                  ))}
-                </ul>
-              )}
+
+              <ExpandableSection
+                title="На их территории"
+                badge={otherQuests.length || undefined}
+                defaultOpen={otherQuests.length > 0}
+                className="gc-diplo-expand"
+              >
+                {otherQuests.length === 0 ? (
+                  <p className="hint">Нет видимых поручений.</p>
+                ) : (
+                  <ul className="deal-quest-list">
+                    {otherQuests.map((q) => (
+                      <li key={q.id}>
+                        <strong>{q.name}</strong>
+                        <span className="hint"> · {q.summary}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </ExpandableSection>
+
               {economy && (
-                <div className="deal-stock-mini" aria-label="Ваша казна">
-                  <h4>Казна (для сделки)</h4>
-                  <div className="deal-stock-row">
-                    {CATEGORY_CURRENCIES.map((c) => (
-                      <span key={c.id} title={c.name}>
-                        <ResourceIcon
-                          resourceId={c.id}
-                          stocks={economy.stocks}
-                          size={14}
-                        />{" "}
-                        {economy.stocks?.[c.id] ?? 0}
-                      </span>
-                    ))}
+                <ExpandableSection
+                  title="Ваша казна"
+                  defaultOpen={false}
+                  className="gc-diplo-expand"
+                >
+                  <div className="deal-stock-mini" aria-label="Ваша казна">
+                    <div className="deal-stock-row">
+                      {CATEGORY_CURRENCIES.map((c) => (
+                        <span key={c.id} title={c.name}>
+                          <ResourceIcon
+                            resourceId={c.id}
+                            stocks={economy.stocks}
+                            size={14}
+                          />{" "}
+                          {economy.stocks?.[c.id] ?? 0}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </ExpandableSection>
               )}
-              {onGift && partner && economy && (
-                <div className="deal-gift">
-                  <h4>Односторонний дар</h4>
-                  <p className="hint">Без встречных условий · на тике</p>
-                  <select
-                    value={giftCurrency}
-                    onChange={(e) => setGiftCurrency(e.target.value)}
-                  >
-                    {CURRENCIES.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min={1}
-                    value={giftAmount}
-                    onChange={(e) => setGiftAmount(e.target.value)}
-                    placeholder="сумма"
-                  />
-                  <button
-                    type="button"
-                    className="btn sm block"
-                    disabled={
-                      busy ||
-                      !giftAmount ||
-                      Math.floor(Number(giftAmount)) <= 0
-                    }
-                    onClick={() => {
-                      const amt = Math.floor(Number(giftAmount));
-                      if (amt <= 0) return;
-                      onGift(partner.id, giftCurrency, amt);
-                      setGiftAmount("");
-                    }}
-                  >
-                    Отправить дар
-                  </button>
-                </div>
+
+              {onGift && economy && (
+                <ExpandableSection
+                  title="Дар"
+                  badge="без условий"
+                  defaultOpen={false}
+                  className="gc-diplo-expand"
+                >
+                  <div className="deal-gift">
+                    <p className="hint">Без встречных условий · на тике</p>
+                    <div className="gc-gift-row">
+                      <select
+                        value={giftCurrency}
+                        onChange={(e) => setGiftCurrency(e.target.value)}
+                      >
+                        {GIFT_CURRENCIES.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        value={giftAmount}
+                        onChange={(e) => setGiftAmount(e.target.value)}
+                        placeholder="сумма"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn sm block"
+                      disabled={
+                        busy ||
+                        !giftAmount ||
+                        Math.floor(Number(giftAmount)) <= 0
+                      }
+                      onClick={() => {
+                        const amt = Math.floor(Number(giftAmount));
+                        if (amt <= 0) return;
+                        onGift(other.id, giftCurrency, amt);
+                        setGiftAmount("");
+                      }}
+                    >
+                      Отправить дар
+                    </button>
+                  </div>
+                </ExpandableSection>
               )}
             </>
           ) : (
-            <p className="hint">Выберите державу слева.</p>
+            <p className="hint">Выберите цивилизацию слева.</p>
           )}
         </aside>
       </div>

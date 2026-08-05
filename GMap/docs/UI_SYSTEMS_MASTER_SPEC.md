@@ -489,6 +489,8 @@ type TechAvailability = {
 
 - **Наука → Экономика:** клик по эффекту `production_mult` → Производство с фильтром.
 - **Наука → Силы:** клик по эффекту `unit_upgrade` → Силы с подсветкой улучшенных юнитов.
+- **Силы → Бой:** readiness / «В БОЮ» → engagement или card battle table (`FORCES_SECTION_SPEC.md`).
+- **Силы → Экономика:** upkeep strip → Экономика.
 - **Экономика → Наука:** предупреждение «нужна технология X» → ссылка на Науку.
 
 ### 5.6 Планировщик и история
@@ -854,8 +856,12 @@ Aceternity — библиотека маркетинговых компонен�
 - `ECONOMY_SECTION_SPEC.md` — спецификация Экономики (подробная).
 - `SCIENCE_SECTION_SPEC.md` — спецификация Науки (подробная).
 - `TECH_TREE_SPEC.md` — инструкция по технологиям (подробная).
+- `TECH_CATALOG_SPEC.md` — целевой каталог ≈400 технологий (A–F × Era 1–5).
+- `TECH_ALCHEMY_SPEC.md` — лаборатория / комбинации (дополнение к research).
+- `content/core/tech_recipes.json` / `tech_combos.json` — seed stubs алхимии (не влиты в дерево research).
+- `INTEL_FOG_SPEC.md` — реализация Intel Fog; `INTEL_FOG_CONCEPT.md` — полная концепт-спека.
 - `content/core/economy_schema.json` — экономическая модель.
-- `content/core/technologies.json` — дерево технологий.
+- `content/core/technologies.json` — текущее дерево технологий (миграция к каталогу — отдельно).
 - `content/core/races.json` — база рас.
 - `content/core/buildings.json` — здания.
 - `content/core/id-aliases.json` — миграции id.

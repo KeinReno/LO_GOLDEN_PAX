@@ -16,11 +16,19 @@ import {
   playCardRound,
   passCardRound,
   finalizeCardBattle,
+  applyCardBattleTrophies,
   shouldOfferCardBattle,
   drawFromDeck,
+  readyRound,
+  applyStanceOrder,
+  strikeWithFrontCard,
+  maybeRunAiSeats,
+  reorderFrontCard,
+  retreatFromBattle,
 } from "./cardBattle.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { spawnRefugees } from "./narrative.mjs";
+import { factionsAtWar as atWar } from "./diplomacyCombat.mjs";
 
 export const ENGAGEMENTS_PATH = path.join(DATA_DIR, "engagements.json");
 
@@ -33,6 +41,8 @@ export const OPEN_ENGAGEMENT_STATUSES = new Set([
 export function isOpenEngagement(eng) {
   return eng && OPEN_ENGAGEMENT_STATUSES.has(eng.status);
 }
+
+export { cancelEngagementsMissingForces } from "./engagementReconcile.mjs";
 
 export function readEngagements() {
   ensureDataDir();
@@ -70,16 +80,6 @@ export function readEngagements() {
 
 export function writeEngagements(list) {
   writeJson(ENGAGEMENTS_PATH, list);
-}
-
-function atWar(world, aId, bId) {
-  if (!aId || !bId || aId === bId) return false;
-  return (world.diplomacy ?? []).some((e) => {
-    if (e.relation !== "war") return false;
-    return (
-      (e.aId === aId && e.bId === bId) || (e.aId === bId && e.bId === aId)
-    );
-  });
 }
 
 function engagementRules() {
@@ -187,6 +187,10 @@ function retreatUnit(world, unit, fromSystemId, idleField, idleValue) {
     unit.route = [];
     delete unit.pendingArrival;
     unit[idleField] = idleValue;
+  } else {
+    unit.route = [];
+    delete unit.pendingArrival;
+    unit[idleField] = idleValue;
   }
 }
 
@@ -206,6 +210,7 @@ function applyOccupationEffects(world, eng, journal) {
   const sys = (world.systems ?? []).find((s) => s.id === eng.systemId);
   if (!sys) return;
   const a = eng.sides[0];
+  if (!a) return;
   const planets = (sys.planets || []).filter((p) =>
     eng.planetId ? p.id === eng.planetId : true,
   );
@@ -245,6 +250,7 @@ function applyAftermath(world, eng, fight, journal) {
 
   const a = eng.sides[0];
   const b = eng.sides[1];
+  if (!a || !b) return;
 
   if (fight.outcome === "retreat_a" || fight.retreated === a.factionId) {
     for (const fid of a.fleetIds || []) retreatFleet(world, fid, eng.systemId);
@@ -256,7 +262,7 @@ function applyAftermath(world, eng, fight, journal) {
   }
 
   if (
-    (eng.theater === "assault" || fight.phase === "occupation") &&
+    (eng.theater === "assault" || eng.theater === "ground" || fight.phase === "occupation") &&
     fight.outcome === "win_a" &&
     sys
   ) {
@@ -264,7 +270,7 @@ function applyAftermath(world, eng, fight, journal) {
     if (prev && prev !== a.factionId) {
       sys.contested = true;
       sys.coOwnerFactionIds = Array.from(
-        new Set([...(sys.coOwnerFactionIds || []), a.factionId, prev]),
+        new Set([...(sys.coOwnerFactionIds || []), a.factionId, prev].filter(Boolean)),
       );
     } else {
       sys.ownerFactionId = a.factionId;
@@ -575,16 +581,86 @@ export function advanceEngagement(engagementId, world, journal, opts = {}) {
   return { ok: true, engagement: eng };
 }
 
+/** Force-resolve engagements created by same-system contact (no stance wait). */
+export function instantResolveEngagementIds(world, engagementIds, journal) {
+  const list = readEngagements();
+  for (const id of engagementIds) {
+    const eng = list.find((e) => e.id === id);
+    if (!eng || !isOpenEngagement(eng)) continue;
+    eng.requiresPlayerInput = false;
+    eng.maxRounds = 1;
+    eng.roundsElapsed = 0;
+    autoLockSides(eng);
+  }
+  writeEngagements(list);
+  for (const id of engagementIds) {
+    advanceEngagement(id, world, journal, { force: true, fullResolve: true });
+  }
+}
+
 /**
  * Build engagements from attack intent + auto war contacts in systems.
  */
+function clearPendingAttackMarker(world, intent, systemId) {
+  const fleetId = intent.payload?.fleetId;
+  const legionId = intent.payload?.legionId;
+  if (fleetId) {
+    const f = (world.fleets ?? []).find((x) => x.id === fleetId);
+    if (f?.pendingAttackSystemId === systemId) delete f.pendingAttackSystemId;
+  }
+  if (legionId) {
+    const l = (world.legions ?? []).find((x) => x.id === legionId);
+    if (l?.pendingAttackSystemId === systemId) delete l.pendingAttackSystemId;
+  }
+}
+
+function pendingAttackIntents(world) {
+  const out = [];
+  for (const f of world.fleets ?? []) {
+    if (
+      f.pendingAttackSystemId &&
+      f.systemId === f.pendingAttackSystemId
+    ) {
+      out.push({
+        factionId: f.factionId,
+        payload: {
+          toSystemId: f.pendingAttackSystemId,
+          fleetId: f.id,
+          stance: "assault",
+          source: "pending_attack",
+        },
+      });
+    }
+  }
+  for (const l of world.legions ?? []) {
+    if (
+      l.pendingAttackSystemId &&
+      l.systemId === l.pendingAttackSystemId
+    ) {
+      out.push({
+        factionId: l.factionId,
+        payload: {
+          toSystemId: l.pendingAttackSystemId,
+          legionId: l.id,
+          theater: "assault",
+          stance: "assault",
+          source: "pending_attack",
+        },
+      });
+    }
+  }
+  return out;
+}
+
 export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
   const list = readEngagements();
   const created = [];
+  const allAttackIntents = [...attackIntents, ...pendingAttackIntents(world)];
 
-  for (const intent of attackIntents) {
+  for (const intent of allAttackIntents) {
     const toId = intent.payload?.toSystemId;
     const fleetId = intent.payload?.fleetId;
+    const legionId = intent.payload?.legionId;
     if (!toId) continue;
     const sys = (world.systems ?? []).find((s) => s.id === toId);
     if (!sys) continue;
@@ -593,7 +669,9 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       intent.payload?.theater ||
       (intent.payload?.planetId || intent.payload?.assault
         ? "assault"
-        : "space");
+        : legionId && !fleetId
+          ? "assault"
+          : "space");
 
     const defendersFleets = (world.fleets ?? [])
       .filter(
@@ -614,6 +692,20 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       )
       .map((l) => l.id);
 
+    const targetFleetId = intent.payload?.targetFleetId;
+    const targetLegionId = intent.payload?.targetLegionId;
+    let defendersFleetsScoped = defendersFleets;
+    let defendersLegionsScoped = defendersLegions;
+    if (targetFleetId) {
+      defendersFleetsScoped = defendersFleets.filter((id) => id === targetFleetId);
+      defendersLegionsScoped = [];
+    } else if (targetLegionId) {
+      defendersLegionsScoped = defendersLegions.filter(
+        (id) => id === targetLegionId,
+      );
+      defendersFleetsScoped = [];
+    }
+
     // Only fleets/legions already at the target system fight this tick (not mid-route).
     const attackerFleets = (
       fleetId
@@ -627,9 +719,18 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
             (f) => f.factionId === intent.factionId && f.systemId === toId,
           )
     ).map((f) => f.id);
-    const attackerLegions = (world.legions ?? [])
-      .filter((l) => l.factionId === intent.factionId && l.systemId === toId)
-      .map((l) => l.id);
+    const attackerLegions = (
+      legionId
+        ? (world.legions ?? []).filter(
+            (l) =>
+              l.id === legionId &&
+              l.factionId === intent.factionId &&
+              l.systemId === toId,
+          )
+        : (world.legions ?? []).filter(
+            (l) => l.factionId === intent.factionId && l.systemId === toId,
+          )
+    ).map((l) => l.id);
 
     const attackersPresent =
       attackerFleets.length > 0 ||
@@ -646,11 +747,12 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
     }
 
     let defFaction =
-      defendersFleets[0] &&
-      (world.fleets ?? []).find((f) => f.id === defendersFleets[0])?.factionId;
-    if (!defFaction && defendersLegions[0]) {
+      defendersFleetsScoped[0] &&
+      (world.fleets ?? []).find((f) => f.id === defendersFleetsScoped[0])
+        ?.factionId;
+    if (!defFaction && defendersLegionsScoped[0]) {
       defFaction = (world.legions ?? []).find(
-        (l) => l.id === defendersLegions[0],
+        (l) => l.id === defendersLegionsScoped[0],
       )?.factionId;
     }
     if (!defFaction) defFaction = sys.ownerFactionId;
@@ -675,6 +777,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       ) {
         sys.ownerFactionId = intent.factionId;
       }
+      clearPendingAttackMarker(world, intent, toId);
       continue;
     }
 
@@ -693,9 +796,9 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       },
       sideB: {
         factionId: defFaction,
-        fleetIds: defendersFleets,
-        legionIds: defendersLegions,
-        stance: defendersFleets.some((id) => {
+        fleetIds: defendersFleetsScoped,
+        legionIds: defendersLegionsScoped,
+        stance: defendersFleetsScoped.some((id) => {
           const f = (world.fleets ?? []).find((x) => x.id === id);
           return f?.stance === "fortify";
         })
@@ -717,6 +820,7 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
     list.push(eng);
     created.push(eng);
     applyCardBattleTriggers(world, eng);
+    clearPendingAttackMarker(world, intent, toId);
     sys.activity = "battle";
     journal.push({
       type: "engagement_created",
@@ -888,7 +992,9 @@ export function requestCardBattle(engagementId, factionId, world = null) {
   if (mutual) {
     eng.mode = "card";
     if (world && (!eng.cardBattle || eng.cardBattle.status !== "active")) {
-      prepareCardBattle(eng, world, getContent());
+      const content = getContent();
+      prepareCardBattle(eng, world, content);
+      maybeRunAiSeats(eng.cardBattle, world, content);
     }
   }
   writeEngagements(list);
@@ -909,7 +1015,9 @@ export function forceCardBattle(engagementId, world = null) {
   eng.gmForceCard = true;
   eng.mode = "card";
   if (world && (!eng.cardBattle || eng.cardBattle.status !== "active")) {
-    prepareCardBattle(eng, world, getContent());
+    const content = getContent();
+    prepareCardBattle(eng, world, content);
+    maybeRunAiSeats(eng.cardBattle, world, content);
   }
   writeEngagements(list);
   return { ok: true, engagement: eng };
@@ -917,28 +1025,39 @@ export function forceCardBattle(engagementId, world = null) {
 
 function finishCardEngagement(world, eng, journal) {
   const fin = finalizeCardBattle(eng.cardBattle, world);
+  const trophies = applyCardBattleTrophies(world, eng, fin);
   const sideA = eng.sides[0];
   const sideB = eng.sides[1];
   let outcome = "draw";
   if (fin.winnerFactionId === sideA?.factionId) outcome = "win_a";
   else if (fin.winnerFactionId === sideB?.factionId) outcome = "win_b";
 
+  const lossesA = fin.lossesByFaction?.[sideA?.factionId] || [];
+  const lossesB = fin.lossesByFaction?.[sideB?.factionId] || [];
+
   const fight = {
     ok: true,
     outcome,
     powerA: 0,
     powerB: 0,
-    lossesA: [],
-    lossesB: [],
+    lossesA,
+    lossesB,
     mode: "card",
     winnerFactionId: fin.winnerFactionId,
+    retreated: fin.retreatedFactionId || null,
+    trophies: trophies.trophies,
   };
   finalizeEngagement(world, eng, fight, journal);
+  if (eng.result) {
+    eng.result.trophies = trophies.trophies;
+    eng.result.lossesByFaction = fin.lossesByFaction;
+  }
   journal.push({
     type: "card_battle_resolved",
     engagementId: eng.id,
     outcome,
     winnerFactionId: fin.winnerFactionId,
+    trophies: trophies.trophies,
   });
 }
 
@@ -977,30 +1096,73 @@ export function applyCardBattleTriggers(world, eng, opts = {}) {
   return { mode: eng.mode, reason: "auto" };
 }
 
-export function playEngagementCard(engagementId, factionId, cardId, world) {
+function ensureCardBattlePrepared(eng, world, content) {
+  if (!eng.cardBattle || eng.cardBattle.status !== "active") {
+    const prep = prepareCardBattle(eng, world, content);
+    if (!prep.ok) return prep;
+    maybeRunAiSeats(eng.cardBattle, world, content);
+  }
+  // Migrate legacy states missing energy/phase
+  const st = eng.cardBattle;
+  if (st && !st.energy) {
+    const ids = (eng.sides || []).map((s) => s.factionId);
+    const rules = content?.rules?.cardBattle || {};
+    const e = rules.energyPerRound ?? 5;
+    const mf = rules.maxFront ?? 5;
+    st.energy = Object.fromEntries(ids.map((id) => [id, e]));
+    st.maxEnergy = e;
+    st.maxFront = st.maxFront ?? mf;
+    st.readySides = st.readySides || [];
+    st.stanceOrderUsedRound = st.stanceOrderUsedRound || {};
+    st.buffs = st.buffs || {};
+    st.block = st.block || Object.fromEntries(ids.map((id) => [id, 0]));
+    st.statuses = st.statuses || {};
+    st.intents = st.intents || {};
+    st.struckThisRound = st.struckThisRound || {};
+    st.phase = st.phase || "plan";
+    st.baseHpMax = st.baseHpMax || { ...st.baseHp };
+    st.styleMoments = st.styleMoments || [];
+  }
+  return { ok: true };
+}
+
+function afterCardAction(eng, world, content, result) {
+  eng.cardBattle = result.state;
+  maybeRunAiSeats(eng.cardBattle, world, content);
+  const journal = [];
+  if (eng.cardBattle.status === "resolved") {
+    finishCardEngagement(world, eng, journal);
+  }
+  return journal;
+}
+
+export function playEngagementCard(
+  engagementId,
+  factionId,
+  cardId,
+  world,
+  opts = {},
+) {
   const content = getContent();
   const list = readEngagements();
   const eng = list.find((e) => e.id === engagementId);
   if (!eng) return { ok: false, error: "engagement missing" };
   if (eng.mode !== "card") return { ok: false, error: "not card mode" };
 
-  if (!eng.cardBattle || eng.cardBattle.status !== "active") {
-    const prep = prepareCardBattle(eng, world, content);
-    if (!prep.ok) return prep;
-  }
+  const prep = ensureCardBattlePrepared(eng, world, content);
+  if (!prep.ok) return prep;
 
   if (!eng.sides.some((s) => s.factionId === factionId)) {
     return { ok: false, error: "not a side" };
   }
 
-  const result = playCardRound(eng.cardBattle, factionId, cardId, content);
+  const result = playCardRound(eng.cardBattle, factionId, cardId, content, {
+    targetId: opts.targetId,
+    mode: opts.mode,
+  });
   if (!result.ok) return result;
 
-  eng.cardBattle = result.state;
-  const journal = [];
-  if (result.state.status === "resolved") {
-    finishCardEngagement(world, eng, journal);
-  }
+  const journal = afterCardAction(eng, world, content, result);
   writeEngagements(list);
   return {
     ok: true,
@@ -1010,7 +1172,42 @@ export function playEngagementCard(engagementId, factionId, cardId, world) {
   };
 }
 
-export function passEngagementCard(engagementId, factionId, world) {
+export function strikeEngagementFront(
+  engagementId,
+  factionId,
+  cardId,
+  targetId,
+  world,
+) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card") return { ok: false, error: "not card mode" };
+  const prep = ensureCardBattlePrepared(eng, world, content);
+  if (!prep.ok) return prep;
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const result = strikeWithFrontCard(
+    eng.cardBattle,
+    factionId,
+    cardId,
+    targetId,
+    content,
+  );
+  if (!result.ok) return result;
+  const journal = afterCardAction(eng, world, content, result);
+  writeEngagements(list);
+  return {
+    ok: true,
+    engagement: eng,
+    journal,
+    pairResult: result.pairResult,
+  };
+}
+
+export function readyEngagementCard(engagementId, factionId, world) {
   const content = getContent();
   const list = readEngagements();
   const eng = list.find((e) => e.id === engagementId);
@@ -1018,15 +1215,46 @@ export function passEngagementCard(engagementId, factionId, world) {
   if (eng.mode !== "card" || !eng.cardBattle) {
     return { ok: false, error: "no card battle" };
   }
-  const result = passCardRound(eng.cardBattle, factionId, content);
+  const result = readyRound(eng.cardBattle, factionId, content);
   if (!result.ok) return result;
-  eng.cardBattle = result.state;
-  const journal = [];
-  if (result.state.status === "resolved") {
-    finishCardEngagement(world, eng, journal);
+  const journal = afterCardAction(eng, world, content, result);
+  writeEngagements(list);
+  return { ok: true, engagement: eng, journal, clashed: result.clashed };
+}
+
+export function stanceOrderEngagement(
+  engagementId,
+  factionId,
+  world,
+  opts = {},
+) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card") return { ok: false, error: "not card mode" };
+  const prep = ensureCardBattlePrepared(eng, world, content);
+  if (!prep.ok) return prep;
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
   }
+  const side = eng.sides.find((s) => s.factionId === factionId);
+  const stance = opts.stance || side?.stance || "hold";
+  const result = applyStanceOrder(
+    eng.cardBattle,
+    factionId,
+    stance,
+    content,
+    { cardId: opts.cardId },
+  );
+  if (!result.ok) return result;
+  const journal = afterCardAction(eng, world, content, result);
   writeEngagements(list);
   return { ok: true, engagement: eng, journal };
+}
+
+export function passEngagementCard(engagementId, factionId, world) {
+  return readyEngagementCard(engagementId, factionId, world);
 }
 
 export function drawEngagementCard(engagementId, factionId, world) {
@@ -1035,16 +1263,64 @@ export function drawEngagementCard(engagementId, factionId, world) {
   const eng = list.find((e) => e.id === engagementId);
   if (!eng) return { ok: false, error: "engagement missing" };
   if (eng.mode !== "card") return { ok: false, error: "not card mode" };
-  if (!eng.cardBattle || eng.cardBattle.status !== "active") {
-    const prep = prepareCardBattle(eng, world, content);
-    if (!prep.ok) return prep;
-  }
+  const prep = ensureCardBattlePrepared(eng, world, content);
+  if (!prep.ok) return prep;
   if (!eng.sides.some((s) => s.factionId === factionId)) {
     return { ok: false, error: "not a side" };
   }
   const result = drawFromDeck(eng.cardBattle, factionId, content);
   if (!result.ok) return result;
   eng.cardBattle = result.state;
+  maybeRunAiSeats(eng.cardBattle, world, content);
   writeEngagements(list);
   return { ok: true, engagement: eng, drawn: result.drawn };
+}
+
+export function reorderEngagementFront(
+  engagementId,
+  factionId,
+  cardId,
+  toIndex,
+  world,
+) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card") return { ok: false, error: "not card mode" };
+  const prep = ensureCardBattlePrepared(eng, world, content);
+  if (!prep.ok) return prep;
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const result = reorderFrontCard(
+    eng.cardBattle,
+    factionId,
+    cardId,
+    toIndex,
+    content,
+  );
+  if (!result.ok) return result;
+  const journal = afterCardAction(eng, world, content, result);
+  writeEngagements(list);
+  return { ok: true, engagement: eng, journal };
+}
+
+export function retreatEngagementCard(engagementId, factionId, world) {
+  const content = getContent();
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (eng.mode !== "card" || !eng.cardBattle) {
+    return { ok: false, error: "no card battle" };
+  }
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const result = retreatFromBattle(eng.cardBattle, factionId, content);
+  if (!result.ok) return result;
+  const journal = [];
+  finishCardEngagement(world, eng, journal);
+  writeEngagements(list);
+  return { ok: true, engagement: eng, journal, retreated: true };
 }

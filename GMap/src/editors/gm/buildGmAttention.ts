@@ -1,0 +1,153 @@
+import type { GmLiveDomainId } from "../../state/types";
+import type { IntentRow } from "../IntentsInbox";
+import type { WorldState } from "../../state/types";
+
+export type GmAttentionKind =
+  | "intents"
+  | "combat"
+  | "quest"
+  | "timer"
+  | "loyalty"
+  | "deficit"
+  | "alchemy"
+  | "npc_task";
+
+export type GmAttentionItem = {
+  id: string;
+  kind: GmAttentionKind;
+  label: string;
+  detail?: string;
+  domain: GmLiveDomainId;
+  factionId?: string | null;
+  systemId?: string | null;
+  priority: number;
+};
+
+type EngagementLite = {
+  id: string;
+  status?: string;
+  systemId?: string;
+  theater?: string;
+};
+
+/**
+ * Build GM Attention list for Live strip.
+ * Pure + sync — engagements/intents passed from callers that already fetch.
+ */
+export function buildGmAttention(opts: {
+  world: WorldState;
+  pendingIntents?: IntentRow[];
+  engagements?: EngagementLite[];
+}): GmAttentionItem[] {
+  const { world } = opts;
+  const turn = world.meta?.turn ?? 0;
+  const items: GmAttentionItem[] = [];
+
+  const pending = opts.pendingIntents ?? [];
+  if (pending.length > 0) {
+    const byFac = new Map<string, number>();
+    for (const i of pending) {
+      byFac.set(i.factionId, (byFac.get(i.factionId) ?? 0) + 1);
+    }
+    for (const [factionId, n] of byFac) {
+      const name =
+        world.factions.find((f) => f.id === factionId)?.name ?? factionId;
+      items.push({
+        id: `intent:${factionId}`,
+        kind: "intents",
+        label: `${name}: ${n} приказ${n === 1 ? "" : n < 5 ? "а" : "ов"}`,
+        domain: "inbox",
+        factionId,
+        priority: 0,
+      });
+    }
+  }
+
+  for (const e of opts.engagements ?? []) {
+    if (
+      e.status !== "active" &&
+      e.status !== "commit" &&
+      e.status !== "contact"
+    ) {
+      continue;
+    }
+    const sys = world.systems.find((s) => s.id === e.systemId);
+    items.push({
+      id: `combat:${e.id}`,
+      kind: "combat",
+      label: `Бой · ${sys?.name ?? e.theater ?? e.id}`,
+      detail: e.status,
+      domain: "diplo",
+      systemId: e.systemId ?? null,
+      priority: 1,
+    });
+  }
+
+  for (const q of world.quests ?? []) {
+    if (q.status !== "active" && q.status !== "hidden") continue;
+    if (q.expiresTurn != null && q.expiresTurn - turn <= 2) {
+      items.push({
+        id: `quest-exp:${q.id}`,
+        kind: "quest",
+        label: `Квест истекает · ${q.name}`,
+        detail: `ход ${q.expiresTurn}`,
+        domain: "quests",
+        systemId: q.systemId ?? null,
+        priority: 2,
+      });
+    }
+  }
+
+  for (const sys of world.systems) {
+    for (const t of sys.timers ?? []) {
+      const left = t.expiresTurn - turn;
+      if (left <= 1) {
+        items.push({
+          id: `timer:${sys.id}:${t.id}`,
+          kind: "timer",
+          label: `Таймер · ${sys.name}`,
+          detail: t.label?.trim() || `ход ${t.expiresTurn}`,
+          domain: "ops",
+          systemId: sys.id,
+          priority: 2,
+        });
+      }
+    }
+    for (const p of sys.planets ?? []) {
+      if (typeof p.loyalty === "number" && p.loyalty < 35) {
+        items.push({
+          id: `loyal:${sys.id}:${p.id}`,
+          kind: "loyalty",
+          label: `Низкая лояльность · ${p.name || sys.name}`,
+          detail: `${Math.round(p.loyalty)}`,
+          domain: "court",
+          systemId: sys.id,
+          factionId: p.ownerFactionId ?? sys.ownerFactionId ?? null,
+          priority: 3,
+        });
+      }
+    }
+  }
+
+  for (const f of world.factions) {
+    for (const npc of f.npcs ?? []) {
+      const task = npc.currentTask;
+      if (!task) continue;
+      const left = task.etaTurn - turn;
+      if (left <= 0) {
+        items.push({
+          id: `npc:${npc.id}:${task.id}`,
+          kind: "npc_task",
+          label: `${npc.name}: поручение к сдаче`,
+          detail: task.label,
+          domain: "court",
+          factionId: f.id,
+          priority: 2,
+        });
+      }
+    }
+  }
+
+  items.sort((a, b) => a.priority - b.priority || a.label.localeCompare(b.label, "ru"));
+  return items.slice(0, 24);
+}

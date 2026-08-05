@@ -44,6 +44,7 @@ export function HoldRevealButton({
   disabled,
   className,
   title,
+  style,
   onHoldComplete,
   onPressStart,
   moveCancelPx,
@@ -157,6 +158,7 @@ export function HoldRevealButton({
         .join(" ")}
       style={
         {
+          ...style,
           ["--hold" as string]: progress,
           ["--hold-x" as string]: `${origin.x}%`,
           ["--hold-y" as string]: `${origin.y}%`,

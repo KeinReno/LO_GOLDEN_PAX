@@ -2,6 +2,8 @@
   "ship.belator_dread": {
     "id": "ship.belator_dread",
     "name": "Громоносец",
+    "faction": "belator",
+    "tier": 8,
     "roles": [
       "capital",
       "bombard"
@@ -19,6 +21,105 @@
       "assault": 1,
       "ground": 0
     },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=7"
+        },
+        "count": 18
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=6"
+        },
+        "count": 10
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=7"
+        },
+        "count": 10
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=6"
+        },
+        "count": 6
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=7"
+        },
+        "count": 5
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=6"
+        },
+        "count": 3
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=6"
+        },
+        "count": 12
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=6"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=6"
+        },
+        "count": 3,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 4,
+        "per": "turn"
+      }
+    ],
     "raceVariants": {
       "race_belator": {
         "statsMult": {
@@ -31,6 +132,8 @@
   "ship.swarm_brood": {
     "id": "ship.swarm_brood",
     "name": "Роевая масса",
+    "faction": "generic",
+    "tier": 4,
     "roles": [
       "screen",
       "carrier"
@@ -48,6 +151,78 @@
       "assault": 0.4,
       "ground": 0
     },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 5
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=3"
+        },
+        "count": 3
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=3"
+        },
+        "count": 2
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=3"
+        },
+        "count": 2
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=3"
+        },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
     "raceVariants": {
       "race_swarm": {
         "statsMult": {
@@ -60,6 +235,8 @@
   "ship.advent_cruiser": {
     "id": "ship.advent_cruiser",
     "name": "Звёздный Адвент",
+    "faction": "generic",
+    "tier": 7,
     "roles": [
       "line",
       "capital"
@@ -77,6 +254,105 @@
       "assault": 0.7,
       "ground": 0
     },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=6"
+        },
+        "count": 12
+      },
+      {
+        "role": "armor",
+        "require": {
+          "properties": [
+            "strong",
+            "malleable"
+          ],
+          "tier": ">=5"
+        },
+        "count": 6
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=6"
+        },
+        "count": 6
+      },
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=5"
+        },
+        "count": 4
+      },
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=6"
+        },
+        "count": 3
+      },
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "accelerate"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=5"
+        },
+        "count": 8
+      },
+      {
+        "role": "tactic",
+        "require": {
+          "category": "F",
+          "tier": ">=5"
+        },
+        "count": 2
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=5"
+        },
+        "count": 2,
+        "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=4"
+        },
+        "count": 3,
+        "per": "turn"
+      }
+    ],
     "raceVariants": {
       "race_human": {
         "statsMult": {

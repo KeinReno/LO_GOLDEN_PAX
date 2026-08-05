@@ -91,9 +91,15 @@
     "status": "stub",
     "mode": "gm_table_driven",
     "placeholder_rates": [
-      { "pair": "currency.metal → currency.supply", "buy": 1.0, "sell": 0.85, "note": "Legacy bridge (ориентир GM)" },
-      { "pair": "currency.extracta → currency.materia", "buy": 2.0, "sell": 1.6, "note": "A→B переработка (ориентир GM)" },
-      { "pair": "currency.cognitio → currency.metal", "buy": 5.0, "sell": 4.0, "note": "Научный обмен (ориентир GM)" }
+      { "pair": "currency.metal → currency.supply", "buy": 1.0, "sell": 0.85, "note": "Legacy bridge" },
+      { "pair": "currency.materia → currency.metal", "buy": 1.0, "sell": 0.95, "note": "B↔metal peg" },
+      { "pair": "currency.extracta → currency.materia", "buy": 2.0, "sell": 1.6, "note": "A→B переработка" },
+      { "pair": "currency.materia → currency.industria", "buy": 1.75, "sell": 1.45, "note": "B→C" },
+      { "pair": "currency.industria → currency.energia", "buy": 1.55, "sell": 1.3, "note": "C→D" },
+      { "pair": "currency.energia → currency.bios", "buy": 1.45, "sell": 1.2, "note": "D→E" },
+      { "pair": "currency.bios → currency.cognitio", "buy": 2.0, "sell": 1.65, "note": "E→F наука" },
+      { "pair": "currency.cognitio → currency.extracta", "buy": 0.55, "sell": 0.4, "note": "F→A reverse" },
+      { "pair": "currency.cognitio → currency.metal", "buy": 3.5, "sell": 2.8, "note": "Научный обмен" }
     ]
   }
 }

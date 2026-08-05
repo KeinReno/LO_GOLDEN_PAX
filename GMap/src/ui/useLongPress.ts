@@ -1,6 +1,19 @@
 import { useDrag } from "@use-gesture/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, type CSSProperties } from "react";
 import { GESTURE } from "./gestureMap";
+
+/** @use-gesture expects touch-action: none on the bind target (dev warning + scroll jank). */
+export function mergeGestureBindProps(
+  props: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...props,
+    style: {
+      touchAction: "none",
+      ...(props.style as CSSProperties | undefined),
+    },
+  };
+}
 
 type LongPressHandlers = {
   onLongPress: (e: { x: number; y: number }) => void;
@@ -9,6 +22,11 @@ type LongPressHandlers = {
   ms?: number;
   /** Prevent native context menu while listening. */
   preventContextMenu?: boolean;
+  /**
+   * Pointer capture blocks HTML5 dragstart on the same element.
+   * Keep true for menus; set false when the target is also `draggable`.
+   */
+  pointerCapture?: boolean;
 };
 
 /**
@@ -22,6 +40,7 @@ export function useLongPress({
   enabled = true,
   ms = GESTURE.longPressMs,
   preventContextMenu = true,
+  pointerCapture = true,
 }: LongPressHandlers) {
   const firedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
@@ -65,10 +84,11 @@ export function useLongPress({
     },
     {
       filterTaps: true,
-      threshold: 0,
-      pointer: { touch: true },
+      threshold: GESTURE.dragThresholdPx,
+      pointer: { touch: true, capture: pointerCapture },
+      preventScroll: pointerCapture,
     },
   );
 
-  return bind;
+  return useCallback(() => mergeGestureBindProps(bind()), [bind]);
 }

@@ -189,6 +189,76 @@ export interface FactionEffectInstance {
   source?: { kind: string; id: string; label?: string };
   /** Turn after which the effect is pruned (economyTick). */
   expiresTurn?: number | null;
+  /** Where the effect applies; default faction (realm-wide). */
+  scope?: "faction" | "system" | "legion" | "fleet";
+  /** Target id when scope is system / legion / fleet. */
+  targetId?: string;
+}
+
+/** Internal court bloc / clique inside a player polity. */
+export type InternalBlocStance =
+  | "loyal"
+  | "ambitious"
+  | "hostile"
+  | "neutral";
+
+export type InternalBlocKind =
+  | "house"
+  | "church"
+  | "military"
+  | "guild"
+  | "race_caucus"
+  | "guest";
+
+export interface InternalBloc {
+  id: string;
+  name: string;
+  color?: string;
+  stance: InternalBlocStance;
+  /** House / church / race caucus / … */
+  kind?: InternalBlocKind;
+  agenda?: string;
+  description?: string;
+  /** Peoples this bloc speaks for (soft race ids). */
+  raceIds?: string[];
+  /** Current head NPC id; null/absent = vacant throne. */
+  leaderNpcId?: string | null;
+  /** Home system (Elegantia, …). */
+  homeSystemId?: string;
+  homeSystemName?: string;
+  /** 0–100 weight from seats + postings + leadership. */
+  influence: number;
+  /** Derived support for the ruler. */
+  support?: number;
+  /** Derived threat / pressure. */
+  threat?: number;
+}
+
+/** NPC as head of a people / race inside the polity. */
+export interface NpcRaceLeadership {
+  raceId: string;
+  /** Display title, e.g. «Матриарх», «Стратег Эланор». */
+  title?: string;
+}
+
+/** Which council seats are available to this polity. */
+export interface FactionCouncil {
+  unlockedSeatIds: string[];
+  lockedSeatIds?: string[];
+  /** Override display labels for catalog / extra seat ids. */
+  seatLabels?: Record<string, string>;
+  /**
+   * Portfolio (specialty) per seat id — shown under «Советник».
+   * Keys = seat ids, values = portfolio ids from council_seats.portfolios.
+   */
+  seatPortfolios?: Record<string, string>;
+  /** Extra seats beyond the content catalog (unique ids). */
+  extraSeats?: Array<{
+    id: string;
+    label: string;
+    roles?: string[];
+    angleDeg?: number;
+  }>;
 }
 
 /** Court timeline entry (RP Court / A10). */
@@ -674,6 +744,22 @@ export interface NpcTask {
   effects?: FactionEffectInstance[];
   /** Linked quest id (advance arc stage on finish). */
   linkedQuestId?: string;
+  /** Catalog id from court_tasks.json when assigned from catalog. */
+  taskId?: string;
+}
+
+/** Durable court posting (governor / commander / admiral). */
+export type NpcPostingKind = "court" | "governor" | "commander" | "admiral";
+
+export interface NpcPosting {
+  kind: NpcPostingKind;
+  /** Target system when kind === "governor". */
+  systemId?: string;
+  /** Target legion when kind === "commander". */
+  legionId?: string;
+  /** Target fleet when kind === "admiral". */
+  fleetId?: string;
+  sinceTurn: number;
 }
 
 /** Court / RP actor attached to a polity (player HQ + GM dossier). */
@@ -700,6 +786,27 @@ export interface FactionNpc {
   /** GM-only. */
   gmNotes?: string;
   tags?: string[];
+  /** Catalog trait ids from npc_traits.json (passive buffs). */
+  traitIds?: string[];
+  /** Durable posting; default court (at the capital council). */
+  posting?: NpcPosting;
+  /**
+   * Seat at the round council table (`council_seats.json` id).
+   * Null / unset = in the personnel pool (drawer), not seated.
+   */
+  councilSeat?: string | null;
+  /** Internal bloc id (`Faction.internalBlocs` / content internal_blocs). */
+  blocId?: string | null;
+  /** True if this NPC is the head of their bloc (house / church). */
+  isBlocLeader?: boolean;
+  /**
+   * Leader of a people/race inside the polity (may also sit at council).
+   */
+  raceLeadership?: NpcRaceLeadership | null;
+  /**
+   * Player's character — locked to `seat.ruler`, never pool/unseat/field posting.
+   */
+  isPlayerRuler?: boolean;
   /** Current court assignment (A10). */
   currentTask?: NpcTask;
   /** Soft opinion toward other NPCs (−100…+100). */
@@ -762,6 +869,15 @@ export interface Faction {
   gmNotes?: string;
   /** Court / key NPCs for HQ «Двор» panel. */
   npcs?: FactionNpc[];
+  /**
+   * Player character NPC id — always occupies `seat.ruler`.
+   * Synced from `npcs[].isPlayerRuler` on normalize.
+   */
+  rulerNpcId?: string | null;
+  /** Internal houses / orders competing for influence at court. */
+  internalBlocs?: InternalBloc[];
+  /** Unlocked / locked council seats for this polity. */
+  council?: FactionCouncil;
   /** Lasting ModifierStack effects from completed NPC tasks / events (A10). */
   activeEffects?: FactionEffectInstance[];
   /**
@@ -788,6 +904,16 @@ export interface Faction {
   loyaltyByRace?: Record<string, number>;
   /** Aggregate loyalty fallback when race-specific missing. */
   loyalty?: number;
+  /**
+   * Биржевая валюта государства (fx.* из faction_currencies).
+   * Привязка казны/котировок к пегу.
+   */
+  fxCurrencyId?: string | null;
+  /**
+   * Товарный пег казны (map.solari / map.blumatid / …).
+   * UI «Казна/Доход» читает этот ресурс; metal остаётся пром. мостом.
+   */
+  treasuryPeg?: string | null;
 }
 
 export type PolityKind = "state" | "faction";
@@ -882,6 +1008,8 @@ export interface Fleet {
     systemId: string;
     fromSystemId?: string;
   };
+  /** Attack resolves when unit reaches this system (multi-hop attack orders). */
+  pendingAttackSystemId?: string;
 }
 
 /** Ground force / legion attached to a system. */
@@ -894,6 +1022,8 @@ export interface Legion {
   status: LegionStatus;
   /** Planned hops (system ids), same as fleets. */
   route?: string[];
+  /** Attack resolves when legion reaches this system. */
+  pendingAttackSystemId?: string;
   /** Previous system after a hop — used for retreat. */
   lastSystemId?: string;
   /** Species for raceVariants (A3). */
@@ -960,6 +1090,9 @@ export interface DiplomacyEdge {
   aId: string;
   bId: string;
   relation: DiplomacyRelation;
+  /** Legacy/alternate serialized war state (quest engine). */
+  status?: string;
+  state?: string;
 }
 
 export interface PlayerOrder {
@@ -1021,13 +1154,29 @@ export interface BrushSettings {
 
 export type SystemSelectMode = "replace" | "add" | "toggle";
 
-/** GM chrome: worldbuild vs live table. */
-export type GmShellMode = "prep" | "live";
+/** GM chrome: map session vs content atelier. */
+export type GmShellMode = "gm" | "atelier";
+
+/** Live table domain workbench (F1–F9). Null = closed. */
+export type GmLiveDomainId =
+  | "inbox"
+  | "economy"
+  | "science"
+  | "court"
+  | "diplo"
+  | "intel"
+  | "quests"
+  | "ops"
+  | "health";
 
 export interface UiState {
   tool: EditorTool;
-  /** Prep = cartography tools; Live = inbox / tick / share-first chrome. */
+  /** gm = map + tools + domains; atelier = content catalogs. */
   gmShellMode: GmShellMode;
+  /** Active domain workbench (null = none). */
+  gmLiveDomain: GmLiveDomainId | null;
+  /** Optional LiveStage gesture wells (default off). */
+  gmGesturesEnabled: boolean;
   selectedSystemId: string | null;
   /** Multi-select set (includes selectedSystemId when set). */
   selectedSystemIds: string[];
@@ -1170,17 +1319,47 @@ export interface BattleCard {
   /** Source composition parent (fleet/legion id). */
   parentId?: string;
   parentKind?: "fleet" | "legion";
+  /** Composition index from Forces deck — lower prefers opening hand. */
+  deployOrder?: number;
+  energyCost?: number;
+  tactical?: boolean;
+  bonusKeywords?: string[];
 }
 
 export interface CardBattleLogEntry {
   round: number;
   side: string;
-  action: "play" | "pass" | "resolve" | "draw" | "base_hit";
+  action:
+    | "play"
+    | "deploy"
+    | "strike"
+    | "pass"
+    | "resolve"
+    | "draw"
+    | "base_hit"
+    | "ready"
+    | "clash"
+    | "stance_order"
+    | "round_start"
+    | "brace"
+    | "focus"
+    | "reorder"
+    | "retreat";
   cardId?: string;
+  targetId?: string;
+  orderId?: string;
   outcome?: {
     winnerCard?: string;
     loserCard?: string;
     damageDealt?: number;
+    blocked?: number;
+    overflowToBase?: number;
+    redirected?: boolean;
+    statusApplied?: string;
+    blockGained?: number;
+    label?: string;
+    energyCost?: number;
+    toIndex?: number;
   };
 }
 
@@ -1192,11 +1371,96 @@ export interface CardBattleState {
   frontLines: { [sideId: string]: BattleCard[] };
   /** Soft HP pool when hitting with no opposing front-line card. */
   baseHp: { [sideId: string]: number };
+  /** Max base at start (for UI bars). */
+  baseHpMax?: { [sideId: string]: number };
+  /** StS-style Block pool per side (soaks base/overflow hits). */
+  block?: { [sideId: string]: number };
+  energy: { [sideId: string]: number };
+  maxEnergy: number;
+  maxFront: number;
+  readySides: string[];
+  /** Last round when side used stance order (0 = never). */
+  stanceOrderUsedRound: { [sideId: string]: number };
+  /** Temporary buffs this plan phase. */
+  buffs?: {
+    [sideId: string]: {
+      damageMult?: number;
+      defenseMult?: number;
+      absorb?: number;
+      flankBase?: boolean;
+      bombard?: boolean;
+      applyVulnerableOnStrike?: boolean;
+      retainBlock?: boolean;
+      openingBlock?: boolean;
+    };
+  };
+  /** Per-card statuses (vulnerable / weak / focus). */
+  statuses?: {
+    [cardId: string]: {
+      vulnerable?: boolean;
+      weak?: boolean;
+      focus?: boolean;
+    };
+  };
+  /** Telegraph of last / planned action per side. */
+  intents?: {
+    [sideId: string]: {
+      kind: "deploy" | "strike" | "order" | "pass" | string;
+      cardId?: string;
+      targetId?: string;
+      orderId?: string;
+      label?: string;
+      round?: number;
+    } | null;
+  };
+  /** Front card ids that already struck this round (free first strike). */
+  struckThisRound?: { [sideId: string]: string[] };
+  escortUsed?: { [sideId: string]: string[] };
+  /** Free front reorders remaining this round. */
+  reorderFreeLeft?: { [sideId: string]: number };
+  techMods?: {
+    [sideId: string]: {
+      blockBonus?: number;
+      damageMult?: number;
+      freeReorder?: boolean;
+    };
+  };
+  retreatedFactionId?: string | null;
+  phase: "plan" | "clash" | "resolved";
   round: number;
+  /** Legacy / whose UI prompt; plan phase allows both until ready. */
   currentSide: string;
   status: "active" | "resolved";
   log: CardBattleLogEntry[];
   winnerFactionId?: string | null;
+  openingStance?: { [sideId: string]: string };
+  openingBuffs?: { [sideId: string]: Record<string, unknown> };
+  clashEvents?: Array<{
+    kind: "pair" | "base";
+    side: string;
+    cardId: string;
+    targetId: string;
+    laneIndex?: number;
+    damageDealt?: number;
+    blocked?: number;
+    overflowToBase?: number;
+    redirected?: boolean;
+    statusApplied?: string;
+    killedTarget?: boolean;
+    killedAttacker?: boolean;
+    splashTargetId?: string;
+    splashDamage?: number;
+    styleTags?: string[];
+  }>;
+  /** Monotonic clash counter for cinema dedupe. */
+  clashSeq?: number;
+  /** Stylish plays this battle (banners + small cognitio on win). */
+  styleMoments?: Array<{
+    sideId: string;
+    kind: string;
+    label: string;
+    round?: number;
+  }>;
 }
 
 /** Intel Fog knowledge depth for an entity (0 = unknown … 4 = full). */
@@ -1282,6 +1546,8 @@ export interface ViewerPayload {
   tableRevision?: number;
   apMax?: number;
   reservedAp?: number;
+  forceApMax?: number;
+  reservedForceAp?: number;
   economy?: {
     stocks: Record<string, number>;
     taxes: Record<string, string>;
@@ -1293,7 +1559,13 @@ export interface ViewerPayload {
     /** Optional bottleneck map keyed by category (A–F). */
     bottlenecks?: Record<string, { tier?: number; deficit?: number } | number>;
     unlockedTechs?: string[];
-    /** Researched tech upgrade ids (e.g. tech.fusion.overclock). */
+    alchemy?: {
+      attemptsUsedThisTurn?: number;
+      discoveredRecipes?: string[];
+      lastExperimentTurn?: number | null;
+      journal?: Array<Record<string, unknown>>;
+    };
+    /** Researched tech upgrade ids (e.g. tech.fusion.feature). */
     unlockedUpgrades?: string[];
     /** Trade / historical acquisitions (Phase D). */
     acquiredTechs?: Array<{

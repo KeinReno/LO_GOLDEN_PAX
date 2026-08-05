@@ -402,22 +402,24 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            #[cfg(not(debug_assertions))]
+            // Prefer live host (Vite :5173 or serve :4173) so GM UI isn't stuck
+            // on a stale embedded frontendDist from an old tauri build.
             {
                 let state = app.state::<HostState>();
-                match ensure_prod_host(&state) {
-                    Ok(st) => {
-                        eprintln!("[gmap] host at {}", st.url);
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.eval(&format!(
-                                "window.location.replace('{}')",
-                                st.url
-                            ));
-                        }
-                    }
+                let st = match ensure_prod_host(&state) {
+                    Ok(s) => s,
                     Err(e) => {
                         eprintln!("[gmap] host start failed: {e}");
-                        // last_error already stored; badge polls host_status
+                        build_status(&state)
+                    }
+                };
+                if st.running {
+                    eprintln!("[gmap] host at {}", st.url);
+                    if let Some(w) = app.get_webview_window("main") {
+                        let _ = w.eval(&format!(
+                            "window.location.replace('{}')",
+                            st.url
+                        ));
                     }
                 }
             }

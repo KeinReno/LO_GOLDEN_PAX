@@ -30,6 +30,10 @@ export interface QuestChoice {
   resultText?: string;
   /** World choice needs a dice roll before resolve. */
   needsDice?: boolean;
+  /** Stock spends required (currencyId → amount). */
+  costs?: Record<string, number>;
+  /** Short cost label for the choice card, e.g. "−6 bios". */
+  costLabel?: string;
 }
 
 export interface DiceCheck {

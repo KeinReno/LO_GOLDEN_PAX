@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeWorld } from "./normalizeWorld.mjs";
 import { getStoreBackend } from "./db/storeAdapter.mjs";
+import { cancelEngagementsMissingForces } from "./engagementReconcile.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = path.resolve(__dirname, "../data");
@@ -138,6 +139,14 @@ export function writeLiveBoard(world, opts = {}) {
     if (!fs.existsSync(loreDir)) fs.mkdirSync(loreDir, { recursive: true });
     writeJson(LORE_PATH, normalized);
   }
+  // Удалили флот/легион из доски → открытые бои с ним закрываем.
+  if (!opts.skipEngagementReconcile) {
+    try {
+      cancelEngagementsMissingForces(normalized);
+    } catch {
+      /* ignore */
+    }
+  }
   return {
     ok: true,
     world: normalized,
@@ -150,20 +159,29 @@ export function writeLiveBoard(world, opts = {}) {
 export function getVersionPayload() {
   const world = readLiveBoard();
   const meta = getTableMeta();
+  const metaRev = Number(meta.tableRevision) || 0;
   if (!world) {
     return {
       ok: false,
-      tableRevision: meta.tableRevision ?? 0,
+      tableRevision: metaRev,
       turn: 0,
-      updatedAt: null,
+      updatedAt: meta.updatedAt ?? null,
       systems: 0,
     };
   }
+  const worldRev = Number(world.meta?.tableRevision) || 0;
+  // Prefer the higher revision: apply-build / ops may bump table-meta
+  // without rewriting the live board body.
+  const tableRevision = Math.max(worldRev, metaRev);
+  const updatedAt =
+    metaRev >= worldRev && meta.updatedAt
+      ? meta.updatedAt
+      : (world.meta?.updatedAt ?? meta.updatedAt ?? null);
   return {
     ok: true,
-    tableRevision: world.meta?.tableRevision ?? meta.tableRevision ?? 0,
+    tableRevision,
     turn: world.meta?.turn ?? 0,
-    updatedAt: world.meta?.updatedAt ?? null,
+    updatedAt,
     systems: Array.isArray(world.systems) ? world.systems.length : 0,
     tickFrozen: !!meta.tickFrozen,
     lastTickAt: meta.lastTickAt ?? null,

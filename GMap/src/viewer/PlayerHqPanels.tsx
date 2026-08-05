@@ -1,20 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TurnBriefing, TurnBriefingEvent, ViewerPayload, WorldState } from "../state/types";
-import { formatHopTurns, hopDistance } from "../state/pathfinding";
+import { formatHopDistance, formatHopTurns, hopDistance } from "../state/pathfinding";
+import { isWithinMoveRange } from "../state/movementRange";
 import { FlowPanel } from "./FlowPanel";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import { ExpandableSection } from "../ui/ExpandableSection";
 import { intentApCost, getCachedContent } from "../state/contentCatalog";
 import { CATEGORY_CURRENCIES } from "../state/economyLabels";
 import {
+  formatOdCost,
+  OD,
+  OD_TOOLTIP,
+  QUEUE_UNTIL_TURN_LABEL,
+  TURN_RESOLVE_HINT,
+} from "../state/playerUiTerms";
+import {
   PlayerEngagementPanel,
   type CombatStanceId,
   type ViewerEngagement,
 } from "./PlayerEngagementPanel";
+import { loadTaxSlots } from "./economy/policyData";
 
 export const ORDER_TYPE_LABELS: Record<string, string> = {
   move_fleet: "Переместить флот",
-  claim_system: "Захватить / экспансия",
+  claim_system: "Захват системы",
   attack_system: "Атака",
   move_legion: "Переместить легион",
   blockade: "Блокада",
@@ -65,19 +74,6 @@ function useEconomyBreakdown(
   }, [eco?.recent, turn]);
 }
 
-const SUPPLY_TAX_TIERS = [
-  { id: "none", label: "0%" },
-  { id: "low", label: "10%" },
-  { id: "mid", label: "20%" },
-] as const;
-
-const INDUSTRY_TAX_TIERS = [
-  { id: "none", label: "0%" },
-  { id: "low", label: "10%" },
-  { id: "mid", label: "20%" },
-  { id: "high", label: "35%" },
-] as const;
-
 function EconomyWhyPanel({
   explain,
 }: {
@@ -95,23 +91,26 @@ function EconomyWhyPanel({
       <summary>Почему так</summary>
       {hasLines && (
         <ul className="eco-reasons" aria-label="Модификаторы экономики">
-          {lines.map((line, i) => (
+          {lines.map((line, i) => {
+            const mod = line.modifier ?? "";
+            return (
             <li key={`${line.category}-${line.label}-${i}`}>
               <span className="hint">{line.label}</span>{" "}
-              <strong className={line.modifier.startsWith("−") || line.modifier.startsWith("-") ? "eco-down" : line.modifier.startsWith("+") ? "eco-up" : ""}>
-                {line.modifier}
+              <strong className={mod.startsWith("−") || mod.startsWith("-") ? "eco-down" : mod.startsWith("+") ? "eco-up" : ""}>
+                {mod || "—"}
               </strong>
               {line.sources?.length ? (
                 <span className="hint"> · {line.sources.join(", ")}</span>
               ) : null}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
       {hasRace && (
         <ul className="eco-race-traits" aria-label="Расовые черты">
-          {raceTraits!.map((r) => (
-            <li key={r.label}>
+          {raceTraits!.map((r, i) => (
+            <li key={`race-${r.label}-${i}`}>
               <strong>{r.label}</strong>
               <span className="hint"> · {r.summary}</span>
             </li>
@@ -120,8 +119,8 @@ function EconomyWhyPanel({
       )}
       {hasFaction && (
         <ul className="eco-faction-traits" aria-label="Черты державы">
-          {factionTraits!.map((r) => (
-            <li key={r.label}>
+          {factionTraits!.map((r, i) => (
+            <li key={`faction-${r.label}-${i}`}>
               <strong>{r.label}</strong>
               <span className="hint"> · {r.summary}</span>
             </li>
@@ -150,7 +149,11 @@ function TaxSelect({
   return (
     <label className="field eco-tax-field">
       <span>{label}</span>
-      <select value={value} onChange={(e) => onSetTax(taxSlot, e.target.value)}>
+      <select
+        value={pending ?? value}
+        disabled={Boolean(pending)}
+        onChange={(e) => onSetTax(taxSlot, e.target.value)}
+      >
         {tiers.map((t) => (
           <option key={t.id} value={t.id}>
             {t.label}
@@ -158,7 +161,10 @@ function TaxSelect({
         ))}
       </select>
       {pending && (
-        <span className="hint">В очереди → {pending}</span>
+        <span className="hint">
+          В очереди → {tiers.find((t) => t.id === pending)?.label ?? pending} (со
+          след. хода)
+        </span>
       )}
     </label>
   );
@@ -226,7 +232,7 @@ function TaxPressureHint({ pressure }: { pressure: number }) {
         <p className="hint">
           Активно:{" "}
           {active
-            .map((t) => `≥${t.min} — ${describePressureEffects(t.effects)}`)
+            .map((t) => `от ${t.min} — ${describePressureEffects(t.effects)}`)
             .join(" · ")}
         </p>
       )}
@@ -480,6 +486,7 @@ export function TurnBriefingCard({
 
 export function PlayerHqHome({
   payload,
+  password,
   reservedAp,
   apMax,
   rpUnread,
@@ -492,6 +499,7 @@ export function PlayerHqHome({
   onOpenOrders,
   onOpenDiplomacy,
   onOpenQuests,
+  onOpenCourt,
   onOpenRp,
   onOpenMap,
   onOpenResearch,
@@ -508,8 +516,11 @@ export function PlayerHqHome({
   stanceBusy,
   onSubmitCombatStance,
   onOpenStanceRing,
+  onRequestCardBattle,
+  onOpenCardBattle,
 }: {
   payload: ViewerPayload;
+  password?: string;
   reservedAp: number;
   apMax: number;
   rpUnread: number;
@@ -522,6 +533,7 @@ export function PlayerHqHome({
   onOpenOrders: () => void;
   onOpenDiplomacy: () => void;
   onOpenQuests: () => void;
+  onOpenCourt?: () => void;
   onOpenRp: () => void;
   onOpenMap: () => void;
   onOpenResearch?: () => void;
@@ -541,11 +553,13 @@ export function PlayerHqHome({
     engagementId: string,
     anchor: { clientX: number; clientY: number },
   ) => void;
+  onRequestCardBattle?: (engagementId: string) => void;
+  onOpenCardBattle?: (engagementId: string) => void;
 }) {
   const eco = payload.economy;
   const fac = payload.world.factions.find((f) => f.id === payload.factionId);
   const breakdown = useEconomyBreakdown(eco, payload.world.meta.turn);
-  const scoutAp = intentApCost("intent.scout_reveal") || 1;
+  const scoutAp = intentApCost("intent.scout_reveal");
   const [scoutTargetId, setScoutTargetId] = useState(
     () => mapSelectedSystemId ?? "",
   );
@@ -556,7 +570,7 @@ export function PlayerHqHome({
   const scoutCanSubmit =
     !!scoutTargetId &&
     !!onScoutReveal &&
-    reservedAp + scoutAp <= apMax;
+    (scoutAp <= 0 || reservedAp + scoutAp <= apMax);
 
   const bn = eco ? bottleneckCount(eco) : null;
   const courtNpc =
@@ -578,7 +592,9 @@ export function PlayerHqHome({
           <strong>{payload.world.meta.turn}</strong>
         </div>
         <div className="hq-bento-cell hq-bento-cell--accent">
-          <span className="hq-stat-label">AP</span>
+          <span className="hq-stat-label" title={OD_TOOLTIP}>
+            {OD}
+          </span>
           <strong>
             {reservedAp}/{apMax}
           </strong>
@@ -615,6 +631,8 @@ export function PlayerHqHome({
               showHistory={false}
               onSubmitStance={onSubmitCombatStance}
               onOpenStanceRing={onOpenStanceRing}
+              onRequestCardBattle={onRequestCardBattle}
+              onOpenCardBattle={onOpenCardBattle}
             />
           </section>
         )}
@@ -630,7 +648,7 @@ export function PlayerHqHome({
             <span className="hint">
               {(affordableResearch ?? 0) > 0
                 ? `можно: ${affordableResearch}`
-                : "дерево A–F"}
+                : "6 категорий наук"}
             </span>
           </button>
         )}
@@ -692,7 +710,7 @@ export function PlayerHqHome({
         <h3>Казна</h3>
         {eco ? (
           <>
-            <div className="eco-cat-grid" aria-label="Категории A–F">
+            <div className="eco-cat-grid" aria-label="Шесть категорий ресурсов">
               {CATEGORY_CURRENCIES.map((c) => {
                 const stock = eco.stocks?.[c.id] ?? 0;
                 const v = breakdown[c.id];
@@ -757,22 +775,20 @@ export function PlayerHqHome({
             >
               <EconomyWhyPanel explain={eco.explain} />
               <div className="eco-tax-row">
-                <TaxSelect
-                  taxSlot="tax.industry"
-                  label="Промышленный налог (1 AP, со след. хода)"
-                  tiers={INDUSTRY_TAX_TIERS}
-                  value={eco.taxes?.["tax.industry"] ?? "none"}
-                  pending={eco.pendingPolicy?.taxes?.["tax.industry"]}
-                  onSetTax={onSetTax}
-                />
-                <TaxSelect
-                  taxSlot="tax.supply"
-                  label="Сбор обеспечения (1 AP, со след. хода)"
-                  tiers={SUPPLY_TAX_TIERS}
-                  value={eco.taxes?.["tax.supply"] ?? "none"}
-                  pending={eco.pendingPolicy?.taxes?.["tax.supply"]}
-                  onSetTax={onSetTax}
-                />
+                {loadTaxSlots().map((slot) => (
+                  <TaxSelect
+                    key={slot.id}
+                    taxSlot={slot.id}
+                    label={`${slot.name} (со след. хода)`}
+                    tiers={slot.tiers.map((t) => ({
+                      id: t.id,
+                      label: t.label,
+                    }))}
+                    value={eco.taxes?.[slot.id] ?? "none"}
+                    pending={eco.pendingPolicy?.taxes?.[slot.id]}
+                    onSetTax={onSetTax}
+                  />
+                ))}
               </div>
               <TaxPressureHint pressure={eco.pressure ?? 0} />
             </ExpandableSection>
@@ -784,17 +800,21 @@ export function PlayerHqHome({
       </section>
 
       <ExpandableSection
-        title="Потоки A–F"
+        title="Потоки ресурсов по категориям"
         badge={bn != null && bn > 0 ? `узких: ${bn}` : "сводка"}
         defaultOpen={bn != null && bn > 0}
         className="hq-card hq-expandable--flush"
       >
-        <FlowPanel factionId={payload.factionId} compact />
+        <FlowPanel
+          factionId={payload.factionId}
+          password={password}
+          compact
+        />
       </ExpandableSection>
 
       {(fac?.notes || courtNpc > 0) && (
         <ExpandableSection
-          title="Двор и доктрина"
+          title="Двор и политика"
           badge={courtNpc > 0 ? `${courtNpc} лиц` : undefined}
           className="hq-card hq-expandable--flush"
         >
@@ -836,7 +856,7 @@ export function PlayerHqHome({
       {onScoutReveal && scoutSystems.length > 0 && (
         <ExpandableSection
           title="Разведка"
-          badge={`${scoutAp} AP`}
+          badge={scoutAp > 0 ? formatOdCost(scoutAp) : "бесплатно"}
           className="hq-card hq-expandable--flush"
         >
           <p className="hint">
@@ -865,7 +885,9 @@ export function PlayerHqHome({
               onScoutReveal(scoutTargetId);
             }}
           >
-            Открыть разведкой ({scoutAp} AP)
+            {scoutAp > 0
+              ? `Открыть разведкой (${formatOdCost(scoutAp)})`
+              : "Открыть разведкой"}
           </button>
         </ExpandableSection>
       )}
@@ -881,12 +903,18 @@ export function PlayerHqHome({
             ? ` · ${activeQuestCount}`
             : ""}
         </button>
+        {onOpenCourt ? (
+          <button type="button" className="btn block" onClick={onOpenCourt}>
+            Двор
+            {courtNpc > 0 ? ` · ${courtNpc} лиц` : ""}
+          </button>
+        ) : null}
         <button
           type="button"
           className={`btn block ${rpUnread > 0 ? "is-pulse" : ""}`}
           onClick={onOpenRp}
         >
-          Двор{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
+          Хроника{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
         </button>
         <button type="button" className="btn primary block" onClick={onOpenMap}>
           Открыть карту
@@ -896,6 +924,7 @@ export function PlayerHqHome({
   );
 }
 
+/** @deprecated Prefer ForcesDeck via goView("forces"). Thin HQ summary only. */
 export function PlayerForcesPanel({
   payload,
   selectedFleetId,
@@ -906,6 +935,7 @@ export function PlayerForcesPanel({
   onOrderWithFleet,
   onOrderWithLegion,
   onOpenMap,
+  onOpenForces,
 }: {
   payload: ViewerPayload;
   selectedFleetId?: string | null;
@@ -913,10 +943,10 @@ export function PlayerForcesPanel({
   onSelectFleet?: (fleetId: string) => void;
   onSelectLegion?: (legionId: string) => void;
   onSelectSystem?: (systemId: string) => void;
-  /** Jump to orders with this fleet already selected. */
   onOrderWithFleet?: (fleetId: string) => void;
   onOrderWithLegion?: (legionId: string) => void;
   onOpenMap?: () => void;
+  onOpenForces?: () => void;
 }) {
   const fid = payload.factionId;
   const fleets = (payload.world.fleets ?? []).filter((f) => f.factionId === fid);
@@ -929,9 +959,14 @@ export function PlayerForcesPanel({
       <header className="hq-panel-head">
         <h2>Силы</h2>
         <p className="hint">
-          Флоты: {fleets.length} · Легионы: {legions.length}. На карте —
-          перетащите иконку на систему (покажет ходы).
+          Флоты: {fleets.length} · Легионы: {legions.length}. Loadout — в разделе
+          Силы; приказы — на карте.
         </p>
+        {onOpenForces && (
+          <button type="button" className="btn" onClick={onOpenForces}>
+            Открыть колоды
+          </button>
+        )}
         {onOpenMap && (
           <button type="button" className="btn ghost" onClick={onOpenMap}>
             На карту
@@ -942,18 +977,10 @@ export function PlayerForcesPanel({
       <section className="hq-card">
         <h3>Флоты</h3>
         {fleets.length === 0 && (
-          <div className="hq-empty">
-            <span className="hq-empty-reveal" aria-hidden />
-            <p className="hint">Нет своих флотов в зоне видимости.</p>
-            {onOpenMap && (
-              <button type="button" className="btn ghost" onClick={onOpenMap}>
-                На карту
-              </button>
-            )}
-          </div>
+          <p className="hint">Нет своих флотов в зоне видимости.</p>
         )}
         <ul className="hq-list">
-          {fleets.map((f) => (
+          {fleets.slice(0, 8).map((f) => (
             <li key={f.id}>
               <button
                 type="button"
@@ -961,16 +988,12 @@ export function PlayerForcesPanel({
                 onClick={() => {
                   onSelectFleet?.(f.id);
                   onSelectSystem?.(f.systemId);
+                  onOpenForces?.();
                 }}
               >
                 <strong>{f.name}</strong>
                 <span className="hint">
                   {systemName(payload.world, f.systemId)} · {f.stance}
-                </span>
-                <span className="hint">
-                  {(f.composition ?? [])
-                    .map((c) => `${c.type}×${c.count}`)
-                    .join(", ") || "состав —"}
                 </span>
               </button>
               {onOrderWithFleet && (
@@ -980,7 +1003,7 @@ export function PlayerForcesPanel({
                   style={{ marginTop: 4 }}
                   onClick={() => onOrderWithFleet(f.id)}
                 >
-                  Приказ для этого флота…
+                  Приказ на карте…
                 </button>
               )}
             </li>
@@ -991,18 +1014,10 @@ export function PlayerForcesPanel({
       <section className="hq-card">
         <h3>Легионы</h3>
         {legions.length === 0 && (
-          <div className="hq-empty">
-            <span className="hq-empty-reveal" aria-hidden />
-            <p className="hint">Нет своих легионов в зоне видимости.</p>
-            {onOpenMap && (
-              <button type="button" className="btn ghost" onClick={onOpenMap}>
-                На карту
-              </button>
-            )}
-          </div>
+          <p className="hint">Нет своих легионов в зоне видимости.</p>
         )}
         <ul className="hq-list">
-          {legions.map((l) => (
+          {legions.slice(0, 8).map((l) => (
             <li key={l.id}>
               <button
                 type="button"
@@ -1010,13 +1025,13 @@ export function PlayerForcesPanel({
                 onClick={() => {
                   onSelectLegion?.(l.id);
                   onSelectSystem?.(l.systemId);
+                  onOpenForces?.();
                 }}
               >
                 <strong>{l.name}</strong>
                 <span className="hint">
                   {systemName(payload.world, l.systemId)} · {l.status}
                 </span>
-                <span className="hint">сила {l.strength ?? "—"}</span>
               </button>
               {onOrderWithLegion && (
                 <button
@@ -1025,7 +1040,7 @@ export function PlayerForcesPanel({
                   style={{ marginTop: 4 }}
                   onClick={() => onOrderWithLegion(l.id)}
                 >
-                  Приказ для этого легиона…
+                  Приказ на карте…
                 </button>
               )}
             </li>
@@ -1101,9 +1116,21 @@ export function PlayerOrdersPanel({
       : (fleets.find((f) => f.id === selectedFleetId)?.systemId ?? null);
 
   const hops = useMemo(
-    () => hopDistance(payload.world, fromSystemId, targetSystemId),
-    [payload.world, fromSystemId, targetSystemId],
+    () =>
+      hopDistance(
+        payload.world,
+        fromSystemId,
+        targetSystemId,
+        orderType === "move_legion" ? "legion" : "fleet",
+      ),
+    [payload.world, fromSystemId, targetSystemId, orderType],
   );
+  const moveMode = orderType === "move_legion" ? "legion" : "fleet";
+  const inMoveRange =
+    !fromSystemId ||
+    !targetSystemId ||
+    fromSystemId === targetSystemId ||
+    isWithinMoveRange(payload.world, fromSystemId, targetSystemId, moveMode);
 
   const needsFleet =
     orderType === "move_fleet" || orderType === "attack_system";
@@ -1113,10 +1140,10 @@ export function PlayerOrdersPanel({
     (orderType === "claim_system"
       ? !!selectedFleetId || !!selectedLegionId
       : needsLegion
-        ? !!selectedLegionId && Number.isFinite(hops) && hops > 0
+        ? !!selectedLegionId && Number.isFinite(hops) && hops > 0 && inMoveRange
         : !!selectedFleetId &&
           (orderType !== "move_fleet" ||
-            (Number.isFinite(hops) && hops > 0)));
+            (Number.isFinite(hops) && hops > 0 && inMoveRange)));
 
   const unitLabel =
     orderType === "move_legion"
@@ -1137,8 +1164,8 @@ export function PlayerOrdersPanel({
       <header className="hq-panel-head">
         <h2>Очередь</h2>
         <p className="hint">
-          Все незавершённые приказы до тика. Отмена возвращает занятый AP.
-          Новые ходы — drag / ПКМ на карте.
+          {TURN_RESOLVE_HINT} Отмена приказа возвращает потраченные {OD}.
+          Новые приказы — перетаскивание или меню на карте.
         </p>
         {onOpenMap && (
           <button type="button" className="btn ghost" onClick={onOpenMap}>
@@ -1148,7 +1175,7 @@ export function PlayerOrdersPanel({
       </header>
 
       <section className="hq-card hq-outliner">
-        <h3>Ожидают тика · {pending.length}</h3>
+        <h3>{QUEUE_UNTIL_TURN_LABEL} · {pending.length}</h3>
         {pending.length === 0 && (
           <div className="hq-empty">
             <span className="hq-empty-reveal" aria-hidden />
@@ -1220,10 +1247,16 @@ export function PlayerOrdersPanel({
             <strong>{targetName ?? "—"}</strong>
           </div>
           <div>
-            <span className="hq-stat-label">Путь</span>
+            <span className="hq-stat-label">Дистанция</span>
             <strong>
               {targetSystemId && fromSystemId
-                ? formatHopTurns(hops)
+                ? needsFleet || needsLegion
+                  ? inMoveRange
+                    ? formatHopDistance(hops)
+                    : Number.isFinite(hops) && hops > 0
+                      ? "вне радиуса"
+                      : formatHopDistance(hops)
+                  : formatHopTurns(hops)
                 : "—"}
             </strong>
           </div>
@@ -1335,7 +1368,12 @@ export function PlayerOrdersPanel({
           onClick={onSubmit}
         >
           Заверить
-          {needsFleet || needsLegion ? ` · ${formatHopTurns(hops)}` : ""}
+          {(needsFleet && orderType === "move_fleet") ||
+          (needsLegion && orderType === "move_legion")
+            ? ` · ${formatHopDistance(hops)}`
+            : needsFleet || needsLegion
+              ? ` · ${formatHopTurns(hops)}`
+              : ""}
         </button>
         {!canSubmit && (
           <p className="hint">

@@ -1,7 +1,7 @@
 import { toIso } from "../renderers/iso";
 import type { Faction, PolityKind, StarSystem, WorldState } from "./types";
 
-/** IDs that are never sovereign states (even if kind missing in old saves). */
+/** IDs that are never sovereign states (even if a save wrongly marked them "state"). */
 const KNOWN_NON_STATE_IDS = new Set([
   "faction_pirates",
   "faction_north_swarm",
@@ -10,14 +10,18 @@ const KNOWN_NON_STATE_IDS = new Set([
   "faction_sahale",
   "faction_sikuri",
   "faction_huchi",
+  "faction_free_traders",
+  "faction_scavengers",
 ]);
 
 export function resolvePolityKind(f: Faction | undefined | null): PolityKind {
   if (!f) return "faction";
+  // Explicit kind from GM / campaign data always wins (including promoted rogues).
   if (f.kind === "faction" || f.kind === "state") return f.kind;
+  // Legacy saves without kind: canonical NPC ids stay non-states.
   if (KNOWN_NON_STATE_IDS.has(f.id)) return "faction";
   const n = (f.name ?? "").toLowerCase();
-  if (/пират|рой|умбра|сахале|сикури|хучи|ор\s*\/|пожирател/.test(n)) {
+  if (/пират|рой|умбра|сахале|сикури|хучи|ор\s*\/|пожирател|караван|сборщик/.test(n)) {
     return "faction";
   }
   return "state";

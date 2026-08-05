@@ -630,8 +630,7 @@ function ProfileTab({ faction }: { faction: Faction }) {
             ))}
           </ul>
           <p className="hint">
-            Редактирование списка NPC — через JSON / скрипт сида (пока
-            read-only в UI).
+            Полный двор: F4 «Двор» — NPC, места, дома, постинги.
           </p>
         </div>
       )}

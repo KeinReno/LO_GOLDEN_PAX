@@ -101,5 +101,10 @@
   },
   "units": {
     "unit.generic_line": "unit.generic_line"
+  },
+  "tech_upgrades": {
+    "tech.fusion.overclock": "tech.fusion.feature",
+    "tech.psionics.xeno_training": "tech.psionics.feature",
+    "tech.white_corridors.beacon": "tech.white_corridors.feature"
   }
 }

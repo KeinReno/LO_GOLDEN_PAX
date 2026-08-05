@@ -128,17 +128,44 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     if (!isOpenEngagement(eng)) continue;
     if (!eng.sides.some((s) => s.factionId === payload.factionId)) continue;
     const mySide = eng.sides.find((s) => s.factionId === payload.factionId);
-    items.push({
-      id: `engagement-${eng.id}`,
-      kind: "engagement",
-      title: `Бой в системе ${systemName(payload.world, eng.systemId)}`,
-      subtitle:
-        mySide && !mySide.locked
-          ? "выберите stance"
-          : ENGAGEMENT_STATUS[eng.status] ?? eng.status,
-      onFocus: (anchor) =>
-        callbacks.onFocusEngagement(eng.systemId, eng.id, anchor),
-    });
+    const iRequested = (eng.cardBattleRequests || []).includes(
+      payload.factionId,
+    );
+    const theyRequested = eng.sides.some(
+      (s) =>
+        s.factionId !== payload.factionId &&
+        (eng.cardBattleRequests || []).includes(s.factionId),
+    );
+    if (eng.mode === "card") {
+      items.push({
+        id: `card-battle-${eng.id}`,
+        kind: "engagement",
+        title: "Карточный бой идёт",
+        subtitle: systemName(payload.world, eng.systemId),
+        onFocus: () => callbacks.onFocusEngagement(eng.systemId, eng.id),
+      });
+    } else if (theyRequested && !iRequested) {
+      items.push({
+        id: `card-invite-${eng.id}`,
+        kind: "engagement",
+        title: "Вызов на карточный бой",
+        subtitle: `${systemName(payload.world, eng.systemId)} · нажмите «Принять»`,
+        onFocus: (anchor) =>
+          callbacks.onFocusEngagement(eng.systemId, eng.id, anchor),
+      });
+    } else {
+      items.push({
+        id: `engagement-${eng.id}`,
+        kind: "engagement",
+        title: `Бой в системе ${systemName(payload.world, eng.systemId)}`,
+        subtitle:
+          mySide && !mySide.locked
+            ? "выберите stance"
+            : ENGAGEMENT_STATUS[eng.status] ?? eng.status,
+        onFocus: (anchor) =>
+          callbacks.onFocusEngagement(eng.systemId, eng.id, anchor),
+      });
+    }
   }
 
   if (pendingOrderCount > 0) {

@@ -18,10 +18,21 @@ import { QuestPanel } from "./editors/QuestPanel";
 import { MapContextMenu } from "./editors/MapContextMenu";
 import { GmLiveDock } from "./editors/GmLiveDock";
 import { GmTickDialog } from "./editors/GmTickDialog";
+import {
+  GmWorkbench,
+  GmAtelierPanel,
+  GmLiveStage,
+  GmFloatingDock,
+  GmAttentionStrip,
+  GmSessionNotch,
+  domainByHotkey,
+} from "./editors/gm";
 import { ViewerPage } from "./viewer/ViewerPage";
 import { DragCardDemo } from "./ui/DragCardDemo";
 import { useWorldStore } from "./state/worldStore";
 import { fetchContent } from "./state/contentCatalog";
+import type { GmLiveDomainId } from "./state/types";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 
 function OrderTargetHint() {
   const pending = useWorldStore((s) => s.pendingUnitOrder);
@@ -58,9 +69,11 @@ function OrderTargetHint() {
 function EditorHotkeys({
   onToggleLeft,
   onToggleRight,
+  onOpenRightDock,
 }: {
   onToggleLeft: () => void;
   onToggleRight: () => void;
+  onOpenRightDock?: () => void;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -96,6 +109,23 @@ function EditorHotkeys({
         e.preventDefault();
         onToggleRight();
       }
+      /* Domains F1–F9 — always in GM session */
+      if (/^F[1-9]$/.test(e.key) && !mod && !e.altKey) {
+        const st = useWorldStore.getState();
+        if (st.gmShellMode === "gm") {
+          const n = Number(e.key.slice(1));
+          const def = domainByHotkey(n);
+          if (def) {
+            e.preventDefault();
+            if (def.id === "inbox") {
+              st.setGmLiveDomain(null);
+              onOpenRightDock?.();
+            } else {
+              st.toggleGmLiveDomain(def.id);
+            }
+          }
+        }
+      }
       if (e.key === "Delete" || e.key === "Backspace") {
         const st = useWorldStore.getState();
         if (st.selectedSystemIds.length > 0) {
@@ -111,6 +141,11 @@ function EditorHotkeys({
       }
       if (e.key === "Escape") {
         const st = useWorldStore.getState();
+        if (st.gmLiveDomain) {
+          e.preventDefault();
+          st.setGmLiveDomain(null);
+          return;
+        }
         st.clearPendingUnitOrder();
         st.clearPendingFleetClone();
         st.clearSystemSelection();
@@ -119,7 +154,7 @@ function EditorHotkeys({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onToggleLeft, onToggleRight]);
+  }, [onToggleLeft, onToggleRight, onOpenRightDock]);
   return null;
 }
 
@@ -137,21 +172,40 @@ function EditorPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [tickOpen, setTickOpen] = useState(false);
+  /** Right rail: inspector by default; F1 / notch → inbox dock. */
+  const [rightPanel, setRightPanel] = useState<"inspector" | "inbox">(
+    "inspector",
+  );
   const gmShellMode = useWorldStore((s) => s.gmShellMode);
-  const live = gmShellMode === "live";
+  const setGmLiveDomain = useWorldStore((s) => s.setGmLiveDomain);
+  const gmGesturesEnabled = useWorldStore((s) => s.gmGesturesEnabled);
+  const atelier = gmShellMode === "atelier";
+  const gm = gmShellMode === "gm";
+
+  const openDomain = (id: GmLiveDomainId) => {
+    if (id === "inbox") {
+      setGmLiveDomain(null);
+      setRightPanel("inbox");
+      setRightOpen(true);
+      return;
+    }
+    setGmLiveDomain(id);
+  };
 
   useEffect(() => {
     void fetchContent();
   }, []);
 
   useEffect(() => {
-    if (live) {
-      setRightOpen(true);
+    if (atelier) {
       setLeftOpen(false);
+      setRightOpen(false);
+      setGmLiveDomain(null);
     } else {
       setLeftOpen(true);
+      setRightOpen(true);
     }
-  }, [live]);
+  }, [atelier, setGmLiveDomain]);
 
   return (
     <CampaignSessionProvider>
@@ -161,68 +215,148 @@ function EditorPage() {
         <EditorHotkeys
           onToggleLeft={() => setLeftOpen((v) => !v)}
           onToggleRight={() => setRightOpen((v) => !v)}
+          onOpenRightDock={() => {
+            setRightPanel("inbox");
+            setRightOpen(true);
+          }}
         />
         <TopBar onRequestTick={() => setTickOpen(true)} />
-        <EditorChrome />
-        <div className="app-shell-body">
-          <EditorShellLayout
-            mode={live ? "live" : "prep"}
-            leftOpen={leftOpen}
-            rightOpen={rightOpen}
-            onLeftOpenChange={setLeftOpen}
-            onRightOpenChange={setRightOpen}
-            leftRailTitle="Показать инструменты ([)"
-            rightRailTitle={
-              live ? "Показать док стола (])" : "Показать инспектор (])"
-            }
-            left={<Toolbar />}
-            right={
-              live ? (
-                <GmLiveDock onRequestTick={() => setTickOpen(true)} />
-              ) : (
-                <Inspector />
-              )
-            }
-            main={
-              <main className="viewport">
-                <div className="viewport-glow" />
-                <MapCanvas mode="editor" />
-                <TurnStampHud />
-                <OrderTargetHint />
-                {!live && (
-                  <div className="viewport-hint">
-                    Ctrl+клик / рамка — мультивыбор · перенос флотов · ПКМ — меню
-                    · Del — удалить · СКМ — пан · тяните края панелей
-                  </div>
-                )}
-                <div className="viewport-panel-toggles">
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => setLeftOpen((v) => !v)}
-                    title="Левая панель ([)"
-                  >
-                    {leftOpen ? "⟨ Инстр." : "Инстр. ⟩"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => setRightOpen((v) => !v)}
-                    title={live ? "Док стола (])" : "Инспектор (])"}
-                  >
-                    {rightOpen
-                      ? live
-                        ? "Стол ⟩"
-                        : "Инсп. ⟩"
-                      : live
-                        ? "⟨ Стол"
-                        : "⟨ Инсп."}
-                  </button>
-                </div>
-              </main>
-            }
+        {gm && (
+          <GmSessionNotch
+            onOpenInbox={() => {
+              setRightPanel("inbox");
+              setRightOpen(true);
+            }}
           />
-        </div>
+        )}
+        <EditorChrome />
+        {atelier ? (
+          <div className="app-shell-body gm-atelier-shell">
+            <GmAtelierPanel />
+          </div>
+        ) : (
+          <div className="app-shell-body">
+            <EditorShellLayout
+              mode="prep"
+              leftOpen={leftOpen}
+              rightOpen={rightOpen}
+              onLeftOpenChange={setLeftOpen}
+              onRightOpenChange={setRightOpen}
+              leftRailTitle="Показать инструменты ([)"
+              rightRailTitle={
+                rightPanel === "inbox"
+                  ? "Показать очередь (])"
+                  : "Показать инспектор (])"
+              }
+              left={
+                <Toolbar
+                  onOpenDomain={openDomain}
+                  onRequestTick={() => setTickOpen(true)}
+                />
+              }
+              right={
+                rightPanel === "inbox" ? (
+                  <div className="gm-right-stack">
+                    <div className="gm-right-stack__tabs">
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() => setRightPanel("inspector")}
+                      >
+                        Инспектор
+                      </button>
+                      <button type="button" className="btn ghost active">
+                        Очередь
+                      </button>
+                    </div>
+                    <GmLiveDock onRequestTick={() => setTickOpen(true)} />
+                  </div>
+                ) : (
+                  <div className="gm-right-stack">
+                    <div className="gm-right-stack__tabs">
+                      <button type="button" className="btn ghost active">
+                        Инспектор
+                      </button>
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() => setRightPanel("inbox")}
+                      >
+                        Очередь
+                      </button>
+                    </div>
+                    <Inspector />
+                  </div>
+                )
+              }
+              main={
+                <main className="viewport">
+                  <div className="viewport-glow" />
+                  <MapCanvas mode="editor" />
+                  <TurnStampHud />
+                  <OrderTargetHint />
+                  {gmGesturesEnabled ? (
+                    <GmLiveStage
+                      onOpenDomain={openDomain}
+                      onOpenRightDock={() => {
+                        setRightPanel("inbox");
+                        setRightOpen(true);
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <div className="gm-map-chrome">
+                        <GmAttentionStrip
+                          onOpenDomain={openDomain}
+                          onOpenRightDock={() => {
+                            setRightPanel("inbox");
+                            setRightOpen(true);
+                          }}
+                        />
+                        <GmFloatingDock
+                          onOpenDomain={openDomain}
+                          onOpenRightDock={() => {
+                            setRightPanel("inbox");
+                            setRightOpen(true);
+                          }}
+                        />
+                      </div>
+                      <p className="viewport-hint gm-live-hint">
+                        F1–F9 домены · Attention снизу · Сессия слева · жесты —
+                        опция в Сессии
+                      </p>
+                    </>
+                  )}
+                  <div className="viewport-panel-toggles">
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => setLeftOpen((v) => !v)}
+                      title="Левая панель ([)"
+                    >
+                      {leftOpen ? "⟨ Инстр." : "Инстр. ⟩"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => setRightOpen((v) => !v)}
+                      title="Правая панель (])"
+                    >
+                      {rightOpen
+                        ? rightPanel === "inbox"
+                          ? "Очередь ⟩"
+                          : "Инсп. ⟩"
+                        : rightPanel === "inbox"
+                          ? "⟨ Очередь"
+                          : "⟨ Инсп."}
+                    </button>
+                  </div>
+                </main>
+              }
+            />
+          </div>
+        )}
+        {gm && <GmWorkbench />}
         <DiplomacyPanel />
         <SystemDossier />
         <PolityDossier />
@@ -236,13 +370,15 @@ function EditorPage() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<EditorPage />} />
-        <Route path="/view" element={<ViewerPage />} />
-        <Route path="/demo/cards" element={<DragCardDemo />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<EditorPage />} />
+          <Route path="/view" element={<ViewerPage />} />
+          <Route path="/demo/cards" element={<DragCardDemo />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

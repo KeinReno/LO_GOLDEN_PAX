@@ -105,23 +105,72 @@ export function getVisibleSystemIds(
   return visible;
 }
 
+/** Apply server fog mask — owned / fleet / legion presence overrides hide. */
+export function applyFogMaskToVisibility(
+  world: WorldState,
+  factionId: string,
+  visible: Set<string>,
+  mask: Set<string>,
+): Set<string> {
+  if (mask.size === 0) return visible;
+  const out = new Set(visible);
+  for (const id of mask) {
+    const sys = world.systems.find((s) => s.id === id);
+    const owned = sys?.ownerFactionId === factionId;
+    const fleetHere = world.fleets.some(
+      (f) => f.factionId === factionId && f.systemId === id,
+    );
+    const legionHere = (world.legions ?? []).some(
+      (l) => l.factionId === factionId && l.systemId === id,
+    );
+    if (!(owned || fleetHere || legionHere)) {
+      out.delete(id);
+    }
+  }
+  return out;
+}
+
+/** Player-visible systems including server fog mask (editor / GM preview). */
+export function getVisibleSystemIdsWithFog(
+  world: WorldState,
+  factionId: string,
+  fogMask: string[] = [],
+): Set<string> {
+  const base = getVisibleSystemIds(world, factionId);
+  return applyFogMaskToVisibility(
+    world,
+    factionId,
+    base,
+    new Set(fogMask),
+  );
+}
+
 /**
  * GM map view: when omniscient is off, return the same subset a player would get.
  * Full campaign stays in the store for editing; only the canvas view is sliced.
  */
 export function resolveEditorViewWorld(
   world: WorldState,
-  opts: { activeFactionId: string | null; gmOmniscientView: boolean },
+  opts: {
+    activeFactionId: string | null;
+    gmOmniscientView: boolean;
+    fogMask?: string[];
+  },
 ): WorldState {
   if (opts.gmOmniscientView || !opts.activeFactionId) return world;
-  return filterWorldForFaction(world, opts.activeFactionId).world;
+  return filterWorldForFaction(
+    world,
+    opts.activeFactionId,
+    opts.fogMask ?? [],
+  ).world;
 }
 
 export function filterWorldForFaction(
   world: WorldState,
   factionId: string,
+  fogMask: string[] = [],
 ): { world: WorldState; visibleSystemIds: string[] } {
-  const visible = getVisibleSystemIds(world, factionId);
+  const visible = getVisibleSystemIdsWithFog(world, factionId, fogMask);
   const visibleSystemIds = [...visible];
 
   const systems = world.systems

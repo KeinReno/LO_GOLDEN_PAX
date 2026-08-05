@@ -57,7 +57,7 @@ export function BuildPreview({
       <div className="sys-build-preview__cost">
         <ResourceCostRow cost={building.cost ?? {}} stocks={stocks} size={12} />
         <span className="hint tabular">
-          {building.ap} AP · {buildTurns ?? 1} ход
+          {building.ap} ОД · {buildTurns ?? 1} ход
         </span>
       </div>
 

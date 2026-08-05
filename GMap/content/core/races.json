@@ -204,6 +204,42 @@
     "origin": "Имперская субраса людей",
     "parent": "race_human"
   },
+  "race_nagaar": {
+    "id": "race_nagaar",
+    "name": "Нагааритяне",
+    "tags": ["imperial", "titular"],
+    "traits": [
+      {
+        "id": "trait.nagaar.titular",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": 2 }
+          }
+        ],
+        "balanceBudget": 0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1,
+      "desert": 0.85,
+      "ocean": 0.9,
+      "ice": 0.55,
+      "toxic": 0.2
+    },
+    "growth": {
+      "baseRate": 0.011,
+      "crowdPenalty": 0.35
+    },
+    "xenorelations": {
+      "race_belator": 0.15,
+      "race_human": 0.05,
+      "race_swarm": -0.3
+    },
+    "kind": "subrace",
+    "origin": "Титульный народ Империи Белатор (караван, паритет с белаторцами)",
+    "parent": "race_human"
+  },
   "race_synth": {
     "id": "race_synth",
     "name": "Синты",

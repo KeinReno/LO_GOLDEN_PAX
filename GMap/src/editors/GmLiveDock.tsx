@@ -25,8 +25,8 @@ export function GmLiveDock({ onRequestTick }: { onRequestTick: () => void }) {
     <aside className="panel panel-right gm-live-dock">
       <header className="gm-live-dock-head">
         <div>
-          <p className="gm-live-kicker">Стол · ход {world.meta.turn}</p>
-          <h3>Очередь приказов</h3>
+          <p className="gm-live-kicker">Очередь · ход {world.meta.turn}</p>
+          <h3>Приказы игроков</h3>
         </div>
         {pendingCount > 0 && (
           <span className="gm-live-pending-pill">{pendingCount}</span>

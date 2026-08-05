@@ -12,6 +12,8 @@ export type QuestChatPanelProps = {
   open: boolean;
   onClose: () => void;
   onSend: (text: string) => void | Promise<void>;
+  /** Mobile stack screen — no slide-in chrome, parent owns the header. */
+  embedded?: boolean;
 };
 
 function EffectBadge({ effect }: { effect: QuestEffect }) {
@@ -67,6 +69,7 @@ export function QuestChatPanel({
   open,
   onClose,
   onSend,
+  embedded = false,
 }: QuestChatPanelProps) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -90,6 +93,82 @@ export function QuestChatPanel({
     }
   };
 
+  if (!open) return null;
+
+  const body = (
+    <>
+      {!embedded ? (
+        <header className="quest-chat-panel__head">
+          <div>
+            <p className="dossier-kicker">
+              {quest.narrative ? "Журнал сюжета" : "История квеста"}
+            </p>
+            <h3>{quest.title}</h3>
+            <p className="hint">
+              {quest.narrative
+                ? "Пишите поступок — ответ GM/агента попадёт сюда."
+                : "Хроника выборов и бросков. Обсуждение — у сюжетных арок."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={onClose}
+            aria-label="Закрыть журнал"
+          >
+            <X size={16} />
+          </button>
+        </header>
+      ) : null}
+
+      <div className="quest-chat-panel__log">
+        {log.length === 0 ? (
+          <div className="quest-chat-empty">
+            <p className="hint">
+              {quest.narrative
+                ? "Нити сюжета ещё нет — опишите первый ход кампании."
+                : "Пока нет записей. Выборы и кубики появятся здесь."}
+            </p>
+          </div>
+        ) : (
+          log.map((e) => <Bubble key={e.id} entry={e} />)
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <form
+        className="quest-chat-panel__compose"
+        onSubmit={(e) => void submit(e)}
+      >
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={
+            quest.narrative
+              ? "Ваш поступок в сюжете…"
+              : "Заметка / вопрос мастеру…"
+          }
+          aria-label="Сообщение"
+          disabled={busy}
+        />
+        <button
+          type="submit"
+          className="btn primary sm"
+          disabled={busy || !text.trim()}
+        >
+          Отправить
+        </button>
+      </form>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="quest-chat-panel quest-chat-panel--embedded">{body}</div>
+    );
+  }
+
   return (
     <AnimatePresence>
       {open ? (
@@ -102,64 +181,7 @@ export function QuestChatPanel({
           transition={{ type: "spring", stiffness: 380, damping: 36 }}
           aria-label={`Чат квеста: ${quest.title}`}
         >
-          <header className="quest-chat-panel__head">
-            <div>
-              <p className="dossier-kicker">
-                {quest.narrative ? "Журнал сюжета" : "История квеста"}
-              </p>
-              <h3>{quest.title}</h3>
-              <p className="hint">
-                {quest.narrative
-                  ? "Пишите поступок — ответ GM/агента попадёт сюда."
-                  : "Хроника выборов и бросков. Обсуждение — у сюжетных арок."}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={onClose}
-              aria-label="Закрыть журнал"
-            >
-              <X size={16} />
-            </button>
-          </header>
-
-          <div className="quest-chat-panel__log">
-            {log.length === 0 ? (
-              <div className="quest-chat-empty">
-                <p className="hint">
-                  {quest.narrative
-                    ? "Нити сюжета ещё нет — опишите первый ход кампании."
-                    : "Пока нет записей. Выборы и кубики появятся здесь."}
-                </p>
-              </div>
-            ) : (
-              log.map((e) => <Bubble key={e.id} entry={e} />)
-            )}
-            <div ref={endRef} />
-          </div>
-
-          <form className="quest-chat-panel__compose" onSubmit={(e) => void submit(e)}>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={
-                quest.narrative
-                  ? "Ваш поступок в сюжете…"
-                  : "Заметка / вопрос мастеру…"
-              }
-              aria-label="Сообщение"
-              disabled={busy}
-            />
-            <button
-              type="submit"
-              className="btn primary sm"
-              disabled={busy || !text.trim()}
-            >
-              Отправить
-            </button>
-          </form>
+          {body}
         </motion.aside>
       ) : null}
     </AnimatePresence>

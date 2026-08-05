@@ -44,6 +44,8 @@ export type EngagementSide = {
   factionId: string;
   stance?: string;
   locked?: boolean;
+  fleetIds?: string[];
+  legionIds?: string[];
 };
 
 export type ViewerEngagement = {
@@ -64,6 +66,19 @@ export type ViewerEngagement = {
     outcome?: string;
     lossesA?: { defId: string; lost: number }[];
     lossesB?: { defId: string; lost: number }[];
+    lossesByFaction?: Record<string, { defId: string; lost: number }[]>;
+    trophies?: {
+      winnerFactionId?: string;
+      metal?: number;
+      cognitio?: number;
+      cognitioBase?: number;
+      styleCognitio?: number;
+      styleBanners?: string[];
+      intelBump?: number;
+      loyaltyHit?: number;
+      loserFactionId?: string | null;
+      scrapUnits?: number;
+    } | null;
   } | null;
 };
 
@@ -125,7 +140,7 @@ function StancePicker({
 
   return (
     <label className="field eng-stance-field">
-      <span>Боевая поза (0 AP, сразу)</span>
+      <span>Боевая поза (бесплатно, сразу)</span>
       <select
         value={stance}
         disabled={busy}
@@ -178,6 +193,11 @@ function ActiveEngagementCard({
     .map((s) => factionName(payload.world, s.factionId))
     .join(", ");
   const requested = (eng.cardBattleRequests || []).includes(payload.factionId);
+  const opponentRequested = eng.sides.some(
+    (s) =>
+      s.factionId !== payload.factionId &&
+      (eng.cardBattleRequests || []).includes(s.factionId),
+  );
   const isCard = eng.mode === "card";
 
   return (
@@ -272,11 +292,15 @@ function ActiveEngagementCard({
         <div onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            className="btn ghost"
+            className={`btn ${opponentRequested && !requested ? "primary" : "ghost"}`}
             disabled={busy || requested}
             onClick={() => onRequestCardBattle(eng.id)}
           >
-            {requested ? "Карточный бой запрошен" : "Запросить карточный бой"}
+            {requested
+              ? "Карточный бой запрошен"
+              : opponentRequested
+                ? "Принять карточный бой"
+                : "Запросить карточный бой"}
           </button>
         </div>
       )}

@@ -1,0 +1,189 @@
+{
+  "meta": {
+    "version": 3,
+    "description": "Целевые кривые + принципы базового набора. SoT: docs/BALANCE_BASELINE_SPEC.md. Ровный рост тира ≈ +40–50%. RPS A–F → здания → shipyard/barracks → produceCost.",
+    "pacing": "even_growth",
+    "spec": "docs/BALANCE_BASELINE_SPEC.md"
+  },
+  "principles": {
+    "spendLanguage": "metal+supply for build/force/station; A–F for flows/taxes/science",
+    "tierGrowth": "metalByTier ~+40–50% per step",
+    "freeBuildTier": 3,
+    "earlyForceGates": {
+      "barracksMaxTier": 2,
+      "spaceportMaxTier": 3,
+      "shipyardMaxTier": 3
+    },
+    "dualAp": "empire vs force pools (rules.apPerTurn / rules.forceAp)",
+    "roleCoverage": "one generic hull/unit per role×tier; raceVariants + packs for flavor",
+    "stationsFromContent": "content/core/stations.json; prices from forces.stations",
+    "techGatesBuildings": "category tech tier ceiling, not hardcoded ship/building unlock ids"
+  },
+  "ap": {
+    "empirePerTurn": 9,
+    "force": { "base": 2, "perFleet": 1, "perLegion": 1, "max": 8 },
+    "note": "Имперские ОД — политика/колонии/дипломатия. ОД сил — ход/блокада/разведка мира/атака (часть)."
+  },
+  "start": {
+    "stocks": {
+      "currency.metal": 100,
+      "currency.supply": 70,
+      "currency.extracta": 14,
+      "currency.materia": 12,
+      "currency.industria": 8,
+      "currency.energia": 16,
+      "currency.bios": 18,
+      "currency.cognitio": 36
+    },
+    "targetOpen": "outpost + residential/mine/farm; OR barracks→militia; OR spaceport+shipyard→scout/corvette"
+  },
+  "baseline": {
+    "ships": [
+      { "id": "ship.scout", "tier": 1, "roles": ["screen"] },
+      { "id": "ship.patrol", "tier": 2, "roles": ["screen"] },
+      { "id": "ship.corvette", "tier": 3, "roles": ["screen"] },
+      { "id": "ship.frigate", "tier": 4, "roles": ["screen", "line"] },
+      { "id": "ship.destroyer", "tier": 5, "roles": ["line"] },
+      { "id": "ship.cruiser", "tier": 6, "roles": ["line"] },
+      { "id": "ship.battleship", "tier": 7, "roles": ["capital"] },
+      { "id": "ship.carrier", "tier": 7, "roles": ["carrier"] },
+      { "id": "ship.psi_cruiser", "tier": 7, "roles": ["line", "psi"] },
+      { "id": "ship.dreadnought", "tier": 8, "roles": ["capital", "bombard"] },
+      { "id": "ship.black_iron", "tier": 9, "roles": ["capital"] }
+    ],
+    "units": [
+      { "id": "unit.militia", "tier": 1, "roles": ["infantry", "militia"] },
+      { "id": "unit.generic_line", "tier": 2, "roles": ["infantry"] },
+      { "id": "unit.garrison", "tier": 3, "roles": ["garrison", "infantry"] },
+      { "id": "unit.planetary_gun", "tier": 3, "roles": ["garrison"], "stationary": true },
+      { "id": "unit.bunker", "tier": 3, "roles": ["garrison"], "stationary": true },
+      { "id": "unit.breach_cadre", "tier": 4, "roles": ["assault", "infantry"] },
+      { "id": "unit.shield_dome", "tier": 4, "roles": ["garrison"], "stationary": true },
+      { "id": "unit.armor_cadre", "tier": 5, "roles": ["vehicle", "assault"] },
+      { "id": "unit.heavy_legion", "tier": 6, "roles": ["infantry", "line"] }
+    ],
+    "stations": ["mining", "military", "science", "trade", "relay"],
+    "coreBuildings": [
+      "building.residential",
+      "building.farm",
+      "building.mine",
+      "building.lab",
+      "building.barracks",
+      "building.spaceport",
+      "building.shipyard",
+      "building.defense",
+      "building.capitol",
+      "building.habitat"
+    ]
+  },
+  "tech": {
+    "eraBaseCognitio": { "1": 12, "2": 24, "3": 42, "4": 144, "5": 200 },
+    "eraRange": {
+      "1": [12, 16],
+      "2": [24, 32],
+      "3": [42, 58],
+      "4": [144, 180],
+      "5": [180, 220]
+    },
+    "upgradeRatio": { "efficiency": 0.5, "austerity": 0.5, "feature": 0.55 },
+    "premiumMaxMult": 1.35,
+    "breakthroughNoUpgrades": true,
+    "unlockTierByEra": {
+      "1": [2, 3],
+      "2": [4, 5],
+      "3": [6, 7],
+      "4": [8, 9],
+      "5": [9, 10]
+    }
+  },
+  "buildings": {
+    "metalByTier": {
+      "1": 8, "2": 11, "3": 15, "4": 19, "5": 24,
+      "6": 30, "7": 37, "8": 45, "9": 54, "10": 65
+    },
+    "supplyRatio": 0.42,
+    "categoryTaxByTier": {
+      "1": 0, "2": 1, "3": 2, "4": 2, "5": 3,
+      "6": 3, "7": 4, "8": 5, "9": 5, "10": 6
+    },
+    "yieldFlatByTier": {
+      "1": 1, "2": 1, "3": 2, "4": 3, "5": 3,
+      "6": 4, "7": 5, "8": 6, "9": 7, "10": 8
+    },
+    "volumeBonusMult": 1.5,
+    "megaApMin": 2,
+    "buildCostMultFloor": 0.75,
+    "buildCostMultDefault": 0.9
+  },
+  "colonies": {
+    "supplyRatio": 0.42,
+    "setTypeRatio": 0.55,
+    "colonizeMetal": {
+      "outpost": 14,
+      "colony": 22,
+      "core": 34,
+      "fortress": 28,
+      "mining": 20,
+      "research": 20
+    }
+  },
+  "forces": {
+    "shipCostMult": 1.6,
+    "unitCostMult": 1.3,
+    "supplyRatio": 0.42,
+    "apTierBreak": 4,
+    "forgeMetal": 40,
+    "disbandRefund": 16,
+    "shipUpkeepMetalPerTier": 0.12,
+    "shipUpkeepMetalBase": 0.2,
+    "shipUpkeepDPerCount": 0.25,
+    "shipUpkeepEPerCount": 0.15,
+    "legionUpkeepEPerCount": 0.35,
+    "stations": {
+      "mining": { "metal": 24, "supply": 10 },
+      "military": { "metal": 36, "supply": 15 },
+      "science": { "metal": 22, "supply": 9 },
+      "trade": { "metal": 24, "supply": 10 },
+      "relay": { "metal": 20, "supply": 8 }
+    }
+  },
+  "modifierCaps": {
+    "production": { "min": 0.5, "max": 2.0 },
+    "upkeep": { "min": 0.5, "max": 1.5 },
+    "research": { "min": 0.5, "max": 1.0 },
+    "cost": { "min": 0.75, "max": 1.5 }
+  },
+  "interconnect": {
+    "freeBuildTier": 3,
+    "buildGate": "building.tier <= max(3, factionTechTier[category] + 1)",
+    "produceGate": "shipyard/barracks required; cost from metalByTier * forces.*CostMult"
+  },
+  "alchemy": {
+    "attemptsPerTurn": 2,
+    "baseCost": 6,
+    "eraGapCost": 3,
+    "note": "attempts×baseCost ≤ era1 research (12). Market recipe ≈ 1.0× experimentCost."
+  },
+  "techMarket": {
+    "techCognitioMult": 2.0,
+    "techMetalMultOfTier": 2.0,
+    "recipeVsAlchemyMult": 1.0,
+    "note": "tech listing cognitio ≈ eraCost×2; metal ≈ metalByTier[eraUnlock]×2"
+  },
+  "cardBattle": {
+    "handSize": 4,
+    "maxRounds": 4,
+    "energyPerRound": 4,
+    "xpPerCardBattle": 50,
+    "trophies": {
+      "metalPerLostUnit": 1,
+      "metalFloor": 2,
+      "cognitioOnWin": 6,
+      "intelBump": 6,
+      "loyaltyHit": 5,
+      "styleCognitioPerBanner": 1,
+      "styleMaxCognitio": 3
+    },
+    "note": "Win cognitio ≤9 (<1 era1); metal ≤~55% corvette even on large fights. Card mode opt-in."
+  }
+}

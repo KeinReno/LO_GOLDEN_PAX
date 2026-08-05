@@ -1,0 +1,124 @@
+{
+  "mining": {
+    "id": "station.mining",
+    "kind": "mining",
+    "name": "Добывающая станция",
+    "ap": 1,
+    "roles": [
+      "extract"
+    ],
+    "cost": {
+      "currency.metal": 24,
+      "currency.supply": 10
+    },
+    "effects": [
+      {
+        "effect": "yield_flat",
+        "args": {
+          "currency": "currency.extracta",
+          "amount": 2
+        }
+      }
+    ],
+    "signature": "Системная добыча / мост к metal",
+    "tradeoff": "уязвима без охраны"
+  },
+  "military": {
+    "id": "station.military",
+    "kind": "military",
+    "name": "Оборонная платформа",
+    "ap": 2,
+    "roles": [
+      "defense"
+    ],
+    "cost": {
+      "currency.metal": 36,
+      "currency.supply": 15
+    },
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "D",
+          "tier": 3,
+          "amount": 1
+        }
+      }
+    ],
+    "signature": "Орбитальная оборона системы",
+    "tradeoff": "дорогое ОД на постройку"
+  },
+  "science": {
+    "id": "station.science",
+    "kind": "science",
+    "name": "Научная станция",
+    "ap": 1,
+    "roles": [
+      "science"
+    ],
+    "cost": {
+      "currency.metal": 22,
+      "currency.supply": 9
+    },
+    "effects": [
+      {
+        "effect": "yield_flat",
+        "args": {
+          "currency": "currency.cognitio",
+          "amount": 1
+        }
+      }
+    ],
+    "signature": "Cognitio / сенсоры",
+    "tradeoff": "слабая в бою"
+  },
+  "trade": {
+    "id": "station.trade",
+    "kind": "trade",
+    "name": "Торговый узел",
+    "ap": 1,
+    "roles": [
+      "trade"
+    ],
+    "cost": {
+      "currency.metal": 24,
+      "currency.supply": 10
+    },
+    "effects": [
+      {
+        "effect": "yield_flat",
+        "args": {
+          "currency": "currency.materia",
+          "amount": 1
+        }
+      }
+    ],
+    "signature": "Рынок / логистика",
+    "tradeoff": "нужна безопасность"
+  },
+  "relay": {
+    "id": "station.relay",
+    "kind": "relay",
+    "name": "Релейный маяк",
+    "ap": 1,
+    "roles": [
+      "relay"
+    ],
+    "cost": {
+      "currency.metal": 20,
+      "currency.supply": 8
+    },
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "F",
+          "tier": 2,
+          "amount": 1
+        }
+      }
+    ],
+    "signature": "Дальность связи / fog",
+    "tradeoff": "низкий yield"
+  }
+}

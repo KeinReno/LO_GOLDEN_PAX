@@ -8,6 +8,7 @@ import { useWorldStore } from "../state/worldStore";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { FlowPanel } from "../viewer/FlowPanel";
 import { GmMarketRatesEditor } from "./GmMarketRatesEditor";
+import { GmEffectAudit } from "./gm/GmEffectAudit";
 
 type EcoFaction = {
   factionId: string;
@@ -162,7 +163,7 @@ export function EconomyPanel() {
 
       {facId && (
         <div style={{ marginTop: 12 }}>
-          <FlowPanel factionId={facId} />
+          <FlowPanel factionId={facId} masterToken={masterToken} />
         </div>
       )}
 
@@ -171,6 +172,10 @@ export function EconomyPanel() {
           masterToken={masterToken}
           onMsg={setSyncMsg}
         />
+      </div>
+
+      <div className="gm-domain-block" style={{ marginTop: 12 }}>
+        <GmEffectAudit compact />
       </div>
     </section>
   );

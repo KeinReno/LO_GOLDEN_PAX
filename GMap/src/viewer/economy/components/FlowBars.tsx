@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { fmtInt } from "../../../state/numberFormat";
 import type { FlowBarRow } from "../chartData";
 
 type Props = {
@@ -15,7 +16,7 @@ export function FlowBars({ rows, onSelectCategory }: Props) {
   return (
     <div className="eco-chart-block">
       <header className="eco-chart-block__head">
-        <h4>A–F · произв. / потребл.</h4>
+        <h4>Потоки · производство и расход</h4>
       </header>
       <ul className="eco-flow-bars" aria-label="Потоки категорий">
         {rows.map((r) => {
@@ -28,7 +29,7 @@ export function FlowBars({ rows, onSelectCategory }: Props) {
                 className="eco-flow-bars__row"
                 style={{ "--eco-bar-color": r.color } as CSSProperties}
                 onClick={() => onSelectCategory?.(r.letter)}
-                title={`${r.name}: +${r.production} / −${r.consumption}`}
+                title={`${r.name}: +${fmtInt(r.production)} / −${fmtInt(r.consumption)}`}
               >
                 <span className="eco-flow-bars__letter">{r.letter}</span>
                 <span className="eco-flow-bars__tracks">
@@ -46,7 +47,7 @@ export function FlowBars({ rows, onSelectCategory }: Props) {
                     r.net > 0 ? "is-up" : r.net < 0 ? "is-down" : ""
                   }`}
                 >
-                  {r.net > 0 ? `+${r.net}` : r.net}
+                  {r.net > 0 ? `+${fmtInt(r.net)}` : fmtInt(r.net)}
                 </span>
               </button>
             </li>

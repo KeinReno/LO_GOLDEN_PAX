@@ -1,18 +1,20 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
 import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS } from "../state/defaults";
-import type {
-  DiplomacyEvent,
-  DiplomacyRelation,
-  Faction,
-  Treaty,
-} from "../state/types";
+import type { DiplomacyEvent, DiplomacyRelation, Faction, Treaty } from "../state/types";
 import { CardBoard } from "../ui/cardBoardContext";
 import { DragCard } from "../ui/DragCard";
 import { DropZone } from "../ui/DropZone";
+import { BackgroundBeamsLite } from "../ui/BackgroundBeamsLite";
 import { HoldButton } from "../ui/HoldButton";
-import { useSpotlight } from "../ui/aceternityFx";
+import {
+  DiploTimeline,
+  DiploAttitudeLabel,
+  DiploLeaderCard,
+  opinionOf,
+  OpinionBar,
+  RelationBadge,
+} from "../viewer/diploUiShared";
 
 function getRelation(
   edges: { aId: string; bId: string; relation: DiplomacyRelation }[],
@@ -21,80 +23,6 @@ function getRelation(
 ): DiplomacyRelation {
   const [x, y] = a < b ? [a, b] : [b, a];
   return edges.find((d) => d.aId === x && d.bId === y)?.relation ?? "neutral";
-}
-
-function opinionOf(fac: Faction | undefined, otherId: string): number {
-  return fac?.diplomacy?.opinions?.[otherId] ?? 0;
-}
-
-function OpinionBar({ value }: { value: number }) {
-  const pct = Math.max(0, Math.min(100, ((value + 100) / 200) * 100));
-  const tone =
-    value >= 40 ? "good" : value <= -40 ? "bad" : value >= 10 ? "warm" : "cold";
-  return (
-    <div
-      className={`diplo-opinion-bar diplo-opinion-bar--${tone}`}
-      title={`${value}`}
-    >
-      <div className="diplo-opinion-bar__fill" style={{ width: `${pct}%` }} />
-      <span className="diplo-opinion-bar__label">
-        {value > 0 ? `+${value}` : value}
-      </span>
-    </div>
-  );
-}
-
-function AnimatedTooltip({
-  open,
-  children,
-}: {
-  open: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="diplo-tooltip"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 4 }}
-          transition={{ duration: 0.18 }}
-        >
-          {children}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-function DiploTimeline({ events }: { events: DiplomacyEvent[] }) {
-  if (!events.length) {
-    return <p className="hint">Нет записанных событий.</p>;
-  }
-  return (
-    <ol className="diplo-timeline">
-      {events
-        .slice()
-        .reverse()
-        .slice(0, 12)
-        .map((e, i) => (
-          <li key={`${e.turn}-${e.type}-${i}`} className="diplo-timeline__item">
-            <span className="diplo-timeline__turn">Ход {e.turn}</span>
-            <span className="diplo-timeline__label">{e.label}</span>
-            {typeof e.opinionDelta === "number" && (
-              <span
-                className={`diplo-timeline__delta ${
-                  e.opinionDelta >= 0 ? "is-plus" : "is-minus"
-                }`}
-              >
-                {e.opinionDelta > 0 ? `+${e.opinionDelta}` : e.opinionDelta}
-              </span>
-            )}
-          </li>
-        ))}
-    </ol>
-  );
 }
 
 function needsAttention(
@@ -124,7 +52,7 @@ const OFFER_TREATIES: DiplomacyRelation[] = [
   "neutral",
 ];
 
-/** GM diplomacy workbench — faction list + focus dossier (Endless Space–style). */
+/** GM diplomacy workbench — Galactic Civilizations layout. */
 export function DiplomacyPanel() {
   const world = useWorldStore((s) => s.world);
   const open = useWorldStore((s) => s.diplomacyPanelOpen);
@@ -134,17 +62,23 @@ export function DiplomacyPanel() {
   const setDiplomacy = useWorldStore((s) => s.setDiplomacy);
 
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [hoverId, setHoverId] = useState<string | null>(null);
   const [compareId, setCompareId] = useState<string | null>(null);
   const [giveTreaty, setGiveTreaty] = useState<DiplomacyRelation | null>(null);
   const [wantTreaty, setWantTreaty] = useState<DiplomacyRelation | null>(null);
-  const cardSpot = useSpotlight();
 
   const factions = world.factions;
   const focus = factions.find((f) => f.id === focusId) ?? null;
   const compare =
     factions.find((f) => f.id === (compareId || factions.find((x) => x.id !== focusId)?.id)) ??
     null;
+
+  // Pick a focus when the panel opens so the list isn't a dead empty state.
+  useEffect(() => {
+    if (!open) return;
+    if (focusId && factions.some((f) => f.id === focusId)) return;
+    const first = factions[0]?.id ?? null;
+    setFocusId(first);
+  }, [open, focusId, factions]);
 
   const focusHistory = useMemo(() => {
     if (!focus || !compare) return [] as DiplomacyEvent[];
@@ -201,7 +135,7 @@ export function DiplomacyPanel() {
 
   return (
     <div className="diplo-overlay">
-      <div className="diplo-workbench">
+      <div className="diplo-workbench gc-diplo">
         <div className="diplo-head">
           <h2>Дипломатия</h2>
           <label className="check">
@@ -220,6 +154,24 @@ export function DiplomacyPanel() {
             Закрыть
           </button>
         </div>
+
+        {focus && compare && (
+          <header
+            className="gc-diplo-faceoff gc-diplo-faceoff--beams"
+            aria-label="Пара держав"
+          >
+            <BackgroundBeamsLite />
+            <DiploLeaderCard faction={focus} align="start" />
+            <div className="gc-diplo-status">
+              <RelationBadge relation={relation} />
+              <DiploAttitudeLabel
+                opinion={opinionOf(focus, compare.id)}
+              />
+              <OpinionBar value={opinionOf(focus, compare.id)} />
+            </div>
+            <DiploLeaderCard faction={compare} align="end" />
+          </header>
+        )}
 
         <div className="diplo-workbench__body">
           <aside className="diplo-faction-list" aria-label="Державы">
@@ -246,11 +198,8 @@ export function DiplomacyPanel() {
               return (
                 <div
                   key={f.id}
-                  className={`diplo-faction-card fx-spotlight ${selected ? "is-selected" : ""} ${hot ? "is-glow fx-glow" : ""}`}
+                  className={`diplo-faction-card ${selected ? "is-selected" : ""} ${hot ? "is-glow fx-glow" : ""}`}
                   style={{ "--fx-glow-color": glowColor } as React.CSSProperties}
-                  onMouseEnter={() => setHoverId(f.id)}
-                  onMouseMove={cardSpot.bind.onMouseMove}
-                  onMouseLeave={(e) => { setHoverId(null); cardSpot.bind.onMouseLeave(e); }}
                 >
                   <button
                     type="button"
@@ -280,14 +229,6 @@ export function DiplomacyPanel() {
                       <OpinionBar value={op} />
                     </span>
                   </button>
-                  <AnimatedTooltip open={hoverId === f.id}>
-                    <p>
-                      <strong>{f.name}</strong>
-                    </p>
-                    <p className="hint">Opinion vs {vs?.name ?? "—"}</p>
-                    <OpinionBar value={op} />
-                    <p className="hint">{DIPLOMACY_LABELS[rel]}</p>
-                  </AnimatedTooltip>
                 </div>
               );
             })}
@@ -368,7 +309,7 @@ export function DiplomacyPanel() {
                       </select>
                     </label>
 
-                    <h4>Предложение</h4>
+                    <h4>Стол переговоров (GM)</h4>
                     <p className="hint">
                       Перетащите договор в «Даю» / «Хочу», затем примените как
                       GM-статус между {focus.name} и {compare.name}.
@@ -417,7 +358,7 @@ export function DiplomacyPanel() {
                         </div>
                       </div>
                     </CardBoard>
-                    <div className="diplo-inbox__actions" style={{ marginTop: 8 }}>
+                    <div className="diplo-gm-apply diplo-inbox__actions">
                       <button
                         type="button"
                         className="btn primary"

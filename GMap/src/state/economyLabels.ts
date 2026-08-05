@@ -1,4 +1,5 @@
 import type { EconomySchema } from "./contentCatalog";
+import { fmtInt } from "./numberFormat";
 
 /** Legacy build currencies — spent on construction, colonization, fleets. */
 export const BUILD_METAL = {
@@ -92,31 +93,42 @@ export function categoryDisplayName(idOrLetter: string): string {
   );
 }
 
-const CATEGORY_CURRENCY: Record<string, { short: string; name: string }> =
-  Object.fromEntries(
-    CATEGORY_CURRENCIES.map((c) => [c.id, { short: c.short, name: c.name }]),
-  );
-
-/** Format build/colonize cost: M/S with Russian labels + optional category-currency lines. */
-export function formatBuildCost(cost?: Record<string, number>): string {
+/** Compact player-facing cost line (no M24 / S6 jargon). */
+export function formatPlayerCost(cost?: Record<string, number>): string {
   if (!cost) return "—";
   const parts: string[] = [];
   const metal = cost[BUILD_METAL.id];
   const supply = cost[BUILD_SUPPLY.id];
-  if (metal) parts.push(`${BUILD_METAL.label} (${BUILD_METAL.short}) ${metal}`);
-  if (supply) parts.push(`${BUILD_SUPPLY.label} (${BUILD_SUPPLY.short}) ${supply}`);
+  if (metal) parts.push(`мет. ${fmtInt(metal)}`);
+  if (supply) parts.push(`снаб. ${fmtInt(supply)}`);
   for (const [id, amount] of Object.entries(cost)) {
     if (id === BUILD_METAL.id || id === BUILD_SUPPLY.id || !amount) continue;
-    const meta = CATEGORY_CURRENCY[id];
-    if (meta) parts.push(`${meta.name} (${meta.short}) ${amount}`);
-    else parts.push(`${id.replace(/^currency\./, "")} ${amount}`);
+    const cat = BY_ID[id];
+    if (cat) parts.push(`${cat.name} ${fmtInt(amount)}`);
+    else parts.push(`${id.replace(/^currency\./, "")} ${fmtInt(amount)}`);
   }
   return parts.join(" · ") || "—";
 }
 
+/** Metal + supply treasury snippet for HUD / menus. */
+export function formatPlayerTreasury(metal: number, supply: number): string {
+  return `мет. ${fmtInt(metal)} · снаб. ${fmtInt(supply)}`;
+}
+
+/** Letter badge with Russian name (tooltips, hints). */
+export function categoryLetterCaption(letter: string): string {
+  const c = BY_LETTER[letter];
+  return c ? `${letter} — ${c.name}` : letter;
+}
+
+/** Format build/colonize cost: M/S with Russian labels + optional category-currency lines. */
+export function formatBuildCost(cost?: Record<string, number>): string {
+  return formatPlayerCost(cost);
+}
+
 /** Compact treasury line for planet build UI. */
 export function formatBuildTreasury(metal: number, supply: number): string {
-  return `${BUILD_METAL.label} (${BUILD_METAL.short}) ${metal} · ${BUILD_SUPPLY.label} (${BUILD_SUPPLY.short}) ${supply}`;
+  return formatPlayerTreasury(metal, supply);
 }
 
 /** One-line bridge hint from economy_schema legacy_bridge, or a generic fallback. */
@@ -124,13 +136,14 @@ export function legacyBridgeHint(schema?: EconomySchema | null): string {
   const mapping = schema?.legacy_bridge?.mapping;
   if (mapping?.["currency.metal"] && mapping?.["currency.supply"]) {
     return (
-      `Строительная казна (M/S) — для стройки и флота. ` +
-      `M ≈ ${mapping["currency.metal"]}, S ≈ ${mapping["currency.supply"]}. ` +
-      `Категории A–F выше — потоки и исследования.`
+      `Строительная казна — для стройки и флота. ` +
+      `Примерный обмен: металл ≈ ${mapping["currency.metal"]}, ` +
+      `снабжение ≈ ${mapping["currency.supply"]}. ` +
+      `Шесть категорий ниже — производство и наука.`
     );
   }
   return (
-    "Строительная казна (M/S) тратится на стройку и флот; " +
-    "категории A–F — потоки ресурсов и исследования."
+    "Металл и снабжение — на стройку и флот. " +
+    "Шесть категорий ниже (от сырья до знания) — на производство и науку."
   );
 }

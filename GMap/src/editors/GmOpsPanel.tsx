@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
 import type { StarSystem } from "../state/types";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
+import { GmSeedPanel } from "./gm/GmSeedPanel";
 
 type Preset = { id: string; name: string };
 
@@ -111,10 +112,12 @@ export function GmOpsPanel() {
   const sys = world.systems.find((s) => s.id === selectedSystemId);
 
   useEffect(() => {
-    if (ids.length === 1 && sys?.gmNotes != null) {
-      setGmNote(sys.gmNotes);
+    if (ids.length !== 1) {
+      setGmNote("");
+      return;
     }
-  }, [ids.length, sys?.gmNotes, sys?.id]);
+    setGmNote(sys?.gmNotes ?? "");
+  }, [ids.length, sys?.id, sys?.gmNotes]);
 
   const paintPreset = async (id: string) => {
     if (!ids.length) {
@@ -204,7 +207,11 @@ export function GmOpsPanel() {
   };
 
   return (
-    <section>
+    <section className="gm-ops-panel">
+      <GmSeedPanel />
+
+      <hr className="gm-ops-divider" />
+
       <h3>GM · нарратив</h3>
       <p className="hint">
         Consequence brush, пресеты, скрытые заметки, таймеры узлов. Игроки не

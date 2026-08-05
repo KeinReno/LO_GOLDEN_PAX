@@ -8,7 +8,10 @@ type Props = {
   children: ReactNode;
   /** Extra class on the sheet content. */
   className?: string;
-  /** Max height fraction of viewport (default 0.88). */
+  /**
+   * Max height as percent of visual viewport (default 88).
+   * Uses --app-vh (px) when set, else dvh — never bare vh (Android Chrome URL bar).
+   */
   maxHeightVh?: number;
 };
 
@@ -24,13 +27,20 @@ export function BottomSheet({
   className = "",
   maxHeightVh = 88,
 }: Props) {
+  const fraction = Math.min(100, Math.max(40, maxHeightVh)) / 100;
   return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange} shouldScaleBackground>
+    <Drawer.Root
+      open={open}
+      onOpenChange={onOpenChange}
+      shouldScaleBackground={false}
+    >
       <Drawer.Portal>
         <Drawer.Overlay className="gmap-sheet-overlay" />
         <Drawer.Content
           className={`gmap-sheet-content ${className}`.trim()}
-          style={{ maxHeight: `${maxHeightVh}vh` }}
+          style={{
+            maxHeight: `min(${maxHeightVh}dvh, calc(var(--app-vh, 100dvh) * ${fraction}))`,
+          }}
         >
           <div className="gmap-sheet-handle" aria-hidden />
           {title ? (

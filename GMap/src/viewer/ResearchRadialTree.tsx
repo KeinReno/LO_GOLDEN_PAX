@@ -128,6 +128,7 @@ export function ResearchRadialTree({
   onNodeDragStart,
   isTechBlocked,
   onCognitioDrop,
+  onTechCombine,
   onNodeLongPress,
   eco,
 }: {
@@ -148,6 +149,8 @@ export function ResearchRadialTree({
   isTechBlocked?: (tech: TechnologyDef) => boolean;
   /** Drop cognitio chip onto node → research / accelerate. */
   onCognitioDrop?: (techId: string) => void;
+  /** Drop researched tech onto researched tech → alchemy combine. */
+  onTechCombine?: (fromTechId: string, toTechId: string) => void;
   onNodeLongPress?: (techId: string, x: number, y: number) => void;
   eco?: ViewerPayload["economy"];
 }) {
@@ -482,38 +485,63 @@ export function ResearchRadialTree({
               : "";
 
           const onDragStart = (e: ReactDragEvent) => {
-            if (n.done || n.locked || busy) {
+            // Researched → alchemy drag; locked → no; unresearched → queue/map drag
+            if (n.locked || busy) {
               e.preventDefault();
               return;
             }
             e.dataTransfer.setData(TECH_DND_MIME, n.tech.id);
             e.dataTransfer.setData("text/plain", n.tech.id);
-            e.dataTransfer.effectAllowed = "copyMove";
-            onNodeDragStart?.(n.tech.id);
+            e.dataTransfer.effectAllowed = n.done ? "copy" : "copyMove";
+            if (!n.done) onNodeDragStart?.(n.tech.id);
           };
 
           const onDragOver = (e: ReactDragEvent) => {
-            if (!onCognitioDrop || n.done || n.locked || busy) return;
+            if (busy || n.locked) return;
             const types = Array.from(e.dataTransfer.types || []);
-            if (
-              types.includes(COGNITIO_DND_MIME) ||
-              types.includes("text/plain")
-            ) {
+            const isTech =
+              types.includes(TECH_DND_MIME) || types.includes("text/plain");
+            const isCognitio = types.includes(COGNITIO_DND_MIME);
+            if (n.done && onTechCombine && isTech) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+              return;
+            }
+            if (!n.done && onCognitioDrop && (isCognitio || isTech)) {
               e.preventDefault();
               e.dataTransfer.dropEffect = "copy";
             }
           };
 
           const onDrop = (e: ReactDragEvent) => {
-            if (!onCognitioDrop || n.done || n.locked || busy) return;
+            if (busy || n.locked) return;
             e.preventDefault();
             e.stopPropagation();
-            const fromCognitio =
-              e.dataTransfer.getData(COGNITIO_DND_MIME) ||
+            const techFrom =
+              e.dataTransfer.getData(TECH_DND_MIME) ||
               e.dataTransfer.getData("text/plain");
+            const fromCognitio = e.dataTransfer.getData(COGNITIO_DND_MIME);
+
             if (
-              fromCognitio === "cognitio" ||
-              fromCognitio === "currency.cognitio"
+              n.done &&
+              onTechCombine &&
+              techFrom &&
+              techFrom !== n.tech.id &&
+              unlocked.has(techFrom) &&
+              techFrom !== "cognitio" &&
+              techFrom !== "currency.cognitio"
+            ) {
+              onTechCombine(techFrom, n.tech.id);
+              return;
+            }
+
+            if (
+              !n.done &&
+              onCognitioDrop &&
+              (fromCognitio === "cognitio" ||
+                fromCognitio === "currency.cognitio" ||
+                techFrom === "cognitio" ||
+                techFrom === "currency.cognitio")
             ) {
               onCognitioDrop(n.tech.id);
             }
@@ -523,7 +551,7 @@ export function ResearchRadialTree({
             <button
               key={n.tech.id}
               type="button"
-              draggable={!n.done && !n.locked && !busy}
+              draggable={!n.locked && !busy}
               className={[
                 "research-radial-node",
                 n.done && "is-done",
@@ -552,7 +580,7 @@ export function ResearchRadialTree({
               onDragOver={onDragOver}
               onDrop={onDrop}
               onPointerDown={(e) => {
-                if (!onNodeLongPress || n.done || busy) return;
+                if (!onNodeLongPress || busy || n.locked) return;
                 const { clientX, clientY } = e;
                 clearLongPress();
                 longPressRef.current.techId = n.tech.id;

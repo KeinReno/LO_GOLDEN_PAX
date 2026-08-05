@@ -43,6 +43,8 @@ if (!g.__gmapPlayerShare) {
     wanIpAt: null,
     directViewUrl: null,
     directHint: null,
+    urlRotated: false,
+    previousViewUrl: null,
   };
 }
 const state = g.__gmapPlayerShare;
@@ -624,8 +626,13 @@ async function softReconnectShare() {
     }
 
     state.child = started.child;
+    const prevView = state.lastViewUrl;
     state.publicUrl = started.url;
     state.lastViewUrl = `${started.url}/view`;
+    if (prevView && prevView !== state.lastViewUrl) {
+      state.urlRotated = true;
+      state.previousViewUrl = prevView;
+    }
     state.provider = started.provider;
     state.endpointIp = meta.ip || state.endpointIp;
     state.playerHint = hintFor(started.provider, state.endpointIp);
@@ -1055,6 +1062,8 @@ export function getPlayerShareStatus() {
     lastHealthError: state.lastHealthError,
     downSince: state.downSince,
     reconnectAttempts: state.reconnectAttempts,
+    urlRotated: !!state.urlRotated,
+    previousViewUrl: state.previousViewUrl || null,
     wanIp: state.wanIp,
     wanIpAt: state.wanIpAt,
     directViewUrl: state.directViewUrl,
@@ -1211,8 +1220,13 @@ export async function startPlayerShare(opts = {}) {
         }
 
         state.child = child;
+        const prevView = state.lastViewUrl;
         state.publicUrl = url;
         state.lastViewUrl = `${url}/view`;
+        if (prevView && prevView !== state.lastViewUrl) {
+          state.urlRotated = true;
+          state.previousViewUrl = prevView;
+        }
         state.provider = provider;
         state.startedAt = new Date().toISOString();
         state.error = null;

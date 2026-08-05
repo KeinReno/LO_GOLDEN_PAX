@@ -25,59 +25,87 @@ export const DOCTRINE_PRESETS: DoctrinePreset[] = [
   {
     id: "military",
     label: "Военная экономика",
-    blurb: "Высокий промышленный налог, умеренный сбор. Больше давления, больше металла.",
-    taxes: { "tax.industry": "high", "tax.supply": "low" },
+    blurb: "Высокий сбор Materia, умеренный Energia. Больше давления, больше промышленности.",
+    taxes: {
+      "tax.materia": "high",
+      "tax.energia": "low",
+      "tax.bios": "none",
+    },
   },
   {
     id: "trade",
     label: "Торговая экспансия",
     blurb: "Низкие налоги — запас для биржи и обменов.",
-    taxes: { "tax.industry": "low", "tax.supply": "none" },
+    taxes: {
+      "tax.materia": "low",
+      "tax.energia": "none",
+      "tax.bios": "none",
+    },
   },
   {
     id: "growth",
     label: "Мирный рост",
     blurb: "Без налогов: минимум давления, максимум лояльности и роста.",
-    taxes: { "tax.industry": "none", "tax.supply": "none" },
+    taxes: {
+      "tax.materia": "none",
+      "tax.energia": "none",
+      "tax.bios": "none",
+    },
   },
 ];
 
 export function loadTaxSlots(): TaxSlotDef[] {
   const content = getCachedContent() as
     | (ReturnType<typeof getCachedContent> & {
-        taxes?: Record<string, TaxSlotDef>;
+        taxes?: Record<string, TaxSlotDef & { hidden?: boolean }>;
       })
     | null;
   const taxes = content?.taxes;
   if (!taxes) {
     return [
       {
-        id: "tax.industry",
-        name: "Промышленный налог",
+        id: "tax.materia",
+        name: "Промышленный сбор",
+        resource: "currency.materia",
         tiers: [
           { id: "none", label: "0%" },
-          { id: "low", label: "10%" },
-          { id: "mid", label: "20%" },
-          { id: "high", label: "35%" },
+          { id: "low", label: "8%" },
+          { id: "mid", label: "15%" },
+          { id: "high", label: "25%" },
         ],
       },
       {
-        id: "tax.supply",
-        name: "Сбор обеспечения",
+        id: "tax.energia",
+        name: "Энергетический сбор",
+        resource: "currency.energia",
         tiers: [
           { id: "none", label: "0%" },
-          { id: "low", label: "10%" },
-          { id: "mid", label: "20%" },
+          { id: "low", label: "8%" },
+          { id: "mid", label: "15%" },
+          { id: "high", label: "22%" },
+        ],
+      },
+      {
+        id: "tax.bios",
+        name: "Биосбор",
+        resource: "currency.bios",
+        tiers: [
+          { id: "none", label: "0%" },
+          { id: "low", label: "5%" },
+          { id: "mid", label: "12%" },
+          { id: "high", label: "18%" },
         ],
       },
     ];
   }
-  return Object.values(taxes).map((t) => ({
-    id: t.id,
-    name: t.name,
-    resource: t.resource,
-    tiers: t.tiers ?? [],
-  }));
+  return Object.values(taxes)
+    .filter((t) => t?.id && !(t as { hidden?: boolean }).hidden)
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      resource: t.resource,
+      tiers: t.tiers ?? [],
+    }));
 }
 
 export function describeTaxEffects(tier: TaxTierDef | undefined): string[] {

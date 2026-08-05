@@ -225,6 +225,7 @@ function FleetPanel({
   updateFleet: (id: string, patch: Partial<typeof fleet>) => void;
   deleteFleet: (id: string) => void;
 }) {
+  const fleetComposition = fleet.composition ?? [];
   return (
     <section>
       <h3>Флот</h3>
@@ -278,12 +279,12 @@ function FleetPanel({
         </select>
       </label>
       <div className="block-title">Состав</div>
-      {fleet.composition.map((c, i) => (
+      {fleetComposition.map((c, i) => (
         <div key={`${c.type}-${i}`} className="comp-row">
           <select
             value={c.type}
             onChange={(e) => {
-              const composition = fleet.composition.map((row, j) =>
+              const composition = fleetComposition.map((row, j) =>
                 j === i ? { ...row, type: e.target.value } : row,
               );
               updateFleet(fleet.id, { composition });
@@ -300,7 +301,7 @@ function FleetPanel({
             min={0}
             value={c.count}
             onChange={(e) => {
-              const composition = fleet.composition.map((row, j) =>
+              const composition = fleetComposition.map((row, j) =>
                 j === i
                   ? { ...row, count: Number(e.target.value) || 0 }
                   : row,
@@ -316,7 +317,7 @@ function FleetPanel({
         onClick={() =>
           updateFleet(fleet.id, {
             composition: [
-              ...fleet.composition,
+              ...fleetComposition,
               { type: SHIP_TYPES[0]!, count: 1 },
             ],
           })

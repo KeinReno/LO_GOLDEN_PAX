@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { StarSystem, StationKind } from "../state/types";
 import { stationKindLabel } from "../state/displayLabels";
+import { formatPlayerCost } from "../state/economyLabels";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
+import { produceForceCostClient } from "../state/forceEconomy";
 import {
   Pickaxe,
   Shield,
@@ -30,6 +32,8 @@ export type SystemActionRequest = {
   beltAngle?: number;
   /** New display name for rename_system. */
   name?: string;
+  fleetId?: string;
+  legionId?: string;
 };
 
 type StationCat = {
@@ -82,11 +86,6 @@ export const DEFAULT_STATIONS: StationCat[] = [
   },
 ];
 
-function formatCost(cost: Record<string, number>) {
-  const m = cost["currency.metal"] ?? 0;
-  const s = cost["currency.supply"] ?? 0;
-  return `M${m} · S${s}`;
-}
 
 export function SystemCommandPanel({
   system,
@@ -108,6 +107,9 @@ export function SystemCommandPanel({
   docked = true,
   forceStationsOpen,
   forceProduceOpen,
+  forceProduceTab,
+  produceFleetId,
+  produceLegionId,
   onDeckChange,
   /** Angle chosen on schematic belt. */
   pendingBeltAngle,
@@ -132,6 +134,9 @@ export function SystemCommandPanel({
   docked?: boolean;
   forceStationsOpen?: boolean;
   forceProduceOpen?: boolean;
+  forceProduceTab?: "ships" | "units";
+  produceFleetId?: string | null;
+  produceLegionId?: string | null;
   onDeckChange?: (deck: "stations" | "produce" | null) => void;
   pendingBeltAngle?: number | null;
   placingKind?: StationKind | null;
@@ -142,6 +147,12 @@ export function SystemCommandPanel({
   const [stationsOpen, setStationsOpen] = useState(false);
   const [produceOpen, setProduceOpen] = useState(false);
   const [tab, setTab] = useState<"ships" | "units">("ships");
+
+  useEffect(() => {
+    if (forceProduceTab === "ships" || forceProduceTab === "units") {
+      setTab(forceProduceTab);
+    }
+  }, [forceProduceTab, system.id]);
   const [count, setCount] = useState(1);
 
   const showStations = forceStationsOpen ?? stationsOpen;
@@ -273,7 +284,7 @@ export function SystemCommandPanel({
               <span className="system-cmd-card__body">
                 <strong>{def.name}</strong>
                 <span className="hint">
-                  {formatCost(def.cost)} · {def.ap} AP
+                  {formatPlayerCost(def.cost)} · {def.ap} ОД
                   {canCommit ? " · зажми → сюда" : " · тап тип"}
                 </span>
               </span>
@@ -325,9 +336,13 @@ export function SystemCommandPanel({
       </p>
       <div className="system-cmd-deck">
         {(tab === "ships" ? shipList : unitList).map((def) => {
-          const tier = def.tier ?? 1;
-          const costM = Math.ceil((8 + tier * 6) * count);
-          const costS = Math.ceil((4 + tier * 2) * count);
+          const cost = produceForceCostClient(
+            tab === "ships" ? "ship" : "unit",
+            def,
+            count,
+          );
+          const costM = cost["currency.metal"] ?? 0;
+          const costS = cost["currency.supply"] ?? 0;
           const ok =
             !busy &&
             (tab === "ships" ? hasShipyard : hasBarracks) &&
@@ -349,12 +364,16 @@ export function SystemCommandPanel({
                         systemId: system.id,
                         shipId: def.id,
                         count,
+                        ...(produceFleetId ? { fleetId: produceFleetId } : {}),
                       }
                     : {
                         action: "produce_unit",
                         systemId: system.id,
                         unitId: def.id,
                         count,
+                        ...(produceLegionId
+                          ? { legionId: produceLegionId }
+                          : {}),
                       },
                 )
               }
@@ -362,7 +381,7 @@ export function SystemCommandPanel({
               <span className="system-cmd-card__body">
                 <strong>{def.name}</strong>
                 <span className="hint">
-                  T{tier} · M{costM} · S{costS} · ×{count} · зажми
+                  T{def.tier ?? "?"} · M{costM} · S{costS} · ×{count} · зажми
                 </span>
               </span>
             </HoldRevealButton>

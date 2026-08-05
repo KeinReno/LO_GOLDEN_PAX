@@ -17,6 +17,7 @@ import {
   transferResources,
   marketConvert,
 } from "./economyTick.mjs";
+import { ECONOMIC_POLICY_PRESETS } from "./economyPending.mjs";
 import {
   placeMarketOffer,
   cancelMarketOffer,
@@ -37,9 +38,18 @@ import {
   processSystemTimers,
   applyRefugeeConvoy,
   applyGiveNpcTask,
+  applyAssignNpcPosting,
+  applyRecallNpcPosting,
+  applySeatNpcCouncil,
+  applyUnseatNpcCouncil,
+  applySetCouncilPortfolio,
+  applyAssignBlocLeader,
+  applyAssignRaceLeader,
   processNpcTasks,
+  syncNpcPassiveEffects,
 } from "./narrative.mjs";
 import { researchUpgrade, researchTech, setResearchQueue } from "./techActions.mjs";
+import { resetAlchemyAttemptsForAll } from "./alchemyActions.mjs";
 import { foundHybridLineage } from "./hybridActions.mjs";
 import { transferTech } from "./techPool.mjs";
 import {
@@ -56,6 +66,10 @@ import {
   adjustStock,
 } from "./ledger.mjs";
 import { hopPath, linkAllowsTravel } from "./pathfinding.mjs";
+import {
+  completeForceTravel,
+  refreshSystemBlockade,
+} from "./forceMovement.mjs";
 import {
   getKnownFactionIds,
   getTradePartnerIds,
@@ -85,100 +99,25 @@ function journalPush(journal, entry) {
   journal.push({ at: new Date().toISOString(), ...entry });
 }
 
-/** Recompute whether a system is blockaded (any idle blockading fleet present). */
-function refreshSystemBlockade(world, systemId) {
-  if (!systemId) return;
-  const sys = (world.systems ?? []).find((s) => s.id === systemId);
-  if (!sys) return;
-  const still = (world.fleets ?? []).some(
-    (f) =>
-      f.systemId === systemId &&
-      f.stance === "blockade" &&
-      !(f.route && f.route.length),
-  );
-  sys.blockaded = still;
-}
-
-/** @deprecated alias — prefer refreshSystemBlockade */
+/** @deprecated alias — prefer refreshSystemBlockade from forceMovement */
 function clearBlockadeIfEmpty(world, systemId) {
   refreshSystemBlockade(world, systemId);
 }
 
 /**
- * Start or complete travel along hyperlanes.
- * One hop this tick; remaining systems stay in fleet.route (incl. destination).
- * @param {"move"|"blockade"|"fortify"} arriveStance stance when route empties
+ * Instant travel within movement radius (rules.movement.rangeHops).
+ * @param {"move"|"blockade"|"fortify"} arriveStance stance on arrival
  */
 function beginFleetTravel(world, fleet, toId, arriveStance, journal, meta) {
-  const fromId = fleet.systemId;
-  const leftBlockade =
-    fleet.stance === "blockade" && (fromId !== toId || arriveStance !== "blockade");
-  if (fromId === toId) {
-    fleet.route = [];
-    fleet.stance = arriveStance;
-    if (leftBlockade || arriveStance !== "blockade") {
-      refreshSystemBlockade(world, fromId);
-    }
-    if (arriveStance === "blockade") {
-      const sys = (world.systems ?? []).find((s) => s.id === toId);
-      if (sys) sys.blockaded = true;
-    }
-    return { ok: true, fromId, toId, arrived: true, hopsLeft: 0 };
-  }
-  const path = hopPath(world, fromId, toId, "fleet");
-  if (path.length < 2) {
-    journalPush(journal, {
-      type: "reject",
-      intentId: meta.intentId,
-      reason: "no_path",
-      fleetId: fleet.id,
-      fromId,
-      toId,
-    });
-    return { ok: false };
-  }
-  // path[0]=from, path[1]=next, … path[n]=dest
-  const nextId = path[1];
-  const remaining = path.slice(2); // may be empty if 1-hop
-  fleet.lastSystemId = fromId;
-  fleet.systemId = nextId;
-  fleet.route = remaining.length ? [...remaining] : [];
-  if (fleet.route.length === 0) {
-    fleet.stance = arriveStance;
-    delete fleet.pendingArrival;
-  } else {
-    fleet.stance = "move";
-    fleet.pendingArrival = {
-      stance: arriveStance,
-      systemId: toId,
-      fromSystemId: fromId,
-    };
-  }
-  if (leftBlockade || fromId !== nextId) {
-    refreshSystemBlockade(world, fromId);
-  }
-  if (fleet.route.length === 0 && arriveStance === "blockade") {
-    const sys = (world.systems ?? []).find((s) => s.id === toId);
-    if (sys) sys.blockaded = true;
-  }
-  journalPush(journal, {
-    type: meta.type,
-    intentId: meta.intentId,
-    fleetId: fleet.id,
-    fromId,
-    stepTo: nextId,
+  return completeForceTravel(
+    world,
+    fleet,
+    "fleet",
     toId,
-    hopsLeft: fleet.route.length,
-    arrived: fleet.route.length === 0,
-    factionId: meta.factionId,
-  });
-  return {
-    ok: true,
-    fromId,
-    toId,
-    arrived: fleet.route.length === 0,
-    hopsLeft: fleet.route.length,
-  };
+    arriveStance,
+    journal,
+    meta,
+  );
 }
 
 /**
@@ -320,6 +259,13 @@ function applyMoveFleet(world, intent, journal) {
     intentId: intent.id,
     factionId: intent.factionId,
   });
+  if (
+    travel.ok &&
+    intent.defId === "intent.move_fleet" &&
+    toId !== fleet.pendingAttackSystemId
+  ) {
+    delete fleet.pendingAttackSystemId;
+  }
   if (travel.ok) clearBlockadeIfEmpty(world, travel.fromId);
   return travel.ok;
 }
@@ -344,47 +290,26 @@ function applyMoveLegion(world, intent, journal) {
     });
     return false;
   }
-  const fromId = legion.systemId;
-  if (fromId === toId) {
-    legion.route = [];
-    legion.status = "idle";
-    journalPush(journal, {
+  const travel = completeForceTravel(
+    world,
+    legion,
+    "legion",
+    toId,
+    "idle",
+    journal,
+    {
       type: "move_legion",
       intentId: intent.id,
-      legionId,
-      fromId,
-      toId,
-      arrived: true,
       factionId: intent.factionId,
-    });
-    return true;
+    },
+  );
+  if (!travel.ok) return false;
+  if (
+    intent.defId === "intent.move_legion" &&
+    toId !== legion.pendingAttackSystemId
+  ) {
+    delete legion.pendingAttackSystemId;
   }
-  const path = hopPath(world, fromId, toId, "legion");
-  if (path.length < 2) {
-    journalPush(journal, {
-      type: "reject",
-      intentId: intent.id,
-      reason: "no_path",
-    });
-    return false;
-  }
-  const nextId = path[1];
-  const remaining = path.slice(2);
-  legion.lastSystemId = fromId;
-  legion.systemId = nextId;
-  legion.route = remaining;
-  legion.status = remaining.length ? "move" : "idle";
-  journalPush(journal, {
-    type: "move_legion",
-    intentId: intent.id,
-    legionId,
-    fromId,
-    stepTo: nextId,
-    toId,
-    hopsLeft: remaining.length,
-    arrived: remaining.length === 0,
-    factionId: intent.factionId,
-  });
   return true;
 }
 
@@ -460,9 +385,17 @@ function applyAttackMarker(world, intent, journal) {
   // Move into theater; Engagement created after all intents, then resolved
   if (intent.payload?.fleetId) {
     if (!applyMoveFleet(world, intent, journal)) return false;
+    const fleet = (world.fleets ?? []).find(
+      (f) => f.id === intent.payload.fleetId,
+    );
+    if (fleet) fleet.pendingAttackSystemId = toId;
   }
   if (intent.payload?.legionId) {
     if (!applyMoveLegion(world, intent, journal)) return false;
+    const legion = (world.legions ?? []).find(
+      (l) => l.id === intent.payload.legionId,
+    );
+    if (legion) legion.pendingAttackSystemId = toId;
   }
   sys.activity = "battle";
   journalPush(journal, {
@@ -608,6 +541,7 @@ function applyBlockade(world, intent, journal) {
     factionId: intent.factionId,
   });
   if (!travel.ok) return false;
+  delete fleet.pendingAttackSystemId;
   clearBlockadeIfEmpty(world, travel.fromId);
   if (travel.arrived) {
     sys.blockaded = true;
@@ -657,7 +591,10 @@ function applyFortify(world, intent, journal) {
       factionId: intent.factionId,
     },
   );
-  if (travel.ok) clearBlockadeIfEmpty(world, travel.fromId);
+  if (travel.ok) {
+    delete fleet.pendingAttackSystemId;
+    clearBlockadeIfEmpty(world, travel.fromId);
+  }
   return travel.ok;
 }
 
@@ -1054,21 +991,6 @@ function applySetFlowPriority(world, intent, journal) {
   });
   return true;
 }
-
-const ECONOMIC_POLICY_PRESETS = {
-  military: {
-    label: "Военная экономика",
-    taxes: { "tax.industry": "high", "tax.supply": "low" },
-  },
-  trade: {
-    label: "Торговая экспансия",
-    taxes: { "tax.industry": "low", "tax.supply": "none" },
-  },
-  growth: {
-    label: "Мирный рост",
-    taxes: { "tax.industry": "none", "tax.supply": "none" },
-  },
-};
 
 function applyReserveStock(world, intent, journal) {
   const currencyId = String(intent.payload?.currencyId || "");
@@ -1525,7 +1447,7 @@ function applySetBuildQueue(world, intent, journal) {
  */
 function applyAllBuildQueues(world, turn, journal) {
   const content = getContent();
-  const apMax = content.rules?.apPerTurn ?? 3;
+  const apMax = content.rules?.apPerTurn ?? 9;
 
   for (const fac of world.factions ?? []) {
     const ledger = ensureAllFactions(readLedger(), world);
@@ -1668,6 +1590,13 @@ const APPLIERS = {
   "intent.market_cancel": applyMarketCancel,
   "intent.refugee_convoy": applyRefugeeConvoyIntent,
   "intent.give_npc_task": applyGiveNpcTask,
+  "intent.assign_npc_posting": applyAssignNpcPosting,
+  "intent.recall_npc_posting": applyRecallNpcPosting,
+  "intent.seat_npc_council": applySeatNpcCouncil,
+  "intent.unseat_npc_council": applyUnseatNpcCouncil,
+  "intent.set_council_portfolio": applySetCouncilPortfolio,
+  "intent.assign_bloc_leader": applyAssignBlocLeader,
+  "intent.assign_race_leader": applyAssignRaceLeader,
   "intent.research_upgrade": applyResearchUpgrade,
   "intent.set_research_queue": applySetResearchQueue,
   "intent.set_build_queue": applySetBuildQueue,
@@ -1734,6 +1663,7 @@ export function processTurn(opts = {}) {
   const journal = [];
   processSystemTimers(world, turn, journal);
   processNpcTasks(world, turn, journal);
+  syncNpcPassiveEffects(world);
 
   const intents = readIntents()
     .filter((i) => i.status === "pending" && i.turn === turn)
@@ -1912,6 +1842,9 @@ export function processTurn(opts = {}) {
 
   world.meta.turn = turn + 1;
   world.meta.updatedAt = new Date().toISOString();
+
+  // New turn → fresh alchemy attempts
+  resetAlchemyAttemptsForAll(world);
 
   const written = writeLiveBoard(world, {
     backup: false,

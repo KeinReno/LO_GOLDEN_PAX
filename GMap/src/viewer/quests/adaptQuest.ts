@@ -77,19 +77,73 @@ export function historyToLog(
   }));
 }
 
+/** Mirror server stockCostsFromEffects for UI affordance. */
+export function stockCostsFromEffects(
+  effects: { effect?: string; args?: { resource?: string; amount?: number } }[] | undefined,
+): Record<string, number> {
+  const need: Record<string, number> = {};
+  for (const e of effects || []) {
+    if (
+      (e.effect === "upkeep_flat" || e.effect === "production_flat") &&
+      e.args?.resource
+    ) {
+      const delta = Number(e.args.amount || 0);
+      if (delta < 0) {
+        const id = String(e.args.resource);
+        need[id] = (need[id] || 0) + Math.abs(delta);
+      }
+    }
+  }
+  return need;
+}
+
+export function formatChoiceCostLabel(costs: Record<string, number>): string | undefined {
+  const parts = Object.entries(costs).map(([id, amt]) => {
+    const short = id.replace(/^currency\./, "");
+    return `−${amt} ${short}`;
+  });
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
+export function canAffordCosts(
+  costs: Record<string, number> | undefined,
+  stocks: Record<string, number> | undefined,
+): boolean {
+  if (!costs || !Object.keys(costs).length) return true;
+  const bag = stocks || {};
+  for (const [id, amt] of Object.entries(costs)) {
+    if (Number(bag[id] ?? 0) < amt) return false;
+  }
+  return true;
+}
+
 function activeChoices(q: WorldQuest): QuestChoice[] {
   let raw = q.choices ?? [];
   if (q.arc?.stages?.length) {
     const stage = q.arc.stages[q.arc.currentStage] ?? q.arc.stages[0];
     if (stage?.choices?.length) raw = stage.choices;
   }
-  return raw.map((c) => ({
-    id: c.id,
-    label: c.label,
-    hint: c.description,
-    needsDice: Boolean(c.diceRequired?.length),
-    resultText: undefined,
-  }));
+  return raw.map((c) => {
+    const isDice = Boolean(c.diceRequired?.length);
+    // Flat choices: block if can't pay. Dice: show risk hint only (no hard block).
+    const costs = isDice ? {} : stockCostsFromEffects(c.effects);
+    const risk = isDice ? stockCostsFromEffects(c.onFail) : {};
+    const riskLabel = formatChoiceCostLabel(risk);
+    const costLabel = isDice
+      ? riskLabel
+        ? `🎲 риск ${riskLabel}`
+        : "🎲 проверка"
+      : formatChoiceCostLabel(costs);
+    return {
+      id: c.id,
+      label: c.label,
+      hint: c.description,
+      needsDice: isDice,
+      costs: Object.keys(costs).length ? costs : undefined,
+      costLabel,
+      resultText: undefined,
+    };
+  });
 }
 
 function activeDice(q: WorldQuest): DiceCheck | undefined {

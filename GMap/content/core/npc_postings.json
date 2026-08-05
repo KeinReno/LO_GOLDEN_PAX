@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "version": 2,
+    "description": "Посты NPC. systemEffects/legionEffects/fleetEffects — на цель поста; factionEffects — echo на державу. Legacy `effects` = только держава."
+  },
+  "postings": {
+    "governor": {
+      "id": "governor",
+      "name": "Наместник",
+      "description": "Управляет системой: лояльность и снабжение на месте + слабый echo двору.",
+      "target": "system",
+      "systemEffects": [
+        { "effect": "loyalty_add", "args": { "amount": 4 } },
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.supply", "mult": 1.12 }
+        }
+      ],
+      "factionEffects": [
+        { "effect": "loyalty_add", "args": { "amount": 1 } },
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.supply", "mult": 1.03 }
+        }
+      ],
+      "ungovernedLoyaltyPenalty": 3
+    },
+    "commander": {
+      "id": "commander",
+      "name": "Командующий",
+      "description": "Возглавляет легион: урон и защита на земле + echo державе.",
+      "target": "legion",
+      "legionEffects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.1 } },
+        { "effect": "stat_mult", "args": { "stat": "defense", "mult": 1.06 } }
+      ],
+      "factionEffects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.03 } }
+      ]
+    },
+    "admiral": {
+      "id": "admiral",
+      "name": "Флотоводец",
+      "description": "Командует флотом: удар и манёвр + echo державе.",
+      "target": "fleet",
+      "fleetEffects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.12 } },
+        { "effect": "move_cost_mult", "args": { "mult": 0.92 } }
+      ],
+      "factionEffects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.03 } }
+      ]
+    }
+  }
+}

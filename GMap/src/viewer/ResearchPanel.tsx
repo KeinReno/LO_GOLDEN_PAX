@@ -16,7 +16,6 @@ import { ActionRing } from "../ui/ActionRing";
 import { AnimatedTooltip } from "../ui/AnimatedTooltip";
 import { useSpotlight } from "../ui/aceternityFx";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
-import { ResearchRadialTree } from "./ResearchRadialTree";
 import {
   ResearchQueue,
   EffectsList,
@@ -35,6 +34,9 @@ import {
   hybridResearchBlocked,
 } from "../state/hybridClient";
 import { buildResearchPath } from "./research/researchPath";
+import { AlchemyLab } from "./research/AlchemyLab";
+import { ResearchOverview } from "./research/ResearchOverview";
+import { ResearchMatrix } from "./research/ResearchMatrix";
 
 const CAT_ORDER: EconomyCategory[] = ["A", "B", "C", "D", "E", "F"];
 const CAT_COLOR: Record<string, string> = {
@@ -79,7 +81,7 @@ function lockLabel(tech: TechnologyDef): string | null {
   if (hybrid) return hybrid;
   if (tech.raceLock) {
     const name = content?.races?.[tech.raceLock]?.name ?? tech.raceLock;
-    return `Только для расы «${name}» (≥30%)`;
+    return `Только для расы «${name}» (от 30% населения)`;
   }
   if (tech.factionTraitLock) {
     const name =
@@ -202,7 +204,7 @@ function buildingsUnlockedByTech(
 type NextBuy = { tech: TechnologyDef; cost: number };
 
 /**
- * Research room: radial tech wheel (6 spokes) + queue + detail rail.
+ * Research room: overview wheel (progress) + cat×era matrix + detail rail.
  */
 export function ResearchPanel({
   eco,
@@ -212,9 +214,11 @@ export function ResearchPanel({
   onResearchUpgrade,
   onSetQueue,
   onAccelerate,
+  onAlchemyExperiment,
   busy,
   msg,
   asRoom,
+  compact = false,
   branch: branchProp,
   onBranchChange,
   highlightTechId,
@@ -233,9 +237,12 @@ export function ResearchPanel({
   onResearchUpgrade?: (techId: string, upgradeId: string) => void;
   onSetQueue?: (queue: string[]) => void;
   onAccelerate?: (techId: string) => void;
+  onAlchemyExperiment?: (techA: string, techB: string) => void;
   busy?: boolean;
   msg?: string | null;
   asRoom?: boolean;
+  /** Phone BottomSheet: single column, hide desktop hotkeys. */
+  compact?: boolean;
   branch?: EconomyCategory | null;
   onBranchChange?: (c: EconomyCategory | null) => void;
   highlightTechId?: string | null;
@@ -247,19 +254,34 @@ export function ResearchPanel({
   onTechMapDrag?: (techId: string) => void;
   onEffectNavigate?: (target: import("./research/EffectsList").EffectNavigateTarget) => void;
 }) {
+  const [scienceMode, setScienceMode] = useState<"tree" | "lab">("tree");
+  const [labSeed, setLabSeed] = useState<{
+    a: string | null;
+    b: string | null;
+    key: number;
+  } | null>(null);
   const [branchLocal, setBranchLocal] = useState<EconomyCategory | null>(null);
   const [filter, setFilter] = useState<ResearchFilter>("all");
   const [search, setSearch] = useState("");
+  const [focusEra, setFocusEra] = useState<number | null>(null);
   const [nodeRing, setNodeRing] = useState<{
     techId: string;
     x: number;
     y: number;
   } | null>(null);
+
+  const openLabWith = (a: string | null, b: string | null = null) => {
+    if (!onAlchemyExperiment) return;
+    setLabSeed({ a, b, key: Date.now() });
+    setScienceMode("lab");
+    setNodeRing(null);
+  };
   const focusBranch =
     branchProp !== undefined ? branchProp : branchLocal;
   const setFocusBranch = (c: EconomyCategory | null) => {
     setBranchLocal(c);
     onBranchChange?.(c);
+    if (c == null) setFocusEra(null);
   };
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -293,6 +315,19 @@ export function ResearchPanel({
     () => new Set(eco?.unlockedTechs || []),
     [eco?.unlockedTechs],
   );
+  const openBranch = (c: EconomyCategory, era?: number) => {
+    setFocusBranch(c);
+    setFocusEra(era ?? null);
+    const techs = byCat.get(c) ?? [];
+    const pool =
+      era != null ? techs.filter((t) => (t.era || 1) === era) : techs;
+    const next = pool.find(
+      (t) =>
+        !unlocked.has(t.id) &&
+        (t.prerequisites || []).every((p) => unlocked.has(p)),
+    );
+    if (next) setSelectedId(next.id);
+  };
   const unlockedUpgrades = useMemo(
     () => new Set(eco?.unlockedUpgrades || []),
     [eco?.unlockedUpgrades],
@@ -342,6 +377,7 @@ export function ResearchPanel({
       const tech = byId.get(highlightTechId);
       if (tech && CAT_ORDER.includes(tech.category as EconomyCategory)) {
         setFocusBranch(tech.category as EconomyCategory);
+        setFocusEra(tech.era || null);
       }
     }
   }, [highlightTechId, byId]);
@@ -488,7 +524,9 @@ export function ResearchPanel({
   const jumpToNextBuy = () => {
     if (!nextBuy) return;
     const cat = nextBuy.tech.category as EconomyCategory;
-    if (CAT_ORDER.includes(cat)) setFocusBranch(cat);
+    if (CAT_ORDER.includes(cat)) {
+      openBranch(cat, nextBuy.tech.era || undefined);
+    }
     setSelectedId(nextBuy.tech.id);
   };
 
@@ -499,6 +537,27 @@ export function ResearchPanel({
       <header className={asRoom === false ? undefined : "hq-panel-head"}>
         {asRoom !== false && <h2>Наука</h2>}
         {asRoom === false && <h3>Исследования</h3>}
+        <div className="research-mode-tabs" role="tablist" aria-label="Режим науки">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scienceMode === "tree"}
+            className={scienceMode === "tree" ? "on" : undefined}
+            onClick={() => setScienceMode("tree")}
+          >
+            Дерево
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scienceMode === "lab"}
+            className={scienceMode === "lab" ? "on" : undefined}
+            onClick={() => setScienceMode("lab")}
+            disabled={!onAlchemyExperiment}
+          >
+            Лаборатория
+          </button>
+        </div>
         <div className="research-stock-row">
           <p className="hint research-stock">
             Знание:{" "}
@@ -546,6 +605,24 @@ export function ResearchPanel({
         </div>
       </header>
 
+      {scienceMode === "lab" && onAlchemyExperiment ? (
+        <AlchemyLab
+          compact={compact}
+          unlockedIds={[...(unlocked)]}
+          cognitio={cognitio}
+          alchemy={eco?.alchemy}
+          busy={busy}
+          onExperiment={onAlchemyExperiment}
+          msg={msg}
+          initialSlots={
+            labSeed ? { a: labSeed.a, b: labSeed.b } : null
+          }
+          seedKey={labSeed?.key ?? null}
+        />
+      ) : null}
+
+      {scienceMode === "tree" ? (
+        <>
       {onSetQueue ? (
         <ResearchQueue
           eco={eco}
@@ -642,7 +719,7 @@ export function ResearchPanel({
           {...branchSpot.bind}
         >
           <strong>Все</strong>
-          <span className="hint">колесо</span>
+          <span className="hint">обзор</span>
         </button>
         {CAT_ORDER.map((c, i) => {
           const techs = byCat.get(c) ?? [];
@@ -669,19 +746,13 @@ export function ResearchPanel({
                   "--fx-spot-color": CAT_COLOR[c],
                 } as React.CSSProperties
               }
-              onClick={() => {
-                setFocusBranch(c);
-                const next = techs.find(
-                  (t) =>
-                    !unlocked.has(t.id) &&
-                    (t.prerequisites || []).every((p) => unlocked.has(p)),
-                );
-                if (next) setSelectedId(next.id);
-              }}
+              onClick={() => openBranch(c)}
               title={`${CAT_NAME[c]} · Alt+${i + 1}`}
               {...branchSpot.bind}
             >
-              <span className="research-tab-hotkey">Alt+{i + 1}</span>
+              {!compact ? (
+                <span className="research-tab-hotkey">Alt+{i + 1}</span>
+              ) : null}
               <span style={{ color: CAT_COLOR[c] }}>{c}</span>
               <strong>{CAT_NAME[c]}</strong>
               <span className="hint">
@@ -703,38 +774,51 @@ export function ResearchPanel({
             : `research-tab-${focusBranch}`
         }
       >
-        <ResearchRadialTree
-          byCat={byCat}
-          unlocked={unlocked}
-          unlockedUpgrades={unlockedUpgrades}
-          cognitio={cognitio}
-          eco={eco}
-          selectedId={selectedId}
-          focusBranch={focusBranch}
-          busy={busy}
-          onSelect={setSelectedId}
-          filter={filter}
-          search={search}
-          highlightId={highlightTechId}
-          queueIds={queueSet}
-          onNodeDragStart={onTechMapDrag}
-          isTechBlocked={(tech) =>
-            lockBlocksResearch(tech, world, factionId, eco)
-          }
-          onCognitioDrop={(techId) => {
-            const tech = byId.get(techId);
-            if (!tech || busy) return;
-            if (queueSet.has(techId) && onAccelerate) {
-              onAccelerate(techId);
-              return;
-            }
-            onResearch(techId);
-          }}
-          onNodeLongPress={(techId, x, y) => {
-            setSelectedId(techId);
-            setNodeRing({ techId, x, y });
-          }}
-        />
+        <div className="research-map">
+          {focusBranch == null ? (
+            <ResearchOverview
+              byCat={byCat}
+              unlocked={unlocked}
+              cognitio={cognitio}
+              busy={busy}
+              eco={eco}
+              isTechBlocked={(tech) =>
+                lockBlocksResearch(tech, world, factionId, eco)
+              }
+              onOpenBranch={openBranch}
+            />
+          ) : (
+            <ResearchMatrix
+              cat={focusBranch}
+              techs={byCat.get(focusBranch) ?? []}
+              unlocked={unlocked}
+              cognitio={cognitio}
+              selectedId={selectedId}
+              busy={busy}
+              filter={filter}
+              search={search}
+              focusEra={focusEra}
+              onFocusEra={setFocusEra}
+              queueIds={queueSet}
+              eco={eco}
+              isTechBlocked={(tech) =>
+                lockBlocksResearch(tech, world, factionId, eco)
+              }
+              onSelect={setSelectedId}
+              onTechDragStart={onTechMapDrag}
+              onBack={() => setFocusBranch(null)}
+              onCognitioDrop={(techId) => {
+                const tech = byId.get(techId);
+                if (!tech || busy) return;
+                if (queueSet.has(techId) && onAccelerate) {
+                  onAccelerate(techId);
+                  return;
+                }
+                onResearch(techId);
+              }}
+            />
+          )}
+        </div>
 
         {nodeRing ? (
           <ActionRing
@@ -743,15 +827,28 @@ export function ResearchPanel({
             y={nodeRing.y}
             onClose={() => setNodeRing(null)}
             items={[
-              {
-                id: "research",
-                label: "Изучить",
-                onSelect: () => {
-                  onResearch(nodeRing.techId);
-                  setNodeRing(null);
-                },
-              },
-              ...(onSetQueue
+              ...(unlocked.has(nodeRing.techId) && onAlchemyExperiment
+                ? [
+                    {
+                      id: "alchemy",
+                      label: "Эксперимент",
+                      onSelect: () => openLabWith(nodeRing.techId, null),
+                    },
+                  ]
+                : []),
+              ...(!unlocked.has(nodeRing.techId)
+                ? [
+                    {
+                      id: "research",
+                      label: "Изучить",
+                      onSelect: () => {
+                        onResearch(nodeRing.techId);
+                        setNodeRing(null);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onSetQueue && !unlocked.has(nodeRing.techId)
                 ? [
                     {
                       id: "queue",
@@ -775,6 +872,14 @@ export function ResearchPanel({
                     },
                   ]
                 : []),
+              {
+                id: "select",
+                label: "В карточке",
+                onSelect: () => {
+                  setSelectedId(nodeRing.techId);
+                  setNodeRing(null);
+                },
+              },
             ]}
           />
         ) : null}
@@ -793,7 +898,11 @@ export function ResearchPanel({
           {...detailSpot.bind}
         >
           {!selected || !selectedState ? (
-            <p className="hint">Выберите технологию на колесе.</p>
+            <p className="hint">
+              {focusBranch == null
+                ? "Выберите сектор на обзоре или вкладку ветки."
+                : "Выберите технологию в матрице."}
+            </p>
           ) : (
             <>
               <header className="research-detail-head">
@@ -983,15 +1092,27 @@ export function ResearchPanel({
           <ResearchTimeline recent={eco?.recent} />
         </aside>
       </div>
+        </>
+      ) : null}
     </>
   );
 
   if (asRoom === false) {
-    return <section className="hq-card research-panel">{body}</section>;
+    return (
+      <section
+        className={`hq-card research-panel${compact ? " research-panel--compact" : ""}`}
+      >
+        {body}
+      </section>
+    );
   }
 
   return (
-    <div className="hq-panel research-panel research-panel--room research-panel--radial">
+    <div
+      className={`hq-panel research-panel research-panel--room research-panel--radial${
+        compact ? " research-panel--compact" : ""
+      }`}
+    >
       {body}
     </div>
   );

@@ -1,4 +1,4 @@
-import {
+﻿import {
   configureCloudPubToken,
   configureNgrokAuthtoken,
   getPlayerShareStatus,
@@ -27,15 +27,21 @@ import { getContent, getPublicContent, loadContent } from "./contentLoader.mjs";
 import {
   buildModifierStack,
   explainStack,
-  resolveApMax,
   collectRaceEffects,
 } from "./modifierStack.mjs";
 import {
   readIntents,
+  writeIntents,
   submitIntent,
   cancelIntent,
   reservedAp,
+  reservedForceAp,
 } from "./intents.mjs";
+import {
+  DEFAULT_AP_PER_TURN,
+  resolveEmpireApMax,
+  resolveForceApMax,
+} from "./apBudget.mjs";
 import { applyPlanetAction } from "./planetActions.mjs";
 import { applyQuestAction } from "./questActions.mjs";
 import { applyForcesMutate } from "./forcesActions.mjs";
@@ -44,6 +50,7 @@ import {
   listStationCatalog,
 } from "./systemActions.mjs";
 import { processTurn, getLastJournal } from "./processTurn.mjs";
+import { applyInstantForceMove } from "./forceMovement.mjs";
 import { getFactionBriefing } from "./briefingFilter.mjs";
 import { startTickScheduler, getSchedulerStatus } from "./tickScheduler.mjs";
 import {
@@ -72,7 +79,9 @@ import {
   ensureAllFactions,
   ensureFactionEco,
   writeLedger,
+  setStockReserve,
 } from "./ledger.mjs";
+import { enrichEconomyWithPendingIntents } from "./economyPending.mjs";
 import { queueTaxChange } from "./economyTick.mjs";
 import {
   getMarketRatesPayload,
@@ -101,7 +110,14 @@ import {
   getDiploOffersForFaction,
   createDiploOffer,
   respondDiploOffer,
+  applyUnilateralStance,
 } from "./diploOffers.mjs";
+import {
+  listCourtProposals,
+  proposeCourtEdit,
+  acceptCourtProposal,
+  rejectCourtProposal,
+} from "./courtProposals.mjs";
 import {
   isCommonMarketMember,
   listCommonMembers,
@@ -120,13 +136,18 @@ import {
   passEngagementCard,
   drawEngagementCard,
   advanceEngagement,
+  strikeEngagementFront,
+  readyEngagementCard,
+  stanceOrderEngagement,
+  reorderEngagementFront,
+  retreatEngagementCard,
+  cancelEngagementsMissingForces,
 } from "./engagements.mjs";
 import {
   applyPresetToSystems,
   scheduleTimer,
 } from "./narrative.mjs";
 import {
-  readRpIndex,
   ensureRp,
   ensurePlayerChannels,
   filterIndexForViewer,
@@ -141,7 +162,32 @@ import {
   patchMessageIntentId,
   DEFAULT_CAMPAIGN,
 } from "./rpStore.mjs";
+import { rollDiceToRpEpisode } from "./dice.mjs";
+import {
+  createChoicePrompt,
+  createDicePrompt,
+  resolveChoicePrompt,
+  resolveDicePrompt,
+  setEpisodePin,
+} from "./rpPrompts.mjs";
 import { storePing, getDataFileSizes } from "./db/storeAdapter.mjs";
+import {
+  buildGmBalanceSnapshot,
+  applyGmBalancePatch,
+} from "./gmBalance.mjs";
+import {
+  listAtelierCatalogs,
+  getCatalogMeta,
+  listCatalogEntries,
+  readCatalogEntry,
+  saveCatalogEntry,
+  removeCatalogEntry,
+  readCatalogDocument,
+  saveCatalogDocument,
+  patchRulesKnobs,
+} from "./gmContent.mjs";
+import { spawnStoryQuestFromCatalog } from "./storyQuestSpawn.mjs";
+import os from "node:os";
 
 export {
   DATA_DIR,
@@ -204,6 +250,35 @@ function authenticatePlayerFaction(body, world) {
   return { ok: true, faction };
 }
 
+function playerEconomy(factionId, world = null) {
+  const board = world || readLiveBoard();
+  const turn = board?.meta?.turn ?? null;
+  return enrichEconomyWithPendingIntents(
+    factionId,
+    publicEconomyPayload(getFactionPublicEco(factionId)),
+    turn,
+  );
+}
+
+function playerApBudget(world, factionId, eco = null) {
+  const rules = getContent().rules || {};
+  const stack = buildModifierStack([]);
+  const apBase =
+    eco?.rules?.apPerTurn != null ? eco.rules.apPerTurn : rules.apPerTurn;
+  const apMax = resolveEmpireApMax(
+    { ...rules, apPerTurn: apBase ?? DEFAULT_AP_PER_TURN },
+    stack,
+  );
+  const forceApMax = resolveForceApMax(world, factionId, rules);
+  const turn = world?.meta?.turn ?? 0;
+  return {
+    apMax,
+    reservedAp: reservedAp(factionId, turn),
+    forceApMax,
+    reservedForceAp: reservedForceAp(factionId, turn),
+  };
+}
+
 function playerSessionPayload(world, faction) {
   const eco = getFactionPublicEco(faction.id);
   bootstrapOwnKnowledge(world, faction.id, {
@@ -211,17 +286,14 @@ function playerSessionPayload(world, faction) {
     unlockedTechs: eco.unlockedTechs,
   });
   const filtered = filterWorldForFaction(world, faction.id);
-  const apMax = eco.rules?.apPerTurn
-    ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
-    : resolveApMax(getContent().rules?.apPerTurn ?? 3, buildModifierStack([]));
+  const apBudget = playerApBudget(world, faction.id, eco);
   const diploOffers = getDiploOffersForFaction(faction.id);
   return {
     factionId: faction.id,
     updatedAt: world.meta?.updatedAt ?? null,
     tableRevision: world.meta?.tableRevision ?? 0,
-    apMax,
-    reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-    economy: publicEconomyPayload(eco),
+    ...apBudget,
+    economy: playerEconomy(faction.id, world),
     briefing: getFactionBriefing(faction.id, world),
     diploOffers,
     intel: publicIntelPayload(faction.id),
@@ -532,6 +604,20 @@ export function createApiMiddleware() {
         return;
       }
 
+      // LAN IPs for GM phone preview (same Wi‑Fi as host)
+      if (url.pathname === "/api/lan" && req.method === "GET") {
+        const ips = [];
+        for (const addrs of Object.values(os.networkInterfaces() || {})) {
+          for (const a of addrs || []) {
+            const fam = a.family;
+            const v4 = fam === "IPv4" || fam === 4;
+            if (v4 && !a.internal && a.address) ips.push(a.address);
+          }
+        }
+        sendJson(res, 200, { ips: [...new Set(ips)] });
+        return;
+      }
+
       if (url.pathname === "/api/content" && req.method === "GET") {
         if (url.searchParams.get("reload") === "1" && requireMaster(req)) {
           loadContent();
@@ -557,7 +643,7 @@ export function createApiMiddleware() {
           mergeOrder: getContent().rules?.economyMergeOrder,
         });
         sendJson(res, 200, {
-          apMax: resolveApMax(getContent().rules?.apPerTurn ?? 3, stack),
+          apMax: resolveEmpireApMax(getContent().rules, stack),
           explain: explainStack(stack),
           channels: stack.channels,
         });
@@ -669,7 +755,7 @@ export function createApiMiddleware() {
           sendJson(res, 200, {
             ok: true,
             ...getDiploOffersForFaction(auth.faction.id),
-            economy: publicEconomyPayload(getFactionPublicEco(auth.faction.id)),
+            economy: playerEconomy(auth.faction.id, world),
           });
           return;
         }
@@ -692,8 +778,33 @@ export function createApiMiddleware() {
             ok: true,
             offer: result.offer,
             ...getDiploOffersForFaction(auth.faction.id),
-            economy: publicEconomyPayload(getFactionPublicEco(auth.faction.id)),
+            economy: playerEconomy(auth.faction.id, world),
             ...playerSessionPayload(world, auth.faction),
+          });
+          return;
+        }
+
+        if (action === "stance") {
+          const result = applyUnilateralStance({
+            fromFactionId: auth.faction.id,
+            toFactionId: body.toFactionId,
+            stance: body.stance,
+            turn: world.meta?.turn ?? 0,
+            knownOk: known.has(body.toFactionId),
+          });
+          if (!result.ok) {
+            sendJson(res, 400, result);
+            return;
+          }
+          const fresh = readLiveBoard() || world;
+          sendJson(res, 200, {
+            ok: true,
+            relation: result.relation,
+            previous: result.previous,
+            message: result.message,
+            ...getDiploOffersForFaction(auth.faction.id),
+            economy: playerEconomy(auth.faction.id, fresh),
+            ...playerSessionPayload(fresh, auth.faction),
           });
           return;
         }
@@ -714,13 +825,76 @@ export function createApiMiddleware() {
             ok: true,
             offer: result.offer,
             ...getDiploOffersForFaction(auth.faction.id),
-            economy: publicEconomyPayload(getFactionPublicEco(auth.faction.id)),
+            economy: playerEconomy(auth.faction.id, world),
             ...playerSessionPayload(fresh, auth.faction),
           });
           return;
         }
 
         sendJson(res, 400, { error: "unknown action" });
+        return;
+      }
+
+      if (url.pathname === "/api/court/proposals" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const status = url.searchParams.get("status") || undefined;
+        sendJson(res, 200, { proposals: listCourtProposals({ status }) });
+        return;
+      }
+
+      if (url.pathname === "/api/court/proposals" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = proposeCourtEdit(body);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/court/proposals/") &&
+        url.pathname.endsWith("/accept") &&
+        req.method === "POST"
+      ) {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const proposalId = url.pathname.split("/")[4];
+        const result = acceptCourtProposal(proposalId);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/court/proposals/") &&
+        url.pathname.endsWith("/reject") &&
+        req.method === "POST"
+      ) {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const proposalId = url.pathname.split("/")[4];
+        const result = rejectCourtProposal(proposalId);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, result);
         return;
       }
 
@@ -965,6 +1139,29 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/engagements/reconcile" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Нужен master token" });
+          return;
+        }
+        const body = await readBody(req);
+        const world = body.world || readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const result = cancelEngagementsMissingForces(world, {
+          removedFleetIds: body.removedFleetIds || [],
+          removedLegionIds: body.removedLegionIds || [],
+        });
+        sendJson(res, 200, {
+          ok: true,
+          ...result,
+          engagements: readEngagements(),
+        });
+        return;
+      }
+
       if (url.pathname === "/api/engagements" && req.method === "GET") {
         const list = readEngagements();
         if (requireMaster(req)) {
@@ -1117,9 +1314,188 @@ export function createApiMiddleware() {
           body.factionId,
           body.cardId,
           world,
+          {
+            mode: body.mode,
+            targetId: body.targetId,
+          },
         );
         if (result.ok) {
           writeLiveBoard(world, { backup: false, reason: "play_card" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/strike_front") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = strikeEngagementFront(
+          engagementId,
+          body.factionId,
+          body.cardId,
+          body.targetId,
+          world,
+        );
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "strike_front" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/ready_card") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = readyEngagementCard(
+          engagementId,
+          body.factionId,
+          world,
+        );
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "ready_card" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/stance_order") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = stanceOrderEngagement(
+          engagementId,
+          body.factionId,
+          world,
+          { stance: body.stance, cardId: body.cardId },
+        );
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "stance_order" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/reorder_front") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = reorderEngagementFront(
+          engagementId,
+          body.factionId,
+          body.cardId,
+          body.toIndex,
+          world,
+        );
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "reorder_front" });
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/engagements/") &&
+        url.pathname.endsWith("/retreat_card") &&
+        req.method === "POST"
+      ) {
+        const body = await readBody(req);
+        const engagementId = url.pathname.split("/")[3];
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find(
+          (f) => f.id === body.factionId,
+        );
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        const result = retreatEngagementCard(
+          engagementId,
+          body.factionId,
+          world,
+        );
+        if (result.ok) {
+          writeLiveBoard(world, { backup: false, reason: "retreat_card" });
         }
         sendJson(res, result.ok ? 200 : 400, result);
         return;
@@ -1398,7 +1774,10 @@ export function createApiMiddleware() {
           { isMaster, factionId },
           campaignId,
         );
-        sendJson(res, 200, { messages });
+        sendJson(res, 200, {
+          messages,
+          pin: ep?.pin || null,
+        });
         return;
       }
 
@@ -1409,6 +1788,7 @@ export function createApiMiddleware() {
         let authorFactionId = body.authorFactionId || null;
         let authorName = body.authorName || null;
         let authorAvatarUrl = body.authorAvatarUrl || null;
+        let playerFaction = null;
 
         if (!isMaster) {
           if (!world) {
@@ -1422,12 +1802,39 @@ export function createApiMiddleware() {
             sendJson(res, 401, { error: "Неверный пароль" });
             return;
           }
+          playerFaction = faction;
           authorFactionId = faction.id;
           authorName = body.authorName || faction.name;
           authorAvatarUrl =
             body.authorAvatarUrl || faction.avatarUrl || null;
         } else {
           authorName = body.authorName || "Мастер";
+        }
+
+        // Persona: narrator / NPC / anonymous speak-as
+        const persona = body.persona || "self";
+        if (persona === "narrator") {
+          authorName = "Рассказчик";
+          authorAvatarUrl = null;
+        } else if (persona === "anonymous" && isMaster) {
+          authorName = body.authorName || "???";
+          authorAvatarUrl = null;
+        } else if (persona === "npc" || body.authorNpcId) {
+          const npcId = body.authorNpcId;
+          const facId = isMaster
+            ? body.authorFactionId || body.factionId || authorFactionId
+            : authorFactionId;
+          const fac = (world?.factions ?? []).find((f) => f.id === facId);
+          const npc = (fac?.npcs || []).find((n) => n.id === npcId);
+          if (npc) {
+            authorName = npc.name;
+            authorAvatarUrl = npc.avatarUrl || null;
+            if (isMaster) authorFactionId = fac?.id || authorFactionId;
+          }
+        } else if (persona === "master" && isMaster) {
+          authorName = body.authorName || "Мастер";
+        } else if (playerFaction && persona === "self") {
+          authorName = body.authorName || playerFaction.name;
         }
 
         const campaignId = body.campaignId || DEFAULT_CAMPAIGN;
@@ -1443,6 +1850,7 @@ export function createApiMiddleware() {
             visibility: body.visibility,
             intentPayload: body.intent || null,
             isMaster,
+            tone: body.tone || null,
           },
           campaignId,
         );
@@ -1459,10 +1867,7 @@ export function createApiMiddleware() {
           authorFactionId &&
           world
         ) {
-          const apMax = resolveApMax(
-            getContent().rules?.apPerTurn ?? 3,
-            buildModifierStack([]),
-          );
+          const apBudget = playerApBudget(world, authorFactionId);
           intentResult = submitIntent({
             factionId: authorFactionId,
             defId: body.intent.defId,
@@ -1470,7 +1875,8 @@ export function createApiMiddleware() {
             note: body.intent.note || body.body?.slice(0, 120) || "RP action",
             source: "rp",
             turn: world.meta?.turn ?? 0,
-            apMax,
+            apMax: apBudget.apMax,
+            forceApMax: apBudget.forceApMax,
             world,
           });
           if (intentResult.ok) {
@@ -1493,6 +1899,146 @@ export function createApiMiddleware() {
         return;
       }
 
+      if (url.pathname === "/api/rp/dice" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        const isMaster = requireMaster(req);
+        let factionId = body.factionId || null;
+        let authorName = body.authorName || null;
+        if (!isMaster) {
+          if (!world) {
+            sendJson(res, 404, { error: "Нет board" });
+            return;
+          }
+          const faction = (world.factions ?? []).find(
+            (f) => f.id === body.factionId,
+          );
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+          factionId = faction.id;
+          authorName = body.authorName || faction.name;
+        } else {
+          authorName = body.authorName || "Мастер";
+        }
+        const result = rollDiceToRpEpisode({
+          factionId,
+          chapterId: body.chapterId,
+          episodeId: body.episodeId,
+          count: body.count,
+          sides: body.sides,
+          label: body.label,
+          authorName,
+          campaignId: body.campaignId || DEFAULT_CAMPAIGN,
+        });
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/prompt" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const campaignId = body.campaignId || DEFAULT_CAMPAIGN;
+        const kind = body.kind || body.prompt?.kind;
+        let result;
+        if (kind === "choice") {
+          result = createChoicePrompt(
+            body.chapterId,
+            body.episodeId,
+            {
+              body: body.body,
+              options: body.options || body.prompt?.options,
+              campaignId,
+            },
+          );
+        } else if (kind === "dice") {
+          result = createDicePrompt(
+            body.chapterId,
+            body.episodeId,
+            {
+              body: body.body,
+              count: body.count ?? body.prompt?.dice?.count,
+              sides: body.sides ?? body.prompt?.dice?.sides,
+              bands: body.bands || body.prompt?.dice?.bands,
+              whoRolls: body.whoRolls || body.prompt?.dice?.whoRolls,
+              campaignId,
+            },
+          );
+        } else {
+          sendJson(res, 400, { error: "kind: choice | dice" });
+          return;
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/prompt/resolve" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        const isMaster = requireMaster(req);
+        let factionId = null;
+        let authorName = null;
+        if (!isMaster) {
+          if (!world) {
+            sendJson(res, 404, { error: "Нет board" });
+            return;
+          }
+          const faction = (world.factions ?? []).find(
+            (f) => f.id === body.factionId,
+          );
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+          factionId = faction.id;
+          authorName = body.authorName || faction.name;
+        } else {
+          authorName = body.authorName || "Мастер";
+          factionId = body.factionId || null;
+        }
+        const campaignId = body.campaignId || DEFAULT_CAMPAIGN;
+        const action = body.action || (body.optionId ? "choice" : "dice");
+        let result;
+        if (action === "choice" || body.optionId) {
+          result = resolveChoicePrompt(
+            body.chapterId,
+            body.episodeId,
+            body.messageId,
+            body.optionId,
+            { factionId, authorName, isMaster, campaignId },
+          );
+        } else {
+          result = resolveDicePrompt(
+            body.chapterId,
+            body.episodeId,
+            body.messageId,
+            { factionId, authorName, isMaster, campaignId },
+          );
+        }
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/rp/pin" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        const result = setEpisodePin(
+          body.chapterId,
+          body.episodeId,
+          body.clear ? null : { title: body.title, body: body.body },
+          body.campaignId || DEFAULT_CAMPAIGN,
+        );
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
       if (url.pathname.startsWith("/api/ledger/") && req.method === "GET") {
         const factionId = url.pathname.split("/")[3];
         if (requireMaster(req)) {
@@ -1506,7 +2052,7 @@ export function createApiMiddleware() {
           sendJson(res, 401, { error: "Неверный пароль" });
           return;
         }
-        sendJson(res, 200, getFactionPublicEco(factionId));
+        sendJson(res, 200, playerEconomy(factionId, world));
         return;
       }
 
@@ -1529,11 +2075,17 @@ export function createApiMiddleware() {
           sendJson(res, 400, { error: "techId required" });
           return;
         }
-        const { researchTech } = await import("./techActions.mjs");
-        const result = researchTech(body.factionId, body.techId, {
-          turn: world.meta?.turn ?? null,
-          world,
-        });
+        const { researchTech, gmGrantTech } = await import("./techActions.mjs");
+        const result =
+          isMaster && body.free
+            ? gmGrantTech(body.factionId, body.techId, {
+                turn: world.meta?.turn ?? null,
+                world,
+              })
+            : researchTech(body.factionId, body.techId, {
+                turn: world.meta?.turn ?? null,
+                world,
+              });
         if (!result.ok) {
           sendJson(res, 400, result);
           return;
@@ -1544,7 +2096,104 @@ export function createApiMiddleware() {
         sendJson(res, 200, {
           ok: true,
           tech: result.tech,
-          economy: getFactionPublicEco(body.factionId),
+          economy: playerEconomy(body.factionId, world),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/alchemy/preview" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!body.techA || !body.techB) {
+          sendJson(res, 400, { error: "techA + techB required" });
+          return;
+        }
+        const { previewAlchemyExperiment } = await import("./alchemyActions.mjs");
+        const result = previewAlchemyExperiment(
+          body.factionId,
+          body.techA,
+          body.techB,
+          { mode: body.mode || "auto", world },
+        );
+        sendJson(res, result.ok === false ? 400 : 200, result);
+        return;
+      }
+
+      if (url.pathname === "/api/economy/alchemy/experiment" && req.method === "POST") {
+        const body = await readBody(req);
+        const world = readLiveBoard();
+        if (!world) {
+          sendJson(res, 404, { error: "Нет board" });
+          return;
+        }
+        const isMaster = requireMaster(req);
+        const faction = (world.factions ?? []).find((f) => f.id === body.factionId);
+        if (!isMaster) {
+          if (!faction || faction.password !== body.password) {
+            sendJson(res, 401, { error: "Неверный пароль" });
+            return;
+          }
+        }
+        if (!body.techA || !body.techB) {
+          sendJson(res, 400, { error: "techA + techB required" });
+          return;
+        }
+        const { alchemyExperiment } = await import("./alchemyActions.mjs");
+        const result = alchemyExperiment(body.factionId, body.techA, body.techB, {
+          mode: body.mode || "auto",
+          turn: world.meta?.turn ?? null,
+          world,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        if (result.worldMutated) {
+          writeLiveBoard(world, { backup: false, reason: "alchemy_experiment" });
+        }
+        sendJson(res, 200, {
+          ...result,
+          economy: playerEconomy(body.factionId, world),
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/economy/alchemy/grant-recipe" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = await readBody(req);
+        if (!body.factionId || !body.recipeId) {
+          sendJson(res, 400, { error: "factionId + recipeId required" });
+          return;
+        }
+        const world = readLiveBoard();
+        const { grantRecipe } = await import("./alchemyActions.mjs");
+        const result = grantRecipe(body.factionId, body.recipeId, {
+          turn: world?.meta?.turn ?? null,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, {
+          ...result,
+          economy: world
+            ? playerEconomy(body.factionId, world)
+            : getFactionPublicEco(body.factionId),
         });
         return;
       }
@@ -1584,7 +2233,7 @@ export function createApiMiddleware() {
           ok: true,
           upgrade: result.upgrade,
           tech: result.tech,
-          economy: getFactionPublicEco(body.factionId),
+          economy: playerEconomy(body.factionId, world),
         });
         return;
       }
@@ -1617,7 +2266,7 @@ export function createApiMiddleware() {
         sendJson(res, 200, {
           ok: true,
           queue: result.eco?.researchQueue ?? [],
-          economy: getFactionPublicEco(body.factionId),
+          economy: playerEconomy(body.factionId, world),
         });
         return;
       }
@@ -1657,7 +2306,7 @@ export function createApiMiddleware() {
           ok: true,
           tech: result.tech,
           cost: result.cost,
-          economy: getFactionPublicEco(body.factionId),
+          economy: playerEconomy(body.factionId, world),
         });
         return;
       }
@@ -1720,7 +2369,7 @@ export function createApiMiddleware() {
         sendJson(res, 200, {
           ok: true,
           queue: result.eco?.buildQueue ?? [],
-          economy: getFactionPublicEco(body.factionId),
+          economy: playerEconomy(body.factionId, world),
         });
         return;
       }
@@ -1817,10 +2466,7 @@ export function createApiMiddleware() {
           sendJson(res, result.ok ? 200 : 400, result);
           return;
         }
-        const apMax = resolveApMax(
-          getContent().rules?.apPerTurn ?? 3,
-          buildModifierStack([]),
-        );
+        const apBudget = playerApBudget(world, body.factionId);
         const result = submitIntent({
           factionId: body.factionId,
           defId: "intent.set_tax",
@@ -1828,7 +2474,8 @@ export function createApiMiddleware() {
           note: body.note,
           source: "map",
           turn: world.meta?.turn ?? 0,
-          apMax,
+          apMax: apBudget.apMax,
+          forceApMax: apBudget.forceApMax,
           world,
         });
         sendJson(res, result.ok ? 200 : 400, result);
@@ -1990,39 +2637,82 @@ export function createApiMiddleware() {
           sendJson(res, 401, { error: "Неверный пароль" });
           return;
         }
-        const apMax = resolveApMax(
-          getContent().rules?.apPerTurn ?? 3,
-          buildModifierStack([]),
-        );
+        const apBudget = playerApBudget(world, faction.id);
         const defId =
           body.defId ||
           (body.type?.startsWith("intent.")
             ? body.type
             : `intent.${body.type}`);
+        const payload = body.payload || {
+          fleetId: body.fleetId,
+          legionId: body.legionId,
+          fromSystemId: body.fromSystemId,
+          toSystemId: body.toSystemId,
+        };
         const result = submitIntent({
           factionId: faction.id,
           defId,
-          payload: body.payload || {
-            fleetId: body.fleetId,
-            legionId: body.legionId,
-            fromSystemId: body.fromSystemId,
-            toSystemId: body.toSystemId,
-          },
+          payload,
           note: body.note,
           source: body.source || "map",
           turn: world.meta?.turn ?? 0,
-          apMax,
+          apMax: apBudget.apMax,
+          forceApMax: apBudget.forceApMax,
           world,
         });
         if (!result.ok) {
           sendJson(res, 400, result);
           return;
         }
+
+        // Honor content instant flag for stock reserves (apply now, skip tick).
+        const def = getContent().intents?.[defId];
+        let intentOut = result.intent;
+        if (defId === "intent.reserve_stock" && def?.instant) {
+          const currencyId = String(payload.currencyId || "");
+          const applied = setStockReserve(
+            faction.id,
+            currencyId,
+            Number(payload.amount) || 0,
+            String(payload.label || "резерв"),
+          );
+          if (!applied.ok) {
+            const list = readIntents().filter((i) => i.id !== result.intent.id);
+            writeIntents(list);
+            sendJson(res, 400, applied);
+            return;
+          }
+          const nowIso = new Date().toISOString();
+          const list = readIntents();
+          for (let i = 0; i < list.length; i++) {
+            const row = list[i];
+            if (!row || row.factionId !== faction.id) continue;
+            if (row.id === result.intent.id) {
+              list[i] = { ...row, status: "applied", resolvedAt: nowIso };
+              intentOut = list[i];
+              continue;
+            }
+            if (
+              row.status === "pending" &&
+              row.defId === "intent.reserve_stock" &&
+              String(row.payload?.currencyId || "") === currencyId
+            ) {
+              list[i] = {
+                ...row,
+                status: "cancelled",
+                cancelledAt: nowIso,
+                note: `${row.note || ""} · superseded`.trim(),
+              };
+            }
+          }
+          writeIntents(list);
+        }
+
         sendJson(res, 200, {
           ok: true,
-          intent: result.intent,
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-          apMax,
+          intent: intentOut,
+          ...playerApBudget(world, faction.id),
+          economy: playerEconomy(faction.id, world),
         });
         return;
       }
@@ -2048,11 +2738,8 @@ export function createApiMiddleware() {
         const turn = world?.meta?.turn ?? 0;
         sendJson(res, 200, {
           ...result,
-          reservedAp: reservedAp(faction.id, turn),
-          apMax: resolveApMax(
-            getContent().rules?.apPerTurn ?? 3,
-            buildModifierStack([]),
-          ),
+          ...playerApBudget(world, faction.id),
+          economy: playerEconomy(faction.id, world),
         });
         return;
       }
@@ -2267,12 +2954,7 @@ export function createApiMiddleware() {
           return;
         }
         const eco = getFactionPublicEco(faction.id);
-        const apMax = eco.rules?.apPerTurn
-          ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
-          : resolveApMax(
-              getContent().rules?.apPerTurn ?? 3,
-              buildModifierStack([]),
-            );
+        const apBudget = playerApBudget(world, faction.id, eco);
         const result = applyPlanetAction({
           world,
           factionId: faction.id,
@@ -2283,7 +2965,7 @@ export function createApiMiddleware() {
           instanceId: body.instanceId,
           colonyType: body.colonyType,
           note: body.note,
-          apMax,
+          apMax: apBudget.apMax,
           slotRole: body.slotRole,
           slotResourceId: body.slotResourceId,
           name: body.name,
@@ -2293,15 +2975,13 @@ export function createApiMiddleware() {
           return;
         }
         const filtered = filterWorldForFaction(world, faction.id);
-        const ecoAfter = getFactionPublicEco(faction.id);
         sendJson(res, 200, {
           ok: true,
           intent: result.intent,
           cost: result.cost ?? null,
           building: result.building ?? null,
-          apMax,
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-          economy: publicEconomyPayload(ecoAfter),
+          ...playerApBudget(world, faction.id, eco),
+          economy: playerEconomy(faction.id, world),
           ...filtered,
         });
         return;
@@ -2319,10 +2999,7 @@ export function createApiMiddleware() {
           sendJson(res, 401, { error: "Неверный пароль" });
           return;
         }
-        const apMax = resolveApMax(
-          getContent().rules?.apPerTurn ?? 3,
-          buildModifierStack([]),
-        );
+        const apBudget = playerApBudget(world, faction.id);
         const { applyFoundHybridLineageInstant } = await import(
           "./hybridActions.mjs"
         );
@@ -2333,7 +3010,7 @@ export function createApiMiddleware() {
           planetId: body.planetId,
           raceA: body.raceA,
           raceB: body.raceB,
-          apMax,
+          apMax: apBudget.apMax,
         });
         if (!result.ok) {
           sendJson(res, 400, result);
@@ -2345,8 +3022,7 @@ export function createApiMiddleware() {
           lineageId: result.lineageId,
           intent: result.intent,
           economy: result.economy,
-          apMax,
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          ...playerApBudget(world, faction.id),
           ...filtered,
         });
         return;
@@ -2380,11 +3056,9 @@ export function createApiMiddleware() {
           return;
         }
         const fresh = readLiveBoard() || world;
-        const ecoAfter = getFactionPublicEco(auth.faction.id);
         sendJson(res, 200, {
           ok: true,
           ...result,
-          economy: publicEconomyPayload(ecoAfter),
           ...playerSessionPayload(fresh, auth.faction),
         });
         return;
@@ -2442,12 +3116,7 @@ export function createApiMiddleware() {
           return;
         }
         const eco = getFactionPublicEco(faction.id);
-        const apMax = eco.rules?.apPerTurn
-          ? resolveApMax(eco.rules.apPerTurn, buildModifierStack([]))
-          : resolveApMax(
-              getContent().rules?.apPerTurn ?? 3,
-              buildModifierStack([]),
-            );
+        const apBudget = playerApBudget(world, faction.id, eco);
         const result = applySystemAction({
           world,
           factionId: faction.id,
@@ -2464,14 +3133,14 @@ export function createApiMiddleware() {
           beltAngle: body.beltAngle,
           name: body.name,
           note: body.note,
-          apMax,
+          apMax: apBudget.apMax,
+          forceApMax: apBudget.forceApMax,
         });
         if (!result.ok) {
           sendJson(res, 400, result);
           return;
         }
         const filtered = filterWorldForFaction(world, faction.id);
-        const ecoAfter = getFactionPublicEco(faction.id);
         sendJson(res, 200, {
           ok: true,
           intent: result.intent,
@@ -2479,9 +3148,8 @@ export function createApiMiddleware() {
           fleet: result.fleet ?? null,
           legion: result.legion ?? null,
           stationsCatalog: listStationCatalog(),
-          apMax,
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
-          economy: publicEconomyPayload(ecoAfter),
+          ...playerApBudget(world, faction.id, eco),
+          economy: playerEconomy(faction.id, world),
           ...filtered,
         });
         return;
@@ -2499,10 +3167,7 @@ export function createApiMiddleware() {
           sendJson(res, 401, { error: "Неверный пароль" });
           return;
         }
-        const apMax = resolveApMax(
-          getContent().rules?.apPerTurn ?? 3,
-          buildModifierStack([]),
-        );
+        const apBudget = playerApBudget(world, faction.id);
         const defId = body.type?.startsWith("intent.")
           ? body.type
           : `intent.${body.type}`;
@@ -2518,32 +3183,65 @@ export function createApiMiddleware() {
           note: body.note,
           source: "map",
           turn: world.meta?.turn ?? 0,
-          apMax,
+          apMax: apBudget.apMax,
+          forceApMax: apBudget.forceApMax,
           world,
         });
         if (!result.ok) {
           sendJson(res, 400, result);
           return;
         }
+
+        const def = getContent().intents?.[defId];
+        let intentOut = result.intent;
+        let worldOut = world;
+
+        if (
+          def?.instant &&
+          (defId === "intent.move_fleet" || defId === "intent.move_legion")
+        ) {
+          const applied = applyInstantForceMove(world, result.intent);
+          if (!applied.ok) {
+            const list = readIntents().filter((i) => i.id !== result.intent.id);
+            writeIntents(list);
+            sendJson(res, 400, applied);
+            return;
+          }
+          writeLiveBoard(world, { backup: false, reason: defId });
+          worldOut = world;
+          const nowIso = new Date().toISOString();
+          const list = readIntents();
+          const idx = list.findIndex((i) => i.id === result.intent.id);
+          if (idx >= 0) {
+            list[idx] = {
+              ...list[idx],
+              status: "applied",
+              resolvedAt: nowIso,
+            };
+            writeIntents(list);
+            intentOut = list[idx];
+          }
+        }
+
         // Legacy shape for ViewerPage
         const order = {
-          id: result.intent.id,
-          factionId: result.intent.factionId,
+          id: intentOut.id,
+          factionId: intentOut.factionId,
           type: body.type,
-          turn: result.intent.turn,
-          status: result.intent.status,
+          turn: intentOut.turn,
+          status: intentOut.status,
           fleetId: body.fleetId,
           fromSystemId: body.fromSystemId,
           toSystemId: body.toSystemId,
           note: body.note || "",
-          createdAt: result.intent.submittedAt,
+          createdAt: intentOut.submittedAt,
         };
         sendJson(res, 200, {
           ok: true,
           order,
-          intent: result.intent,
-          apMax,
-          reservedAp: reservedAp(faction.id, world.meta?.turn ?? 0),
+          intent: intentOut,
+          world: worldOut,
+          ...playerApBudget(worldOut, faction.id),
         });
         return;
       }
@@ -2599,6 +3297,231 @@ export function createApiMiddleware() {
             "public/campaigns/lo_golden_pax.json",
             "data/published.json",
           ],
+        });
+        return;
+      }
+
+      /**
+       * GM: reload content packs from disk + bump tableRevision so viewers
+       * and the GM client pick up build/catalog changes after save.
+       * Optional body.world writes the live board first.
+       */
+      if (url.pathname === "/api/gm/balance/snapshot" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        sendJson(res, 200, buildGmBalanceSnapshot());
+        return;
+      }
+
+      if (url.pathname === "/api/gm/balance/patch" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = (await readBody(req)) || {};
+        const result = applyGmBalancePatch(body);
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/catalogs" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        sendJson(res, 200, { catalogs: listAtelierCatalogs() });
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/meta" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const catalog = url.searchParams.get("catalog") || "";
+        const result = getCatalogMeta(catalog);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/entries" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const catalog = url.searchParams.get("catalog") || "";
+        const result = listCatalogEntries(catalog, {
+          q: url.searchParams.get("q") || "",
+          bag: url.searchParams.get("bag") || "",
+          limit: url.searchParams.get("limit") || "80",
+          offset: url.searchParams.get("offset") || "0",
+        });
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/entry" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const catalog = url.searchParams.get("catalog") || "";
+        const key = url.searchParams.get("key") || "";
+        const bag = url.searchParams.get("bag") || "";
+        const result = readCatalogEntry(catalog, key, bag);
+        sendJson(res, result.ok ? 200 : 404, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/entry" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = (await readBody(req)) || {};
+        const result = saveCatalogEntry(
+          body.catalog,
+          body.key,
+          body.bag,
+          body.data,
+          Boolean(body.create),
+        );
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/entry" && req.method === "DELETE") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const catalog = url.searchParams.get("catalog") || "";
+        const key = url.searchParams.get("key") || "";
+        const bag = url.searchParams.get("bag") || "";
+        const result = removeCatalogEntry(catalog, key, bag);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/document" && req.method === "GET") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const catalog = url.searchParams.get("catalog") || "";
+        const result = readCatalogDocument(catalog);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/document" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = (await readBody(req)) || {};
+        const result = saveCatalogDocument(body.catalog, body.data);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/rules-knobs" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = (await readBody(req)) || {};
+        const result = patchRulesKnobs(body);
+        sendJson(res, result.ok ? 200 : 400, result);
+        return;
+      }
+
+      if (url.pathname === "/api/gm/content/reload" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        loadContent();
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      if (url.pathname === "/api/gm/quests/spawn-catalog" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = (await readBody(req)) || {};
+        const catalogId = String(body.catalogId || "");
+        const factionId = String(body.factionId || "");
+        if (!catalogId || !factionId) {
+          sendJson(res, 400, { ok: false, error: "Нужны catalogId и factionId" });
+          return;
+        }
+        const result = spawnStoryQuestFromCatalog(catalogId, factionId, {
+          systemId: body.systemId || null,
+          returnWorld: true,
+        });
+        if (!result.ok) {
+          sendJson(res, 400, result);
+          return;
+        }
+        const meta = bumpTableRevision();
+        if (result.world?.meta) {
+          result.world.meta.tableRevision = meta.tableRevision;
+          result.world.meta.updatedAt = meta.updatedAt;
+        }
+        sendJson(res, 200, {
+          ok: true,
+          quest: result.quest,
+          world: result.world,
+          tableRevision: meta.tableRevision,
+        });
+        return;
+      }
+
+      if (url.pathname === "/api/gm/apply-build" && req.method === "POST") {
+        if (!requireMaster(req)) {
+          sendJson(res, 401, { error: "Неверный мастер-токен" });
+          return;
+        }
+        const body = (await readBody(req)) || {};
+        if (body.world?.meta && Array.isArray(body.world.systems)) {
+          writeLiveBoard(body.world, {
+            backup: true,
+            reason: "apply_build",
+            alsoDraft: true,
+            alsoLore: true,
+          });
+        }
+        let contentPacks = 0;
+        if (body.reloadContent !== false) {
+          const content = loadContent();
+          contentPacks = Array.isArray(content?.packs)
+            ? content.packs.length
+            : content
+              ? 1
+              : 0;
+        }
+        const meta = bumpTableRevision();
+        // Keep live board meta in sync so /api/map-version and saves agree.
+        const live = readLiveBoard();
+        if (live?.meta) {
+          live.meta.tableRevision = meta.tableRevision;
+          live.meta.updatedAt = meta.updatedAt;
+          writeJson(PUBLISHED_PATH, live);
+        }
+        sendJson(res, 200, {
+          ok: true,
+          tableRevision: meta.tableRevision,
+          updatedAt: meta.updatedAt,
+          contentPacks,
         });
         return;
       }

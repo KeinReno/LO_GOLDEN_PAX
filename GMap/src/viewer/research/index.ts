@@ -11,7 +11,14 @@ export {
 } from "./CognitioForecast";
 export { ResearchTimeline } from "./ResearchTimeline";
 export { UpgradesComparison, upgradeRoiScore } from "./UpgradesComparison";
+export { ResearchOverview } from "./ResearchOverview";
+export { ResearchMatrix } from "./ResearchMatrix";
 export { buildResearchPath } from "./researchPath";
+export {
+  RESEARCH_ERAS,
+  buildCatProgress,
+  techUiState,
+} from "./techCellState";
 export type { ResearchPathStep } from "./researchPath";
 export {
   buildingsUnlockedByTech,

@@ -6,7 +6,6 @@ import { GESTURE } from "../../ui/gestureMap";
 import { CometCard } from "../quests/CometCard";
 import {
   TIER_COLORS,
-  COMBAT_ROLE_LABELS,
   SLOT_ROLE_LABELS,
   type CatalogShip,
   type DropZoneId,
@@ -14,6 +13,9 @@ import {
 import { hitCardIndex, hitDropZone } from "./useDeckGestures";
 import { effectiveUnitStats } from "./veterancy";
 import { resolveResourceOrCurrencyLabel } from "../../state/displayLabels";
+import { roleLabel } from "../../state/cardBattleHints";
+import { matchupLineForRole } from "../../state/forceReadiness";
+import { CombatCardMeta } from "./CombatCardMeta";
 
 export type UnitCardModel = {
   type: string;
@@ -69,8 +71,9 @@ export function UnitCard({
   const slots = catalogItem?.slots ?? [];
   const slotTotal = slots.length;
   const name = catalogItem?.name ?? group.type;
-  const role = catalogItem?.roles?.[0] ?? group.type;
-  const roleLabel = COMBAT_ROLE_LABELS[role] ?? role;
+  const role = catalogItem?.roles?.[0] ?? "line";
+  const roleLbl = roleLabel(role);
+  const matchup = matchupLineForRole(role);
   const eff = effectiveUnitStats(catalogItem?.stats, level);
   const maxHp = eff.hp || catalogItem?.stats?.hp || 100;
   const hpPercent =
@@ -103,7 +106,12 @@ export function UnitCard({
         role="button"
         tabIndex={0}
         aria-pressed={isSelected}
-        aria-label={`${name} ×${group.count}`}
+        aria-label={`${name} ×${group.count}, ${roleLbl}, порядок ${index + 1}`}
+        title={
+          matchup
+            ? `#${index + 1} в развёртывании · ${matchup}`
+            : `#${index + 1} в развёртывании колоды`
+        }
         drag={!reduce}
         dragSnapToOrigin
         dragElastic={0.12}
@@ -169,14 +177,22 @@ export function UnitCard({
       >
         <div className="forces-unit-card-header">
           <Rocket size={20} strokeWidth={1.6} aria-hidden />
-          <span className="forces-unit-role">{roleLabel}</span>
+          <span className="forces-unit-deploy" title="Порядок развёртывания → рука в card battle">
+            #{index + 1}
+          </span>
         </div>
         <div className="forces-unit-name">{name}</div>
         <div className="forces-unit-count">×{group.count}</div>
+        <CombatCardMeta
+          role={role}
+          hpPercent={hpPercent}
+          showMatchup={!isDragging}
+          compact
+        />
         <div
           className="forces-unit-vet"
           aria-label={`Ветераны ${level} из 5`}
-          title={`Veterancy ${level}/5 · XP ${group.xp ?? 0}`}
+          title={`Veterancy ${level}/5 · XP ${group.xp ?? 0} · только из боёв`}
         >
           {"★".repeat(level)}
           {"☆".repeat(5 - level)}

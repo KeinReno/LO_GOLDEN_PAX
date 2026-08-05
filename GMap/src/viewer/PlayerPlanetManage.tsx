@@ -19,12 +19,14 @@ import {
   canFactionBuildDef,
   raceIdsFromComposition,
 } from "../state/buildingAccess";
+import { planetAllowsBuildingBiome } from "../state/biomeMatch";
 import { BuildingSlotsPanel } from "./BuildingSlotsPanel";
 import {
   buildingKindLabel,
   buildingZoneLabel,
   economyCategoryLabel,
 } from "../state/displayLabels";
+import { formatPlayerCost } from "../state/economyLabels";
 import { BuildingKindIcon } from "./BuildingKindIcon";
 import { FloatingPanel } from "../ui/FloatingPanel";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
@@ -58,10 +60,12 @@ export type BuildingDef = {
   ap?: number;
   cost?: Record<string, number>;
   maxPerPlanet?: number;
+  maxPerSystem?: number;
   category?: string;
   tier?: number;
   faction?: string;
-  prerequisites?: { race?: string };
+  prerequisites?: { race?: string; races?: string[] };
+  biome_restrictions?: string[];
   slots?: BuildingSlotDef[];
   upkeep_slots?: BuildingSlotDef[];
   effects?: Array<{ effect: string; args: Record<string, unknown> }>;
@@ -106,14 +110,6 @@ export type PlanetActionRequest = {
   slotResourceId?: string;
   name?: string;
 };
-
-function formatCost(cost?: Record<string, number>): string {
-  if (!cost) return "—";
-  const parts: string[] = [];
-  if (cost["currency.metal"]) parts.push(`M${cost["currency.metal"]}`);
-  if (cost["currency.supply"]) parts.push(`S${cost["currency.supply"]}`);
-  return parts.join(" · ") || "—";
-}
 
 function normalizeColonyType(t?: string | null): string {
   if (!t || t === "none") return "none";
@@ -318,7 +314,7 @@ export function PlayerPlanetManage({
         <section className="planet-manage-block">
           <h4>Колонизация</h4>
           <p className="hint">
-            Зажми карту: списывает ресурсы и AP, колония появляется сразу.
+            Зажми карту: списывает ресурсы и ОД, колония появляется сразу.
           </p>
           <div className="planet-manage-grid">
             {colonyOptions.map((c) => (
@@ -339,7 +335,7 @@ export function PlayerPlanetManage({
               >
                 <strong>{c.name}</strong>
                 <span className="hint">
-                  {formatCost(c.colonizeCost)} · {c.colonizeAp ?? 1} AP · зажми
+                  {formatPlayerCost(c.colonizeCost)} · {c.colonizeAp ?? 1} ОД · зажми
                 </span>
               </HoldRevealButton>
             ))}
@@ -365,7 +361,7 @@ export function PlayerPlanetManage({
                     type="button"
                     className={`order-type-chip ${on ? "on" : ""}`}
                     disabled={busy || on || apLeft < (c.setTypeAp ?? 1)}
-                    title={`${formatCost(c.setTypeCost)} · ${c.setTypeAp ?? 1} AP`}
+                    title={`${formatPlayerCost(c.setTypeCost)} · ${c.setTypeAp ?? 1} ОД`}
                     onClick={() =>
                       onAction({
                         action: "set_colony_type",
@@ -398,8 +394,8 @@ export function PlayerPlanetManage({
               <h4 style={{ margin: 0 }}>Строительство</h4>
               <div className="planet-radial-stats">
                 <span className="hint">
-                  AP {reservedAp}/{apMax}
-                  {apLeft === 0 ? " · нет AP" : ""}
+                  ОД {reservedAp}/{apMax}
+                  {apLeft === 0 ? " · нет ОД" : ""}
                 </span>
                 <div
                   className="sys-view-toggle"
@@ -511,7 +507,8 @@ export function PlayerPlanetManage({
                       canFactionBuildDef(b, factionId, {
                         raceIds: raceIdsFromComposition(planet.raceComposition),
                       }) &&
-                      canBuildWithTech(techEco, b).ok,
+                      canBuildWithTech(techEco, b).ok &&
+                      planetAllowsBuildingBiome(planet, b.biome_restrictions),
                   )}
                   stocks={stocks}
                   apLeft={apLeft}

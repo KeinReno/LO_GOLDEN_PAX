@@ -9,8 +9,8 @@
     "tier": 1,
     "faction": "generic",
     "cost": {
-      "currency.metal": 10,
-      "currency.supply": 6
+      "currency.metal": 8,
+      "currency.supply": 3
     },
     "effects": [
       {
@@ -53,9 +53,10 @@
     "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 8,
-      "currency.supply": 4,
-      "currency.energia": 2
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.energia": 2,
+      "currency.bios": 2
     },
     "effects": [
       {
@@ -93,63 +94,7 @@
       }
     ],
     "signature": "D→E: Energia → Bios T1–T3 (пища)",
-    "tradeoff": "занимает плодородную землю (-1 Materia cap)",
-    "variant_base": true,
-    "variants": [
-      "building.farm.barial",
-      "building.farm.lord_dust"
-    ]
-  },
-  "building.farm.barial": {
-    "id": "building.farm.barial",
-    "base": "building.farm",
-    "kind": "farm",
-    "zone": "surface",
-    "name": "Агрокомплекс (бариальский)",
-    "tags": ["race_human_barial"],
-    "cost_mult": 0.85,
-    "extra_effects": [
-      {
-        "effect": "production_mult",
-        "args": {
-          "resource": "currency.bios",
-          "mult": 1.1
-        }
-      }
-    ],
-    "flavor": "Бариальские контракты удешевляют агрологистику"
-  },
-  "building.farm.lord_dust": {
-    "id": "building.farm.lord_dust",
-    "base": "building.farm",
-    "kind": "farm",
-    "zone": "surface",
-    "name": "Агрокомплекс (лордов праха)",
-    "tags": ["race_lord_dust"],
-    "cost": {
-      "currency.metal": 12,
-      "currency.supply": 6,
-      "currency.energia": 3
-    },
-    "extra_effects": [
-      {
-        "effect": "production_flat",
-        "args": {
-          "resource": "currency.bios",
-          "amount": 1
-        }
-      }
-    ],
-    "upkeep_effects": [
-      {
-        "effect": "upkeep_flat",
-        "args": {
-          "resource": "currency.bios",
-          "amount": 1
-        }
-      }
-    ],
-    "flavor": "Призраки выращивают биомассу, но половину забирают себе"
+    "tradeoff": "занимает плодородную землю (-1 Materia cap)"
   },
   "building.mine": {
     "id": "building.mine",
@@ -160,10 +105,10 @@
     "category": "A",
     "tier": 3,
     "faction": "generic",
-    "variant_base": true,
     "cost": {
-      "currency.metal": 12,
-      "currency.supply": 3
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.extracta": 2
     },
     "effects": [
       {
@@ -195,68 +140,7 @@
       }
     ],
     "signature": "Добывает Extracta T1–T3",
-    "tradeoff": "-1 Bios cap",
-    "variants": [
-      "building.mine.barial",
-      "building.mine.lord_dust"
-    ]
-  },
-  "building.mine.barial": {
-    "id": "building.mine.barial",
-    "base": "building.mine",
-    "kind": "mine",
-    "zone": "surface",
-    "name": "Шахта (бариальская)",
-    "tags": ["race_human_barial"],
-    "cost_mult": 0.85,
-    "extra_effects": [
-      {
-        "effect": "yield_flat",
-        "args": {
-          "currency": "currency.extracta",
-          "amount": 1
-        }
-      }
-    ],
-    "flavor": "Бариальцы удешевляют добычу за счёт коммерческих контрактов"
-  },
-  "building.mine.lord_dust": {
-    "id": "building.mine.lord_dust",
-    "base": "building.mine",
-    "kind": "mine",
-    "zone": "surface",
-    "name": "Шахта (лордов праха)",
-    "tags": ["race_lord_dust"],
-    "cost": {
-      "currency.metal": 18,
-      "currency.supply": 5
-    },
-    "extra_effects": [
-      {
-        "effect": "yield_flat",
-        "args": {
-          "currency": "currency.extracta",
-          "amount": 3
-        }
-      }
-    ],
-    "upkeep_effects": [
-      {
-        "effect": "upkeep_flat",
-        "args": {
-          "resource": "currency.bios",
-          "amount": 1
-        }
-      }
-    ],
-    "requires": [
-      {
-        "resource": "currency.energia",
-        "min_amount": 1,
-        "reason": "лорды праха размножаются только при энергии/бруннатите"
-      }
-    ],
-    "flavor": "Призрачные лорды извлекают сырьё из ткани реальности"
+    "tradeoff": "-1 Bios cap"
   },
   "building.factory": {
     "id": "building.factory",
@@ -268,9 +152,10 @@
     "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 5,
-      "currency.materia": 3
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.materia": 3,
+      "currency.industria": 2
     },
     "effects": [
       {
@@ -320,9 +205,10 @@
     "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 14,
+      "currency.metal": 15,
       "currency.supply": 6,
-      "currency.bios": 2
+      "currency.bios": 2,
+      "currency.cognitio": 2
     },
     "effects": [
       {
@@ -353,55 +239,14 @@
       {
         "require": {
           "category": "E",
-          "tier": ">=1"
+          "tier": ">=2"
         },
-        "count": 1,
+        "count": 2,
         "per": "turn"
       }
     ],
     "signature": "E→F: Bios → Cognitio T1–T3 (базовая наука)",
-    "tradeoff": "-1 E upkeep (учёные едят)",
-    "variant_base": true,
-    "variants": [
-      "building.lab.narburi",
-      "building.lab.barial"
-    ]
-  },
-  "building.lab.narburi": {
-    "id": "building.lab.narburi",
-    "base": "building.lab",
-    "kind": "lab",
-    "zone": "surface",
-    "name": "Лаборатория (нарбури)",
-    "tags": ["race_horn_narburi"],
-    "extra_effects": [
-      {
-        "effect": "production_mult",
-        "args": {
-          "resource": "currency.cognitio",
-          "mult": 1.15
-        }
-      }
-    ],
-    "flavor": "Хорны-нарбури усиливают прирост знания"
-  },
-  "building.lab.barial": {
-    "id": "building.lab.barial",
-    "base": "building.lab",
-    "kind": "lab",
-    "zone": "surface",
-    "name": "Лаборатория (бариальская)",
-    "tags": ["race_human_barial"],
-    "cost_mult": 0.9,
-    "extra_effects": [
-      {
-        "effect": "research_cost_mult",
-        "args": {
-          "mult": 0.95
-        }
-      }
-    ],
-    "flavor": "Бариальские гранты удешевляют исследования"
+    "tradeoff": "-1 E upkeep (учёные едят)"
   },
   "building.barracks": {
     "id": "building.barracks",
@@ -410,35 +255,44 @@
     "name": "Казарма",
     "ap": 1,
     "category": "C",
-    "tier": 4,
+    "tier": 2,
     "faction": "generic",
     "cost": {
-      "currency.metal": 12,
-      "currency.supply": 8,
-      "currency.industria": 2
+      "currency.metal": 11,
+      "currency.supply": 5,
+      "currency.industria": 1
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 2,
+          "amount": 1
+        }
+      }
+    ],
     "slots": [
       {
         "role": "structure",
         "require": {
           "category": "B",
-          "tier": ">=2"
+          "tier": ">=1"
         },
-        "count": 5
+        "count": 4
       }
     ],
     "upkeep_slots": [
       {
         "require": {
           "category": "E",
-          "tier": ">=2"
+          "tier": ">=1"
         },
-        "count": 2,
+        "count": 1,
         "per": "turn"
       }
     ],
-    "signature": "Слоты десанта T1–T4",
+    "signature": "Слоты десанта (милиция→линия); early force-gate",
     "tradeoff": "-1 мораль в мирное время"
   },
   "building.capitol": {
@@ -452,7 +306,7 @@
     "faction": "generic",
     "maxPerPlanet": 1,
     "cost": {
-      "currency.metal": 20,
+      "currency.metal": 24,
       "currency.supply": 10,
       "currency.industria": 3
     },
@@ -461,6 +315,14 @@
         "effect": "pop_cap_add",
         "args": {
           "amount": 10
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 3,
+          "amount": 1
         }
       }
     ],
@@ -484,7 +346,7 @@
         "per": "turn"
       }
     ],
-    "signature": "+AP/ход, налоги в торговое значение",
+    "signature": "+pop_cap, +AP/ход, налоги",
     "tradeoff": "1 на планету"
   },
   "building.defense": {
@@ -497,11 +359,20 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 14,
-      "currency.supply": 4,
+      "currency.metal": 19,
+      "currency.supply": 8,
       "currency.materia": 2
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "B",
+          "tier": 3,
+          "amount": 1
+        }
+      }
+    ],
     "slots": [
       {
         "role": "hull",
@@ -524,7 +395,7 @@
         "per": "turn"
       }
     ],
-    "signature": "Планетарный щит/орудия; tier = Materia tier корпуса",
+    "signature": "Планетарный щит/орудия; +capacity B",
     "tradeoff": "-1 Energia upkeep"
   },
   "building.spaceport": {
@@ -534,11 +405,11 @@
     "name": "Космопорт",
     "ap": 1,
     "category": "C",
-    "tier": 4,
+    "tier": 3,
     "faction": "generic",
     "maxPerPlanet": 1,
     "cost": {
-      "currency.metal": 18,
+      "currency.metal": 15,
       "currency.supply": 6,
       "currency.industria": 2
     },
@@ -549,6 +420,14 @@
           "currency": "currency.industria",
           "amount": 1
         }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 2,
+          "amount": 1
+        }
       }
     ],
     "slots": [
@@ -556,22 +435,22 @@
         "role": "structure",
         "require": {
           "category": "B",
-          "tier": ">=3"
+          "tier": ">=2"
         },
-        "count": 6
+        "count": 5
       }
     ],
     "upkeep_slots": [
       {
         "require": {
           "category": "D",
-          "tier": ">=3"
+          "tier": ">=2"
         },
-        "count": 2,
+        "count": 1,
         "per": "turn"
       }
     ],
-    "signature": "Открывает орбитальные здания и торговлю",
+    "signature": "Открывает орбиту / торговлю; free-tier",
     "tradeoff": "1 на планету"
   },
   "building.shipyard": {
@@ -581,13 +460,13 @@
     "name": "Верфь",
     "ap": 1,
     "category": "C",
-    "tier": 5,
+    "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 24,
-      "currency.supply": 8,
-      "currency.materia": 4,
-      "currency.industria": 3
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.materia": 2,
+      "currency.industria": 2
     },
     "effects": [
       {
@@ -595,11 +474,11 @@
         "args": {
           "from": {
             "category": "B",
-            "tier": ">=3"
+            "tier": ">=2"
           },
           "to": {
             "category": "C",
-            "tier": ">=3"
+            "tier": ">=2"
           }
         }
       }
@@ -609,23 +488,23 @@
         "role": "structure",
         "require": {
           "category": "B",
-          "tier": ">=3"
+          "tier": ">=2"
         },
-        "count": 8
+        "count": 6
       }
     ],
     "upkeep_slots": [
       {
         "require": {
           "category": "D",
-          "tier": ">=3"
+          "tier": ">=2"
         },
         "count": 2,
         "per": "turn"
       }
     ],
-    "signature": "B→C слоты кораблей; tier верфи = макс. класс",
-    "tradeoff": "нужен космопорт"
+    "signature": "Производство флота (scout→corvette+); early force-gate",
+    "tradeoff": "нужен космопорт желателен"
   },
   "building.habitat": {
     "id": "building.habitat",
@@ -637,15 +516,15 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 10,
+      "currency.metal": 19,
+      "currency.supply": 8,
       "currency.bios": 2
     },
     "effects": [
       {
         "effect": "pop_cap_add",
         "args": {
-          "amount": 15
+          "amount": 18
         }
       }
     ],
@@ -682,11 +561,20 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 5,
+      "currency.metal": 24,
+      "currency.supply": 10,
       "currency.energia": 3
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "D",
+          "tier": 3,
+          "amount": 1
+        }
+      }
+    ],
     "slots": [
       {
         "role": "weapon",
@@ -709,7 +597,7 @@
         "per": "turn"
       }
     ],
-    "signature": "Щит/орудия системы; tier = Energia tier",
+    "signature": "Щит/орудия системы; +capacity D",
     "tradeoff": "-1 Energia upkeep"
   },
   "building.orbital_lab": {
@@ -722,9 +610,10 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 18,
-      "currency.supply": 7,
-      "currency.bios": 3
+      "currency.metal": 24,
+      "currency.supply": 10,
+      "currency.bios": 3,
+      "currency.cognitio": 3
     },
     "effects": [
       {
@@ -774,16 +663,17 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 20,
-      "currency.supply": 6,
-      "currency.industria": 3
+      "currency.metal": 30,
+      "currency.supply": 13,
+      "currency.industria": 3,
+      "currency.extracta": 3
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.extracta",
-          "amount": 3
+          "amount": 4
         }
       },
       {
@@ -820,7 +710,7 @@
         "per": "turn"
       }
     ],
-    "signature": "Поднимает tier месторождения на +1 (T4–T6); soft F→A",
+    "signature": "Extracta T4–T6 + soft F→A",
     "tradeoff": "риск обвала"
   },
   "extract.strip_pit": {
@@ -833,15 +723,16 @@
     "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 14,
-      "currency.supply": 4
+      "currency.metal": 18,
+      "currency.supply": 8,
+      "currency.extracta": 2
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.extracta",
-          "amount": 6
+          "amount": 3
         }
       }
     ],
@@ -863,10 +754,18 @@
         },
         "count": 1,
         "per": "turn"
+      },
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
       }
     ],
-    "signature": "×3 объём Extracta T1–T3",
-    "tradeoff": "-1 Bios cap, -1 Materia cap (истощает почву)"
+    "signature": "Объёмная добыча Extracta (+50% к T3 yield)",
+    "tradeoff": "дороже шахты, жрёт Bios upkeep (истощает почву)"
   },
   "extract.gas_well": {
     "id": "extract.gas_well",
@@ -878,8 +777,9 @@
     "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 12,
-      "currency.supply": 5
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.extracta": 2
     },
     "effects": [
       {
@@ -928,16 +828,17 @@
     "tier": 7,
     "faction": "generic",
     "cost": {
-      "currency.metal": 26,
-      "currency.supply": 8,
-      "currency.industria": 4
+      "currency.metal": 37,
+      "currency.supply": 16,
+      "currency.industria": 4,
+      "currency.extracta": 4
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.extracta",
-          "amount": 4
+          "amount": 5
         }
       },
       {
@@ -982,17 +883,18 @@
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 40,
-      "currency.supply": 15,
+      "currency.metal": 65,
+      "currency.supply": 27,
       "currency.cognitio": 6,
-      "currency.energia": 4
+      "currency.energia": 4,
+      "currency.extracta": 6
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.extracta",
-          "amount": 2
+          "amount": 8
         }
       },
       {
@@ -1042,8 +944,9 @@
     "tier": 2,
     "faction": "generic",
     "cost": {
-      "currency.metal": 10,
-      "currency.supply": 4
+      "currency.metal": 11,
+      "currency.supply": 5,
+      "currency.extracta": 1
     },
     "effects": [
       {
@@ -1087,11 +990,21 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 5,
-      "currency.industria": 2
+      "currency.metal": 19,
+      "currency.supply": 8,
+      "currency.industria": 2,
+      "currency.extracta": 2
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "A",
+          "tier": 2,
+          "amount": 2
+        }
+      }
+    ],
     "slots": [
       {
         "role": "structure",
@@ -1112,8 +1025,8 @@
         "per": "turn"
       }
     ],
-    "signature": "+50% дальности добычи в системе (буст соседних шахт)",
-    "tradeoff": "ничего не добывает сам"
+    "signature": "+capacity A (буст добычи системы)",
+    "tradeoff": "сам почти не добывает"
   },
   "materia.smelter": {
     "id": "materia.smelter",
@@ -1125,9 +1038,10 @@
     "tier": 3,
     "faction": "generic",
     "cost": {
-      "currency.metal": 14,
-      "currency.supply": 5,
-      "currency.extracta": 4
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.extracta": 4,
+      "currency.materia": 2
     },
     "effects": [
       {
@@ -1177,9 +1091,9 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 18,
-      "currency.supply": 6,
-      "currency.materia": 3
+      "currency.metal": 19,
+      "currency.supply": 8,
+      "currency.materia": 2
     },
     "effects": [
       {
@@ -1224,9 +1138,10 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 20,
-      "currency.supply": 7,
-      "currency.extracta": 5
+      "currency.metal": 24,
+      "currency.supply": 10,
+      "currency.extracta": 5,
+      "currency.materia": 3
     },
     "effects": [
       {
@@ -1276,12 +1191,25 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 22,
-      "currency.supply": 8,
-      "currency.materia": 4,
-      "currency.cognitio": 2
+      "currency.metal": 30,
+      "currency.supply": 13,
+      "currency.cognitio": 2,
+      "currency.materia": 3
     },
     "effects": [
+      {
+        "effect": "flow_convert",
+        "args": {
+          "from": {
+            "category": "A",
+            "tier": ">=4"
+          },
+          "to": {
+            "category": "B",
+            "tier": ">=4"
+          }
+        }
+      },
       {
         "effect": "unlock_tech_tier",
         "args": {
@@ -1310,7 +1238,7 @@
         "per": "turn"
       }
     ],
-    "signature": "Открывает tier T4–T6 для Materia",
+    "signature": "A→B T4–T6 + unlock Materia tier 6",
     "tradeoff": "-2 Cognitio upkeep (нужны учёные)"
   },
   "materia.metamaterial_forge": {
@@ -1323,10 +1251,11 @@
     "tier": 9,
     "faction": "generic",
     "cost": {
-      "currency.metal": 32,
-      "currency.supply": 12,
+      "currency.metal": 54,
+      "currency.supply": 23,
       "currency.extracta": 8,
-      "currency.energia": 4
+      "currency.energia": 4,
+      "currency.materia": 5
     },
     "effects": [
       {
@@ -1376,9 +1305,10 @@
     "tier": 2,
     "faction": "generic",
     "cost": {
-      "currency.metal": 12,
+      "currency.metal": 11,
       "currency.supply": 5,
-      "currency.energia": 2
+      "currency.energia": 2,
+      "currency.materia": 1
     },
     "effects": [
       {
@@ -1433,7 +1363,23 @@
       "currency.supply": 10,
       "currency.materia": 5
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "B",
+          "tier": 5,
+          "amount": 2
+        }
+      },
+      {
+        "effect": "yield_flat",
+        "args": {
+          "currency": "currency.materia",
+          "amount": 1
+        }
+      }
+    ],
     "slots": [
       {
         "role": "structure",
@@ -1454,7 +1400,7 @@
         "per": "turn"
       }
     ],
-    "signature": "B T5 (золото/серебро/соларид) → торговое значение",
+    "signature": "B T5 → торговое значение + лёгкий Materia yield",
     "tradeoff": "1 на планету, требует закон «Валюта»"
   },
   "industria.assembly": {
@@ -1467,10 +1413,11 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 22,
-      "currency.supply": 8,
+      "currency.metal": 24,
+      "currency.supply": 10,
       "currency.materia": 4,
-      "currency.bios": 2
+      "currency.bios": 2,
+      "currency.industria": 3
     },
     "effects": [
       {
@@ -1520,10 +1467,11 @@
     "tier": 8,
     "faction": "generic",
     "cost": {
-      "currency.metal": 30,
-      "currency.supply": 12,
+      "currency.metal": 45,
+      "currency.supply": 19,
       "currency.materia": 6,
-      "currency.bios": 3
+      "currency.bios": 3,
+      "currency.industria": 5
     },
     "effects": [
       {
@@ -1573,16 +1521,24 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 6,
+      "currency.metal": 19,
+      "currency.supply": 8,
       "currency.industria": 2
     },
     "effects": [
       {
         "effect": "cost_mult",
         "args": {
-          "mult": 0.5,
+          "mult": 0.9,
           "tag": "build"
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 2,
+          "amount": 1
         }
       }
     ],
@@ -1606,8 +1562,8 @@
         "per": "turn"
       }
     ],
-    "signature": "Ускоряет стройку всех зданий T1–T4 на планете на +50%",
-    "tradeoff": "ничего не производит сам"
+    "signature": "−10% cost стройки на планете + capacity C",
+    "tradeoff": "сам почти не производит"
   },
   "industria.repair_dock": {
     "id": "industria.repair_dock",
@@ -1619,11 +1575,21 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 20,
-      "currency.supply": 7,
-      "currency.materia": 3
+      "currency.metal": 24,
+      "currency.supply": 10,
+      "currency.materia": 3,
+      "currency.industria": 3
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 4,
+          "amount": 1
+        }
+      }
+    ],
     "slots": [
       {
         "role": "structure",
@@ -1644,7 +1610,7 @@
         "per": "turn"
       }
     ],
-    "signature": "Восстанавливает корпус/HP флота без возврата на столицу",
+    "signature": "Ремонт флота + capacity C",
     "tradeoff": "требует Materia того же tier, что и корпус"
   },
   "energia.thermal_plant": {
@@ -1657,9 +1623,10 @@
     "tier": 2,
     "faction": "generic",
     "cost": {
-      "currency.metal": 12,
+      "currency.metal": 11,
       "currency.supply": 5,
-      "currency.industria": 2
+      "currency.industria": 2,
+      "currency.energia": 1
     },
     "effects": [
       {
@@ -1711,9 +1678,10 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 6,
-      "currency.materia": 2
+      "currency.metal": 19,
+      "currency.supply": 8,
+      "currency.materia": 2,
+      "currency.energia": 2
     },
     "effects": [
       {
@@ -1753,10 +1721,11 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 24,
-      "currency.supply": 10,
+      "currency.metal": 30,
+      "currency.supply": 13,
       "currency.industria": 4,
-      "currency.materia": 3
+      "currency.materia": 3,
+      "currency.energia": 3
     },
     "effects": [
       {
@@ -1809,10 +1778,11 @@
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 36,
-      "currency.supply": 14,
+      "currency.metal": 45,
+      "currency.supply": 19,
       "currency.industria": 6,
-      "currency.cognitio": 3
+      "currency.cognitio": 3,
+      "currency.energia": 5
     },
     "effects": [
       {
@@ -1865,16 +1835,17 @@
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 40,
-      "currency.supply": 16,
-      "currency.materia": 6
+      "currency.metal": 43,
+      "currency.supply": 18,
+      "currency.materia": 6,
+      "currency.energia": 4
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.energia",
-          "amount": 8
+          "amount": 7
         }
       }
     ],
@@ -1889,7 +1860,7 @@
       }
     ],
     "upkeep_slots": [],
-    "signature": "Мегапроект: D T7+ без топлива; питает всю систему",
+    "signature": "Мегапроект: объёмный D yield без топлива; питает систему",
     "tradeoff": "требует нестабильное ядро звезды; риск взрыва"
   },
   "energia.plasma_condenser": {
@@ -1902,9 +1873,10 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 22,
-      "currency.supply": 9,
-      "currency.industria": 3
+      "currency.metal": 30,
+      "currency.supply": 13,
+      "currency.industria": 3,
+      "currency.energia": 3
     },
     "effects": [
       {
@@ -1956,17 +1928,17 @@
     "tier": 7,
     "faction": "generic",
     "cost": {
-      "currency.metal": 26,
-      "currency.supply": 10,
-      "currency.energia": 3,
-      "currency.cognitio": 2
+      "currency.metal": 37,
+      "currency.supply": 16,
+      "currency.cognitio": 2,
+      "currency.energia": 4
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.energia",
-          "amount": 4
+          "amount": 5
         }
       },
       {
@@ -2014,9 +1986,10 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 7,
-      "currency.energia": 3
+      "currency.metal": 24,
+      "currency.supply": 10,
+      "currency.energia": 3,
+      "currency.bios": 3
     },
     "effects": [
       {
@@ -2066,10 +2039,11 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 18,
-      "currency.supply": 8,
+      "currency.metal": 30,
+      "currency.supply": 13,
       "currency.energia": 3,
-      "currency.cognitio": 2
+      "currency.cognitio": 2,
+      "currency.bios": 3
     },
     "effects": [
       {
@@ -2126,14 +2100,22 @@
     "tier": 4,
     "faction": "generic",
     "cost": {
-      "currency.metal": 16,
-      "currency.supply": 7,
+      "currency.metal": 19,
+      "currency.supply": 8,
       "currency.bios": 2
     },
     "effects": [
       {
         "effect": "stability_add",
         "args": {
+          "amount": 1
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "E",
+          "tier": 3,
           "amount": 1
         }
       }
@@ -2158,7 +2140,7 @@
         "per": "turn"
       }
     ],
-    "signature": "+мораль, +рост, снижает потери от боя",
+    "signature": "+мораль, +рост, capacity E",
     "tradeoff": "-1 E upkeep (медикаменты)"
   },
   "bios.clone_vats": {
@@ -2171,16 +2153,24 @@
     "tier": 8,
     "faction": "generic",
     "cost": {
-      "currency.metal": 28,
-      "currency.supply": 12,
-      "currency.bios": 5,
-      "currency.industria": 3
+      "currency.metal": 45,
+      "currency.supply": 19,
+      "currency.industria": 3,
+      "currency.bios": 5
     },
     "effects": [
       {
         "effect": "pop_growth_mult",
         "args": {
-          "mult": 1.5
+          "mult": 1.35
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "E",
+          "tier": 5,
+          "amount": 2
         }
       }
     ],
@@ -2217,15 +2207,23 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 20,
-      "currency.supply": 9,
+      "currency.metal": 30,
+      "currency.supply": 13,
       "currency.bios": 3
     },
     "effects": [
       {
         "effect": "habitability_mult",
         "args": {
-          "mult": 1.3
+          "mult": 1.25
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "E",
+          "tier": 4,
+          "amount": 1
         }
       }
     ],
@@ -2269,10 +2267,10 @@
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 34,
-      "currency.supply": 14,
+      "currency.metal": 45,
+      "currency.supply": 19,
       "currency.energia": 4,
-      "currency.bios": 4
+      "currency.bios": 5
     },
     "effects": [
       {
@@ -2329,9 +2327,10 @@
     "tier": 5,
     "faction": "generic",
     "cost": {
-      "currency.metal": 18,
-      "currency.supply": 8,
-      "currency.bios": 3
+      "currency.metal": 24,
+      "currency.supply": 10,
+      "currency.bios": 3,
+      "currency.cognitio": 3
     },
     "effects": [
       {
@@ -2392,10 +2391,11 @@
     "tier": 8,
     "faction": "generic",
     "cost": {
-      "currency.metal": 24,
-      "currency.supply": 10,
+      "currency.metal": 45,
+      "currency.supply": 19,
       "currency.bios": 4,
-      "currency.energia": 3
+      "currency.energia": 3,
+      "currency.cognitio": 5
     },
     "effects": [
       {
@@ -2442,7 +2442,7 @@
         "per": "turn"
       }
     ],
-    "signature": "E→F: F T7–T8 (гринид, рэдид, грёзный туман) + псион-бафы",
+    "signature": "E→F: F T7–T8 + unlock psion_emit",
     "tradeoff": "-2 мораль не-псиоников, требует расу псиоников"
   },
   "cognitio.anomaly_detector": {
@@ -2455,15 +2455,23 @@
     "tier": 7,
     "faction": "generic",
     "cost": {
-      "currency.metal": 22,
-      "currency.supply": 9,
-      "currency.cognitio": 2
+      "currency.metal": 37,
+      "currency.supply": 16,
+      "currency.cognitio": 4
     },
     "effects": [
       {
         "effect": "yield_flat",
         "args": {
           "currency": "currency.cognitio",
+          "amount": 2
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "F",
+          "tier": 5,
           "amount": 1
         }
       }
@@ -2488,8 +2496,8 @@
         "per": "turn"
       }
     ],
-    "signature": "Открывает аномальные события T5–T7; лёгкий Cognitio yield",
-    "tradeoff": "ничего не конвертирует, -1 Energia upkeep"
+    "signature": "Аномальные события T5–T7 + Cognitio yield",
+    "tradeoff": "-1 Energia upkeep"
   },
   "cognitio.archive": {
     "id": "cognitio.archive",
@@ -2502,10 +2510,10 @@
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 40,
-      "currency.supply": 16,
+      "currency.metal": 54,
+      "currency.supply": 23,
       "currency.bios": 5,
-      "currency.cognitio": 4
+      "currency.cognitio": 5
     },
     "effects": [
       {
@@ -2559,7 +2567,7 @@
         "per": "turn"
       }
     ],
-    "signature": "E→F: открывает технологии T9–T10",
+    "signature": "E→F: unlock Cognitio tier 9",
     "tradeoff": "1 на систему, требует Cognitio T7"
   },
   "cognitio.astral_loom": {
@@ -2572,10 +2580,10 @@
     "tier": 6,
     "faction": "generic",
     "cost": {
-      "currency.metal": 20,
-      "currency.supply": 8,
-      "currency.cognitio": 3,
-      "currency.energia": 2
+      "currency.metal": 30,
+      "currency.supply": 13,
+      "currency.energia": 2,
+      "currency.cognitio": 3
     },
     "effects": [
       {
@@ -2628,12 +2636,27 @@
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 50,
-      "currency.supply": 20,
+      "currency.metal": 54,
+      "currency.supply": 23,
       "currency.energia": 6,
-      "currency.cognitio": 6
+      "currency.cognitio": 5
     },
-    "effects": [],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "corridor_open"
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "F",
+          "tier": 7,
+          "amount": 1
+        }
+      }
+    ],
     "slots": [
       {
         "role": "structure",
@@ -2664,7 +2687,7 @@
         "per": "turn"
       }
     ],
-    "signature": "Мгновенный перенос флота между системами с Вратами",
+    "signature": "Мгновенный перенос флота + unlock corridor_open",
     "tradeoff": "требует Cognitio T6 + Energia T6 на обоих концах"
   },
   "mega.gate.damyl": {
@@ -2753,8 +2776,8 @@
     "faction": "belator",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 36,
-      "currency.supply": 14,
+      "currency.metal": 54,
+      "currency.supply": 23,
       "currency.cognitio": 5
     },
     "effects": [
@@ -2817,10 +2840,10 @@
     "faction": "belator",
     "maxPerSystem": 1,
     "cost": {
-      "currency.metal": 30,
-      "currency.supply": 12,
-      "currency.industria": 4,
-      "currency.materia": 3
+      "currency.metal": 37,
+      "currency.supply": 16,
+      "currency.materia": 3,
+      "currency.industria": 4
     },
     "effects": [
       {
@@ -2840,7 +2863,7 @@
         "effect": "stat_mult",
         "args": {
           "stat": "shields",
-          "mult": 1.3
+          "mult": 1.25
         }
       }
     ],

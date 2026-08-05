@@ -1,6 +1,6 @@
 export type BuildingDefAccess = {
   faction?: string;
-  prerequisites?: { race?: string };
+  prerequisites?: { race?: string; races?: string[] };
 };
 
 /** Strip `faction_` prefix → content tag (`faction_belator` → `belator`). */
@@ -11,6 +11,7 @@ export function factionContentTag(factionId: string): string {
 /**
  * Whether a faction may build this def in the UI / server.
  * Race prereq is enforced only when raceIds is non-empty.
+ * `prerequisites.races` requires all listed races in the colony mix.
  */
 export function canFactionBuildDef(
   def: BuildingDefAccess,
@@ -22,10 +23,17 @@ export function canFactionBuildDef(
     !def.faction || def.faction === "generic" || def.faction === tag;
   if (!factionOk) return false;
 
-  const reqRace = def.prerequisites?.race;
   const raceIds = opts?.raceIds;
-  if (reqRace && raceIds && raceIds.length > 0) {
-    if (!raceIds.includes(reqRace)) return false;
+  if (!raceIds || raceIds.length === 0) return true;
+
+  const reqRace = def.prerequisites?.race;
+  if (reqRace && !raceIds.includes(reqRace)) return false;
+
+  const reqRaces = def.prerequisites?.races;
+  if (Array.isArray(reqRaces) && reqRaces.length > 0) {
+    for (const r of reqRaces) {
+      if (!raceIds.includes(r)) return false;
+    }
   }
   return true;
 }

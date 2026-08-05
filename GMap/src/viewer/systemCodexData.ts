@@ -2,7 +2,7 @@ import type { Planet, StarSystem, StationKind } from "../state/types";
 import { getCachedContent } from "../state/contentCatalog";
 import { classifyPlanet } from "../state/planets";
 import { COLONY_TYPE_LABELS } from "../state/defaults";
-import { categoryByLetter } from "../state/economyLabels";
+import { categoryByLetter, formatPlayerCost } from "../state/economyLabels";
 import { systemSpaceObjects } from "../state/spaceObjects";
 import { systemMineInfo, systemMineLabel } from "./depositMining";
 import { resolvePoiIntel, type PoiIntel } from "./poiIntel";
@@ -53,35 +53,35 @@ const STATION_CODEX: CodexStationRow[] = [
     kind: "mining",
     name: "Добывающая станция",
     ap: 1,
-    costLabel: "M24 · S6",
+    costLabel: "мет. 24 · снаб. 6",
     why: "Добывает весь пояс системы сразу — не привязана к одному депозиту.",
   },
   {
     kind: "military",
     name: "Оборонная платформа",
     ap: 2,
-    costLabel: "M36 · S12",
+    costLabel: "мет. 36 · снаб. 12",
     why: "Защита и разрешение верфи, если нет planetary shipyard/spaceport.",
   },
   {
     kind: "science",
     name: "Научная станция",
     ap: 1,
-    costLabel: "M18 · S10",
+    costLabel: "мет. 18 · снаб. 10",
     why: "Усиливает исследование аномалий и Cognitio в системе.",
   },
   {
     kind: "trade",
     name: "Торговый узел",
     ap: 1,
-    costLabel: "M22 · S8",
+    costLabel: "мет. 22 · снаб. 8",
     why: "Логистика и обмен; полезен рядом с hub / трафиком.",
   },
   {
     kind: "relay",
     name: "Релейный маяк",
     ap: 1,
-    costLabel: "M28 · S6",
+    costLabel: "мет. 28 · снаб. 6",
     why: "Связь и навигация державы между системами.",
   },
 ];
@@ -93,7 +93,7 @@ const KIND_WHY: Record<string, string> = {
   factory: "Промышленность: переработка Materia → Industria.",
   lab: "Наука Cognitio; нужно для tech и аномалий.",
   barracks: "Сухопутные войска — без казарм легион не собрать.",
-  capitol: "Админцентр: AP, налоги, тип колонии.",
+  capitol: "Админцентр: очки действия, налоги, тип колонии.",
   defense: "Планетарная оборона / щиты.",
   spaceport: "Орбитальный хаб — логистика и верфь-доступ.",
   shipyard: "Постройка кораблей в системе.",
@@ -102,17 +102,7 @@ const KIND_WHY: Record<string, string> = {
 };
 
 function formatCost(cost?: Record<string, number>): string {
-  if (!cost) return "—";
-  const parts: string[] = [];
-  if (cost["currency.metal"]) parts.push(`M${cost["currency.metal"]}`);
-  if (cost["currency.supply"]) parts.push(`S${cost["currency.supply"]}`);
-  for (const [k, v] of Object.entries(cost)) {
-    if (k === "currency.metal" || k === "currency.supply") continue;
-    if (!v) continue;
-    const letter = k.replace(/^currency\./, "").slice(0, 1).toUpperCase();
-    parts.push(`${letter}${v}`);
-  }
-  return parts.join(" · ") || "—";
+  return formatPlayerCost(cost);
 }
 
 function normalizeColony(t?: string | null): string {
@@ -348,7 +338,7 @@ export function buildSystemCodex(
   const howTo: string[] = [
     "Депозиты пояса — общие: одна mining-станция качает весь пояс.",
     "ПКМ / долгий тап по депозиту или алерт «Пояс не добывается» → стройка.",
-    "Стоимость mining: M24 · S6 · 1 AP (система должна быть вашей).",
+    "Стоимость добычи: мет.24 · снаб.6 · 1 ОД (система должна быть вашей).",
   ];
   if (mine.status === "own") {
     howTo.unshift("Сейчас пояс уже добывается вашей станцией.");

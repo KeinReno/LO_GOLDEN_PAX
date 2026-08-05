@@ -1,8 +1,17 @@
 import { useMemo, useState } from "react";
 import { useDrag } from "@use-gesture/react";
 import { explainCategoryLabel } from "../../state/displayLabels";
+import {
+  formatExplainLineLabel,
+  formatExplainModifier,
+  formatExplainSummary,
+} from "./explainFormat";
+import { fmtInt } from "../../state/numberFormat";
 import type { ViewerPayload } from "../../state/types";
-import { computeMetrics } from "./economyMath";
+import {
+  computeMetrics,
+  resolveFactionTreasuryCurrency,
+} from "./economyMath";
 import {
   buildExpenseSlices,
   currencyShortLabel,
@@ -23,18 +32,37 @@ export function BudgetSection({ payload }: Props) {
   const eco = payload.economy;
   const [filter, setFilter] = useState<Filter>("all");
   const [turnIndex, setTurnIndex] = useState(0);
+  const treasuryCurrencyId = useMemo(
+    () => resolveFactionTreasuryCurrency(payload),
+    [payload],
+  );
+  const treasuryHint = currencyShortLabel(treasuryCurrencyId);
 
   const metrics = useMemo(
-    () => (eco ? computeMetrics(eco) : null),
-    [eco],
+    () =>
+      eco
+        ? computeMetrics(
+            eco,
+            payload.world?.meta?.turn ?? null,
+            treasuryCurrencyId,
+          )
+        : null,
+    [eco, payload.world?.meta?.turn, treasuryCurrencyId],
   );
   const groups = useMemo(
     () => groupRecentByTurn(eco?.recent ?? [], filter),
     [eco?.recent, filter],
   );
   const slices = useMemo(
-    () => (eco ? buildExpenseSlices(eco) : []),
-    [eco],
+    () =>
+      eco
+        ? buildExpenseSlices(
+            eco,
+            treasuryCurrencyId,
+            payload.world?.meta?.turn ?? null,
+          )
+        : [],
+    [eco, payload.world?.meta?.turn, treasuryCurrencyId],
   );
   const explain = eco?.explain;
 
@@ -42,10 +70,11 @@ export function BudgetSection({ payload }: Props) {
   const activeGroup = groups[safeIndex] ?? null;
 
   const bindSwipe = useDrag(
-    ({ last, movement: [mx], direction: [dx] }) => {
+    ({ last, movement: [mx] }) => {
       if (!last) return;
       if (Math.abs(mx) < 40) return;
-      if (dx < 0) {
+      // Use movement sign — direction is often 0 on the last frame.
+      if (mx < 0) {
         setTurnIndex((i) => Math.min(i + 1, Math.max(0, groups.length - 1)));
       } else {
         setTurnIndex((i) => Math.max(i - 1, 0));
@@ -71,7 +100,9 @@ export function BudgetSection({ payload }: Props) {
         <MetricCard
           label="Баланс"
           value={metrics.balance}
-          tone={metrics.balance >= 0 ? "income" : "expense"}
+          tone="neutral"
+          signed
+          tip={`Доход минус расход «${treasuryHint}» за последний ход журнала`}
         />
       </div>
 
@@ -146,7 +177,7 @@ export function BudgetSection({ payload }: Props) {
           ) : (
             <>
               <p className="eco-timeline__summary hint">
-                +{activeGroup.income} / −{activeGroup.expense}
+                +{fmtInt(activeGroup.income)} / −{fmtInt(activeGroup.expense)}
                 <span className="eco-timeline__swipe-hint"> · свайп для листания</span>
               </p>
               <ul className="eco-timeline__list">
@@ -166,7 +197,7 @@ export function BudgetSection({ payload }: Props) {
                         r.delta >= 0 ? "is-up" : "is-down"
                       }`}
                     >
-                      {r.delta > 0 ? `+${r.delta}` : r.delta}
+                      {r.delta > 0 ? `+${fmtInt(r.delta)}` : fmtInt(r.delta)}
                     </strong>
                   </li>
                 ))}
@@ -177,12 +208,17 @@ export function BudgetSection({ payload }: Props) {
 
         <ExpenseDonut
           slices={slices}
-          recent={eco.recent ?? []}
-          title="Пончик расходов"
+          recent={(eco.recent ?? []).filter(
+            (r) => r.currencyId === "currency.metal",
+          )}
+          title={`Расход · ${treasuryHint}`}
         />
       </div>
 
-      {explain && (explain.lines?.length > 0 || explain.raceTraits?.length) && (
+      {explain &&
+        (explain.lines?.length > 0 ||
+          explain.raceTraits?.length ||
+          explain.factionTraits?.length) && (
         <div className="eco-explain">
           <header className="eco-chart-block__head">
             <h4>Почему так</h4>
@@ -194,8 +230,10 @@ export function BudgetSection({ payload }: Props) {
                   <span className="eco-explain__cat">
                     {explainCategoryLabel(line.category)}
                   </span>
-                  <span>{line.label}</span>
-                  <strong className="tabular-nums">{line.modifier}</strong>
+                  <span>{formatExplainLineLabel(line.label)}</span>
+                  <strong className="tabular-nums">
+                    {formatExplainModifier(line.modifier)}
+                  </strong>
                 </li>
               ))}
             </ul>
@@ -205,7 +243,7 @@ export function BudgetSection({ payload }: Props) {
               {[...(explain.raceTraits ?? []), ...(explain.factionTraits ?? [])].map(
                 (t, i) => (
                   <li key={`${t.label}-${i}`}>
-                    <strong>{t.label}</strong> — {t.summary}
+                    <strong>{t.label}</strong> — {formatExplainSummary(t.summary)}
                   </li>
                 ),
               )}

@@ -24,6 +24,16 @@ import {
 
 export const DEFAULT_TECH_TIERS = { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1 };
 
+/** Resolve tech from live tree or alchemy combos. */
+export function resolveTechDef(content, techId) {
+  if (!techId) return null;
+  return (
+    content?.technologies?.[techId] ||
+    content?.tech_combos?.[techId] ||
+    null
+  );
+}
+
 const RACE_LOCK_MIN_SHARE = 30;
 
 /** Early-game properties available without research (keep list small). */
@@ -119,11 +129,10 @@ function findUpgradeAcrossTechs(content, upgradeId) {
  */
 export function collectTechModifierEffects(eco, content) {
   const effects = [];
-  const techs = content?.technologies || {};
   const unlockedUpgrades = new Set(eco?.unlockedUpgrades || []);
 
   for (const id of eco?.unlockedTechs || []) {
-    const def = techs[id];
+    const def = resolveTechDef(content, id);
     if (!def) continue;
     for (const e of def.effects || []) {
       if (e.effect === "unlock_tech_tier" || e.effect === "unlock_property") {
@@ -162,7 +171,10 @@ export function applyResearchCostMult(cost, stack, category) {
   if (allCh?.mult != null) mult *= allCh.mult;
   if (mult === 1) return out;
   for (const [k, v] of Object.entries(out)) {
-    out[k] = Math.max(1, Math.ceil(Number(v || 0) * mult));
+    const val = Number(v || 0);
+    if (val > 0) {
+      out[k] = Math.max(1, Math.ceil(val * mult));
+    }
   }
   return out;
 }
@@ -327,24 +339,37 @@ export function applyUnlockEffects(eco, effects) {
 /**
  * Recompute techTiers / properties from unlockedTechs + upgrades (idempotent).
  */
-export function recomputeUnlocksFromTechs(eco, content) {
+export function recomputeUnlocksFromTechs(eco, content, factionId = null, world = null) {
   eco.techTiers = { ...DEFAULT_TECH_TIERS };
   eco.unlockedProperties = [];
-  const techs = content?.technologies || {};
   const unlockedUpgrades = new Set(eco.unlockedUpgrades || []);
+  
   for (const id of eco.unlockedTechs || []) {
-    const def = techs[id];
+    const def = resolveTechDef(content, id);
     if (def) applyUnlockEffects(eco, def.effects);
     for (const u of def?.upgrades || []) {
       if (unlockedUpgrades.has(u.id)) applyUnlockEffects(eco, u.effects);
+    }
+  }
+
+  if (factionId && world) {
+    const faction = (world.factions || []).find((f) => f.id === factionId);
+    if (faction) {
+      const traitCatalog = content?.faction_traits?.traits || content?.faction_traits || {};
+      for (const tid of traitIdsOf(faction)) {
+        const def = traitCatalog[tid];
+        if (def) applyUnlockEffects(eco, def.effects);
+      }
     }
   }
 }
 
 function canAfford(eco, cost) {
   for (const [cur, amt] of Object.entries(cost || {})) {
-    if ((eco.stocks?.[cur] ?? 0) < Number(amt || 0)) {
-      return { ok: false, error: `Не хватает ${cur} (нужно ${amt})` };
+    const numAmt = Number(amt || 0);
+    if (numAmt < 0) return { ok: false, error: "Отрицательная стоимость недопустима" };
+    if ((eco.stocks?.[cur] ?? 0) < numAmt) {
+      return { ok: false, error: `Не хватает ${cur} (нужно ${numAmt})` };
     }
   }
   return { ok: true };
@@ -369,7 +394,7 @@ function publicEcoSlice(eco) {
  */
 export function canQueueTech(factionId, techId, opts = {}) {
   const content = opts.content || getContent();
-  const def = content.technologies?.[techId];
+  const def = resolveTechDef(content, techId);
   if (!def) return { ok: false, error: "Неизвестная технология", canQueue: false };
 
   const world = opts.world ?? readLiveBoard();
@@ -378,6 +403,15 @@ export function canQueueTech(factionId, techId, opts = {}) {
 
   if ((eco.unlockedTechs || []).includes(techId)) {
     return { ok: false, error: "Уже исследовано", canQueue: false };
+  }
+
+  // Alchemy / combo techs are granted via laboratory, not normal research queue.
+  if (def.alchemyOnly || (def.tags || []).includes("alchemy") || (def.tags || []).includes("combo")) {
+    return {
+      ok: false,
+      error: "Только через лабораторию (алхимия)",
+      canQueue: false,
+    };
   }
 
   for (const pre of def.prerequisites || []) {
@@ -402,7 +436,7 @@ export function canQueueTech(factionId, techId, opts = {}) {
  */
 export function techAvailability(factionId, techId, opts = {}) {
   const content = opts.content || getContent();
-  const def = content.technologies?.[techId];
+  const def = resolveTechDef(content, techId);
   if (!def) {
     return {
       available: false,
@@ -471,7 +505,8 @@ export function setResearchQueue(factionId, queue) {
   for (const raw of queue) {
     const techId = String(raw || "");
     if (!techId) continue;
-    if (!techs[techId]) {
+    const def = resolveTechDef(content, techId);
+    if (!def) {
       return { ok: false, error: `Неизвестная технология: ${techId}` };
     }
     if (unlocked.has(techId)) continue;
@@ -485,7 +520,7 @@ export function setResearchQueue(factionId, queue) {
     if (!gate.ok) {
       return {
         ok: false,
-        error: `${techs[techId].name || techId}: ${gate.error}`,
+        error: `${def.name || techId}: ${gate.error}`,
       };
     }
     seen.add(techId);
@@ -502,7 +537,7 @@ export function setResearchQueue(factionId, queue) {
  */
 export function accelerateResearch(factionId, techId, meta = {}) {
   const content = getContent();
-  const def = content.technologies?.[techId];
+  const def = resolveTechDef(content, techId);
   if (!def) return { ok: false, error: "Неизвестная технология" };
 
   const world = meta.world ?? readLiveBoard();
@@ -575,14 +610,14 @@ export function removeFromResearchQueue(eco, techId) {
  * @param {{ eco?: object, factionId?: string, world?: object, stack?: object }} [opts]
  */
 export function researchPathTo(techId, unlockedTechs, content, opts = {}) {
-  const techs = content?.technologies || getContent().technologies || {};
+  const safeContent = content || getContent();
   const unlocked = new Set(unlockedTechs || []);
   const path = [];
   const visiting = new Set();
 
   function walk(id) {
     if (!id || unlocked.has(id) || visiting.has(id)) return;
-    const def = techs[id];
+    const def = resolveTechDef(safeContent, id);
     if (!def) return;
     visiting.add(id);
     for (const pre of def.prerequisites || []) walk(pre);
@@ -606,7 +641,7 @@ export function researchPathTo(techId, unlockedTechs, content, opts = {}) {
 
   let totalCognitio = 0;
   const steps = path.map((id) => {
-    const def = techs[id];
+    const def = resolveTechDef(safeContent, id);
     const rawCost = def?.cost || {};
     const adjusted = stack
       ? applyResearchCostMult(rawCost, stack, def?.category)
@@ -630,7 +665,7 @@ export function researchPathTo(techId, unlockedTechs, content, opts = {}) {
  */
 export function researchTech(factionId, techId, meta = {}) {
   const content = getContent();
-  const def = content.technologies?.[techId];
+  const def = resolveTechDef(content, techId);
   if (!def) return { ok: false, error: "Неизвестная технология" };
 
   const world = meta.world ?? readLiveBoard();
@@ -686,22 +721,58 @@ export function researchTech(factionId, techId, meta = {}) {
 }
 
 /**
+ * Master-only: unlock tech without cost / lock / prerequisite checks.
+ */
+export function gmGrantTech(factionId, techId, meta = {}) {
+  const content = getContent();
+  const def = resolveTechDef(content, techId);
+  if (!def) return { ok: false, error: "Неизвестная технология" };
+
+  const world = meta.world ?? readLiveBoard();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+
+  if ((eco.unlockedTechs || []).includes(techId)) {
+    return { ok: false, error: "Уже исследовано" };
+  }
+
+  if (!Array.isArray(eco.unlockedTechs)) eco.unlockedTechs = [];
+  eco.unlockedTechs.push(techId);
+  applyUnlockEffects(eco, def.effects);
+  removeFromResearchQueue(eco, techId);
+  writeLedger(ledger);
+
+  if (world) {
+    applyUnitUpgradeEffectsToWorld(world, factionId, def.effects || [], content);
+  }
+
+  return {
+    ok: true,
+    eco: publicEcoSlice(eco),
+    tech: def,
+    worldMutated: Boolean(
+      world && (def.effects || []).some((e) => e?.effect === "unit_upgrade"),
+    ),
+  };
+}
+
+/**
  * Research an upgrade on an already-unlocked tech.
  */
 export function researchUpgrade(factionId, techId, upgradeId, meta = {}) {
   const content = meta.content || getContent();
-  const def = content.technologies?.[techId];
+  const def = resolveTechDef(content, techId);
   if (!def) return { ok: false, error: "Неизвестная технология" };
 
-  const upgrade = findUpgrade(def, upgradeId);
-  if (!upgrade) {
+  let up = findUpgrade(def, upgradeId);
+  if (!up) {
     // allow lookup by upgradeId alone
     const found = findUpgradeAcrossTechs(content, upgradeId);
     if (!found || found.tech.id !== techId) {
       return { ok: false, error: "Неизвестный апгрейд" };
     }
+    up = found.upgrade;
   }
-  const up = upgrade || findUpgrade(def, upgradeId);
 
   const world = meta.world ?? readLiveBoard();
   const ledger = readLedger();

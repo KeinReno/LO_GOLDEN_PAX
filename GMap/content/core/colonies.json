@@ -4,10 +4,10 @@
     "colonyType": "outpost",
     "name": "Форпост",
     "colonizeAp": 1,
-    "colonizeCost": { "currency.metal": 15, "currency.supply": 12 },
+    "colonizeCost": { "currency.metal": 14, "currency.supply": 6 },
     "colonizePopulation": 2,
     "setTypeAp": 1,
-    "setTypeCost": { "currency.metal": 8, "currency.supply": 6 },
+    "setTypeCost": { "currency.metal": 8, "currency.supply": 3 },
     "effects": [{ "effect": "pop_cap_add", "args": { "amount": 5 } }]
   },
   "colony.colony": {
@@ -15,10 +15,10 @@
     "colonyType": "colony",
     "name": "Колония",
     "colonizeAp": 1,
-    "colonizeCost": { "currency.metal": 25, "currency.supply": 18 },
+    "colonizeCost": { "currency.metal": 22, "currency.supply": 9 },
     "colonizePopulation": 5,
     "setTypeAp": 1,
-    "setTypeCost": { "currency.metal": 12, "currency.supply": 10 },
+    "setTypeCost": { "currency.metal": 12, "currency.supply": 5 },
     "effects": []
   },
   "colony.core": {
@@ -26,10 +26,10 @@
     "colonyType": "core",
     "name": "Мир-ядро",
     "colonizeAp": 2,
-    "colonizeCost": { "currency.metal": 40, "currency.supply": 30 },
+    "colonizeCost": { "currency.metal": 34, "currency.supply": 14 },
     "colonizePopulation": 10,
     "setTypeAp": 1,
-    "setTypeCost": { "currency.metal": 25, "currency.supply": 18 },
+    "setTypeCost": { "currency.metal": 19, "currency.supply": 8 },
     "effects": [
       { "effect": "pop_cap_add", "args": { "amount": 25 } },
       { "effect": "yield_flat", "args": { "currency": "currency.supply", "amount": 1 } }
@@ -40,10 +40,10 @@
     "colonyType": "fortress",
     "name": "Крепость",
     "colonizeAp": 1,
-    "colonizeCost": { "currency.metal": 30, "currency.supply": 16 },
+    "colonizeCost": { "currency.metal": 28, "currency.supply": 12 },
     "colonizePopulation": 4,
     "setTypeAp": 1,
-    "setTypeCost": { "currency.metal": 18, "currency.supply": 10 },
+    "setTypeCost": { "currency.metal": 15, "currency.supply": 6 },
     "effects": []
   },
   "colony.mining": {
@@ -51,10 +51,10 @@
     "colonyType": "mining",
     "name": "Добыча",
     "colonizeAp": 1,
-    "colonizeCost": { "currency.metal": 22, "currency.supply": 12 },
+    "colonizeCost": { "currency.metal": 20, "currency.supply": 8 },
     "colonizePopulation": 3,
     "setTypeAp": 1,
-    "setTypeCost": { "currency.metal": 14, "currency.supply": 8 },
+    "setTypeCost": { "currency.metal": 11, "currency.supply": 5 },
     "effects": [
       { "effect": "yield_flat", "args": { "currency": "currency.metal", "amount": 2 } }
     ]
@@ -64,10 +64,12 @@
     "colonyType": "research",
     "name": "Исследовательский",
     "colonizeAp": 1,
-    "colonizeCost": { "currency.metal": 22, "currency.supply": 14 },
+    "colonizeCost": { "currency.metal": 20, "currency.supply": 8 },
     "colonizePopulation": 3,
     "setTypeAp": 1,
-    "setTypeCost": { "currency.metal": 14, "currency.supply": 10 },
-    "effects": []
+    "setTypeCost": { "currency.metal": 11, "currency.supply": 5 },
+    "effects": [
+      { "effect": "yield_flat", "args": { "currency": "currency.cognitio", "amount": 1 } }
+    ]
   }
 }

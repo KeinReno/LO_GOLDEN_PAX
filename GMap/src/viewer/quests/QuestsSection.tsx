@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { ChevronLeft, ScrollText, Users } from "lucide-react";
 import type { ViewerPayload } from "../../state/types";
 import {
   adaptNpcTasks,
   adaptQuests,
+  canAffordCosts,
   hasRolledPerTurn,
 } from "./adaptQuest";
 import { QuestSidebar } from "./QuestSidebar";
 import { QuestStage } from "./QuestStage";
 import { QuestChatPanel } from "./QuestChatPanel";
-import { NpcPanel } from "./NpcPanel";
-import { StoryTracker } from "./StoryTracker";
+import {
+  AttentionInbox,
+  collectAttention,
+} from "./AttentionInbox";
 import { QuestDiceRoller } from "./DiceRoller";
 import { useQuestsState } from "./useQuestsState";
 import type { QuestLogEntry } from "./types";
@@ -23,7 +27,10 @@ export type QuestActionHandlers = {
     questIds?: string[];
     error?: string;
   }>;
-  onResolveChoice?: (questId: string, choiceId: string) => Promise<boolean>;
+  onResolveChoice?: (
+    questId: string,
+    choiceId: string,
+  ) => Promise<boolean | { ok: boolean; error?: string }>;
   onResolveDice?: (
     questId: string,
     specIndex: number,
@@ -47,6 +54,12 @@ export type QuestsSectionProps = {
   actions?: QuestActionHandlers;
   onFocusSystem?: (systemId: string) => void;
   onSelectQuest?: (questId: string) => void;
+  /** Deep-link into the Court personnel room. */
+  onOpenCourt?: () => void;
+  /** Phone full-screen room — back to map from inbox. */
+  onCloseMap?: () => void;
+  /** Phone bottom sheet — single-pane navigation. */
+  compact?: boolean;
 };
 
 export function QuestsSection({
@@ -54,15 +67,17 @@ export function QuestsSection({
   actions,
   onFocusSystem,
   onSelectQuest,
+  onOpenCourt,
+  onCloseMap,
+  compact = false,
 }: QuestsSectionProps) {
   const activeQuestId = useQuestsState((s) => s.activeQuestId);
   const selectQuest = useQuestsState((s) => s.selectQuest);
+  const clearQuest = useQuestsState((s) => s.clearQuest);
+  const setMode = useQuestsState((s) => s.setMode);
   const chatOpen = useQuestsState((s) => s.chatOpen);
   const openChat = useQuestsState((s) => s.openChat);
   const closeChat = useQuestsState((s) => s.closeChat);
-  const npcOpen = useQuestsState((s) => s.npcOpen);
-  const openNpc = useQuestsState((s) => s.openNpc);
-  const closeNpc = useQuestsState((s) => s.closeNpc);
   const sidebarCollapsed = useQuestsState((s) => s.sidebarCollapsed);
   const toggleSidebar = useQuestsState((s) => s.toggleSidebar);
   const droppingIds = useQuestsState((s) => s.droppingIds);
@@ -89,6 +104,10 @@ export function QuestsSection({
     hydrateLogs();
   }, [hydrateLogs]);
 
+  useEffect(() => {
+    setMode("quests");
+  }, [setMode]);
+
   const quests = useMemo(
     () => adaptQuests(payload, logsByQuest),
     [payload, logsByQuest],
@@ -98,16 +117,17 @@ export function QuestsSection({
   const rolled = hasRolledPerTurn(payload.world, payload.factionId);
 
   const selected =
-    quests.find((q) => q.id === activeQuestId) ??
-    quests.find((q) => q.status === "active") ??
-    quests[0] ??
-    null;
+    activeQuestId != null
+      ? (quests.find((q) => q.id === activeQuestId) ?? null)
+      : null;
 
-  useEffect(() => {
-    if (!activeQuestId && selected) {
-      selectQuest(selected.id);
-    }
-  }, [activeQuestId, selected, selectQuest]);
+  const attentionCount = useMemo(
+    () => collectAttention(quests, turn).length + (rolled ? 0 : 1),
+    [quests, turn, rolled],
+  );
+  const courtBadge = npcTasks.filter(
+    (t) => t.status === "working" || t.status === "done",
+  ).length;
 
   useEffect(() => {
     if (droppingIds.length === 0) return;
@@ -117,7 +137,7 @@ export function QuestsSection({
 
   useEffect(() => {
     if (!actionMsg) return;
-    const t = window.setTimeout(() => setActionMsg(null), 5000);
+    const t = window.setTimeout(() => setActionMsg(null), 4000);
     return () => window.clearTimeout(t);
   }, [actionMsg]);
 
@@ -125,7 +145,10 @@ export function QuestsSection({
     selectQuest(id);
     onSelectQuest?.(id);
     setStageDice(null);
-    closeNpc();
+  };
+
+  const showInbox = () => {
+    clearQuest();
   };
 
   const openJournal = (id: string) => {
@@ -188,6 +211,17 @@ export function QuestsSection({
     setActionMsg(null);
     const choice = selected.choices?.find((c) => c.id === choiceId);
     try {
+      if (
+        choice?.costs &&
+        !canAffordCosts(choice.costs, payload.economy?.stocks)
+      ) {
+        setActionMsg(
+          choice.costLabel
+            ? `Не хватает ресурсов: ${choice.costLabel}`
+            : "Недостаточно ресурсов для этого выбора",
+        );
+        return;
+      }
       if (choice?.needsDice && actions.onResolveDice) {
         const res = await actions.onResolveDice(selected.id, 0, choiceId);
         if (!res.ok || res.rolls?.[0] == null) {
@@ -202,14 +236,19 @@ export function QuestsSection({
         appendSystemLog(selected.id, res.message || `Бросок: ${res.rolls[0]}`);
         return;
       }
-      const ok = await actions.onResolveChoice(selected.id, choiceId);
+      const res = await actions.onResolveChoice(selected.id, choiceId);
+      const ok = typeof res === "boolean" ? res : res.ok;
       if (ok) {
         appendSystemLog(
           selected.id,
           choice?.resultText || `Выбор: ${choice?.label ?? choiceId}`,
         );
       } else {
-        setActionMsg("Выбор не применён");
+        setActionMsg(
+          typeof res === "object" && res.error
+            ? res.error
+            : "Выбор не применён",
+        );
       }
     } finally {
       setBusy(false);
@@ -262,7 +301,7 @@ export function QuestsSection({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [selected, choose]);
 
   const sendChat = async (text: string) => {
     if (!selected) return;
@@ -278,80 +317,298 @@ export function QuestsSection({
     await actions?.onSendChat?.(selected.id, text);
   };
 
-  const assignNpc = async (npcId: string, project: string) => {
-    if (!actions?.onGiveNpcTask) return;
-    await actions.onGiveNpcTask(npcId, {
-      taskLabel: project,
-      etaTurn: turn + 2,
-      linkedQuestId: selected?.id,
-    });
-  };
+  const rightOpen = chatOpen;
 
-  const rightOpen = chatOpen || npcOpen;
+  const diceOverlayUi = (
+    <AnimatePresence>
+      {diceOverlay ? (
+        <motion.div
+          className="quest-dice-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          role="status"
+          onClick={() => {
+            if (!diceOverlay.rolling) clearDice();
+          }}
+        >
+          <div
+            className="quest-dice-overlay__card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QuestDiceRoller
+              value={diceOverlay.value}
+              sides={diceOverlay.sides}
+              rolling={diceOverlay.rolling}
+              label={diceOverlay.label}
+              onSettled={() => {
+                settleDice();
+                window.setTimeout(() => clearDice(), 1200);
+              }}
+            />
+            {!diceOverlay.rolling && diceOverlay.message ? (
+              <p className="dice-result-text" data-reveal>
+                {diceOverlay.message}
+              </p>
+            ) : null}
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+
+  if (compact) {
+    const screen =
+      chatOpen && selected ? "chat" : selected ? "detail" : "inbox";
+    const goBack = () => {
+      if (screen === "chat") closeChat();
+      else if (screen === "detail") showInbox();
+      else onCloseMap?.();
+    };
+
+    return (
+      <div className={`quests-mobile quests-mobile--${screen}`}>
+        <header className="quests-mobile__bar">
+          <button
+            type="button"
+            className="quests-mobile__back"
+            onClick={goBack}
+            aria-label={
+              screen === "inbox" ? "Назад к карте" : "Назад"
+            }
+          >
+            <ChevronLeft size={22} strokeWidth={2} aria-hidden />
+          </button>
+          <div className="quests-mobile__titles">
+            <strong>
+              {screen === "inbox"
+                ? "Квесты"
+                : screen === "chat"
+                  ? "Журнал"
+                  : (selected?.title ?? "Квест")}
+            </strong>
+            {screen === "inbox" && (
+              <span className="hint">ход {turn}</span>
+            )}
+          </div>
+          {screen === "inbox" && onOpenCourt ? (
+            <button
+              type="button"
+              className="quests-mobile__action"
+              onClick={onOpenCourt}
+            >
+              <Users size={16} aria-hidden />
+              Двор
+              {courtBadge > 0 ? (
+                <span className="quest-group-count">{courtBadge}</span>
+              ) : null}
+            </button>
+          ) : null}
+          {screen === "detail" && selected ? (
+            <button
+              type="button"
+              className="quests-mobile__action"
+              onClick={() => openJournal(selected.id)}
+            >
+              Чат
+            </button>
+          ) : null}
+        </header>
+
+        {actionMsg ? (
+          <p className="quest-action-msg quests-mobile__msg" role="status">
+            {actionMsg}
+          </p>
+        ) : null}
+
+        <div className="quests-mobile__body">
+          {screen === "inbox" ? (
+            <AttentionInbox
+              quests={quests}
+              npcTasks={npcTasks}
+              turn={turn}
+              perTurnRolled={rolled}
+              perTurnBusy={perTurnBusy}
+              onRollPerTurn={() => void rollPerTurn()}
+              onSelectQuest={pick}
+              onOpenCourt={() => onOpenCourt?.()}
+              onOpenJournal={openJournal}
+              onFocusSystem={onFocusSystem}
+            />
+          ) : null}
+          {screen === "detail" && selected ? (
+            <QuestStage
+              quest={selected}
+              busy={busy}
+              chatOpen={chatOpen}
+              compact
+              stocks={payload.economy?.stocks}
+              onChoose={(id) => void choose(id)}
+              onRollDice={() => void rollGm()}
+              onOpenChat={() => openJournal(selected.id)}
+              onFocusSystem={onFocusSystem}
+              dicePreview={stageDice}
+              onDiceSettled={() =>
+                setStageDice((d) => (d ? { ...d, rolling: false } : d))
+              }
+            />
+          ) : null}
+          {screen === "chat" && selected ? (
+            <QuestChatPanel
+              quest={selected}
+              open
+              embedded
+              onClose={closeChat}
+              onSend={(t) => void sendChat(t)}
+            />
+          ) : null}
+        </div>
+
+        {diceOverlayUi}
+      </div>
+    );
+  }
 
   return (
     <section
       className={[
         "quests-table",
-        sidebarCollapsed ? "is-rail-collapsed" : "",
+        compact ? "quests-table--mobile" : "",
+        compact && selected ? "quests-table--mobile-detail" : "",
+        !compact && sidebarCollapsed ? "is-rail-collapsed" : "",
         rightOpen ? "is-dock-open" : "",
         chatOpen ? "is-chat-open" : "",
-        npcOpen ? "is-npc-open" : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <QuestSidebar
-        quests={quests}
-        activeQuestId={selected?.id ?? null}
-        onSelect={pick}
-        onRollPerTurn={() => void rollPerTurn()}
-        onOpenNpc={openNpc}
-        npcTasks={npcTasks}
-        perTurnRolled={rolled}
-        perTurnBusy={perTurnBusy}
-        droppingIds={droppingIds}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={toggleSidebar}
-      />
+      {!compact && (
+        <QuestSidebar
+          quests={quests}
+          activeQuestId={selected?.id ?? null}
+          onSelect={pick}
+          onShowInbox={showInbox}
+          onRollPerTurn={() => void rollPerTurn()}
+          perTurnRolled={rolled}
+          perTurnBusy={perTurnBusy}
+          droppingIds={droppingIds}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+          attentionCount={collectAttention(quests, turn).length}
+        />
+      )}
 
       <div className="quests-table__center">
+        {compact && selected ? (
+          <header className="quests-table__mobile-head">
+            <button
+              type="button"
+              className="btn ghost sm quests-table__back"
+              onClick={showInbox}
+            >
+              ← Обзор
+            </button>
+            <strong className="quests-table__mobile-title">{selected.title}</strong>
+            {chatOpen ? (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={closeChat}
+              >
+                Закрыть чат
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => openJournal(selected.id)}
+              >
+                Чат
+              </button>
+            )}
+          </header>
+        ) : (
+          <nav className="quests-table__modes" aria-label="Режим квестов">
+            <button
+              type="button"
+              className="quests-table__mode is-active"
+              aria-current="page"
+            >
+              <ScrollText size={14} aria-hidden />
+              Квесты
+              {attentionCount > 0 ? (
+                <span className="quest-group-count">{attentionCount}</span>
+              ) : null}
+            </button>
+            {onOpenCourt ? (
+              <button
+                type="button"
+                className="quests-table__mode"
+                onClick={onOpenCourt}
+              >
+                <Users size={14} aria-hidden />
+                Двор
+                {courtBadge > 0 ? (
+                  <span className="quest-group-count">{courtBadge}</span>
+                ) : null}
+              </button>
+            ) : null}
+          </nav>
+        )}
+
         {actionMsg ? (
           <p className="quest-action-msg" role="status">
             {actionMsg}
           </p>
         ) : null}
 
-        <StoryTracker
-          quests={quests}
-          activeQuestId={selected?.id ?? null}
-          onSelect={pick}
-          onOpenJournal={openJournal}
-          onFocusSystem={onFocusSystem}
-        />
-
-        <div className="quests-table__stage">
-          <QuestStage
-            quest={selected}
-            busy={busy}
-            chatOpen={chatOpen}
-            onChoose={(id) => void choose(id)}
-            onRollDice={() => void rollGm()}
-            onOpenChat={() => {
-              if (selected) openJournal(selected.id);
-              else openChat();
-            }}
-            onFocusSystem={onFocusSystem}
-            dicePreview={stageDice}
-            onDiceSettled={() =>
-              setStageDice((d) => (d ? { ...d, rolling: false } : d))
-            }
-          />
-        </div>
+        {!(compact && chatOpen) &&
+          (selected ? (
+            <div className="quests-table__stage">
+              {!compact && (
+                <button
+                  type="button"
+                  className="btn ghost sm quests-table__back"
+                  onClick={showInbox}
+                >
+                  ← Обзор хода
+                </button>
+              )}
+              <QuestStage
+                quest={selected}
+                busy={busy}
+                chatOpen={chatOpen}
+                stocks={payload.economy?.stocks}
+                onChoose={(id) => void choose(id)}
+                onRollDice={() => void rollGm()}
+                onOpenChat={() => {
+                  openJournal(selected.id);
+                }}
+                onFocusSystem={onFocusSystem}
+                dicePreview={stageDice}
+                onDiceSettled={() =>
+                  setStageDice((d) => (d ? { ...d, rolling: false } : d))
+                }
+              />
+            </div>
+          ) : (
+            <AttentionInbox
+              quests={quests}
+              npcTasks={npcTasks}
+              turn={turn}
+              perTurnRolled={rolled}
+              perTurnBusy={perTurnBusy}
+              onRollPerTurn={() => void rollPerTurn()}
+              onSelectQuest={pick}
+              onOpenCourt={() => onOpenCourt?.()}
+              onOpenJournal={openJournal}
+              onFocusSystem={onFocusSystem}
+            />
+          ))}
       </div>
 
       <div className="quests-table__dock" aria-hidden={!rightOpen}>
-        {selected ? (
+        {selected && rightOpen ? (
           <QuestChatPanel
             quest={selected}
             open={chatOpen}
@@ -359,51 +616,9 @@ export function QuestsSection({
             onSend={(t) => void sendChat(t)}
           />
         ) : null}
-
-        <NpcPanel
-          open={npcOpen}
-          onClose={closeNpc}
-          tasks={npcTasks}
-          turn={turn}
-          onAssign={assignNpc}
-        />
       </div>
 
-      <AnimatePresence>
-        {diceOverlay ? (
-          <motion.div
-            className="quest-dice-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            role="status"
-            onClick={() => {
-              if (!diceOverlay.rolling) clearDice();
-            }}
-          >
-            <div
-              className="quest-dice-overlay__card"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <QuestDiceRoller
-                value={diceOverlay.value}
-                sides={diceOverlay.sides}
-                rolling={diceOverlay.rolling}
-                label={diceOverlay.label}
-                onSettled={() => {
-                  settleDice();
-                  window.setTimeout(() => clearDice(), 1200);
-                }}
-              />
-              {!diceOverlay.rolling && diceOverlay.message ? (
-                <p className="dice-result-text" data-reveal>
-                  {diceOverlay.message}
-                </p>
-              ) : null}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {diceOverlayUi}
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { categoryLetterCaption } from "../../state/economyLabels";
 import {
   ECO_CATEGORY_COLORS,
 } from "../economyFlowTypes";
@@ -20,7 +21,7 @@ export function SystemFlows({
   return (
     <section className="sys-flows" aria-label="Вклад системы в экономику">
       <header className="sys-flows__head">
-        <strong>Вклад в потоки A–F</strong>
+        <strong>Вклад в потоки по категориям</strong>
         <span className="hint">здания в системе</span>
       </header>
 
@@ -71,6 +72,7 @@ export function SystemFlows({
                 disabled={!onCategoryClick}
                 onClick={() => onCategoryClick?.(row.letter)}
                 style={{ color: ECO_CATEGORY_COLORS[row.letter] }}
+                title={categoryLetterCaption(row.letter)}
               >
                 <span className="tabular">{row.letter}</span>
                 <span>{row.name}</span>

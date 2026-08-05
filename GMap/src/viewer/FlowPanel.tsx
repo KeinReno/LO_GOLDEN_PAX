@@ -41,9 +41,15 @@ const TIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 export function FlowPanel({
   factionId,
   compact,
+  password,
+  masterToken,
 }: {
   factionId: string;
   compact?: boolean;
+  /** Faction password (viewer). */
+  password?: string;
+  /** Master token (GM editor). */
+  masterToken?: string;
 }) {
   const [data, setData] = useState<FlowBreakdown | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -54,7 +60,16 @@ export function FlowPanel({
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/economy/flows?factionId=${encodeURIComponent(factionId)}`);
+      const headers: Record<string, string> = {};
+      if (masterToken) headers["X-Master-Token"] = masterToken;
+      if (password) {
+        headers["X-Faction-Id"] = factionId;
+        headers["X-Faction-Password"] = password;
+      }
+      const res = await fetch(
+        `/api/economy/flows?factionId=${encodeURIComponent(factionId)}`,
+        { headers },
+      );
       if (!res.ok) throw new Error(await res.text());
       setData((await res.json()) as FlowBreakdown);
     } catch (e) {
@@ -62,7 +77,7 @@ export function FlowPanel({
     } finally {
       setBusy(false);
     }
-  }, [factionId]);
+  }, [factionId, password, masterToken]);
 
   useEffect(() => {
     void refresh();

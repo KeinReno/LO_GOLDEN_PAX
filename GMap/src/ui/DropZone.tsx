@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useCardBoard } from "./cardBoardContext";
 
 export type DropZoneProps = {
@@ -8,9 +8,18 @@ export type DropZoneProps = {
   onDrop?: (cardId: string) => void;
   /** Force highlight (in addition to drag-hover). */
   highlight?: boolean;
+  /** Soft “armed” glow while a valid card is being dragged elsewhere. */
+  armWhileDragging?: boolean;
   children?: ReactNode;
   className?: string;
   label?: string;
+  /**
+   * How the inner content wrapper lays out children.
+   * - center: legacy (row-ish flex center) — fine for empty targets
+   * - stack: column, stretch, fills parent — panels/drawers
+   * - contents: wrapper is display:contents (children participate in parent flex)
+   */
+  contentLayout?: "center" | "stack" | "contents";
 };
 
 /**
@@ -22,9 +31,11 @@ export function DropZone({
   accepts,
   onDrop,
   highlight = false,
+  armWhileDragging = false,
   children,
   className = "",
   label,
+  contentLayout = "center",
 }: DropZoneProps) {
   const board = useCardBoard();
   const ref = useRef<HTMLDivElement>(null);
@@ -44,7 +55,15 @@ export function DropZone({
     });
   }, [board, zoneId, accepts]);
 
-  const active = highlight || hover;
+  const acceptsDrag = useMemo(() => {
+    const id = board.draggingCardId;
+    if (!id) return false;
+    if (!accepts || accepts.length === 0) return true;
+    return accepts.includes(id) || accepts.includes("*");
+  }, [board.draggingCardId, accepts]);
+
+  const armed = armWhileDragging && acceptsDrag;
+  const active = highlight || hover || armed;
 
   return (
     <div
@@ -52,6 +71,8 @@ export function DropZone({
       className={[
         "drop-zone",
         active ? "drop-zone--active" : "",
+        hover ? "drop-zone--hover" : "",
+        armed && !hover ? "drop-zone--armed" : "",
         className,
       ]
         .filter(Boolean)
@@ -60,7 +81,17 @@ export function DropZone({
       aria-dropeffect="move"
     >
       {label ? <div className="drop-zone__label">{label}</div> : null}
-      <div className="drop-zone__content">{children}</div>
+      <div
+        className={[
+          "drop-zone__content",
+          contentLayout === "stack" ? "drop-zone__content--stack" : "",
+          contentLayout === "contents" ? "drop-zone__content--contents" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {children}
+      </div>
     </div>
   );
 }

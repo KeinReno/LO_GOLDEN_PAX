@@ -9,13 +9,16 @@ import {
   ScrollText,
 } from "lucide-react";
 import type { ViewerPayload } from "../../state/types";
-import { FloatingPanel } from "../../ui/FloatingPanel";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
 import { OverviewSection } from "./OverviewSection";
 import { ProductionSection } from "./ProductionSection";
 import { BudgetSection } from "./BudgetSection";
 import { StockpileSection } from "./StockpileSection";
 import { PoliciesSection } from "./PoliciesSection";
+import {
+  categoryFilterLabel,
+  isEconomyInteractionTarget,
+} from "./ecoCopy";
 import {
   ECONOMY_SECTION_BY_DIGIT,
   ECONOMY_SECTIONS,
@@ -37,7 +40,7 @@ type Props = {
   factionName?: string;
   onClose: () => void;
   onFocusBuild?: () => void;
-  /** System opened from Production (highlight + snap). */
+  /** System opened from Production (highlight). */
   linkedSystemId?: string | null;
   onOpenSystem?: (systemId: string) => void;
   /** Jump from deficit warning to a system with category highlight. */
@@ -56,7 +59,9 @@ type Props = {
     amount: number,
     label?: string,
   ) => void;
-  onSellFromStock?: (currencyId: string) => void;
+  onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
+  /** Jump to Market common tab with quick-sell preselect. */
+  onSellToMarket?: (currencyId: string) => void;
   onCaravanHint?: (currencyId: string, systemId?: string) => void;
   onStockAlert?: (currencyId: string) => void;
   stockBusy?: boolean;
@@ -65,14 +70,33 @@ type Props = {
   onOpenResearch?: (hint?: string) => void;
   /** External open: jump to production with category filter. */
   focusProductionCategory?: string | null;
+  /** Clear external focus after it was applied (avoids sticky remount filter). */
+  onFocusProductionConsumed?: () => void;
+  /**
+   * Body-only for WorkbenchShell / BottomSheet host (no FloatingPanel chrome).
+   * Desktop workbench + mobile sheet both use this.
+   */
+  embedded?: boolean;
+  /** Horizontal section chips (mobile sheet). Desktop workbench uses sidebar. */
+  compactNav?: boolean;
 };
+
+const ECO_SECTION_STORAGE = "gmap-eco-section";
+
+function readStoredEcoSection(): EconomySectionId | null {
+  try {
+    const v = localStorage.getItem(ECO_SECTION_STORAGE);
+    if (v && ECONOMY_SECTIONS.some((s) => s.id === v)) return v as EconomySectionId;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 export function EconomyPanel({
   open,
   payload,
   flowData,
-  factionName,
-  onClose,
   onFocusBuild,
   linkedSystemId,
   onOpenSystem,
@@ -83,25 +107,41 @@ export function EconomyPanel({
   onSetTax,
   onSetDoctrine,
   onReserveStock,
-  onSellFromStock,
+  onConvert,
+  onSellToMarket,
   onCaravanHint,
   onStockAlert,
   stockBusy,
   policyBusy,
   onOpenResearch,
   focusProductionCategory,
+  onFocusProductionConsumed,
+  embedded = false,
+  compactNav = false,
 }: Props) {
-  const [section, setSection] = useState<EconomySectionId>("overview");
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [section, setSection] = useState<EconomySectionId>(
+    () => readStoredEcoSection() ?? "overview",
+  );
+  const [sidebarExpanded, setSidebarExpanded] = useState(!compactNav);
   const [productionFilter, setProductionFilter] = useState<string | null>(
     null,
   );
 
+  const goSection = (next: EconomySectionId) => {
+    setSection(next);
+    try {
+      localStorage.setItem(ECO_SECTION_STORAGE, next);
+    } catch {
+      /* ignore */
+    }
+  };
+
   useEffect(() => {
     if (!focusProductionCategory) return;
     setProductionFilter(focusProductionCategory);
-    setSection("production");
-  }, [focusProductionCategory]);
+    goSection("production");
+    onFocusProductionConsumed?.();
+  }, [focusProductionCategory, onFocusProductionConsumed]);
 
   useEffect(() => {
     if (!open) return;
@@ -116,136 +156,165 @@ export function EconomyPanel({
       ) {
         return;
       }
+      const t = e.target;
+      if (isEconomyInteractionTarget(t)) return;
       const next = ECONOMY_SECTION_BY_DIGIT[e.key];
       if (!next) return;
       e.preventDefault();
       e.stopPropagation();
-      setSection(next);
+      goSection(next);
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open]);
 
-  const title = factionName
-    ? `Экономика · ${factionName}`
-    : "Экономика";
-
   const openProduction = (letter?: string) => {
     setProductionFilter(letter ?? null);
-    setSection("production");
+    goSection("production");
   };
 
-  return (
-    <FloatingPanel
-      open={open}
-      onClose={onClose}
-      title={title}
-      storageKey="gmap-economy-panel"
-      defaultGeom={{ x: 48, y: 72, w: 720, h: 520 }}
-      minW={480}
-      minH={320}
-      zIndex={380}
-      resizable
-      snapLeft={Boolean(linkedSystemId)}
-      className={`gmap-float-panel--economy ${
-        linkedSystemId ? "is-snapped-left" : ""
-      }`}
-    >
-      <div
-        className={`eco-panel ${sidebarExpanded ? "eco-panel--expanded" : "eco-panel--collapsed"}`}
-      >
-        <aside className="eco-sidebar" aria-label="Разделы экономики">
-          <button
-            type="button"
-            className="eco-sidebar__toggle"
-            title={sidebarExpanded ? "Свернуть" : "Развернуть"}
-            onClick={() => setSidebarExpanded((v) => !v)}
-          >
-            {sidebarExpanded ? (
-              <PanelLeftClose size={16} strokeWidth={2} />
-            ) : (
-              <PanelLeftOpen size={16} strokeWidth={2} />
-            )}
-          </button>
-          <nav className="eco-sidebar__nav">
-            {ECONOMY_SECTIONS.map((s) => {
-              const Icon = SIDEBAR_ICONS[s.id];
-              const active = section === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`eco-sidebar__item ${active ? "is-active" : ""}`}
-                  onClick={() => setSection(s.id)}
-                  title={`${s.label} · ${s.hotkey}`}
-                  aria-current={active ? "page" : undefined}
-                >
-                  <Icon size={16} strokeWidth={2} aria-hidden />
-                  {sidebarExpanded && (
-                    <span className="eco-sidebar__label">{s.label}</span>
-                  )}
-                  {sidebarExpanded && (
-                    <kbd className="eco-sidebar__kbd">{s.hotkey}</kbd>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+  if (!open) return null;
 
-        <div className="eco-content">
-          {section === "overview" && (
-            <OverviewSection
-              payload={payload}
-              flowData={flowData}
-              onOpenProduction={openProduction}
-              onOpenPolicies={() => setSection("policies")}
-              onOpenBudget={() => setSection("budget")}
-              onFocusBuild={onFocusBuild}
-              onFocusDeficit={onFocusDeficit}
-              onOpenResearch={onOpenResearch}
-            />
+  const sectionNav = compactNav ? (
+    <nav className="eco-tabs" aria-label="Разделы экономики">
+      {ECONOMY_SECTIONS.map((s) => {
+        const Icon = SIDEBAR_ICONS[s.id];
+        const active = section === s.id;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            className={`eco-tabs__item ${active ? "is-active" : ""}`}
+            onClick={() => goSection(s.id)}
+            aria-current={active ? "page" : undefined}
+          >
+            <Icon size={15} strokeWidth={2} aria-hidden />
+            <span>{s.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  ) : (
+    <aside className="eco-sidebar" aria-label="Разделы экономики">
+      <button
+        type="button"
+        className="eco-sidebar__toggle"
+        title={sidebarExpanded ? "Свернуть" : "Развернуть"}
+        onClick={() => setSidebarExpanded((v) => !v)}
+      >
+        {sidebarExpanded ? (
+          <PanelLeftClose size={16} strokeWidth={2} />
+        ) : (
+          <PanelLeftOpen size={16} strokeWidth={2} />
+        )}
+      </button>
+      <nav className="eco-sidebar__nav">
+        {ECONOMY_SECTIONS.map((s) => {
+          const Icon = SIDEBAR_ICONS[s.id];
+          const active = section === s.id;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              className={`eco-sidebar__item ${active ? "is-active" : ""}`}
+              onClick={() => goSection(s.id)}
+              title={`${s.label} · ${s.hotkey}`}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon size={16} strokeWidth={2} aria-hidden />
+              {sidebarExpanded && (
+                <span className="eco-sidebar__label">{s.label}</span>
+              )}
+              {sidebarExpanded && (
+                <kbd className="eco-sidebar__kbd">{s.hotkey}</kbd>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+
+  return (
+    <div
+      className={[
+        "eco-panel",
+        sidebarExpanded ? "eco-panel--expanded" : "eco-panel--collapsed",
+        embedded ? "eco-panel--embedded" : "",
+        compactNav ? "eco-panel--compact" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {sectionNav}
+
+      <div className="eco-content">
+        <header className="eco-content__head">
+          <h3 className="eco-content__title">
+            {ECONOMY_SECTIONS.find((s) => s.id === section)?.label}
+          </h3>
+          {section === "production" && productionFilter && (
+            <button
+              type="button"
+              className="btn sm ghost"
+              onClick={() => setProductionFilter(null)}
+            >
+              Сбросить фильтр · {categoryFilterLabel(productionFilter)}
+            </button>
           )}
-          {section === "production" && (
-            <ProductionSection
-              payload={payload}
-              flowData={flowData}
-              filterCategory={productionFilter}
-              linkedSystemId={linkedSystemId}
-              onOpenSystem={onOpenSystem}
-              onFocusOnMap={onFocusSystemOnMap}
-              onSetFlowPriority={onSetFlowPriority}
-              priorityBusy={priorityBusy}
-            />
-          )}
-          {section === "budget" && <BudgetSection payload={payload} />}
-          {section === "stockpile" && (
-            <StockpileSection
-              payload={payload}
-              busy={stockBusy}
-              onSell={onSellFromStock}
-              onReserve={onReserveStock}
-              onCaravan={onCaravanHint}
-              onSetAlert={onStockAlert}
-              onDropOnSystem={(currencyId, systemId) => {
-                onCaravanHint?.(currencyId, systemId);
-                onOpenSystem?.(systemId);
-              }}
-            />
-          )}
-          {section === "policies" && (
-            <PoliciesSection
-              payload={payload}
-              busy={policyBusy}
-              onSetTax={(slot, tier) => {
-                onSetTax?.(slot, tier);
-                setSection("budget");
-              }}
-              onSetDoctrine={onSetDoctrine}
-            />
-          )}
-        </div>
+        </header>
+        {section === "overview" && (
+          <OverviewSection
+            payload={payload}
+            flowData={flowData}
+            onOpenProduction={openProduction}
+            onOpenPolicies={() => goSection("policies")}
+            onOpenBudget={() => goSection("budget")}
+            onFocusBuild={onFocusBuild}
+            onFocusDeficit={onFocusDeficit}
+            onOpenResearch={onOpenResearch}
+            onConvert={onConvert}
+          />
+        )}
+        {section === "production" && (
+          <ProductionSection
+            payload={payload}
+            flowData={flowData}
+            filterCategory={productionFilter}
+            linkedSystemId={linkedSystemId}
+            onOpenSystem={onOpenSystem}
+            onFocusOnMap={onFocusSystemOnMap}
+            onSetFlowPriority={onSetFlowPriority}
+            priorityBusy={priorityBusy}
+          />
+        )}
+        {section === "budget" && <BudgetSection payload={payload} />}
+        {section === "stockpile" && (
+          <StockpileSection
+            payload={payload}
+            busy={stockBusy}
+            onConvert={onConvert}
+            onSellToMarket={onSellToMarket}
+            onReserve={onReserveStock}
+            onCaravan={onCaravanHint}
+            onSetAlert={onStockAlert}
+            onDropOnSystem={(currencyId, systemId) => {
+              onCaravanHint?.(currencyId, systemId);
+              onOpenSystem?.(systemId);
+            }}
+          />
+        )}
+        {section === "policies" && (
+          <PoliciesSection
+            payload={payload}
+            busy={policyBusy}
+            onSetTax={(slot, tier) => {
+              onSetTax?.(slot, tier);
+            }}
+            onSetDoctrine={onSetDoctrine}
+          />
+        )}
       </div>
-    </FloatingPanel>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { ViewerPayload } from "../../state/types";
+import type { Faction, ViewerPayload } from "../../state/types";
 import { BUILD_METAL, CATEGORY_CURRENCIES } from "../../state/economyLabels";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
 import type { CategoryStatus } from "./types";
@@ -8,6 +8,8 @@ export type EconomyMetrics = {
   income: number;
   expense: number;
   balance: number;
+  /** currency.metal | map.solari | map.blumatid | … */
+  treasuryCurrencyId: string;
 };
 
 export type CategorySnapshot = {
@@ -21,23 +23,87 @@ export type CategorySnapshot = {
   bottleneckDeficit: number;
 };
 
-/** Sum metal income / expense for the latest ledger turn only. */
+/** Faction treasury commodity (peg) or legacy metal. */
+export function resolveTreasuryCurrencyId(
+  faction?: Pick<Faction, "treasuryPeg"> | null,
+): string {
+  const peg = faction?.treasuryPeg;
+  if (typeof peg === "string" && peg.trim()) return peg.trim();
+  return BUILD_METAL.id;
+}
+
+export function resolveFactionTreasuryCurrency(
+  payload: ViewerPayload,
+): string {
+  const fac = payload.world?.factions?.find((f) => f.id === payload.factionId);
+  return resolveTreasuryCurrencyId(fac);
+}
+
+const TICK_REASONS = new Set([
+  "bridge_income",
+  "bridge_upkeep",
+  "flow_income",
+  "flow_upkeep",
+  "treasury_income",
+  "treasury_upkeep",
+]);
+
+/** Latest turn that has an economy tick for the treasury currency. */
+export function latestTreasuryTurn(
+  economy: NonNullable<ViewerPayload["economy"]>,
+  treasuryCurrencyId: string,
+  currentTurn?: number | null,
+): number | null {
+  const recent = economy.recent ?? [];
+  const cap =
+    currentTurn != null && Number.isFinite(currentTurn)
+      ? Number(currentTurn)
+      : null;
+  let latest: number | null = null;
+  for (const row of recent) {
+    if (row.turn == null) continue;
+    if (cap != null && row.turn > cap) continue;
+    if (!TICK_REASONS.has(row.reason)) continue;
+    if (latest == null || row.turn > latest) latest = row.turn;
+  }
+  if (cap != null) {
+    const hasCap = recent.some(
+      (row) =>
+        row.turn === cap &&
+        row.currencyId === treasuryCurrencyId &&
+        TICK_REASONS.has(row.reason),
+    );
+    if (hasCap) return cap;
+  }
+  return latest;
+}
+
+/** @deprecated use latestTreasuryTurn */
+export function latestMetalTurn(
+  economy: NonNullable<ViewerPayload["economy"]>,
+  currentTurn?: number | null,
+): number | null {
+  return latestTreasuryTurn(economy, BUILD_METAL.id, currentTurn);
+}
+
+/** Sum treasury income / expense for the latest ledger turn only. */
 export function computeMetrics(
   economy: NonNullable<ViewerPayload["economy"]>,
+  currentTurn?: number | null,
+  treasuryCurrencyId: string = BUILD_METAL.id,
 ): EconomyMetrics {
   const stocks = economy.stocks ?? {};
-  const treasury = stocks[BUILD_METAL.id] ?? 0;
+  const treasury = stocks[treasuryCurrencyId] ?? 0;
   const recent = economy.recent ?? [];
-  let latestTurn: number | null = null;
-  for (const row of recent) {
-    if (row.currencyId !== BUILD_METAL.id) continue;
-    if (row.turn == null) continue;
-    if (latestTurn == null || row.turn > latestTurn) latestTurn = row.turn;
-  }
+  const latestTurn = latestTreasuryTurn(
+    economy,
+    treasuryCurrencyId,
+    currentTurn,
+  );
   let income = 0;
   let expense = 0;
   for (const row of recent) {
-    if (row.currencyId !== BUILD_METAL.id) continue;
+    if (row.currencyId !== treasuryCurrencyId) continue;
     if (latestTurn != null && row.turn !== latestTurn) continue;
     if (latestTurn == null && row.turn != null) continue;
     if (row.delta > 0) income += row.delta;
@@ -48,6 +114,7 @@ export function computeMetrics(
     income,
     expense,
     balance: income - expense,
+    treasuryCurrencyId,
   };
 }
 

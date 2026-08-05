@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import type { ViewerPayload } from "../state/types";
-import { formatHopTurns, hopDistance } from "../state/pathfinding";
+import { canAttackSystem } from "../state/combatEligibility";
+import { formatHopDistance, hopDistance } from "../state/pathfinding";
+import { isWithinMoveRange } from "../state/movementRange";
 import { ActionRing, type ActionRingItem } from "../ui/ActionRing";
 
 export type FleetOrderRingState = {
@@ -15,7 +17,13 @@ type Props = {
   payload: ViewerPayload;
   reservedAp: number;
   apMax: number;
+  reservedForceAp?: number;
+  forceApMax?: number;
   scoutApCost: number;
+  scoutForceApCost?: number;
+  moveForceApCost?: number;
+  attackEmpireApCost?: number;
+  attackForceApCost?: number;
   onClose: () => void;
   onMove: (
     fleetId: string,
@@ -42,7 +50,12 @@ export function FleetOrderRing({
   payload,
   reservedAp,
   apMax,
+  reservedForceAp = 0,
+  forceApMax = 0,
   scoutApCost,
+  moveForceApCost = 1,
+  attackEmpireApCost = 1,
+  attackForceApCost = 1,
   onClose,
   onMove,
   onAttack,
@@ -69,51 +82,94 @@ export function FleetOrderRing({
 
     const visibleSet = new Set(payload.visibleSystemIds);
     const inVision = visibleSet.has(system.id);
+    const forceShort =
+      moveForceApCost > 0 && reservedForceAp + moveForceApCost > forceApMax;
+    const attackShort =
+      (attackForceApCost > 0 &&
+        reservedForceAp + attackForceApCost > forceApMax) ||
+      (attackEmpireApCost > 0 && reservedAp + attackEmpireApCost > apMax);
 
     const out: ActionRingItem[] = [];
 
     if (ownFleet && system.id !== ownFleet.systemId) {
       const hops = hopDistance(world, ownFleet.systemId, system.id, "fleet");
-      const pathOk = Number.isFinite(hops) && hops > 0;
+      const pathOk =
+        Number.isFinite(hops) &&
+        hops > 0 &&
+        isWithinMoveRange(world, ownFleet.systemId, system.id, "fleet");
       out.push({
         id: "move",
         label: !inVision
           ? "вне обзора"
-          : pathOk
-            ? `Перелёт (${formatHopTurns(hops)})`
-            : "Перелёт",
-        disabled: !inVision || !pathOk,
+          : forceShort
+            ? "нет ОД сил"
+            : pathOk
+              ? `Перелёт (${formatHopDistance(hops)})`
+              : Number.isFinite(hops) && hops > 0
+                ? "вне радиуса"
+                : "Перелёт",
+        disabled: !inVision || !pathOk || forceShort,
         onSelect: () => {
-          if (pathOk && inVision) onMove(ownFleet.id, system.id, hops);
+          if (pathOk && inVision && !forceShort) {
+            onMove(ownFleet.id, system.id, hops);
+          }
         },
       });
       out.push({
         id: "attack",
-        label: inVision ? "Атака" : "вне обзора",
-        danger: inVision,
-        disabled: !inVision,
+        label: !inVision ? "вне обзора" : attackShort ? "нет ОД" : "Атака",
+        danger: inVision && !attackShort,
+        disabled: !inVision || attackShort,
         onSelect: () => {
-          if (inVision) onAttack(ownFleet.id, system.id);
+          if (inVision && !attackShort) onAttack(ownFleet.id, system.id);
         },
       });
       out.push({
         id: "blockade",
-        label: inVision ? "Блокада" : "вне обзора",
-        disabled: !inVision || !pathOk,
+        label: !inVision
+          ? "вне обзора"
+          : forceShort
+            ? "нет ОД сил"
+            : "Блокада",
+        disabled: !inVision || !pathOk || forceShort,
         onSelect: () => {
-          if (inVision) onBlockade(ownFleet.id, system.id, pathOk ? hops : undefined);
+          if (inVision && !forceShort) {
+            onBlockade(ownFleet.id, system.id, pathOk ? hops : undefined);
+          }
         },
       });
     } else if (ownFleet && system.id === ownFleet.systemId) {
+      const attackHere = canAttackSystem(world, factionId, system.id);
+      out.push({
+        id: "attack",
+        label: !attackHere.eligible
+          ? "Нет целей для атаки"
+          : attackShort
+            ? "нет ОД"
+            : attackHere.label,
+        danger: attackHere.eligible && !attackShort,
+        disabled: !attackHere.eligible || attackShort,
+        onSelect: () => {
+          if (attackHere.eligible && !attackShort) {
+            onAttack(ownFleet.id, system.id);
+          }
+        },
+      });
       out.push({
         id: "fortify",
-        label: "Оборона",
-        onSelect: () => onFortify(ownFleet.id, system.id),
+        label: forceShort ? "Оборона · нет ОД сил" : "Оборона",
+        disabled: forceShort,
+        onSelect: () => {
+          if (!forceShort) onFortify(ownFleet.id, system.id);
+        },
       });
       out.push({
         id: "blockade",
-        label: "Блокада",
-        onSelect: () => onBlockade(ownFleet.id, system.id, undefined),
+        label: forceShort ? "Блокада · нет ОД сил" : "Блокада",
+        disabled: forceShort,
+        onSelect: () => {
+          if (!forceShort) onBlockade(ownFleet.id, system.id, undefined);
+        },
       });
       if ((ownFleet.route?.length ?? 0) > 0) {
         out.push({
@@ -140,7 +196,8 @@ export function FleetOrderRing({
       });
     }
 
-    const scoutBlocked = reservedAp + scoutApCost > apMax;
+    const scoutBlocked =
+      scoutApCost > 0 && reservedAp + scoutApCost > apMax;
     out.push({
       id: "scout",
       label: scoutBlocked ? "Разведка" : "Наблюдение",
@@ -165,7 +222,12 @@ export function FleetOrderRing({
     payload,
     reservedAp,
     apMax,
+    reservedForceAp,
+    forceApMax,
     scoutApCost,
+    moveForceApCost,
+    attackEmpireApCost,
+    attackForceApCost,
     onMove,
     onAttack,
     onBlockade,

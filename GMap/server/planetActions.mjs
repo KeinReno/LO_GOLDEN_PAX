@@ -12,8 +12,13 @@ import { reservedAp, readIntents, writeIntents } from "./intents.mjs";
 import { writeLiveBoard } from "./tableStore.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
 import { canBuild as canBuildSlots, resolveSlots, resourceMatchesRequire } from "./slotResolver.mjs";
-import { canBuildWithTech, factionHasProperty } from "./techActions.mjs";
+import {
+  canBuildWithTech,
+  factionHasProperty,
+  applyUnlockEffects,
+} from "./techActions.mjs";
 import { canFactionBuildDef, raceIdsFromComposition } from "./buildingAccess.mjs";
+import { planetAllowsBuildingBiome } from "./biomeMatch.mjs";
 import { CATEGORIES } from "./flowEngine.mjs";
 import {
   listAvailableVariants,
@@ -154,7 +159,31 @@ function colonyDefForType(content, colonyType) {
   return Object.values(colonyDefs(content)).find((d) => d.colonyType === t);
 }
 
-function buildCostMult(factionId) {
+function buildingCostMultOnPlanet(content, planet) {
+  let best = 1;
+  const all = [
+    ...(planet?.surfaceBuildings || []),
+    ...(planet?.orbitalBuildings || []),
+  ];
+  for (const b of all) {
+    if (b?.disabled) continue;
+    const def = buildingDefFromInstance(content, b);
+    if (!def) continue;
+    for (const e of [...(def.effects || []), ...(def.extra_effects || [])]) {
+      if (
+        e.effect === "cost_mult" &&
+        (e.args?.tag === "build" || !e.args?.tag) &&
+        e.args?.mult != null
+      ) {
+        const m = Number(e.args.mult);
+        if (Number.isFinite(m) && m > 0 && m < best) best = m;
+      }
+    }
+  }
+  return best;
+}
+
+function buildCostMult(factionId, planet = null) {
   const content = getContent();
   const ledger = readLedger();
   const eco = ensureFactionEco(ledger, factionId);
@@ -168,7 +197,29 @@ function buildCostMult(factionId) {
       }
     }
   }
-  return mult;
+  if (planet) mult *= buildingCostMultOnPlanet(content, planet);
+  const floor = Number(content.economy_balance?.buildings?.buildCostMultFloor ?? 0.75);
+  return Math.max(floor, mult);
+}
+
+function countBuildingInSystem(system, buildingId) {
+  let n = 0;
+  for (const p of system?.planets || []) {
+    for (const b of [
+      ...(p.surfaceBuildings || []),
+      ...(p.orbitalBuildings || []),
+    ]) {
+      if (b?.disabled) continue;
+      if (b.buildingId === buildingId || b.baseBuildingId === buildingId) n += 1;
+    }
+  }
+  return n;
+}
+
+function collectBuildingUnlockEffects(def) {
+  return [...(def?.effects || []), ...(def?.extra_effects || [])].filter(
+    (e) => e.effect === "unlock_tech_tier" || e.effect === "unlock_property",
+  );
 }
 
 function scaledCost(cost, mult) {
@@ -181,8 +232,10 @@ function scaledCost(cost, mult) {
 
 function canAfford(eco, cost) {
   for (const [cur, amt] of Object.entries(cost || {})) {
-    if ((eco.stocks?.[cur] ?? 0) < amt) {
-      return { ok: false, error: `Не хватает ${cur} (нужно ${amt})` };
+    const numAmt = Number(amt || 0);
+    if (numAmt < 0) return { ok: false, error: "Отрицательная стоимость недопустима" };
+    if ((eco.stocks?.[cur] ?? 0) < numAmt) {
+      return { ok: false, error: `Не хватает ${cur} (нужно ${numAmt})` };
     }
   }
   return { ok: true };
@@ -202,6 +255,7 @@ function recordAppliedIntent({
   note,
   turn,
   apCost,
+  forceApCost = 0,
 }) {
   const intent = {
     id: `int_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -210,6 +264,7 @@ function recordAppliedIntent({
     turn,
     status: "applied",
     apCost,
+    forceApCost,
     payload: payload || {},
     note: note || "",
     submittedAt: new Date().toISOString(),
@@ -349,6 +404,13 @@ export function applyPlanetAction({
     const ecoPre = ensureFactionEco(ledgerPre, factionId);
     const techGate = canBuildWithTech(ecoPre, def);
     if (!techGate.ok) return techGate;
+    if (!planetAllowsBuildingBiome(planet, def.biome_restrictions)) {
+      const need = (def.biome_restrictions || []).join(", ");
+      return {
+        ok: false,
+        error: `«${def.name}» требует биом: ${need}`,
+      };
+    }
     // orbital → orbital list; surface/subsurface/deep → surface list (zone preserved on instance)
     const listKey = def.zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
     const zone = def.zone || "surface";
@@ -366,16 +428,22 @@ export function applyPlanetAction({
         ...(planet.orbitalBuildings ?? []),
       ];
       const same = all.filter(
-        (b) => b.buildingId === buildingId && !b.disabled,
+        (b) => (b.buildingId === buildingId || b.baseBuildingId === buildingId) && !b.disabled,
       ).length;
       if (same >= def.maxPerPlanet) {
         return { ok: false, error: `Лимит «${def.name}» на планете` };
       }
     }
-    const apCost = def.ap ?? content.intents?.["intent.build"]?.ap ?? 1;
+    if (def.maxPerSystem) {
+      const sameSys = countBuildingInSystem(system, buildingId);
+      if (sameSys >= def.maxPerSystem) {
+        return { ok: false, error: `Лимит «${def.name}» на систему` };
+      }
+    }
+    const apCost = content.intents?.["intent.build"]?.ap ?? 0;
     const apGate = gateAp(apCost);
     if (!apGate.ok) return apGate;
-    const cost = scaledCost(def.cost, buildCostMult(factionId));
+    const cost = scaledCost(def.cost, buildCostMult(factionId, planet));
     const ledger = readLedger();
     const eco = ensureFactionEco(ledger, factionId);
     const afford = canAfford(eco, cost);
@@ -403,6 +471,8 @@ export function applyPlanetAction({
       apCost,
     });
     spendCost(ledger, factionId, cost, turn, intent.id, "build");
+    const unlockFx = collectBuildingUnlockEffects(def);
+    if (unlockFx.length) applyUnlockEffects(eco, unlockFx);
     writeLedger(ledger);
     pushSystemHistory(system, {
       turn,
@@ -834,7 +904,7 @@ export async function previewBuild({
 
   const afterBreak = computeFlowBreakdown(clonedWorld, factionId, content, eco);
   const after = afterBreak.totals || {};
-  const cost = scaledCost(def.cost, buildCostMult(factionId));
+  const cost = scaledCost(def.cost, buildCostMult(factionId, planet));
 
   return {
     ok: true,

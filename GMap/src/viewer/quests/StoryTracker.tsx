@@ -1,6 +1,6 @@
 import { BookOpen, MapPin, Target } from "lucide-react";
 import type { Quest } from "./types";
-import { QUEST_KIND_META, QUEST_STATUS_LABEL } from "./types";
+import { QUEST_KIND_META } from "./types";
 
 export type StoryTrackerProps = {
   quests: Quest[];
@@ -169,8 +169,10 @@ export function StoryTracker({
       ) : null}
 
       {beats.length > 0 ? (
-        <div className="story-tracker__block">
-          <h4>Последние события</h4>
+        <details className="story-tracker__block">
+          <summary>
+            <h4>Последние события</h4>
+          </summary>
           <ol className="story-tracker__beats">
             {beats.map((b) => (
               <li key={`${b.questId}-${b.at}`}>
@@ -182,26 +184,7 @@ export function StoryTracker({
               </li>
             ))}
           </ol>
-        </div>
-      ) : null}
-
-      {story.length > 1 ? (
-        <div className="story-tracker__lanes">
-          {story.map((q) => (
-            <button
-              key={q.id}
-              type="button"
-              className={`story-tracker__lane ${q.id === activeQuestId ? "is-active" : ""}`}
-              onClick={() => onSelect(q.id)}
-            >
-              <span
-                className={`quest-status-dot quest-status-dot--${q.status}`}
-                title={QUEST_STATUS_LABEL[q.status]}
-              />
-              <span>{q.title}</span>
-            </button>
-          ))}
-        </div>
+        </details>
       ) : null}
     </section>
   );

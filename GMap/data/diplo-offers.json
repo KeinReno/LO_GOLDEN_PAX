@@ -1,0 +1,40 @@
+{
+  "offers": [
+    {
+      "id": "diplo_1785918446738_jkbb1",
+      "fromFactionId": "64928514-afb3-4cdb-b79c-23dd39cdcbd0",
+      "toFactionId": "faction_north_swarm",
+      "status": "accepted",
+      "give": [
+        {
+          "kind": "treaty",
+          "treaty": "war"
+        }
+      ],
+      "want": [],
+      "note": "",
+      "createdTurn": 24,
+      "createdAt": "2026-08-05T08:27:26.738Z",
+      "escrowed": false,
+      "resolvedAt": "2026-08-05T08:29:08.260Z"
+    },
+    {
+      "id": "diplo_1785918483837_a5tfv",
+      "fromFactionId": "64928514-afb3-4cdb-b79c-23dd39cdcbd0",
+      "toFactionId": "faction_north_swarm",
+      "status": "cancelled",
+      "give": [
+        {
+          "kind": "treaty",
+          "treaty": "war"
+        }
+      ],
+      "want": [],
+      "note": "",
+      "createdTurn": 24,
+      "createdAt": "2026-08-05T08:28:03.837Z",
+      "escrowed": false,
+      "resolvedAt": "2026-08-05T08:28:09.866Z"
+    }
+  ]
+}

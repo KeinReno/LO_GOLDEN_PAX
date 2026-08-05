@@ -199,7 +199,7 @@ export function CombatPanel() {
               <PhaseRibbon phase={eng.phase || "bombard"} />
             )}
 
-            {eng.sides.map((side) => (
+            {(eng.sides ?? []).map((side) => (
               <label
                 key={side.factionId}
                 className="field"
@@ -261,7 +261,7 @@ export function CombatPanel() {
                 </strong>
                 <br />
                 <span className="hint">
-                  {eng.sides.map((s) => nameOf(s.factionId)).join(" vs ")}
+                  {(eng.sides ?? []).map((s) => nameOf(s.factionId)).join(" vs ")}
                 </span>
               </div>
               <ul className="hint" style={{ paddingLeft: 16, margin: "4px 0" }}>

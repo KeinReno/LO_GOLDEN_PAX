@@ -4,17 +4,18 @@
  */
 import { LEDGER_PATH, readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
 import { getContent } from "./contentLoader.mjs";
+import { resolveAlias } from "./normalizeWorld.mjs";
 
-/** Starting stocks for a new faction (balanced for early colony survival). */
+/** Starting stocks for a new faction (aligned to economy_balance.start). */
 export const DEFAULT_STOCKS = {
-  "currency.metal": 80,
-  "currency.supply": 60,
-  "currency.extracta": 12,
-  "currency.materia": 10,
-  "currency.industria": 4,
-  "currency.energia": 14,
-  "currency.bios": 16,
-  "currency.cognitio": 32,
+  "currency.metal": 100,
+  "currency.supply": 70,
+  "currency.extracta": 14,
+  "currency.materia": 12,
+  "currency.industria": 8,
+  "currency.energia": 16,
+  "currency.bios": 18,
+  "currency.cognitio": 36,
 };
 
 export const CATEGORY_CURRENCY = {
@@ -33,8 +34,9 @@ export function defaultFactionEco(factionId) {
     factionId,
     stocks: { ...DEFAULT_STOCKS },
     taxes: {
-      "tax.industry": "none",
-      "tax.supply": "none",
+      "tax.materia": "none",
+      "tax.energia": "none",
+      "tax.bios": "none",
     },
     pendingPolicy: { taxes: {} },
     laws: [],
@@ -60,6 +62,13 @@ export function defaultFactionEco(factionId) {
     forceReserve: [],
     /** Active doctrine id: military | trade | growth | null */
     economicPolicy: null,
+    /** Tech alchemy lab state */
+    alchemy: {
+      attemptsUsedThisTurn: 0,
+      discoveredRecipes: [],
+      lastExperimentTurn: null,
+      journal: [],
+    },
   };
 }
 
@@ -95,13 +104,41 @@ export function ensureFactionEco(ledger, factionId) {
   const f = ledger.factions[factionId];
   if (!f.stocks) f.stocks = { ...DEFAULT_STOCKS };
   else ensureCategoryStocks(f.stocks);
-  if (!f.taxes) f.taxes = { "tax.industry": "none", "tax.supply": "none" };
+  if (!f.taxes) {
+    f.taxes = {
+      "tax.materia": "none",
+      "tax.energia": "none",
+      "tax.bios": "none",
+    };
+  } else {
+    // Migrate legacy industry/supply → materia/bios.
+    if (f.taxes["tax.industry"] != null && f.taxes["tax.materia"] == null) {
+      f.taxes["tax.materia"] = f.taxes["tax.industry"];
+    }
+    if (f.taxes["tax.supply"] != null && f.taxes["tax.bios"] == null) {
+      f.taxes["tax.bios"] = f.taxes["tax.supply"];
+    }
+    if (f.taxes["tax.energia"] == null) f.taxes["tax.energia"] = "none";
+    if (f.taxes["tax.materia"] == null) f.taxes["tax.materia"] = "none";
+    if (f.taxes["tax.bios"] == null) f.taxes["tax.bios"] = "none";
+  }
   if (!f.pendingPolicy) f.pendingPolicy = { taxes: {} };
   if (typeof f.pressure !== "number") f.pressure = 0;
   if (!f.deficit) f.deficit = "ok";
   if (!f.bottlenecks) f.bottlenecks = {};
   if (!Array.isArray(f.unlockedTechs)) f.unlockedTechs = [];
   if (!Array.isArray(f.unlockedUpgrades)) f.unlockedUpgrades = [];
+  else {
+    const migrated = [];
+    const seen = new Set();
+    for (const raw of f.unlockedUpgrades) {
+      const id = resolveAlias("tech_upgrades", raw);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      migrated.push(id);
+    }
+    f.unlockedUpgrades = migrated;
+  }
   if (!Array.isArray(f.acquiredTechs)) f.acquiredTechs = [];
   if (!f.techTiers || typeof f.techTiers !== "object") {
     f.techTiers = { ...DEFAULT_TECH_TIERS };
@@ -125,6 +162,22 @@ export function ensureFactionEco(ledger, factionId) {
   }
   if (f.economicPolicy === undefined) f.economicPolicy = null;
   if (!Array.isArray(f.laws)) f.laws = [];
+  if (!f.alchemy || typeof f.alchemy !== "object") {
+    f.alchemy = {
+      attemptsUsedThisTurn: 0,
+      discoveredRecipes: [],
+      lastExperimentTurn: null,
+      journal: [],
+    };
+  } else {
+    if (!Array.isArray(f.alchemy.discoveredRecipes)) {
+      f.alchemy.discoveredRecipes = [];
+    }
+    if (!Number.isFinite(f.alchemy.attemptsUsedThisTurn)) {
+      f.alchemy.attemptsUsedThisTurn = 0;
+    }
+    if (!Array.isArray(f.alchemy.journal)) f.alchemy.journal = [];
+  }
   return f;
 }
 
@@ -198,10 +251,33 @@ export function getFactionPublicEco(factionId) {
   const ledger = readLedger();
   const eco = ensureFactionEco(ledger, factionId);
   const content = getContent();
-  const recent = ledger.entries
-    .filter((e) => e.factionId === factionId)
-    .slice(-40)
-    .reverse();
+  // Bias treasury rows (metal + commodity peg) — a single tick floods category
+  // lines and used to push treasury out of a flat slice, zeroing budget UI.
+  const factionEntries = ledger.entries.filter((e) => e.factionId === factionId);
+  const isTreasuryRow = (e) =>
+    e.currencyId === "currency.metal" ||
+    e.reason === "treasury_income" ||
+    e.reason === "treasury_upkeep";
+  const metal = factionEntries.filter(isTreasuryRow).slice(-100);
+  const other = factionEntries.filter((e) => !isTreasuryRow(e)).slice(-50);
+  const seen = new Set();
+  const merged = [];
+  for (const e of [...metal, ...other]) {
+    const key =
+      e.id ||
+      `${e.turn ?? ""}|${e.currencyId}|${e.delta}|${e.reason}|${e.intentId ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(e);
+  }
+  merged.sort((a, b) => {
+    const td = (b.turn ?? 0) - (a.turn ?? 0);
+    if (td !== 0) return td;
+    return String(b.at || b.createdAt || "").localeCompare(
+      String(a.at || a.createdAt || ""),
+    );
+  });
+  const recent = merged.slice(0, 120);
   return {
     ...eco,
     recent,
@@ -210,6 +286,7 @@ export function getFactionPublicEco(factionId) {
     economy_schema: content.economy_schema,
     rules: {
       apPerTurn: content.rules?.apPerTurn,
+      forceAp: content.rules?.forceAp,
       deficit: content.rules?.deficit,
       tax: content.rules?.tax,
       population: content.rules?.population,
@@ -217,16 +294,83 @@ export function getFactionPublicEco(factionId) {
   };
 }
 
+/**
+ * Apply stock reserve immediately (intent.reserve_stock is marked instant).
+ * @returns {{ ok: true } | { ok: false, error: string }}
+ */
+export function setStockReserve(factionId, currencyId, amount, label = "резерв") {
+  const id = String(currencyId || "");
+  const amt = Math.floor(Number(amount) || 0);
+  const tag = String(label || "резерв").slice(0, 48);
+  if (!id || amt < 0) return { ok: false, error: "нужны currencyId и amount ≥ 0" };
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const stock = Number(eco.stocks?.[id] ?? 0);
+  if (!eco.stockReserves) eco.stockReserves = {};
+  if (amt === 0) {
+    delete eco.stockReserves[id];
+  } else {
+    if (amt > stock) {
+      return { ok: false, error: `недостаточно запаса (есть ${stock})` };
+    }
+    eco.stockReserves[id] = { amount: amt, label: tag };
+  }
+  writeLedger(ledger);
+  return { ok: true };
+}
+
 const CURRENCY_LABELS = {
   "currency.metal": "Металл",
   "currency.supply": "Обеспечение",
-  "currency.extracta": "Extracta",
-  "currency.materia": "Materia",
-  "currency.industria": "Industria",
-  "currency.energia": "Energia",
-  "currency.bios": "Bios",
-  "currency.cognitio": "Cognitio",
+  "currency.extracta": "Сырьё",
+  "currency.materia": "Материалы",
+  "currency.industria": "Промышленность",
+  "currency.energia": "Энергия",
+  "currency.bios": "Биомасса",
+  "currency.cognitio": "Знание",
 };
+
+const STAT_LABELS = {
+  defense: "оборона",
+  attack: "атака",
+  morale: "мораль",
+  stability: "стабильность",
+};
+
+const CHANNEL_PLAYER_LABELS = {
+  "tax_pressure": "Налоговое давление",
+  ap: "Очки действия",
+  stability: "Стабильность",
+  move_cost: "Стоимость хода",
+  "stat:defense": "Оборона",
+  "stat:attack": "Атака",
+  "loyalty:*": "Лояльность",
+  "cost:diplomacy": "Дипломатия",
+  "research:*": "Наука",
+  "cost:*": "Затраты",
+};
+
+function roundNum(n, decimals = 2) {
+  if (n == null || !Number.isFinite(Number(n))) return n;
+  const f = 10 ** decimals;
+  return Math.round(Number(n) * f) / f;
+}
+
+function explainChannelPlayerLabel(channelKey) {
+  if (CHANNEL_PLAYER_LABELS[channelKey]) return CHANNEL_PLAYER_LABELS[channelKey];
+  const [head, tail] = String(channelKey).split(":");
+  if (head === "stat" && tail) {
+    return STAT_LABELS[tail] ? `Показатель: ${STAT_LABELS[tail]}` : `Показатель: ${tail}`;
+  }
+  if (head === "production" || head === "upkeep") {
+    const cur = currencyLabelFromChannel(channelKey);
+    return cur ? `${head === "production" ? "Доход" : "Содержание"} · ${cur}` : channelKey;
+  }
+  if (head === "loyalty") return "Лояльность";
+  if (head === "cost") return tail ? `Затраты · ${tail}` : "Затраты";
+  if (head === "research") return "Наука";
+  return channelKey.replace(/_/g, " ");
+}
 
 const EXPLAIN_CATEGORY_LABELS = {
   income: "Доход",
@@ -268,67 +412,73 @@ function currencyLabelFromChannel(channelKey) {
 function formatExplainModifier(flat, mult) {
   const parts = [];
   if (flat && flat !== 0) {
-    const n = Math.round(flat * 100) / 100;
+    const n = roundNum(flat);
     parts.push(n > 0 ? `+${n}` : String(n));
   }
   if (mult && mult !== 1) {
-    parts.push(`×${Math.round(mult * 1000) / 1000}`);
+    parts.push(`×${roundNum(mult, 3)}`);
   }
   return parts.join(" ") || null;
 }
 
+function formatMult(mult) {
+  return roundNum(mult, 3);
+}
+
 function formatEffectSnippet(effect, args = {}) {
   if (effect === "production_mult" && args.mult != null) {
-    return `добыча ×${args.mult}`;
+    return `добыча ×${formatMult(args.mult)}`;
   }
   if (effect === "production_flat" && args.amount != null) {
-    return `добыча +${args.amount}`;
+    return `добыча +${roundNum(args.amount)}`;
   }
   if (effect === "upkeep_mult" && args.mult != null) {
-    return `содержание ×${args.mult}`;
+    return `содержание ×${formatMult(args.mult)}`;
   }
   if (effect === "upkeep_flat" && args.amount != null) {
-    return `содержание +${args.amount}`;
+    return `содержание +${roundNum(args.amount)}`;
   }
   if (effect === "stat_mult" && args.stat != null && args.mult != null) {
-    return `${args.stat} ×${args.mult}`;
+    const stat =
+      STAT_LABELS[args.stat] ?? String(args.stat).replace(/_/g, " ");
+    return `${stat} ×${formatMult(args.mult)}`;
   }
   if (effect === "pop_growth_mult" && args.mult != null) {
-    return `рост ×${args.mult}`;
+    return `рост ×${formatMult(args.mult)}`;
   }
   if (effect === "tax_pressure" && args.amount != null) {
-    return `давление +${args.amount}`;
+    return `давление +${roundNum(args.amount)}`;
   }
   if (effect === "ap_add" && args.amount != null) {
-    return `AP ${args.amount > 0 ? "+" : ""}${args.amount}`;
+    return `ОД ${args.amount > 0 ? "+" : ""}${roundNum(args.amount)}`;
   }
   if (effect === "habitability_mult" && args.mult != null) {
-    return `обитаемость ×${args.mult}`;
+    return `обитаемость ×${formatMult(args.mult)}`;
   }
   if (effect === "loyalty_add" && args.amount != null) {
-    return `лояльность ${args.amount > 0 ? "+" : ""}${args.amount}`;
+    return `лояльность ${args.amount > 0 ? "+" : ""}${roundNum(args.amount)}`;
   }
   if (effect === "loyalty_mult" && args.mult != null) {
-    return `лояльность ×${args.mult}`;
+    return `лояльность ×${formatMult(args.mult)}`;
   }
   if (effect === "logistics_range_add" && (args.hops != null || args.amount != null)) {
     const h = args.hops ?? args.amount;
     return `логистика +${h} хоп`;
   }
   if (effect === "research_cost_mult" && args.mult != null) {
-    return `наука ×${args.mult}`;
+    return `наука ×${formatMult(args.mult)}`;
   }
   if (effect === "diplomacy_trust_decay_mult" && args.mult != null) {
-    return `доверие ×${args.mult}`;
+    return `доверие ×${formatMult(args.mult)}`;
   }
   if (effect === "move_cost_mult" && args.mult != null) {
-    return `ход ×${args.mult}`;
+    return `ход ×${formatMult(args.mult)}`;
   }
   if (effect === "cost_mult" && args.mult != null) {
-    return `стоимость ×${args.mult}`;
+    return `стоимость ×${formatMult(args.mult)}`;
   }
-  if (effect === "forbid_intent" && args.intentId) {
-    return `запрет ${args.intentId}`;
+  if (effect === "forbid_intent") {
+    return "запрет действия";
   }
   if (effect === "unlock_property" && args.property) {
     return `свойство ${args.property}`;
@@ -400,7 +550,7 @@ export function sanitizeEconomyExplain(explainRows, opts = {}) {
         label = currency ? `Рост · ${currency}` : "Рост населения";
         break;
       default:
-        label = currency ? `${channel.split(":")[0]} · ${currency}` : channel;
+        label = explainChannelPlayerLabel(channel);
         break;
     }
 
@@ -471,7 +621,7 @@ export function sanitizeEconomyExplain(explainRows, opts = {}) {
     lines.push({
       category: "deficit",
       label: deficit === "empty" ? "Пустая казна" : "Низкие запасы",
-      modifier: deficit === "empty" ? "штрафы" : "−1 AP",
+      modifier: deficit === "empty" ? "штрафы" : "−1 ОД",
     });
   }
 
@@ -534,6 +684,23 @@ export function publicEconomyPayload(eco) {
       : [],
     economicPolicy: eco.economicPolicy ?? null,
     laws: Array.isArray(eco.laws) ? [...eco.laws] : [],
+    alchemy: eco.alchemy
+      ? {
+          attemptsUsedThisTurn: Number(eco.alchemy.attemptsUsedThisTurn || 0),
+          discoveredRecipes: Array.isArray(eco.alchemy.discoveredRecipes)
+            ? [...eco.alchemy.discoveredRecipes]
+            : [],
+          lastExperimentTurn: eco.alchemy.lastExperimentTurn ?? null,
+          journal: Array.isArray(eco.alchemy.journal)
+            ? eco.alchemy.journal.slice(-10)
+            : [],
+        }
+      : {
+          attemptsUsedThisTurn: 0,
+          discoveredRecipes: [],
+          lastExperimentTurn: null,
+          journal: [],
+        },
   };
   if (eco.bottlenecks != null) out.bottlenecks = eco.bottlenecks;
   if (eco.explain != null) out.explain = eco.explain;

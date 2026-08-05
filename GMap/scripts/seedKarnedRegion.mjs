@@ -890,7 +890,7 @@ function main() {
       "map.cinnabar": 2500,
       "map.gas": 5000,
     },
-    taxes: { "tax.industry": "none", "tax.supply": "none" },
+    taxes: { "tax.materia": "none", "tax.energia": "none", "tax.bios": "none" },
     pendingPolicy: { taxes: {} },
     laws: [],
     pressure: 0,

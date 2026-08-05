@@ -10,9 +10,10 @@ import {
   FloatingRpWindow,
   RpFloatLauncher,
 } from "./FloatingRpWindow";
-import { usePendingIntents } from "./IntentsInbox";
-import { exportMapPosterPng } from "../io/exportExtras";
+import { RpGmDesk } from "../viewer/RpGmDesk";
+import { exportMapPosterPng, exportMapPlayerPosterPng } from "../io/exportExtras";
 import type { WorldState } from "../state/types";
+import { GmLocalPlayerPreview } from "./gm";
 
 function posterFilename(name: string, turn: number): string {
   const slug = (name || "campaign").replace(/\s+/g, "_");
@@ -28,6 +29,24 @@ async function downloadPoster(world: WorldState): Promise<void> {
   }
 }
 
+async function downloadPlayerPoster(
+  world: WorldState,
+  factionId: string | null,
+  factionName?: string,
+): Promise<void> {
+  const ok = await exportMapPlayerPosterPng(world, {
+    factionId,
+    factionName,
+  });
+  if (!ok) {
+    alert(
+      factionId
+        ? "Нет видимых систем для этой державы — или карта ещё не готова"
+        : "Выберите державу в выпадающем списке",
+    );
+  }
+}
+
 export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const {
     world,
@@ -36,6 +55,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
     lastSaved,
     syncMsg,
     onSaveToServer,
+    onApplyBuild,
     onDownloadMap,
     shareBusy,
     shareViewUrl,
@@ -52,6 +72,8 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
     shareLastHealthError,
     shareDownSince,
     shareLinkChanged,
+    shareAutoRefresh,
+    setShareAutoRefresh,
     shareWanIp,
     shareDirectViewUrl,
     shareDirectHint,
@@ -88,6 +110,8 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const setGmShellMode = useWorldStore((s) => s.setGmShellMode);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [rpUnread, setRpUnread] = useState(0);
   const activeFaction =
     world.factions.find((f) => f.id === activeFactionId) ?? null;
 
@@ -120,26 +144,25 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             ? "btn primary"
             : "btn ghost";
 
-  const live = gmShellMode === "live";
-  const { pending } = usePendingIntents();
+  const atelier = gmShellMode === "atelier";
 
   const modeSwitch = (
     <div className="gm-mode-switch" role="group" aria-label="Режим ГМа">
       <button
         type="button"
-        className={`gm-mode-btn ${!live ? "on" : ""}`}
-        onClick={() => setGmShellMode("prep")}
-        title="Картостроение, кисти, ресурсы"
+        className={`gm-mode-btn ${gmShellMode === "gm" ? "on" : ""}`}
+        onClick={() => setGmShellMode("gm")}
+        title="Карта, кисти, домены F1–F9, тик"
       >
-        Подготовка
+        ГМ
       </button>
       <button
         type="button"
-        className={`gm-mode-btn ${live ? "on" : ""}`}
-        onClick={() => setGmShellMode("live")}
-        title="Стол: приказы, тик, игроки"
+        className={`gm-mode-btn ${atelier ? "on" : ""}`}
+        onClick={() => setGmShellMode("atelier")}
+        title="Контент и баланс (каталоги)"
       >
-        Стол
+        Atelier
       </button>
     </div>
   );
@@ -189,6 +212,14 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               {!hasCloudPubToken && (
                 <>
                   <p className="share-hint">API-ключ CloudPub — один раз:</p>
+                  <input
+                    type="text"
+                    name="username"
+                    autoComplete="username"
+                    style={{ display: "none" }}
+                    value="cloudpub_user"
+                    readOnly
+                  />
                   <input
                     className="share-url"
                     type="password"
@@ -271,12 +302,33 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             </>
           )}
           <div className="share-actions">
+            {(shareStatus === "down" ||
+              shareStatus === "degraded" ||
+              shareLinkChanged) && (
+              <button
+                type="button"
+                className="btn primary block"
+                disabled={shareBusy}
+                onClick={() => void restartShare()}
+                title="Пересоздать туннель и получить актуальную ссылку"
+              >
+                {shareBusy
+                  ? "Обновляю…"
+                  : shareLinkChanged
+                    ? "Ссылка новая — скопируй"
+                    : "Обновить ссылку"}
+              </button>
+            )}
             <button
               type="button"
               className="btn primary"
               onClick={() => void copyShareLink()}
             >
-              {shareCopied ? "Скопировано" : "Копировать"}
+              {shareCopied
+                ? "Скопировано"
+                : shareLinkChanged
+                  ? "Копировать новую"
+                  : "Копировать"}
             </button>
             <a
               className="btn ghost"
@@ -302,9 +354,20 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               Стоп
             </button>
           </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={shareAutoRefresh}
+              onChange={(e) => setShareAutoRefresh(e.target.checked)}
+            />
+            Автообновление при 503 / падении (~10с)
+          </label>
         </>
       )}
       {shareError && <p className="hint share-error">{shareError}</p>}
+      <div className="share-local-preview">
+        <GmLocalPlayerPreview />
+      </div>
     </div>
   ) : null;
 
@@ -316,175 +379,18 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
       masterToken={masterToken}
       onMsg={setSyncMsg}
       storageKey="gmap-rp-float-geom-gm"
-      title="Сцена · мастер"
+      title="RP · мастер"
       focusFactionId={rpFocusFactionId}
-    />
+      unread={rpUnread}
+    >
+      <RpGmDesk
+        masterToken={masterToken}
+        onMsg={setSyncMsg}
+        focusFactionId={rpFocusFactionId}
+        onUnreadChange={setRpUnread}
+      />
+    </FloatingRpWindow>
   );
-
-  if (live) {
-    return (
-      <header className="top-bar top-bar--live">
-        <div className="top-bar-live-left">
-          <span className="brand-mark">LO PAX</span>
-          <span className="top-bar-turn">ход {world.meta.turn}</span>
-          {modeSwitch}
-        </div>
-        <div className="top-bar-live-right">
-          <button
-            type="button"
-            className={`live-status-pill live-status-pill--${shareStatus}`}
-            title={shareLastHealthError || "Доступ для игроков"}
-            onClick={() => {
-              if (shareSession) setShareOpen((o) => !o);
-              else void openForPlayers();
-            }}
-          >
-            <span
-              className={`share-status-dot share-status-dot--${shareStatus}`}
-              aria-hidden
-            />
-            {shareStatus === "online"
-              ? "online"
-              : shareStatus === "idle"
-                ? "туннель выкл"
-                : shareStatus}
-          </button>
-          {pending.length > 0 && (
-            <span className="live-inbox-badge" title="Pending приказы в доке справа">
-              Inbox {pending.length}
-            </span>
-          )}
-          <button
-            type="button"
-            className={`btn ghost ${rpFloatOpen ? "active" : ""}`}
-            onClick={() => setRpFloatOpen(!rpFloatOpen)}
-            title="Отыгрыш с фракциями"
-          >
-            Сцена
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            title="Сохранить, ссылка, державы…"
-            onClick={() => setMenuOpen((o) => !o)}
-          >
-            ···
-          </button>
-        </div>
-
-        {menuOpen && (
-          <div className="gm-table-menu">
-            <div className="share-popover-head">
-              <strong>Стол…</strong>
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => setMenuOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <DesktopHostBadge />
-            <button
-              type="button"
-              className="btn primary block"
-              onClick={() => {
-                onRequestTick();
-                setMenuOpen(false);
-              }}
-            >
-              Закрыть ход · превью
-            </button>
-            <button
-              type="button"
-              className="btn ghost block"
-              onClick={() => {
-                void onSaveToServer();
-                setMenuOpen(false);
-              }}
-            >
-              Сохранить / опубликовать
-            </button>
-            <label className="field">
-              <span>Мастер-токен</span>
-              <input
-                value={masterToken}
-                onChange={(e) => setMasterToken(e.target.value)}
-              />
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={gmOmniscientView}
-                onChange={(e) => setGmOmniscientView(e.target.checked)}
-              />
-              Видимость ГМа (вся карта)
-            </label>
-            <div className="btn-col">
-              <button
-                type="button"
-                className="btn ghost block"
-                onClick={() => {
-                  openPolityEditor(activeFactionId);
-                  setMenuOpen(false);
-                }}
-              >
-                Державы…
-              </button>
-              <button
-                type="button"
-                className="btn ghost block"
-                onClick={() => {
-                  setDiplomacyPanelOpen(true);
-                  setMenuOpen(false);
-                }}
-              >
-                Дипломатия…
-              </button>
-            <button
-              type="button"
-              className="btn ghost block"
-              onClick={() => {
-                void downloadPoster(world);
-                setMenuOpen(false);
-              }}
-            >
-              Плакат PNG
-            </button>
-            <button
-              type="button"
-              className="btn ghost block"
-              onClick={() => {
-                onDownloadMap();
-                setMenuOpen(false);
-              }}
-            >
-              Скачать JSON
-            </button>
-            <Link
-              className="btn ghost block"
-              to="/view"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setMenuOpen(false)}
-            >
-              Превью /view
-            </Link>
-            </div>
-            <p className="hint">
-              Ресурсы: слева «Инструменты» (кнопка ⟨ Инстр.).
-            </p>
-          </div>
-        )}
-
-        {sharePopover}
-
-        {/* syncMsg → StatusStrip in App shell (no absolute hang over panels) */}
-
-        {rpWindow}
-      </header>
-    );
-  }
 
   return (
     <header className={`top-bar top-bar--${gmShellMode}`}>
@@ -493,18 +399,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
         <span className="top-bar-campaign" title={world.meta.name}>
           {world.meta.name}
         </span>
-        <span
-          className="hint"
-          title="Ход / tableRevision"
-          style={{ opacity: 0.75, fontSize: 12 }}
-        >
-          ход {world.meta.turn}
-          {world.meta.tableRevision != null
-            ? ` · rev ${world.meta.tableRevision}`
-            : ""}
-        </span>
         {modeSwitch}
-        <DesktopHostBadge />
         {dirty ? (
           <span className="save-pill dirty" title="Черновик пишется…">
             ●
@@ -547,6 +442,18 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
         <button
           type="button"
           className="btn ghost"
+          disabled={applyBusy}
+          title="Сохранить стол + перечитать content + обновить игроков"
+          onClick={() => {
+            setApplyBusy(true);
+            void onApplyBuild().finally(() => setApplyBusy(false));
+          }}
+        >
+          {applyBusy ? "Билд…" : "Применить билд"}
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
           title="Закрыть ход на сервере"
           onClick={onRequestTick}
         >
@@ -559,6 +466,20 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
           onClick={() => void downloadPoster(world)}
         >
           Плакат PNG
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
+          title="Плакат только по видимой игроку области"
+          onClick={() =>
+            void downloadPlayerPoster(
+              world,
+              activeFactionId,
+              activeFaction?.name,
+            )
+          }
+        >
+          Плакат · игрок
         </button>
       </div>
 
@@ -615,7 +536,8 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
         <RpFloatLauncher
           open={rpFloatOpen}
           onToggle={() => setRpFloatOpen(!rpFloatOpen)}
-          label="Сцена"
+          label="RP"
+          unread={rpUnread}
         />
         <button
           type="button"
@@ -649,20 +571,13 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
           />
           {shareBtnLabel}
         </button>
-        <Link
-          className="view-link-inline"
-          to="/view"
-          target="_blank"
-          rel="noreferrer"
-        >
-          /view
-        </Link>
+        <GmLocalPlayerPreview compact />
       </div>
 
       {menuOpen && (
         <div className="gm-table-menu">
           <div className="share-popover-head">
-            <strong>Стол…</strong>
+            <strong>Ещё…</strong>
             <button
               type="button"
               className="btn ghost"
@@ -722,6 +637,20 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               type="button"
               className="btn ghost block"
               onClick={() => {
+                void downloadPlayerPoster(
+                  world,
+                  activeFactionId,
+                  activeFaction?.name,
+                );
+                setMenuOpen(false);
+              }}
+            >
+              Плакат · вид игрока
+            </button>
+            <button
+              type="button"
+              className="btn ghost block"
+              onClick={() => {
                 onDownloadMap();
                 setMenuOpen(false);
               }}
@@ -735,9 +664,10 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               rel="noreferrer"
               onClick={() => setMenuOpen(false)}
             >
-              Превью /view
+              /view (без входа)
             </Link>
           </div>
+          <GmLocalPlayerPreview />
           <p className="hint">
             Ресурсы и кисти — вкладка «Инструменты» слева (оба режима).
           </p>

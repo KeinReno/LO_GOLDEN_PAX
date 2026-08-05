@@ -109,6 +109,7 @@ export function resolveShipOrUnitName(defId: string): string {
   );
 }
 
+
 export function formatSlotRequire(req: {
   category?: string;
   tier?: string;
@@ -116,7 +117,10 @@ export function formatSlotRequire(req: {
 }): string {
   const parts: string[] = [];
   if (req.category) parts.push(economyCategoryLabel(req.category));
-  if (req.tier) parts.push(`T${req.tier.replace(/^>=/, "≥")}`);
+  if (req.tier) {
+    const raw = req.tier.replace(/^>=/, "");
+    parts.push(req.tier.startsWith(">=") ? `от ур. ${raw}` : `ур. ${raw}`);
+  }
   if (req.properties?.length) {
     parts.push(req.properties.map(resourcePropertyLabel).join("/"));
   }
@@ -134,7 +138,21 @@ export const NPC_ROLE_LABELS: Record<string, string> = {
   strategist: "Стратег",
   architect: "Архитектор",
   agent: "Агент",
-  other: "Прочее",
+  other: "Советник",
+};
+
+/** Fallback if content portfolios aren't loaded yet. */
+export const COUNCIL_PORTFOLIO_LABELS: Record<string, string> = {
+  military: "Военное дело",
+  strategy: "Стратегия",
+  health: "Здравоохранение",
+  economy: "Экономика",
+  infrastructure: "Строительство",
+  faith: "Вера и культ",
+  intel: "Разведка",
+  diplomacy: "Дипломатия",
+  science: "Наука",
+  interior: "Внутренние дела",
 };
 
 export const OPS_TICK_ALERT_KIND_LABELS: Record<string, string> = {
@@ -165,6 +183,11 @@ export function systemKindLabel(kind: string | undefined): string {
 export function npcRoleLabel(role: string | undefined): string {
   if (!role) return "—";
   return NPC_ROLE_LABELS[role] ?? role;
+}
+
+export function councilPortfolioLabel(id: string | undefined): string {
+  if (!id) return "—";
+  return COUNCIL_PORTFOLIO_LABELS[id] ?? id;
 }
 
 export function opsTickAlertKindLabel(kind: string): string {

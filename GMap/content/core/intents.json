@@ -1,21 +1,26 @@
 {
   "intent.move_fleet": {
     "id": "intent.move_fleet",
-    "ap": 1,
+    "ap": 0,
+    "forceAp": 1,
+    "instant": true,
     "legacyOrderType": "move_fleet",
     "ops": ["move_fleet"],
     "params": ["fleetId", "toSystemId"]
   },
   "intent.move_legion": {
     "id": "intent.move_legion",
-    "ap": 1,
+    "ap": 0,
+    "forceAp": 1,
+    "instant": true,
     "legacyOrderType": "move_legion",
     "ops": ["move_legion"],
     "params": ["legionId", "toSystemId"]
   },
   "intent.attack_system": {
     "id": "intent.attack_system",
-    "ap": 2,
+    "ap": 1,
+    "forceAp": 1,
     "legacyOrderType": "attack_system",
     "ops": ["attack_system"],
     "params": ["fleetId", "legionId", "toSystemId", "theater", "stance", "planetId"]
@@ -72,33 +77,37 @@
   },
   "intent.set_tax": {
     "id": "intent.set_tax",
-    "ap": 1,
+    "ap": 0,
+    "instant": true,
     "ops": ["set_tax"],
     "params": ["taxSlot", "tierId"]
   },
   "intent.blockade": {
     "id": "intent.blockade",
-    "ap": 1,
+    "ap": 0,
+    "forceAp": 1,
     "legacyOrderType": "blockade",
     "ops": ["blockade"],
     "params": ["fleetId", "toSystemId"]
   },
   "intent.fortify": {
     "id": "intent.fortify",
-    "ap": 1,
+    "ap": 0,
+    "forceAp": 1,
     "legacyOrderType": "fortify",
     "ops": ["fortify"],
     "params": ["fleetId", "toSystemId"]
   },
   "intent.scout_reveal": {
     "id": "intent.scout_reveal",
-    "ap": 1,
+    "ap": 0,
     "ops": ["scout_reveal"],
     "params": ["systemId"]
   },
   "intent.scout_world": {
     "id": "intent.scout_world",
-    "ap": 1,
+    "ap": 0,
+    "forceAp": 1,
     "ops": ["gather_intel"],
     "params": ["targetSystemId", "fleetId"],
     "requires": { "unit": ["fleet", "legion"] },
@@ -125,12 +134,67 @@
     "id": "intent.give_npc_task",
     "ap": 1,
     "ops": ["give_npc_task"],
-    "params": ["npcId", "taskLabel", "etaTurn", "effects", "linkedQuestId"]
+    "params": ["npcId", "taskLabel", "etaTurn", "effects", "linkedQuestId", "taskId"]
+  },
+  "intent.assign_npc_posting": {
+    "id": "intent.assign_npc_posting",
+    "ap": 1,
+    "ops": ["assign_npc_posting"],
+    "params": ["npcId", "kind", "systemId", "legionId", "fleetId"],
+    "description": "Назначить NPC губернатором / командующим / флотоводцем"
+  },
+  "intent.recall_npc_posting": {
+    "id": "intent.recall_npc_posting",
+    "ap": 0,
+    "instant": true,
+    "ops": ["recall_npc_posting"],
+    "params": ["npcId"],
+    "description": "Вернуть NPC ко двору с поста"
+  },
+  "intent.seat_npc_council": {
+    "id": "intent.seat_npc_council",
+    "ap": 0,
+    "instant": true,
+    "ops": ["seat_npc_council"],
+    "params": ["npcId", "seatId"],
+    "description": "Посадить NPC за круглый стол совета"
+  },
+  "intent.unseat_npc_council": {
+    "id": "intent.unseat_npc_council",
+    "ap": 0,
+    "instant": true,
+    "ops": ["unseat_npc_council"],
+    "params": ["npcId"],
+    "description": "Убрать NPC со стола совета в пул"
+  },
+  "intent.set_council_portfolio": {
+    "id": "intent.set_council_portfolio",
+    "ap": 0,
+    "instant": true,
+    "ops": ["set_council_portfolio"],
+    "params": ["seatId", "portfolioId"],
+    "description": "Назначить портфолио (роль) советнику за столом"
+  },
+  "intent.assign_bloc_leader": {
+    "id": "intent.assign_bloc_leader",
+    "ap": 0,
+    "instant": true,
+    "ops": ["assign_bloc_leader"],
+    "params": ["npcId", "blocId"],
+    "description": "Назначить главу дома / ордена"
+  },
+  "intent.assign_race_leader": {
+    "id": "intent.assign_race_leader",
+    "ap": 0,
+    "instant": true,
+    "ops": ["assign_race_leader"],
+    "params": ["npcId", "raceId", "title"],
+    "description": "Назначить лидера народа"
   },
 
   "intent.build": {
     "id": "intent.build",
-    "ap": 1,
+    "ap": 0,
     "instant": true,
     "ops": ["build"],
     "params": ["systemId", "planetId", "buildingId"]
@@ -173,7 +237,8 @@
   },
   "intent.research_upgrade": {
     "id": "intent.research_upgrade",
-    "ap": 1,
+    "ap": 0,
+    "instant": true,
     "ops": ["research_upgrade"],
     "params": ["techId", "upgradeId"]
   },
@@ -195,7 +260,8 @@
   },
   "intent.set_flow_priority": {
     "id": "intent.set_flow_priority",
-    "ap": 1,
+    "ap": 0,
+    "instant": true,
     "ops": ["set_flow_priority"],
     "params": ["from", "to", "systemId"],
     "description": "Приоритет RPS-трансформации (from→to), опционально по системе"

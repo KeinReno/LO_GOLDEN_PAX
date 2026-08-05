@@ -6,7 +6,7 @@ import { RpChat, type RpChatProps } from "./RpChat";
 
 type Geom = { x: number; y: number; w: number; h: number };
 
-const DEFAULT_GEOM: Geom = { x: 48, y: 48, w: 920, h: 620 };
+const DEFAULT_GEOM: Geom = { x: 40, y: 32, w: 980, h: 720 };
 const MIN_W = 280;
 const MIN_H = 280;
 

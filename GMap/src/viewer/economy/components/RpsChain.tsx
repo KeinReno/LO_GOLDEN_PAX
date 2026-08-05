@@ -33,10 +33,8 @@ export function RpsChain({
       const to = RPS_CHAIN[(i + 1) % RPS_CHAIN.length]!;
       const rateFrom = flowData?.totals?.[from]?.rate ?? 0;
       const rateTo = flowData?.totals?.[to]?.rate ?? 0;
-      out[edgeKey(from, to)] = Math.max(
-        0,
-        Math.min(rateFrom, rateTo) || rateFrom * 0.35,
-      );
+      const flow = Math.min(rateFrom, rateTo);
+      out[edgeKey(from, to)] = Math.max(0, flow);
     }
     return out;
   }, [flowData]);
@@ -72,10 +70,12 @@ export function RpsChain({
       : null);
 
   return (
-    <div className="eco-rps" aria-label="RPS-цикл">
+    <div className="eco-rps" aria-label="Цикл ресурсов">
       <header className="eco-chart-block__head">
-        <h4>Цикл A→F</h4>
-        <span className="hint">drag категории на следующую = приоритет</span>
+        <h4>Цикл производства</h4>
+        <span className="hint">
+          клик по категории/стрелке — приоритет · перетащите на соседнюю
+        </span>
       </header>
       <div className="eco-rps__chain">
         {RPS_CHAIN.map((letter, i) => {
@@ -99,8 +99,9 @@ export function RpsChain({
                     "--eco-rps-color": ECO_CATEGORY_COLORS[letter],
                   } as CSSProperties
                 }
-                title={`${ECO_CATEGORY_NAMES[letter]} · ${cat?.name ?? ""}`}
+                title={`${ECO_CATEGORY_NAMES[letter]} · ${cat?.name ?? ""} · клик: ${letter}→${next}`}
                 {...bindCat(letter)}
+                onClick={() => onSelectEdge?.(letter, next)}
               >
                 <span className="eco-rps__letter">{letter}</span>
                 <span className="eco-rps__name">
@@ -130,9 +131,9 @@ export function RpsChain({
       {(activeEdge || preview) && (
         <p className="hint eco-rps__status">
           {preview && preview !== activeEdge
-            ? `Превью: ${preview} (+35% на следующем тике)`
+            ? `Превью: ${preview.replace("->", " → ")} (усиление на следующем ходу)`
             : activeEdge
-              ? `Приоритет: ${activeEdge}`
+              ? `Приоритет: ${activeEdge.replace("->", " → ")}`
               : null}
         </p>
       )}

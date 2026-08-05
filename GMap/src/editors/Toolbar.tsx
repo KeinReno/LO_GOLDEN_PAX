@@ -24,6 +24,8 @@ import {
   exportCampaignMarkdown,
   exportMapPng,
   exportMapPosterPng,
+  exportMapPlayerPosterPng,
+  exportMapPlayerPng,
 } from "../io/exportExtras";
 import {
   clearDraft,
@@ -48,6 +50,8 @@ import { CombatPanel } from "./CombatPanel";
 import { GmOpsPanel } from "./GmOpsPanel";
 import { GmSystemsPanel } from "./GmSystemsPanel";
 import { OpsHealthPanel } from "./OpsHealthPanel";
+import { GmLiveConductor } from "./gm";
+import type { GmLiveDomainId } from "../state/types";
 import { RESOURCE_POOL } from "../state/defaults";
 import { RESOURCE_ICON_SLUGS } from "../state/resourcePool.generated";
 
@@ -338,13 +342,13 @@ const TABS_PREP: { id: TabId; label: string; Icon: typeof Wrench }[] = [
   { id: "session", label: "Сессия", Icon: Radio },
 ];
 
-const TABS_LIVE: { id: TabId; label: string; Icon: typeof Wrench }[] = [
-  { id: "tools", label: "Инструменты", Icon: Wrench },
-  { id: "layers", label: "Слои", Icon: Layers },
-  { id: "session", label: "Ход", Icon: Radio },
-];
-
-export function Toolbar() {
+export function Toolbar({
+  onOpenDomain,
+  onRequestTick,
+}: {
+  onOpenDomain?: (id: GmLiveDomainId) => void;
+  onRequestTick?: () => void;
+} = {}) {
   const {
     world,
     dirty,
@@ -355,11 +359,12 @@ export function Toolbar() {
     masterToken,
     setMasterToken,
   } = useCampaignSessionCtx();
-  const gmShellMode = useWorldStore((s) => s.gmShellMode);
-  const tabs = gmShellMode === "live" ? TABS_LIVE : TABS_PREP;
+  const tabs = TABS_PREP;
 
   const tool = useWorldStore((s) => s.tool);
   const setTool = useWorldStore((s) => s.setTool);
+  const setShowFogPreview = useWorldStore((s) => s.setShowFogPreview);
+  const setGmOmniscientView = useWorldStore((s) => s.setGmOmniscientView);
   const brush = useWorldStore((s) => s.brush);
   const setBrushDensity = useWorldStore((s) => s.setBrushDensity);
   const setBrushMinDistance = useWorldStore((s) => s.setBrushMinDistance);
@@ -404,6 +409,7 @@ export function Toolbar() {
   const revealAllVisible = useWorldStore((s) => s.revealAllVisible);
   const clearFactionReveals = useWorldStore((s) => s.clearFactionReveals);
   const advanceTurn = useWorldStore((s) => s.advanceTurn);
+  const setCampaignTurn = useWorldStore((s) => s.setCampaignTurn);
   const restoreTurnSnapshot = useWorldStore((s) => s.restoreTurnSnapshot);
   const loadWorld = useWorldStore((s) => s.loadWorld);
   const resetWorld = useWorldStore((s) => s.resetWorld);
@@ -417,25 +423,8 @@ export function Toolbar() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<TabId>("tools");
-  /** GM tool sections — collapsed by default; Ресурсы open in live for quick paint. */
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
-    () => (gmShellMode === "live" ? { Ресурсы: true } : ({} as Record<string, boolean>)),
-  );
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const resourceNames = RESOURCE_POOL as readonly string[];
-
-  useEffect(() => {
-    const allowed =
-      gmShellMode === "live"
-        ? new Set<TabId>(["tools", "layers", "session"])
-        : new Set<TabId>(["tools", "layers", "file", "session"]);
-    if (!allowed.has(tab)) setTab("tools");
-  }, [gmShellMode, tab]);
-
-  useEffect(() => {
-    if (gmShellMode === "live") {
-      setOpenSections((prev) => ({ ...prev, Ресурсы: true }));
-    }
-  }, [gmShellMode]);
 
   const activeMapMode = activeMapModePreset(layerFlags);
 
@@ -556,7 +545,8 @@ export function Toolbar() {
       });
       if (!res.ok) throw new Error(await res.text());
       const orders = (await res.json()) as PlayerOrder[];
-      loadWorld({ ...world, orders });
+      const w = useWorldStore.getState().world;
+      loadWorld({ ...w, orders });
       setSyncMsg(`Загружено приказов: ${orders.length}`);
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : String(e));
@@ -614,7 +604,7 @@ export function Toolbar() {
                   value={
                     pendingCapitalFactionId ?? activeFactionId ?? ""
                   }
-                  onChange={(e) => setActiveFaction(e.target.value)}
+                  onChange={(e) => setActiveFaction(e.target.value || null)}
                   disabled={!!pendingCapitalFactionId}
                 >
                   {world.factions.map((f) => (
@@ -671,7 +661,16 @@ export function Toolbar() {
                               type="button"
                               className={tool === t.id ? "tool active" : "tool"}
                               title={t.hint}
-                              onClick={() => setTool(t.id)}
+                              onClick={() => {
+                                setTool(t.id);
+                                if (
+                                  t.id === "fog_paint" ||
+                                  t.id === "fog_erase"
+                                ) {
+                                  setShowFogPreview(true);
+                                  setGmOmniscientView(true);
+                                }
+                              }}
                             >
                               {t.label}
                             </button>
@@ -794,9 +793,10 @@ export function Toolbar() {
               <section>
                 <h3>Туман (серверная кисть)</h3>
                 <p className="hint">
-                  Красит mask для <strong>активной фракции</strong>. Игрок не
-                  видит системы в mask, пока нет флота/владения/permanent reveal.
-                  Включите «Туман (превью)» в слоях, чтобы видеть veil.
+                  Красит mask для <strong>активной фракции</strong>. Скрывает
+                  чужие/нейтральные системы в зоне видимости;{" "}
+                  <strong>свои миры и флоты туман не скрывает</strong>.
+                  Превью включается автоматически.
                 </p>
               </section>
             )}
@@ -955,6 +955,21 @@ export function Toolbar() {
                 Ход {world.meta.turn} · систем {world.systems.length} · флотов{" "}
                 {world.fleets.length} · секторов {world.sectors.length}
               </p>
+              <label className="field">
+                <span>Номер хода</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={world.meta.turn}
+                  title="Календарный ход без симуляции тика"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (Number.isFinite(n)) setCampaignTurn(n);
+                  }}
+                />
+              </label>
               <p className="hint">
                 Сохранение — кнопкой сверху. Здесь загрузка, экспорт и ход.
               </p>
@@ -1053,6 +1068,60 @@ export function Toolbar() {
                 </button>
                 <button
                   type="button"
+                  className="btn ghost"
+                  title="Только видимая игроку область (активная держава + туман)"
+                  onClick={() => {
+                    void (async () => {
+                      const fac = world.factions.find(
+                        (f) => f.id === activeFactionId,
+                      );
+                      const ok = await exportMapPlayerPosterPng(world, {
+                        factionId: activeFactionId,
+                        factionName: fac?.name,
+                      });
+                      if (!ok) {
+                        alert(
+                          activeFactionId
+                            ? "Нет видимых систем для этой державы — или карта ещё не готова"
+                            : "Выберите державу в фокусе ГМ",
+                        );
+                      }
+                    })();
+                  }}
+                >
+                  Плакат · вид игрока
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  title="PNG без рамки — только видимая игроку область"
+                  onClick={() => {
+                    void (async () => {
+                      const fac = world.factions.find(
+                        (f) => f.id === activeFactionId,
+                      );
+                      const facSlug = (fac?.name || "игрок").replace(
+                        /\s+/g,
+                        "_",
+                      );
+                      const ok = await exportMapPlayerPng(
+                        `${slug(world.meta.name)}_ход${world.meta.turn}_${facSlug}_вид.png`,
+                        { factionId: activeFactionId },
+                      );
+                      if (!ok) {
+                        alert(
+                          activeFactionId
+                            ? "Нет видимых систем для этой державы — или карта ещё не готова"
+                            : "Выберите державу в фокусе ГМ",
+                        );
+                      }
+                    })();
+                  }}
+                >
+                  PNG · вид игрока
+                </button>
+                <button
+                  type="button"
                   className="btn danger"
                   onClick={() => {
                     if (
@@ -1114,15 +1183,15 @@ export function Toolbar() {
 
         {tab === "session" && (
           <>
+            <GmLiveConductor
+              onOpenDomain={onOpenDomain}
+              onRequestTick={onRequestTick}
+            />
             <section>
-              <h3>{gmShellMode === "live" ? "Ход и ops" : "Сессия мастера"}</h3>
-              <p className="hint">
-                {gmShellMode === "live"
-                  ? "Inbox справа на карте. Здесь — экономика, бой и служебное."
-                  : "Ссылка для игроков — сверху. Здесь токен, публикация и ops."}
-              </p>
-              {gmShellMode !== "live" && (
-                <>
+                  <h3>Сессия мастера</h3>
+                  <p className="hint">
+                    Ссылка для игроков — сверху. Здесь токен, публикация и ops.
+                  </p>
                   <label className="field">
                     <span>Мастер-токен</span>
                     <input
@@ -1147,68 +1216,59 @@ export function Toolbar() {
                     </button>
                   </div>
                   {publishStatus && <p className="hint">{publishStatus}</p>}
-                </>
-              )}
-              {gmShellMode === "live" && (
-                <div className="btn-col">
-                  <button
-                    type="button"
-                    className="btn primary block"
-                    onClick={() => useWorldStore.getState().setRpFloatOpen(true)}
-                  >
-                    Открыть связь
-                  </button>
-                </div>
-              )}
-            </section>
+                </section>
 
-            {gmShellMode !== "live" && <IntentsInbox variant="panel" />}
-            <EconomyPanel />
-            <CombatPanel />
-            <GmOpsPanel />
-            <GmSystemsPanel />
-            <OpsHealthPanel />
+                <IntentsInbox variant="panel" />
+                <EconomyPanel />
+                <CombatPanel />
+                <GmOpsPanel />
+                <GmSystemsPanel />
+                <OpsHealthPanel />
 
-            {world.orders.length > 0 && gmShellMode !== "live" && (
-              <section>
-                <h3>Приказы (legacy · {world.orders.length})</h3>
-                <div className="order-list">
-                  {world.orders.map((o) => {
-                    const faction = world.factions.find(
-                      (f) => f.id === o.factionId,
-                    );
-                    return (
-                      <div key={o.id} className="order-card">
-                        <div>
-                          <strong>{faction?.name ?? o.factionId}</strong> ·{" "}
-                          {o.type}
-                          <br />
-                          <span className="hint">{o.status}</span>
-                        </div>
-                        {o.status === "pending" && (
-                          <div className="order-actions">
-                            <button
-                              type="button"
-                              className="btn ghost"
-                              onClick={() => setOrderStatus(o.id, "accepted")}
-                            >
-                              OK
-                            </button>
-                            <button
-                              type="button"
-                              className="btn danger"
-                              onClick={() => setOrderStatus(o.id, "rejected")}
-                            >
-                              Нет
-                            </button>
+                {world.orders.length > 0 && (
+                  <section>
+                    <h3>Приказы (legacy · {world.orders.length})</h3>
+                    <div className="order-list">
+                      {world.orders.map((o) => {
+                        const faction = world.factions.find(
+                          (f) => f.id === o.factionId,
+                        );
+                        return (
+                          <div key={o.id} className="order-card">
+                            <div>
+                              <strong>{faction?.name ?? o.factionId}</strong> ·{" "}
+                              {o.type}
+                              <br />
+                              <span className="hint">{o.status}</span>
+                            </div>
+                            {o.status === "pending" && (
+                              <div className="order-actions">
+                                <button
+                                  type="button"
+                                  className="btn ghost"
+                                  onClick={() =>
+                                    setOrderStatus(o.id, "accepted")
+                                  }
+                                >
+                                  OK
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn danger"
+                                  onClick={() =>
+                                    setOrderStatus(o.id, "rejected")
+                                  }
+                                >
+                                  Нет
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
           </>
         )}
       </div>

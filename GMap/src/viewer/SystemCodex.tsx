@@ -75,7 +75,7 @@ export function SystemCodex({
       className="dossier-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label={`Досье: ${system.name}`}
+      aria-label={`Сведения: ${system.name}`}
       onClick={onClose}
     >
       <div
@@ -86,7 +86,7 @@ export function SystemCodex({
           <div>
             <p className="dossier-kicker">
               <BookOpen size={12} style={{ marginRight: 6 }} />
-              Досье системы
+              Сведения о системе
             </p>
             <h2>{system.name}</h2>
             <p className="sys-codex__lead">
@@ -100,7 +100,7 @@ export function SystemCodex({
           </button>
         </header>
 
-        <nav className="sys-codex__tabs" aria-label="Разделы досье">
+        <nav className="sys-codex__tabs" aria-label="Разделы справки">
           {TABS.map((t) => {
             const Icon = t.icon;
             const count =
@@ -212,7 +212,7 @@ export function SystemCodex({
                     </div>
                     <span className="sys-codex__cost">
                       {s.costLabel}
-                      <em>{s.ap} AP</em>
+                      <em>{s.ap} ОД</em>
                     </span>
                   </li>
                 ))}
@@ -236,7 +236,7 @@ export function SystemCodex({
                         <span className="sys-codex__tag">{buildingZoneLabel(b.zone)}</span>
                         <span className="sys-codex__cost">
                           {b.costLabel}
-                          <em>{b.ap} AP</em>
+                          <em>{b.ap} ОД</em>
                         </span>
                       </header>
                       <p>{b.why}</p>

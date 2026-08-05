@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { fmtInt } from "../../../state/numberFormat";
 import { useSpotlight } from "../../../ui/aceternityFx";
 import type { CategorySnapshot } from "../economyMath";
 import { formatStatusIcon } from "../economyMath";
@@ -21,15 +22,15 @@ export function CategoryCard({ cat, sparkValues, onSelect }: Props) {
       <strong>
         {cat.letter} · {cat.name}
       </strong>
-      <div>Запас {cat.stock}</div>
+      <div>Запас {fmtInt(cat.stock)}</div>
       {cat.net != null && (
         <div>
           {cat.net > 0 ? "+" : ""}
-          {cat.net}/ход
+          {fmtInt(cat.net)}/ход
         </div>
       )}
       {cat.bottleneckDeficit > 0 && (
-        <div>Узкое место −{cat.bottleneckDeficit}</div>
+        <div>Узкое место −{fmtInt(cat.bottleneckDeficit)}</div>
       )}
     </>
   );
@@ -82,12 +83,12 @@ export function CategoryCard({ cat, sparkValues, onSelect }: Props) {
               cat.net > 0 ? "is-up" : "is-down"
             }`}
           >
-            {cat.net > 0 ? `+${cat.net}` : cat.net}/ход
+            {cat.net > 0 ? `+${fmtInt(cat.net)}` : fmtInt(cat.net)}/ход
           </span>
         )}
         {cat.bottleneckDeficit > 0 && (
           <span className="eco-category-card__bn hint">
-            узкое место −{cat.bottleneckDeficit}
+            узкое место −{fmtInt(cat.bottleneckDeficit)}
           </span>
         )}
       </button>

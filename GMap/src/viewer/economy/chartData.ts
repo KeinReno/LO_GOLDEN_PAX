@@ -1,6 +1,7 @@
 import type { ViewerPayload } from "../../state/types";
 import { BUILD_METAL, CATEGORY_CURRENCIES } from "../../state/economyLabels";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
+import { latestTreasuryTurn } from "./economyMath";
 
 export type LedgerRow = NonNullable<
   NonNullable<ViewerPayload["economy"]>["recent"]
@@ -18,6 +19,8 @@ export type ExpenseSlice = {
   label: string;
   amount: number;
   fill: string;
+  /** Turn the slice was aggregated from (for drill-down filter). */
+  turn?: number | null;
 };
 
 export type FlowBarRow = {
@@ -39,8 +42,10 @@ export type TurnGroup = {
 const REASON_LABELS: Record<string, string> = {
   flow_income: "Производство",
   flow_upkeep: "Содержание",
-  bridge_income: "Мост дохода",
-  bridge_upkeep: "Мост расхода",
+  bridge_income: "Перевод в металл",
+  bridge_upkeep: "Расход металла",
+  treasury_income: "Доход казны",
+  treasury_upkeep: "Расход казны",
   market_convert_out: "Обмен (отдача)",
   market_convert_in: "Обмен (получение)",
   transfer_out: "Перевод (исх.)",
@@ -73,11 +78,27 @@ export function reasonLabel(reason: string): string {
   return REASON_LABELS[reason] ?? reason.replace(/_/g, " ");
 }
 
+const PEG_LABELS: Record<string, string> = {
+  "map.solari": "Соларит",
+  "map.blumatid": "Блюматид",
+  "map.glasssteel": "Стеклосталь",
+  "map.gold": "Золото",
+  "map.crystals": "Кристаллы",
+  "map.biomass": "Биомасса",
+  "map.iron": "Железо",
+  "map.water": "Вода",
+  "map.dark_matter": "Тёмная материя",
+};
+
 export function currencyShortLabel(currencyId: string): string {
   const cat = CATEGORY_CURRENCIES.find((c) => c.id === currencyId);
   if (cat) return `${cat.name} (${cat.short})`;
   if (currencyId === BUILD_METAL.id) return BUILD_METAL.label;
   if (currencyId === "currency.supply") return "Обеспечение";
+  if (PEG_LABELS[currencyId]) return PEG_LABELS[currencyId];
+  if (currencyId.startsWith("map.")) {
+    return currencyId.replace(/^map\./, "");
+  }
   return currencyId.replace(/^currency\./, "");
 }
 
@@ -88,9 +109,11 @@ export function currencyShortLabel(currencyId: string): string {
 export function buildTreasurySeries(
   economy: NonNullable<ViewerPayload["economy"]>,
   forecastTurns = 5,
+  currentTurn?: number | null,
+  treasuryCurrencyId: string = BUILD_METAL.id,
 ): { points: TreasuryPoint[]; zeroTurn: number | null; avgNet: number } {
   const recent = (economy.recent ?? []).filter(
-    (r) => r.currencyId === BUILD_METAL.id && r.turn != null,
+    (r) => r.currencyId === treasuryCurrencyId && r.turn != null,
   );
   const byTurn = new Map<number, number>();
   for (const r of recent) {
@@ -99,7 +122,11 @@ export function buildTreasurySeries(
   }
 
   const turns = [...byTurn.keys()].sort((a, b) => a - b);
-  const current = economy.stocks?.[BUILD_METAL.id] ?? 0;
+  const current = economy.stocks?.[treasuryCurrencyId] ?? 0;
+  const nowTurn =
+    currentTurn != null && Number.isFinite(currentTurn)
+      ? Number(currentTurn)
+      : (turns[turns.length - 1] ?? economy.recent?.[0]?.turn ?? 0);
 
   // Walk backwards from current stock using net deltas.
   const history: { turn: number; value: number }[] = [];
@@ -113,10 +140,16 @@ export function buildTreasurySeries(
   }
   history.reverse();
 
-  // If no history, still show current as a single point on "now".
+  // Anchor "now" to world turn even when this turn has no metal rows yet.
   if (history.length === 0) {
-    const turn = economy.recent?.[0]?.turn ?? 0;
-    history.push({ turn, value: current });
+    history.push({ turn: nowTurn, value: current });
+  } else {
+    const lastHist = history[history.length - 1]!;
+    if (lastHist.turn < nowTurn) {
+      history.push({ turn: nowTurn, value: current });
+    } else if (lastHist.turn === nowTurn) {
+      lastHist.value = current;
+    }
   }
 
   const last = history[history.length - 1]!;
@@ -190,14 +223,23 @@ export function buildSparkline(
 export function buildExpenseSlices(
   economy: NonNullable<ViewerPayload["economy"]>,
   currencyFilter?: string | null,
+  currentTurn?: number | null,
 ): ExpenseSlice[] {
   const recent = economy.recent ?? [];
-  let latestTurn: number | null = null;
-  for (const r of recent) {
-    if (r.delta >= 0) continue;
-    if (currencyFilter && r.currencyId !== currencyFilter) continue;
-    if (r.turn == null) continue;
-    if (latestTurn == null || r.turn > latestTurn) latestTurn = r.turn;
+  // Align with computeMetrics: same "latest treasury turn" for filtered currency.
+  const filterId = currencyFilter || BUILD_METAL.id;
+  let latestTurn: number | null = latestTreasuryTurn(
+    economy,
+    filterId,
+    currentTurn,
+  );
+  if (latestTurn == null) {
+    for (const r of recent) {
+      if (r.delta >= 0) continue;
+      if (currencyFilter && r.currencyId !== currencyFilter) continue;
+      if (r.turn == null) continue;
+      if (latestTurn == null || r.turn > latestTurn) latestTurn = r.turn;
+    }
   }
   const byReason = new Map<string, number>();
   for (const r of recent) {
@@ -213,6 +255,7 @@ export function buildExpenseSlices(
       label: reasonLabel(reason),
       amount: Math.round(amount * 10) / 10,
       fill: DONUT_PALETTE[i % DONUT_PALETTE.length]!,
+      turn: latestTurn,
     }))
     .sort((a, b) => b.amount - a.amount);
   return slices;
@@ -274,6 +317,12 @@ export function groupRecentByTurn(
 export function rowsForReason(
   recent: LedgerRow[],
   reason: string,
+  opts?: { turn?: number | null; currencyId?: string | null },
 ): LedgerRow[] {
-  return recent.filter((r) => r.reason === reason && r.delta < 0);
+  return recent.filter((r) => {
+    if (r.reason !== reason || r.delta >= 0) return false;
+    if (opts?.turn != null && r.turn !== opts.turn) return false;
+    if (opts?.currencyId && r.currencyId !== opts.currencyId) return false;
+    return true;
+  });
 }

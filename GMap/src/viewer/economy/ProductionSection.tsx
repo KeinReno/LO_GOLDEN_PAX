@@ -1,13 +1,23 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import {
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { MapPinned, ExternalLink, Star } from "lucide-react";
 import type { ViewerPayload } from "../../state/types";
 import { ResourceIcon } from "../../ui/ResourceIcon";
 import { ActionRing } from "../../ui/ActionRing";
 import { useLongPress } from "../../ui/useLongPress";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
-import { buildProductionSystemRows, edgeKey } from "./productionData";
+import {
+  buildProductionSystemRows,
+  edgeKey,
+  listFactionBottlenecks,
+} from "./productionData";
 import { RpsChain } from "./components/RpsChain";
 import { EmptyState } from "./components/EmptyState";
+import { categoryFilterLabel } from "./ecoCopy";
+import { fmtInt } from "../../state/numberFormat";
 
 type Props = {
   payload: ViewerPayload;
@@ -31,6 +41,7 @@ function SystemRow({
   onOpen,
   onFocus,
   onPriorityHere,
+  priorityDisabled,
 }: {
   row: ReturnType<typeof buildProductionSystemRows>[number];
   linked: boolean;
@@ -38,21 +49,49 @@ function SystemRow({
   onOpen: () => void;
   onFocus: () => void;
   onPriorityHere: () => void;
+  priorityDisabled?: boolean;
 }) {
   const [ring, setRing] = useState<{ x: number; y: number } | null>(null);
+  const openRing = useCallback((x: number, y: number) => {
+    setRing({ x, y });
+  }, []);
   const bind = useLongPress({
-    onLongPress: ({ x, y }) => setRing({ x, y }),
+    onLongPress: ({ x, y }) => openRing(x, y),
     onTap: () => onOpen(),
   });
+  const ringItems = useMemo(
+    () => [
+      {
+        id: "open",
+        label: "Открыть",
+        icon: <ExternalLink size={14} />,
+        onSelect: onOpen,
+      },
+      {
+        id: "focus",
+        label: "Фокус на карте",
+        icon: <MapPinned size={14} />,
+        onSelect: onFocus,
+      },
+      {
+        id: "priority",
+        label: priorityDisabled
+          ? "Сначала задайте цикл"
+          : "Приоритет сюда",
+        icon: <Star size={14} />,
+        disabled: !!priorityDisabled,
+        onSelect: onPriorityHere,
+      },
+    ],
+    [onOpen, onFocus, onPriorityHere, priorityDisabled],
+  );
 
   return (
     <>
-      <li>
+      <li className={`eco-prod-row-wrap ${linked ? "is-linked" : ""}`}>
         <button
           type="button"
-          className={`eco-prod-row ${linked ? "is-linked" : ""} ${
-            row.bottleneck ? "is-warn" : ""
-          }`}
+          className={`eco-prod-row ${linked ? "is-linked" : ""}`}
           {...bind()}
         >
           <span className="eco-prod-row__name">{row.name}</span>
@@ -76,38 +115,52 @@ function SystemRow({
               </span>
             )}
           </span>
-          <span className="eco-prod-row__rate tabular-nums" title="Оценка по тирам ресурсов/зданий, не поток flow-engine">
-            ~{row.ratePerTurn}
-            {row.bottleneck ? " ⚠" : ""}
+          <span
+            className="eco-prod-row__rate tabular-nums"
+            title="Оценка по зданиям и ресурсам, не поток движка"
+          >
+            ~{fmtInt(row.ratePerTurn)}
           </span>
           <span className="eco-prod-row__open hint">открыть →</span>
         </button>
+        <div className="eco-prod-row__actions">
+          <button
+            type="button"
+            className="eco-prod-row__icon-btn"
+            title="Открыть систему"
+            onClick={onOpen}
+          >
+            <ExternalLink size={14} strokeWidth={2} aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="eco-prod-row__icon-btn"
+            title="Фокус на карте"
+            onClick={onFocus}
+          >
+            <MapPinned size={14} strokeWidth={2} aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="eco-prod-row__icon-btn"
+            title={
+              priorityDisabled
+                ? "Сначала задайте цикл на цепочке выше"
+                : "Приоритет потока сюда"
+            }
+            disabled={!!priorityDisabled}
+            onClick={onPriorityHere}
+          >
+            <Star size={14} strokeWidth={2} aria-hidden />
+          </button>
+        </div>
       </li>
       <ActionRing
         open={!!ring}
         x={ring?.x ?? 0}
         y={ring?.y ?? 0}
         onClose={() => setRing(null)}
-        items={[
-          {
-            id: "open",
-            label: "Открыть",
-            icon: <ExternalLink size={14} />,
-            onSelect: onOpen,
-          },
-          {
-            id: "focus",
-            label: "Фокус на карте",
-            icon: <MapPinned size={14} />,
-            onSelect: onFocus,
-          },
-          {
-            id: "priority",
-            label: "Приоритет сюда",
-            icon: <Star size={14} />,
-            onSelect: onPriorityHere,
-          },
-        ]}
+        items={ringItems}
       />
     </>
   );
@@ -133,6 +186,15 @@ export function ProductionSection({
     [payload, flowData, filterCategory],
   );
 
+  const factionBn = useMemo(
+    () =>
+      listFactionBottlenecks(
+        flowData,
+        payload.economy?.bottlenecks as Record<string, unknown> | undefined,
+      ),
+    [flowData, payload.economy?.bottlenecks],
+  );
+
   const priorities = payload.economy?.flowPriorities ?? {};
   const factionPri = priorities._faction;
   const linkedPri = linkedSystemId ? priorities[linkedSystemId] : null;
@@ -145,6 +207,8 @@ export function ProductionSection({
   const previewEdge = pendingEdge
     ? edgeKey(pendingEdge.from, pendingEdge.to)
     : null;
+
+  const hasFactionEdge = Boolean(factionPri || pendingEdge);
 
   const applyPriority = (from: string, to: string, systemId?: string | null) => {
     setPendingEdge({ from, to });
@@ -166,10 +230,16 @@ export function ProductionSection({
         }
       />
 
-      {filterCategory && (
-        <p className="hint eco-production__filter">
-          Фильтр: категория {filterCategory}
-        </p>
+      {factionBn.length > 0 && (
+        <ul className="eco-warnings" aria-label="Узкие места империи">
+          {factionBn.map((b) => (
+            <li key={b.letter} className="eco-warning-row">
+              <span>
+                Узкое место: {b.name} (−{fmtInt(b.deficit)})
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
 
       {priorityBusy && (
@@ -182,12 +252,12 @@ export function ProductionSection({
         <EmptyState
           title={
             filterCategory
-              ? `Нет систем · ${filterCategory}`
+              ? `Нет систем · ${categoryFilterLabel(filterCategory)}`
               : "Нет производственных систем"
           }
           body={
             filterCategory
-              ? `Нет своих систем с категорией ${filterCategory}. Снимите фильтр или постройте добычу.`
+              ? `Нет своих систем с акцентом на ${categoryFilterLabel(filterCategory)}. Снимите фильтр в шапке или постройте добычу.`
               : "Захватите или колонизируйте систему и постройте шахту."
           }
         />
@@ -201,13 +271,11 @@ export function ProductionSection({
               stocks={payload.economy?.stocks}
               onOpen={() => onOpenSystem?.(row.systemId)}
               onFocus={() => onFocusOnMap?.(row.systemId)}
+              priorityDisabled={!hasFactionEdge}
               onPriorityHere={() => {
                 const pri = factionPri || pendingEdge;
-                if (pri) {
-                  applyPriority(pri.from, pri.to, row.systemId);
-                } else {
-                  applyPriority("A", "B", row.systemId);
-                }
+                if (!pri) return;
+                applyPriority(pri.from, pri.to, row.systemId);
               }}
             />
           ))}
@@ -216,6 +284,3 @@ export function ProductionSection({
     </div>
   );
 }
-
-// silence unused CSSProperties if tree-shaken — used via RpsChain styles
-void (0 as unknown as CSSProperties);

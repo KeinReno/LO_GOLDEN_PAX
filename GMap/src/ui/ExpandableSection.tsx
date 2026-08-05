@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode, type SyntheticEvent } from "react";
 
 type Props = {
   title: string;
@@ -15,6 +15,7 @@ type Props = {
 /**
  * Progressive-density wrapper: summary by default, drill-down on demand.
  * Uses native <details> for a11y + keyboard without Framer.
+ * Note: React does not support defaultOpen on <details>, so we mirror it in state.
  */
 export function ExpandableSection({
   title,
@@ -25,10 +26,18 @@ export function ExpandableSection({
   children,
 }: Props) {
   const controlled = open !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const isOpen = controlled ? open : uncontrolledOpen;
+
+  const onToggle = (e: SyntheticEvent<HTMLDetailsElement>) => {
+    if (!controlled) setUncontrolledOpen(e.currentTarget.open);
+  };
+
   return (
     <details
       className={`hq-expandable ${className}`.trim()}
-      {...(controlled ? { open } : { defaultOpen })}
+      open={isOpen}
+      onToggle={onToggle}
     >
       <summary className="hq-expandable-summary">
         <span className="hq-expandable-title">{title}</span>

@@ -214,7 +214,7 @@ export const EDITOR_LAYER_GROUPS: {
     items: [
       { key: "showLinks", label: "Связи / врата", icon: "route" },
       { key: "showLabels", label: "Подписи систем", icon: "type" },
-      { key: "showFogPreview", label: "Туман (превью)", icon: "eye-off" },
+      { key: "showFogPreview", label: "Скрытое (как у игрока)", icon: "eye-off" },
       { key: "gmOmniscientView", label: "Видимость ГМа", icon: "eye" },
       { key: "showDeadZones", label: "Мёртвые зоны", icon: "eye-off" },
       { key: "showTraffic", label: "Трафик хабов", icon: "activity" },

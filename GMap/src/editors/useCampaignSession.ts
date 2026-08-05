@@ -14,6 +14,7 @@ import {
   type DraftMeta,
 } from "../io/draftPersist";
 import { DEFAULT_MASTER_TOKEN } from "../state/defaults";
+import { fetchContent } from "../state/contentCatalog";
 
 function slug(name: string): string {
   return name.replace(/[^\wа-яё\-]+/gi, "_").slice(0, 40) || "campaign";
@@ -65,6 +66,13 @@ export function useCampaignSession() {
   >(null);
   const [shareDownSince, setShareDownSince] = useState<string | null>(null);
   const [shareLinkChanged, setShareLinkChanged] = useState(false);
+  const [shareAutoRefresh, setShareAutoRefresh] = useState(() => {
+    try {
+      return localStorage.getItem("gmap-share-auto-refresh") !== "0";
+    } catch {
+      return true;
+    }
+  });
   const [shareWanIp, setShareWanIp] = useState<string | null>(null);
   const [shareDirectViewUrl, setShareDirectViewUrl] = useState<string | null>(
     null,
@@ -77,6 +85,7 @@ export function useCampaignSession() {
   const shareAbortRef = useRef<AbortController | null>(null);
   const prevShareStatusRef = useRef<string>("idle");
   const shareViewUrlRef = useRef<string | null>(null);
+  const lastAutoRestartRef = useRef(0);
 
   type ShareApi = {
     active?: boolean;
@@ -96,6 +105,8 @@ export function useCampaignSession() {
     wanIp?: string | null;
     directViewUrl?: string | null;
     directHint?: string | null;
+    urlRotated?: boolean;
+    previousViewUrl?: string | null;
   };
 
   const applyShareStatus = useCallback((data: ShareApi) => {
@@ -128,13 +139,22 @@ export function useCampaignSession() {
         : (data.viewUrl ?? data.lastViewUrl ?? null);
     setShareLastViewUrl(data.lastViewUrl ?? data.viewUrl ?? null);
     if (
-      nextUrl &&
-      shareViewUrlRef.current &&
-      nextUrl !== shareViewUrlRef.current &&
-      status === "online"
+      (nextUrl &&
+        shareViewUrlRef.current &&
+        nextUrl !== shareViewUrlRef.current &&
+        status === "online") ||
+      data.urlRotated
     ) {
       setShareLinkChanged(true);
       setShareCopied(false);
+      setShareOpen(true);
+      if (data.urlRotated || (nextUrl && nextUrl !== shareViewUrlRef.current)) {
+        setSyncMsg(
+          `Ссылка для игроков обновилась — скопируй и раздай снова${
+            nextUrl ? `: ${nextUrl}` : ""
+          }`,
+        );
+      }
     }
     shareViewUrlRef.current = nextUrl;
     setShareViewUrl(nextUrl);
@@ -203,7 +223,10 @@ export function useCampaignSession() {
     (
       window as unknown as { __GMAP_MASTER_TOKEN?: string }
     ).__GMAP_MASTER_TOKEN = masterToken;
-  }, [masterToken]);
+    (
+      window as unknown as { __GMAP_SYNC_MSG?: (msg: string) => void }
+    ).__GMAP_SYNC_MSG = setSyncMsg;
+  }, [masterToken, setSyncMsg]);
 
   useEffect(() => {
     let cancelled = false;
@@ -380,6 +403,29 @@ export function useCampaignSession() {
     await openForPlayers();
   };
 
+  /** Soft→hard auto refresh when tunnel stays down (503 / agent offline). */
+  useEffect(() => {
+    if (!shareAutoRefresh) return;
+    if (shareStatus !== "down" || shareBusy) return;
+    const t = window.setTimeout(() => {
+      const now = Date.now();
+      if (now - lastAutoRestartRef.current < 45_000) return;
+      lastAutoRestartRef.current = now;
+      setSyncMsg("Автообновление ссылки для игроков…");
+      void restartShare();
+    }, 10_000);
+    return () => window.clearTimeout(t);
+  }, [shareStatus, shareBusy, shareAutoRefresh]);
+
+  const setShareAutoRefreshPersist = (on: boolean) => {
+    setShareAutoRefresh(on);
+    try {
+      localStorage.setItem("gmap-share-auto-refresh", on ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
+
   const copyShareLink = async () => {
     const url = shareViewUrl || shareLastViewUrl;
     if (!url) return;
@@ -494,6 +540,74 @@ export function useCampaignSession() {
     }
   };
 
+  /** Save world + reload content packs + bump rev so GM and players see the build. */
+  const onApplyBuild = async () => {
+    setSyncMsg("Применяю билд к столу…");
+    try {
+      const saveRes = await fetch("/api/save-campaign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": masterToken,
+        },
+        body: JSON.stringify(useWorldStore.getState().world),
+      });
+      const saveData = (await saveRes.json()) as {
+        error?: string;
+        updatedAt?: string;
+        tableRevision?: number;
+        turn?: number;
+      };
+      if (!saveRes.ok) throw new Error(saveData.error || saveRes.statusText);
+      rememberSave();
+      const afterSave = useWorldStore.getState().world;
+      if (typeof saveData.tableRevision === "number" && afterSave.meta) {
+        loadWorld({
+          ...afterSave,
+          meta: {
+            ...afterSave.meta,
+            tableRevision: saveData.tableRevision,
+            updatedAt: saveData.updatedAt ?? afterSave.meta.updatedAt,
+            turn: saveData.turn ?? afterSave.meta.turn,
+          },
+        });
+      }
+
+      const res = await fetch("/api/gm/apply-build", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": masterToken,
+        },
+        body: JSON.stringify({ reloadContent: true }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        tableRevision?: number;
+        updatedAt?: string;
+        contentPacks?: number;
+      };
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      await fetchContent(true);
+      const cur = useWorldStore.getState().world;
+      if (typeof data.tableRevision === "number" && cur.meta) {
+        loadWorld({
+          ...cur,
+          meta: {
+            ...cur.meta,
+            tableRevision: data.tableRevision,
+            updatedAt: data.updatedAt ?? cur.meta.updatedAt,
+          },
+        });
+      }
+      setSyncMsg(
+        `Билд применён · rev ${data.tableRevision} · packs ${data.contentPacks ?? "ok"}. Игроки подтянут на /view.`,
+      );
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const onAdvanceTurn = async () => {
     setSyncMsg("Закрытие хода…");
     try {
@@ -531,7 +645,9 @@ export function useCampaignSession() {
         `Ход → ${data.turn} · rev ${data.tableRevision} · событий ${n}`,
       );
     } catch (e) {
-      setSyncMsg(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setSyncMsg(msg);
+      throw e;
     }
   };
 
@@ -549,6 +665,7 @@ export function useCampaignSession() {
     setMasterToken,
     rememberSave,
     onSaveToServer,
+    onApplyBuild,
     onAdvanceTurn,
     onDownloadMap,
     shareBusy,
@@ -567,6 +684,8 @@ export function useCampaignSession() {
     shareLastHealthError,
     shareDownSince,
     shareLinkChanged,
+    shareAutoRefresh,
+    setShareAutoRefresh: setShareAutoRefreshPersist,
     shareWanIp,
     shareDirectViewUrl,
     shareDirectHint,

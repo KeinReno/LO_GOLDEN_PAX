@@ -109,14 +109,14 @@ export function UpgradesComparison({
 
   return (
     <div className="research-upgrades-compare">
-      <h4>Сравнение апгрейдов</h4>
+      <h4>Сравнение улучшений</h4>
       <table>
         <thead>
           <tr>
-            <th>Апгрейд</th>
+            <th>Улучшение</th>
             <th>Эффект</th>
             <th>Цена</th>
-            <th>ROI</th>
+            <th>Окупаемость</th>
             <th />
           </tr>
         </thead>
@@ -151,7 +151,7 @@ export function UpgradesComparison({
                 </td>
                 <td className="hint">{effectSummary(u)}</td>
                 <td className="tabular">{done ? "—" : cost}</td>
-                <td className="tabular" title={`score ${score.toFixed(2)}`}>
+                <td className="tabular" title={`индекс ${score.toFixed(2)}`}>
                   {done ? "—" : stars}
                 </td>
                 <td>
@@ -180,8 +180,8 @@ export function UpgradesComparison({
       </table>
       {bestId ? (
         <p className="hint research-roi-hint">
-          Рекомендация: «{upgrades.find((u) => u.id === bestId)?.name}» — макс.
-          ROI
+          Рекомендация: «{upgrades.find((u) => u.id === bestId)?.name}» — лучшая
+          окупаемость
         </p>
       ) : null}
     </div>

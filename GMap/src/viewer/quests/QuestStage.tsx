@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { BookOpen, MapPin, RotateCcw } from "lucide-react";
 import { StatefulButton } from "../../ui/StatefulButton";
 import { QuestDiceRoller } from "./DiceRoller";
+import { canAffordCosts } from "./adaptQuest";
 import type { Quest, QuestChoice } from "./types";
 import { QUEST_KIND_META, QUEST_STATUS_LABEL } from "./types";
 import { useQuestsState } from "./useQuestsState";
@@ -16,6 +17,7 @@ export type QuestStageProps = {
   quest: Quest | null;
   busy?: boolean;
   chatOpen?: boolean;
+  stocks?: Record<string, number>;
   onChoose: (choiceId: string) => void | Promise<void>;
   onRollDice: () => void | Promise<void>;
   onOpenChat: () => void;
@@ -26,15 +28,18 @@ export type QuestStageProps = {
     message?: string;
   } | null;
   onDiceSettled?: () => void;
+  compact?: boolean;
 };
 
 function ChoiceFan({
   choices,
   busy,
+  stocks,
   onChoose,
 }: {
   choices: QuestChoice[];
   busy?: boolean;
+  stocks?: Record<string, number>;
   onChoose: (id: string) => void;
 }) {
   return (
@@ -43,40 +48,61 @@ function ChoiceFan({
         Выберите вариант (1–{choices.length})
       </p>
       <div className="quest-choice-fan__row" role="list">
-        {choices.map((c, i) => (
-          <motion.div
-            key={c.id}
-            role="listitem"
-            initial={{ y: 12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: i * 0.04 }}
-          >
-            <button
-              type="button"
-              className="quest-choice-card"
-              disabled={busy}
-              style={
-                {
-                  "--fan-i": i - (choices.length - 1) / 2,
-                } as CSSProperties
-              }
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("text/quest-choice", c.id);
-                e.dataTransfer.effectAllowed = "copy";
-              }}
-              onClick={() => onChoose(c.id)}
-              title={c.hint}
+        {choices.map((c, i) => {
+          const affordable = canAffordCosts(c.costs, stocks);
+          const title = [
+            c.hint,
+            c.costLabel,
+            !affordable ? "Недостаточно ресурсов" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <motion.div
+              key={c.id}
+              role="listitem"
+              initial={{ y: 12, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: i * 0.04 }}
             >
-              <span className="quest-choice-card__hotkey">{i + 1}</span>
-              <strong>{c.label}</strong>
-              {c.hint ? <span className="hint">{c.hint}</span> : null}
-              {c.needsDice ? (
-                <span className="quest-choice-card__dice">🎲</span>
-              ) : null}
-            </button>
-          </motion.div>
-        ))}
+              <button
+                type="button"
+                className={`quest-choice-card ${!affordable ? "is-unaffordable" : ""}`}
+                disabled={busy || !affordable}
+                style={
+                  {
+                    "--fan-i": i - (choices.length - 1) / 2,
+                  } as CSSProperties
+                }
+                draggable={affordable}
+                onDragStart={(e) => {
+                  if (!affordable) {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.dataTransfer.setData("text/quest-choice", c.id);
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+                onClick={() => onChoose(c.id)}
+                title={title}
+              >
+                <span className="quest-choice-card__hotkey">{i + 1}</span>
+                <strong>{c.label}</strong>
+                {c.hint ? <span className="hint">{c.hint}</span> : null}
+                {c.costLabel ? (
+                  <span
+                    className={`quest-choice-card__cost ${!affordable ? "is-short" : ""}`}
+                  >
+                    {c.costLabel}
+                  </span>
+                ) : null}
+                {c.needsDice ? (
+                  <span className="quest-choice-card__dice">🎲</span>
+                ) : null}
+              </button>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -87,6 +113,7 @@ function Briefing({
   quest,
   chatOpen,
   flipped,
+  compact,
   onToggleFlip,
   onOpenChat,
   onFocusSystem,
@@ -95,6 +122,7 @@ function Briefing({
   quest: Quest;
   chatOpen?: boolean;
   flipped: boolean;
+  compact?: boolean;
   onToggleFlip: () => void;
   onOpenChat: () => void;
   onFocusSystem?: (systemId: string) => void;
@@ -129,17 +157,19 @@ function Briefing({
           {QUEST_STATUS_LABEL[quest.status]}
         </span>
         <div className="quest-brief__actions">
-          <button
-            type="button"
-            className={`quest-card-journal ${chatOpen ? "is-open" : ""} ${quest.narrative ? "is-narrative" : ""}`}
-            onClick={onOpenChat}
-          >
-            <BookOpen size={13} aria-hidden />
-            {quest.narrative ? "Журнал" : "История"}
-            {logCount > 0 ? (
-              <span className="quest-group-count">{logCount}</span>
-            ) : null}
-          </button>
+          {!compact ? (
+            <button
+              type="button"
+              className={`quest-card-journal ${chatOpen ? "is-open" : ""} ${quest.narrative ? "is-narrative" : ""}`}
+              onClick={onOpenChat}
+            >
+              <BookOpen size={13} aria-hidden />
+              {quest.narrative ? "Журнал" : "История"}
+              {logCount > 0 ? (
+                <span className="quest-group-count">{logCount}</span>
+              ) : null}
+            </button>
+          ) : null}
           {quest.systemId && onFocusSystem ? (
             <button
               type="button"
@@ -150,15 +180,17 @@ function Briefing({
               {quest.systemName ?? "Карта"}
             </button>
           ) : null}
-          <button
-            type="button"
-            className="btn ghost sm"
-            onClick={onToggleFlip}
-            title="Досье (СКМ)"
-            aria-pressed={flipped}
-          >
-            <RotateCcw size={13} aria-hidden />
-          </button>
+          {!compact ? (
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={onToggleFlip}
+              title="Карточка (СКМ)"
+              aria-pressed={flipped}
+            >
+              <RotateCcw size={13} aria-hidden />
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -214,7 +246,7 @@ function Briefing({
         </div>
       ) : (
         <div className="quest-brief__dossier">
-          <p className="dossier-kicker">Досье</p>
+          <p className="dossier-kicker">Карточка квеста</p>
           <div className="quest-card-face__desc">{quest.description}</div>
           {quest.objectives?.length ? (
             <ul className="quest-card-face__objs">
@@ -235,6 +267,8 @@ export function QuestStage({
   quest,
   busy,
   chatOpen,
+  compact,
+  stocks,
   onChoose,
   onRollDice,
   onOpenChat,
@@ -258,7 +292,7 @@ export function QuestStage({
   if (!quest) {
     return (
       <div className="quest-stage quest-stage--empty">
-        <p className="hint">Выберите квест слева или смотрите сюжетный трекер.</p>
+        <p className="hint">Выберите квест слева или откройте обзор хода.</p>
       </div>
     );
   }
@@ -274,11 +308,12 @@ export function QuestStage({
     !showDice;
 
   return (
-    <div className="quest-stage">
+    <div className={`quest-stage${compact ? " quest-stage--compact" : ""}`}>
       <Briefing
         quest={quest}
         chatOpen={chatOpen}
         flipped={flipped}
+        compact={compact}
         onToggleFlip={toggleFlip}
         onOpenChat={onOpenChat}
         onFocusSystem={onFocusSystem}
@@ -300,6 +335,7 @@ export function QuestStage({
           <ChoiceFan
             choices={choices}
             busy={busy}
+            stocks={stocks}
             onChoose={(id) => void onChoose(id)}
           />
         ) : null}

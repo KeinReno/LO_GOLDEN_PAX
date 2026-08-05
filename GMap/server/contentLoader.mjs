@@ -14,6 +14,7 @@ const FILE_KEYS = [
   "effects",
   "currencies",
   "economy_schema",
+  "economy_balance",
   "id-aliases",
   "intents",
   "ships",
@@ -30,19 +31,29 @@ const FILE_KEYS = [
   "system_presets",
   "buildings",
   "colonies",
+  "stations",
   "technologies",
+  "tech_combos",
+  "tech_recipes",
   "tech_icons",
   "tech_market",
   "space_objects",
   "superpower_market",
   "faction_currencies",
+  "faction_currency_bindings",
   "market_quote_seed",
   "faction_traits",
   "diplomacy_stances",
   "yearly_quests",
+  "story_quests",
   "hybrid_rules",
   "cultures",
   "faiths",
+  "npc_traits",
+  "npc_postings",
+  "court_tasks",
+  "council_seats",
+  "internal_blocs",
 ];
 
 let cache = null;
@@ -101,6 +112,7 @@ function loadContentPacks(packIds = ["core"]) {
   let effects = { meta: {}, effects: {} };
   let currencies = {};
   let economy_schema = {};
+  let economy_balance = {};
   let intents = {};
   let ships = {};
   let units = {};
@@ -116,20 +128,30 @@ function loadContentPacks(packIds = ["core"]) {
   let system_presets = {};
   let buildings = {};
   let colonies = {};
+  let stations = {};
   let technologies = {};
+  let tech_combos = {};
+  let tech_recipes = {};
   let tech_icons = {};
   let tech_market = {};
   let space_objects = {};
   let superpower_market = {};
   let faction_currencies = {};
+  let faction_currency_bindings = {};
   let market_quote_seed = {};
   let faction_traits = { meta: {}, traits: {} };
   let diplomacy_stances = {};
   let yearly_quests = {};
+  let story_quests = { meta: {}, quests: {} };
   let hybrid_rules = {};
   let cultures = {};
   let faiths = {};
-  let id_aliases = { version: 1, ships: {}, resources: {}, units: {} };
+  let npc_traits = { meta: {}, traits: {} };
+  let npc_postings = { meta: {}, postings: {} };
+  let court_tasks = { meta: {}, tasks: {} };
+  let council_seats = { meta: {}, seats: {}, portfolios: {} };
+  let internal_blocs = { meta: {}, blocs: {} };
+  let id_aliases = { version: 1, ships: {}, resources: {}, units: {}, tech_upgrades: {} };
 
   for (const id of packIds) {
     const pack = loadPack(id);
@@ -145,6 +167,9 @@ function loadContentPacks(packIds = ["core"]) {
     }
     currencies = mergeDicts(currencies, pack.currencies);
     economy_schema = mergeDicts(economy_schema, pack.economy_schema);
+    if (pack.economy_balance && typeof pack.economy_balance === "object") {
+      economy_balance = { ...economy_balance, ...pack.economy_balance };
+    }
     intents = mergeDicts(intents, pack.intents);
     ships = mergeDicts(ships, pack.ships);
     units = mergeDicts(units, pack.units);
@@ -167,7 +192,10 @@ function loadContentPacks(packIds = ["core"]) {
     system_presets = mergeDicts(system_presets, pack.system_presets);
     buildings = mergeDicts(buildings, pack.buildings);
     colonies = mergeDicts(colonies, pack.colonies);
+    stations = mergeDicts(stations, pack.stations);
     technologies = mergeDicts(technologies, pack.technologies);
+    tech_combos = mergeDicts(tech_combos, pack.tech_combos);
+    tech_recipes = mergeDicts(tech_recipes, pack.tech_recipes);
     tech_icons = mergeDicts(tech_icons, pack.tech_icons);
     tech_market = mergeDicts(tech_market, pack.tech_market);
     space_objects = mergeDicts(space_objects, pack.space_objects);
@@ -190,6 +218,20 @@ function loadContentPacks(packIds = ["core"]) {
       faction_currencies,
       pack.faction_currencies,
     );
+    if (pack.faction_currency_bindings) {
+      faction_currency_bindings = {
+        ...faction_currency_bindings,
+        ...pack.faction_currency_bindings,
+        bindings: {
+          ...(faction_currency_bindings.bindings || {}),
+          ...(pack.faction_currency_bindings.bindings || {}),
+        },
+        seedStocks: {
+          ...(faction_currency_bindings.seedStocks || {}),
+          ...(pack.faction_currency_bindings.seedStocks || {}),
+        },
+      };
+    }
     if (pack.faction_traits?.traits) {
       faction_traits = {
         meta: pack.faction_traits.meta || faction_traits.meta,
@@ -235,6 +277,64 @@ function loadContentPacks(packIds = ["core"]) {
         },
       };
     }
+    if (pack.npc_traits?.traits) {
+      npc_traits = {
+        meta: pack.npc_traits.meta || npc_traits.meta,
+        traits: {
+          ...(npc_traits.traits || {}),
+          ...pack.npc_traits.traits,
+        },
+      };
+    }
+    if (pack.npc_postings?.postings) {
+      npc_postings = {
+        meta: pack.npc_postings.meta || npc_postings.meta,
+        postings: {
+          ...(npc_postings.postings || {}),
+          ...pack.npc_postings.postings,
+        },
+      };
+    }
+    if (pack.court_tasks?.tasks) {
+      court_tasks = {
+        meta: pack.court_tasks.meta || court_tasks.meta,
+        tasks: {
+          ...(court_tasks.tasks || {}),
+          ...pack.court_tasks.tasks,
+        },
+      };
+    }
+    if (pack.council_seats?.seats || pack.council_seats?.portfolios) {
+      council_seats = {
+        meta: pack.council_seats.meta || council_seats.meta,
+        seats: {
+          ...(council_seats.seats || {}),
+          ...(pack.council_seats.seats || {}),
+        },
+        portfolios: {
+          ...(council_seats.portfolios || {}),
+          ...(pack.council_seats.portfolios || {}),
+        },
+      };
+    }
+    if (pack.story_quests?.quests) {
+      story_quests = {
+        meta: pack.story_quests.meta || story_quests.meta,
+        quests: {
+          ...(story_quests.quests || {}),
+          ...pack.story_quests.quests,
+        },
+      };
+    }
+    if (pack.internal_blocs?.blocs) {
+      internal_blocs = {
+        meta: pack.internal_blocs.meta || internal_blocs.meta,
+        blocs: {
+          ...(internal_blocs.blocs || {}),
+          ...pack.internal_blocs.blocs,
+        },
+      };
+    }
     if (
       pack.market_quote_seed &&
       typeof pack.market_quote_seed === "object" &&
@@ -251,6 +351,10 @@ function loadContentPacks(packIds = ["core"]) {
           ...(pack.id_aliases.resources || {}),
         },
         units: { ...id_aliases.units, ...(pack.id_aliases.units || {}) },
+        tech_upgrades: {
+          ...(id_aliases.tech_upgrades || {}),
+          ...(pack.id_aliases.tech_upgrades || {}),
+        },
       };
     }
   }
@@ -262,6 +366,7 @@ function loadContentPacks(packIds = ["core"]) {
     effects,
     currencies,
     economy_schema,
+    economy_balance,
     intents,
     ships,
     units,
@@ -277,19 +382,29 @@ function loadContentPacks(packIds = ["core"]) {
     system_presets,
     buildings,
     colonies,
+    stations,
     technologies,
+    tech_combos,
+    tech_recipes,
     tech_icons,
     tech_market,
     space_objects,
     superpower_market,
     faction_currencies,
+    faction_currency_bindings,
     market_quote_seed,
     faction_traits,
     diplomacy_stances,
     yearly_quests,
+    story_quests,
     hybrid_rules,
     cultures,
     faiths,
+    npc_traits,
+    npc_postings,
+    court_tasks,
+    council_seats,
+    internal_blocs,
     id_aliases,
     loadedAt: new Date().toISOString(),
   };
@@ -308,6 +423,7 @@ export function getPublicContent() {
     packs: c.packs,
     rules: {
       apPerTurn: c.rules.apPerTurn,
+      forceAp: c.rules.forceAp,
       apBanking: c.rules.apBanking,
       tickTimezone: c.rules.tickTimezone,
       deficit: c.rules.deficit,
@@ -318,10 +434,13 @@ export function getPublicContent() {
       fog: c.rules.fog,
       races: c.rules.races,
       variants: c.rules.variants,
+      alchemy: c.rules.alchemy,
+      intel: c.rules.intel,
     },
     combat_matchups: c.combat_matchups,
     currencies: c.currencies,
     economy_schema: c.economy_schema,
+    economy_balance: c.economy_balance,
     intents: c.intents,
     ships: c.ships,
     units: c.units,
@@ -334,20 +453,30 @@ export function getPublicContent() {
     system_presets: c.system_presets,
     buildings: c.buildings,
     colonies: c.colonies,
+    stations: c.stations,
     technologies: c.technologies,
+    tech_combos: c.tech_combos,
+    tech_recipes: c.tech_recipes,
     tech_icons: c.tech_icons,
     tech_market: c.tech_market,
     space_objects: c.space_objects,
     combat_stances: c.combat_stances,
     combat_property_matchups: c.combat_property_matchups,
     faction_currencies: c.faction_currencies,
+    faction_currency_bindings: c.faction_currency_bindings,
     market_quote_seed: c.market_quote_seed,
     faction_traits: c.faction_traits,
     diplomacy_stances: c.diplomacy_stances,
     yearly_quests: c.yearly_quests,
+    story_quests: c.story_quests,
     hybrid_rules: c.hybrid_rules,
     cultures: c.cultures,
     faiths: c.faiths,
+    npc_traits: c.npc_traits,
+    npc_postings: c.npc_postings,
+    court_tasks: c.court_tasks,
+    council_seats: c.council_seats,
+    internal_blocs: c.internal_blocs,
     effects: Object.keys(c.effects.effects || {}),
     loadedAt: c.loadedAt,
   };

@@ -3,7 +3,9 @@ import type { Planet, PlanetBuildingZone } from "../state/types";
 import { PLANET_BUILDING_KIND_LABELS } from "../state/defaults";
 import type { BuildingDef, PlanetActionRequest } from "./PlayerPlanetManage";
 import { canFactionBuildDef } from "../state/buildingAccess";
+import { planetAllowsBuildingBiome } from "../state/biomeMatch";
 import { canBuildWithTech, type TechEcoSlice } from "../state/techGate";
+import { intentApCost } from "../state/contentCatalog";
 import { GESTURE } from "../ui/gestureMap";
 import { BuildingKindIcon, buildingKindColor } from "./BuildingKindIcon";
 import { BuildDeck } from "./BuildDeck";
@@ -202,6 +204,8 @@ export function PlanetRadialSlots({
     [surfaceSlots.length, orbitalSlots.length],
   );
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const fitRef = useRef<HTMLDivElement | null>(null);
+  const [fitScale, setFitScale] = useState(1);
   const [openSlot, setOpenSlot] = useState<{ zone: RingZone; index: number } | null>(
     null,
   );
@@ -232,6 +236,20 @@ export function PlanetRadialSlots({
   }, [planetId]);
 
   useEffect(() => {
+    const el = fitRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w <= 0 || layout.size <= 0) return;
+      setFitScale(Math.min(1, w / layout.size));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [layout.size]);
+
+  useEffect(() => {
     const id = highlightBuildingIds?.[0];
     if (id && buildings[id]) {
       setSelectedBuildId(id);
@@ -248,9 +266,10 @@ export function PlanetRadialSlots({
         (b) =>
           b.zone === zone &&
           canFactionBuildDef(b, fid, { raceIds }) &&
-          canBuildWithTech(techEco, b).ok,
+          canBuildWithTech(techEco, b).ok &&
+          planetAllowsBuildingBiome(planet, b.biome_restrictions),
       );
-  }, [buildings, factionId, raceIds, techEco]);
+  }, [buildings, factionId, raceIds, techEco, planet]);
 
   const apLeft = Math.max(0, apMax - reservedAp);
 
@@ -283,11 +302,11 @@ export function PlanetRadialSlots({
   }, [openSlot, inspectKey, onInspect]);
 
   const canAfford = (def: BuildingDef) => {
-    const needAp = def.ap ?? 1;
+    const needAp = intentApCost("intent.build");
     const needM = def.cost?.["currency.metal"] ?? 0;
     const needS = def.cost?.["currency.supply"] ?? 0;
     return (
-      apLeft >= needAp &&
+      (needAp <= 0 || apLeft >= needAp) &&
       (stocks["currency.metal"] ?? 0) >= needM &&
       (stocks["currency.supply"] ?? 0) >= needS
     );
@@ -499,7 +518,7 @@ export function PlanetRadialSlots({
               setHoverTip({
                 name: "Свободный слот",
                 meta: selectedBuildId
-                  ? "тап — построить выбранное"
+                  ? "тап — выбрать слот, затем зажми карту в колоде"
                   : "тап — открыть колоду",
               });
             } else if (slot.state === "expandable") {
@@ -700,11 +719,23 @@ export function PlanetRadialSlots({
         />
       </FloatingPanel>
 
-      <div className="planet-radial-stage">
+      <div className="planet-radial-fit" ref={fitRef}>
         <div
-          className="planet-radial-ring-wrap"
-          style={{ width: layout.size, height: layout.size }}
+          className="planet-radial-stage"
+          style={{
+            width: layout.size * fitScale,
+            height: layout.size * fitScale,
+          }}
         >
+          <div
+            className="planet-radial-ring-wrap"
+            style={{
+              width: layout.size,
+              height: layout.size,
+              transform: fitScale < 1 ? `scale(${fitScale})` : undefined,
+              transformOrigin: "top left",
+            }}
+          >
         <svg
           ref={svgRef}
           width={layout.size}
@@ -828,6 +859,7 @@ export function PlanetRadialSlots({
               <span>{hoverTip.meta}</span>
             </div>
           )}
+        </div>
         </div>
       </div>
 

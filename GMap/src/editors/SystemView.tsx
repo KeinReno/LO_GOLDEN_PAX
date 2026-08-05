@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useWorldStore } from "../state/worldStore";
 import type {
   Climate,
@@ -110,6 +110,12 @@ export type PlayerSystemManageProps = {
   buildings?: Record<string, BuildingDef>;
   highlightCategory?: string | null;
   onHighlightCategory?: (letter: string | null) => void;
+  /** Open stations/produce deck when diving (e.g. from Forces → верфь). */
+  preferDeck?: "stations" | "produce" | null;
+  preferProduceTab?: "ships" | "units";
+  /** Target fleet/legion when producing from Forces deck. */
+  produceFleetId?: string | null;
+  produceLegionId?: string | null;
 };
 
 /** Full drill-down: Galaxy → System schematic → Planet card. */
@@ -221,6 +227,13 @@ export function SystemView({
     y: number;
     items: ActionRingItem[];
   } | null>(null);
+
+  useEffect(() => {
+    const pref = systemManage?.preferDeck;
+    if (pref === "produce" || pref === "stations") {
+      setForceDeck(pref);
+    }
+  }, [system.id, systemManage?.preferDeck]);
 
   const playerDive = !!(readOnly && systemManage);
   const canBuildBelt =
@@ -415,7 +428,11 @@ export function SystemView({
   };
 
   return (
-    <div className={`system-view${playerDive ? " system-view--dive" : ""}`}>
+    <div
+      className={`system-view${playerDive ? " system-view--dive" : ""}${
+        playerDive && drilledPlanet ? " system-view--planet-manage" : ""
+      }`}
+    >
       <nav className="sys-crumb" aria-label="Иерархия">
         <button type="button" className="crumb-link" onClick={goGalaxy}>
           {readOnly ? "К карте" : "Галактика"}
@@ -831,6 +848,9 @@ export function SystemView({
                 forceProduceOpen={
                   forceDeck === "produce" ? true : undefined
                 }
+                forceProduceTab={systemManage.preferProduceTab}
+                produceFleetId={systemManage.produceFleetId}
+                produceLegionId={systemManage.produceLegionId}
                 onDeckChange={setForceDeck}
               />
             </>

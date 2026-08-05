@@ -517,11 +517,11 @@ function rolePower(groups) {
   for (const g of groups) {
     const role = g.roles[0] || "line";
     const unitPower =
-      g.damage *
-      (0.5 + g.accuracy / 200) *
-      (1 + g.shields / 200) *
-      g.count *
-      (g.hp / Math.max(1, g.maxHp));
+      (g.damage || 0) *
+      (0.5 + (g.accuracy || 0) / 200) *
+      (1 + (g.shields || 0) / 200) *
+      (g.count || 0) *
+      ((g.hp || 0) / Math.max(1, g.maxHp || 1));
     out[role] = (out[role] || 0) + unitPower;
   }
   return out;
@@ -574,32 +574,56 @@ export function applyCasualties(groups, damagePoints, preferredTargeting) {
 
   for (const g of sorted) {
     if (dmg <= 0) break;
-    const absorb = Math.max(1, g.armor * 0.15 + g.shields * 0.1);
-    const hpPool = g.hp * g.count;
-    const inflicted = Math.min(hpPool, dmg / Math.max(0.5, absorb / 10));
+    if ((g.count || 0) <= 0) continue;
+    
+    const absorb = Math.max(1, (g.armor || 0) * 0.15 + (g.shields || 0) * 0.1);
+    const maxHp = Math.max(1, g.maxHp || g.hp || 1);
+    const currentHp = g.hp || maxHp;
+    const hpPool = Math.max(0, currentHp + Math.max(0, (g.count || 0) - 1) * maxHp);
+    
+    const effectiveDmg = dmg / Math.max(0.5, absorb / 10);
+    const inflicted = Math.min(hpPool, effectiveDmg);
     dmg -= inflicted * (absorb / 10);
 
-    const lostHp = inflicted;
-    const unitsLost = Math.floor(lostHp / Math.max(1, g.maxHp));
-    const remainCount = Math.max(0, g.count - unitsLost);
-    const remainHp =
-      remainCount === 0
-        ? 0
-        : Math.max(1, Math.floor(g.hp - (lostHp % Math.max(1, g.maxHp))));
+    const beforeCount = g.count;
+    let remainCount = beforeCount;
+    let remainHp = currentHp;
+    
+    if (inflicted >= hpPool) {
+      remainCount = 0;
+      remainHp = 0;
+    } else {
+      let remainDmg = inflicted;
+      if (remainDmg >= remainHp) {
+        remainDmg -= remainHp;
+        remainCount -= 1;
+        remainHp = maxHp;
+        
+        if (remainDmg > 0) {
+          const unitsLost = Math.floor(remainDmg / maxHp);
+          remainCount -= unitsLost;
+          remainDmg -= unitsLost * maxHp;
+          remainHp -= remainDmg;
+        }
+      } else {
+        remainHp -= remainDmg;
+      }
+    }
 
-    if (unitsLost > 0 || remainHp < g.hp) {
+    const unitsLost = beforeCount - remainCount;
+    if (unitsLost > 0 || remainHp < currentHp) {
       log.push({
         defId: g.defId,
         parentId: g.parentId,
         lost: unitsLost,
-        before: g.count,
+        before: beforeCount,
         after: remainCount,
         stationary: !!g.stationary,
       });
     }
 
-    g.count = remainCount;
-    g.hp = remainCount > 0 ? remainHp : 0;
+    g.count = Math.max(0, remainCount);
+    g.hp = g.count > 0 ? Math.max(1, remainHp) : 0;
     if (g.ref) {
       g.ref.count = g.count;
       if (g.count > 0) g.ref.hp = g.hp;
@@ -651,14 +675,20 @@ export function persistStationaryCasualties(world, engagement, losses) {
 }
 
 export function cleanupEmptyComposition(world) {
-  for (const f of world.fleets ?? []) {
-    f.composition = (f.composition || []).filter((g) => (g.count || 0) > 0);
-  }
-  for (const l of world.legions ?? []) {
-    if (Array.isArray(l.composition)) {
-      l.composition = l.composition.filter((g) => (g.count || 0) > 0);
-      l.strength = l.composition.reduce((s, g) => s + (g.count || 0), 0);
+  if (world.fleets) {
+    for (const f of world.fleets) {
+      f.composition = (f.composition || []).filter((g) => (g.count || 0) > 0);
     }
+    world.fleets = world.fleets.filter((f) => f.composition.length > 0);
+  }
+  if (world.legions) {
+    for (const l of world.legions) {
+      if (Array.isArray(l.composition)) {
+        l.composition = l.composition.filter((g) => (g.count || 0) > 0);
+        l.strength = l.composition.reduce((s, g) => s + (g.count || 0), 0);
+      }
+    }
+    world.legions = world.legions.filter((l) => (l.composition || []).length > 0);
   }
 }
 
@@ -816,8 +846,8 @@ export function resolveEngagementFight(world, engagement) {
   if (shareA > 0.58) outcome = "win_a";
   else if (shareA < 0.42) outcome = "win_b";
 
-  const aliveA = groupsA.some((g) => g.count > 0);
-  const aliveB = groupsB.some((g) => g.count > 0);
+  const aliveA = groupsA.some((g) => (g.count || 0) > 0);
+  const aliveB = groupsB.some((g) => (g.count || 0) > 0);
   if (aliveA && !aliveB) outcome = "win_a";
   if (!aliveA && aliveB) outcome = "win_b";
   if (!aliveA && !aliveB) outcome = "draw";
@@ -871,7 +901,7 @@ export function resolveAssaultPhase(world, engagement) {
     const bombA = filterGroupsByRoles(groupsA, ["bombard", "capital"]);
     const bombPower =
       bombA.reduce(
-        (s, g) => s + g.damage * g.count * (0.5 + g.accuracy / 200),
+        (s, g) => s + (g.damage || 0) * (g.count || 0) * (0.5 + (g.accuracy || 0) / 200),
         0,
       ) * (stA.powerMult ?? 1);
     powerA = bombPower;
@@ -947,8 +977,8 @@ export function resolveAssaultPhase(world, engagement) {
     );
     persistStationaryCasualties(world, engagement, [...lossesA, ...lossesB]);
 
-    const aliveA = groundA.some((g) => g.count > 0);
-    const aliveB = groundB.some((g) => g.count > 0);
+    const aliveA = groundA.some((g) => (g.count || 0) > 0);
+    const aliveB = groundB.some((g) => (g.count || 0) > 0);
     if (aliveA && !aliveB) outcome = "win_a";
     else if (!aliveA && aliveB) outcome = "win_b";
     else if (!aliveA && !aliveB) outcome = "draw";
@@ -963,9 +993,9 @@ export function resolveAssaultPhase(world, engagement) {
     // Stationary wiped in ground phase stay gone (persistStationaryCasualties).
     groupsA = gatherGroups(world, sideA, "assault", content, engagement);
     groupsB = gatherGroups(world, sideB, "assault", content, engagement);
-    const aliveA = groupsA.some((g) => g.count > 0 && !g.stationary);
+    const aliveA = groupsA.some((g) => (g.count || 0) > 0 && !g.stationary);
     // Wiped stationary stay count 0 / buildings disabled — only remaining forces block.
-    const aliveB = groupsB.some((g) => g.count > 0);
+    const aliveB = groupsB.some((g) => (g.count || 0) > 0);
     powerA = aliveA ? 1 : 0;
     powerB = aliveB ? 1 : 0;
     if (aliveA && !aliveB) outcome = "win_a";

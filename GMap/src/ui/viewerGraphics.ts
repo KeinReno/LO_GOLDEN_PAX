@@ -108,9 +108,14 @@ export const EDITOR_DEFAULT_GRAPHICS: ViewerGraphicsPrefs = {
 };
 
 export function isLikelyMobileViewport(): boolean {
+  // Keep in sync with viewer/useViewerViewport.isLikelyMobile (layout + portrait).
   if (typeof window === "undefined") return false;
   try {
-    return window.matchMedia("(max-width: 900px)").matches;
+    const mq = window.matchMedia("(max-width: 900px)").matches;
+    const vw = window.visualViewport?.width ?? window.innerWidth;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    const portraitPhone = vw <= 900 || (vw < vh && vw <= 980);
+    return mq || portraitPhone;
   } catch {
     return false;
   }
@@ -194,7 +199,7 @@ export const GRAPHICS_TOGGLES: {
   },
   {
     key: "battleFx",
-    label: "Бой FX",
+    label: "Бой (эффекты)",
     hint: "Искры / кольца в системах сражения",
   },
   {
@@ -214,12 +219,12 @@ export const GRAPHICS_TOGGLES: {
   },
   {
     key: "cinematic",
-    label: "Cinematic",
+    label: "Кино",
     hint: "Доп. polish: звёзды, тени, пульс. Тяжелее — только ПК.",
   },
   {
     key: "liveZoomRebuild",
-    label: "Live zoom",
+    label: "Зум карты",
     hint: "Пересборка на каждом кадре зума",
   },
 ];

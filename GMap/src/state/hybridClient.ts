@@ -120,7 +120,7 @@ export function hybridLockLabel(tech: {
     if (tech.requiresLineage) {
       const name =
         content?.races?.[tech.requiresLineage]?.name ?? tech.requiresLineage;
-      return `Гибридный линейдж «${name}»`;
+      return `Смешанный род «${name}»`;
     }
     return null;
   }

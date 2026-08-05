@@ -110,18 +110,20 @@ export function formatDiceMessage(spec, rolls, success = null, actorName = null)
 export function logDiceToRp(factionId, body, opts = {}) {
   try {
     const campaignId = opts.campaignId;
-    let index = readRpIndex(campaignId);
-    index = ensurePlayerChannels(index, [{ id: factionId }], campaignId);
+    ensurePlayerChannels([{ id: factionId, name: factionId }], campaignId);
+    const index = readRpIndex(campaignId);
     const home = pickHomeEpisode(index, factionId);
-    if (!home) return { ok: false, error: "no_hq_episode" };
+    if (!home?.chapterId || !home?.episodeId) {
+      return { ok: false, error: "no_hq_episode" };
+    }
     return appendMessage(
       home.chapterId,
-      home.episode.id,
+      home.episodeId,
       {
         type: "system",
         body,
         authorFactionId: factionId,
-        authorName: opts.authorName || "Система",
+        authorName: opts.authorName || "Кубик",
         isMaster: true,
       },
       campaignId,
@@ -129,4 +131,67 @@ export function logDiceToRp(factionId, body, opts = {}) {
   } catch (e) {
     return { ok: false, error: e?.message || String(e) };
   }
+}
+
+/**
+ * Player/GM dice roll into a specific RP episode (or faction HQ).
+ * @param {{
+ *   factionId?: string,
+ *   chapterId?: string,
+ *   episodeId?: string,
+ *   count?: number,
+ *   sides?: number,
+ *   label?: string,
+ *   authorName?: string,
+ *   campaignId?: string,
+ * }} opts
+ */
+export function rollDiceToRpEpisode(opts = {}) {
+  const campaignId = opts.campaignId;
+  const count = Math.max(1, Math.min(20, Math.floor(Number(opts.count) || 1)));
+  const sides = Math.max(2, Math.min(100, Math.floor(Number(opts.sides) || 20)));
+  const rolls = rollDice({ count, sides });
+  const spec = {
+    count,
+    sides,
+    label: opts.label || `${count}d${sides}`,
+  };
+  const body = formatDiceMessage(spec, rolls, null, opts.authorName || null);
+  let chapterId = opts.chapterId || "";
+  let episodeId = opts.episodeId || "";
+  if ((!chapterId || !episodeId) && opts.factionId) {
+    ensurePlayerChannels(
+      [{ id: opts.factionId, name: opts.factionId }],
+      campaignId,
+    );
+    const home = pickHomeEpisode(readRpIndex(campaignId), opts.factionId);
+    chapterId = home.chapterId;
+    episodeId = home.episodeId;
+  }
+  if (!chapterId || !episodeId) {
+    return { ok: false, error: "no_episode" };
+  }
+  const result = appendMessage(
+    chapterId,
+    episodeId,
+    {
+      type: "system",
+      body,
+      authorFactionId: opts.factionId || null,
+      authorName: "Кубик",
+      isMaster: true,
+    },
+    campaignId,
+  );
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    rolls,
+    sum: rolls.reduce((a, b) => a + b, 0),
+    spec,
+    body,
+    message: result.message,
+    chapterId,
+    episodeId,
+  };
 }

@@ -3,6 +3,11 @@ import { useWorldStore } from "../state/worldStore";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { apPerTurn, fetchContent } from "../state/contentCatalog";
 import { intentLabel } from "./intentLabels";
+import {
+  formatOdCost,
+  formatOdMeter,
+  TURN_RESOLVE_HINT,
+} from "../state/playerUiTerms";
 
 export type IntentRow = {
   id: string;
@@ -21,7 +26,7 @@ export function usePendingIntents() {
   const { masterToken, setSyncMsg } = useCampaignSessionCtx();
   const [intents, setIntents] = useState<IntentRow[]>([]);
   const [busy, setBusy] = useState(false);
-  const [apCap, setApCap] = useState(3);
+  const [apCap, setApCap] = useState(15);
 
   const refresh = useCallback(async (opts?: { quiet?: boolean }) => {
     if (!opts?.quiet) setBusy(true);
@@ -91,7 +96,8 @@ export function IntentsInbox({
         <>
           <h3>Приказы хода {world.meta.turn}</h3>
           <p className="hint">
-            Лимит AP/ход: {apCap}. Тик применит pending автоматически.
+            До {apCap} ОД империи за ход (+ ОД сил для флотов/легионов).{" "}
+            {TURN_RESOLVE_HINT}
           </p>
         </>
       )}
@@ -123,7 +129,7 @@ export function IntentsInbox({
             >
               <div className="live-faction-card-head">
                 <strong style={{ color: f.color }}>{f.name}</strong>
-                <span className="hint">AP 0/{apCap}</span>
+                <span className="hint">{formatOdMeter(0, apCap)}</span>
               </div>
               <div className="live-faction-ap">
                 <span style={{ width: "0%" }} />
@@ -150,7 +156,7 @@ export function IntentsInbox({
             <div className="live-faction-card-head">
               <strong style={{ color: f.color }}>{f.name}</strong>
               <span className="hint">
-                AP {used}/{apCap}
+                {formatOdMeter(used, apCap)}
                 {list.length > 0 ? ` · ${list.length}` : ""}
               </span>
             </div>
@@ -181,7 +187,7 @@ export function IntentsInbox({
                           {[
                             fleetName,
                             toName !== "—" ? toName : null,
-                            i.apCost != null ? `${i.apCost} AP` : null,
+                            i.apCost != null ? formatOdCost(i.apCost) : null,
                           ]
                             .filter(Boolean)
                             .join(" · ")}

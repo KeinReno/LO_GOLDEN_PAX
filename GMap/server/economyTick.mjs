@@ -6,11 +6,11 @@ import { getContent } from "./contentLoader.mjs";
 import {
   buildModifierStack,
   applyFlatThenMult,
-  resolveApMax,
   collectRaceEffects,
   resolvePlanetRaceComposition,
   explainStack,
 } from "./modifierStack.mjs";
+import { resolveEmpireApMax } from "./apBudget.mjs";
 import {
   collectPoiEffects,
   collectSystemPoiEffects,
@@ -18,6 +18,10 @@ import {
   ownedDepotSystemIds,
 } from "./narrative.mjs";
 import { collectTreatyEffects } from "./opinionTick.mjs";
+import {
+  factionScopedActiveEffects,
+  npcProductionMultForSystem,
+} from "./courtGovernance.mjs";
 import {
   readLedger,
   writeLedger,
@@ -28,6 +32,7 @@ import {
 } from "./ledger.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
 import { planetCapFromBuildings } from "./planetActions.mjs";
+import { forceUpkeepRates } from "./forceEconomy.mjs";
 import {
   emptyFlows,
   addPlanetExtraction,
@@ -61,6 +66,40 @@ import {
 
 function floor(n) {
   return Math.floor(Number(n) || 0);
+}
+
+/**
+ * Core natural growth before pop_growth_flat/mult modifiers.
+ * Over cap → emigration/pressure loss (never a fixed 20% growth floor).
+ */
+export function naturalPopDeltaBeforeModifiers(
+  pop,
+  cap,
+  rate,
+  habEff,
+  supplyFactor,
+  maxLossPerTurn,
+) {
+  if (pop <= 0) return 0;
+  const safeCap = Math.max(1, Number(cap) || 1);
+  if (pop > safeCap) {
+    const excessRatio = (pop - safeCap) / safeCap;
+    const lossRate = Math.min(
+      maxLossPerTurn,
+      0.03 + 0.02 * Math.min(excessRatio, 20),
+    );
+    return -pop * lossRate;
+  }
+  const headroomFactor = (safeCap - pop) / safeCap;
+  return pop * rate * habEff * supplyFactor * headroomFactor;
+}
+
+/** Bios flow upkeep: only population within planetary housing counts. */
+function fedPopulationForUpkeep(pop, cap) {
+  const p = Math.max(0, Number(pop) || 0);
+  if (p <= 0) return 0;
+  const safeCap = Math.max(1, Number(cap) || 1);
+  return Math.min(p, safeCap);
 }
 
 function planetCap(planet, content) {
@@ -151,6 +190,7 @@ function collectFactionEffects(world, factionId, eco, content, turn = 0) {
 
   for (const [slot, tierId] of Object.entries(eco.taxes || {})) {
     const def = content.taxes?.[slot];
+    if (!def || def.hidden || def.aliasOf) continue;
     const tier = def?.tiers?.find((t) => t.id === tierId);
     for (const e of tier?.effects || []) {
       effects.push({
@@ -255,8 +295,10 @@ function collectFactionEffects(world, factionId, eco, content, turn = 0) {
   effects.push(...applyLogisticsEffects(world, factionId, content));
 
   // Completed NPC court tasks / quest lasting effects (A10) — prune first
+  // Only faction-scoped actives enter the realm ModifierStack; system-scoped
+  // apply via npcProductionMultForSystem / loyalty.
   if (faction) pruneActiveEffects(faction, turn);
-  for (const e of faction?.activeEffects || []) {
+  for (const e of factionScopedActiveEffects(faction)) {
     if (!e?.effect) continue;
     effects.push({
       ...e,
@@ -311,24 +353,46 @@ function mapResourceYieldLegacyOnly(sys, content) {
   return yields;
 }
 
-function fleetUpkeep(world, factionId) {
+function fleetUpkeep(world, factionId, content) {
   let metal = 0;
   let supply = 0;
+  const ships = content?.ships || {};
+  const units = content?.units || {};
   for (const f of world.fleets ?? []) {
     if (f.factionId !== factionId) continue;
-    const n = (f.composition ?? []).reduce((s, g) => s + (g.count || 0), 0) || 1;
-    metal += Math.ceil(n * 0.5);
-    supply += Math.ceil(n * 0.3);
+    const groups = f.composition ?? [];
+    if (!groups.length) {
+      const rates = forceUpkeepRates("ship", 1, 1);
+      metal += rates.metal;
+      continue;
+    }
+    for (const g of groups) {
+      const def = ships[g.defId] || ships[g.type];
+      const tier = Number(def?.tier ?? 1) || 1;
+      const rates = forceUpkeepRates("ship", tier, g.count || 0);
+      metal += rates.metal;
+    }
   }
   for (const l of world.legions ?? []) {
     if (l.factionId !== factionId) continue;
-    const n =
-      (l.composition ?? []).reduce((s, g) => s + (g.count || 0), 0) ||
-      l.strength ||
-      1;
-    supply += Math.ceil(n * 0.4);
+    const groups = l.composition ?? [];
+    if (!groups.length) {
+      const n = l.strength || 1;
+      const rates = forceUpkeepRates("unit", 2, n);
+      supply += Math.ceil(rates.e);
+      continue;
+    }
+    for (const g of groups) {
+      const def = units[g.defId] || units[g.type];
+      const tier = Number(def?.tier ?? 2) || 2;
+      const rates = forceUpkeepRates("unit", tier, g.count || 0);
+      supply += rates.e;
+    }
   }
-  return { "currency.metal": metal, "currency.supply": supply };
+  return {
+    "currency.metal": Math.ceil(metal),
+    "currency.supply": Math.ceil(supply),
+  };
 }
 
 function popUpkeep(world, factionId) {
@@ -344,10 +408,11 @@ function popUpkeep(world, factionId) {
 
 function applyPendingTaxes(eco) {
   const pending = eco.pendingPolicy?.taxes || {};
+  if (!eco.taxes) eco.taxes = {};
   for (const [slot, tierId] of Object.entries(pending)) {
     eco.taxes[slot] = tierId;
   }
-  eco.pendingPolicy.taxes = {};
+  if (eco.pendingPolicy) eco.pendingPolicy.taxes = {};
 }
 
 export function activatePendingPolicies(world) {
@@ -361,10 +426,22 @@ export function activatePendingPolicies(world) {
 }
 
 function taxRateFor(eco, content, slot) {
-  const tierId = eco.taxes?.[slot] || "none";
-  const def = content.taxes?.[slot];
+  const resolved = resolveTaxSlotId(content, slot);
+  const tierId = eco.taxes?.[resolved] || eco.taxes?.[slot] || "none";
+  const def = content.taxes?.[resolved] || content.taxes?.[slot];
   const tier = def?.tiers?.find((t) => t.id === tierId);
   return tier?.rate ?? 0;
+}
+
+function resolveTaxSlotId(content, slot) {
+  const def = content?.taxes?.[slot];
+  if (def?.aliasOf && content?.taxes?.[def.aliasOf]) return def.aliasOf;
+  return slot;
+}
+
+/** Primary (non-hidden) tax slots for category taxation. */
+function primaryTaxSlots(content) {
+  return Object.values(content?.taxes || {}).filter((t) => t?.id && !t.hidden);
 }
 
 /**
@@ -404,16 +481,39 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
   // Pass 1: extraction + ambient baselines (must exist before converters)
   let inhabitedPlanets = 0;
   let pop = 0;
+  let popBiosDemand = 0;
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
-    const prodScale = logisticsProductionMult(sys, c);
+    const govSupply = npcProductionMultForSystem(
+      world,
+      factionId,
+      sys.id,
+      "currency.supply",
+    );
+    const govMateria = npcProductionMultForSystem(
+      world,
+      factionId,
+      sys.id,
+      "currency.materia",
+    );
+    const npcScale =
+      govSupply !== 1 || govMateria !== 1
+        ? (govSupply + govMateria) / 2
+        : 1;
+    const prodScale = logisticsProductionMult(sys, c) * npcScale;
     for (const p of sys.planets ?? []) {
       addPlanetExtraction(flows, p.resources || [], c, {
         maxTiers,
         rateScale: prodScale,
       });
-      pop += p.population || 0;
-      if ((p.population || 0) > 0 || p.colonyType) inhabitedPlanets += 1;
+      const pPop = p.population || 0;
+      pop += pPop;
+      if (pPop > 0) {
+        popBiosDemand += Math.ceil(
+          fedPopulationForUpkeep(pPop, planetCap(p, c)) * 0.05,
+        );
+      }
+      if (pPop > 0 || p.colonyType) inhabitedPlanets += 1;
     }
     const objs = c.space_objects?.objects || {};
     for (const poiType of sys.spaceObjects || []) {
@@ -429,7 +529,23 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
   // Pass 2: building yields / converts (after inputs exist)
   for (const sys of world.systems ?? []) {
     if (sys.ownerFactionId !== factionId) continue;
-    const prodScale = logisticsProductionMult(sys, c);
+    const govSupply = npcProductionMultForSystem(
+      world,
+      factionId,
+      sys.id,
+      "currency.supply",
+    );
+    const govMateria = npcProductionMultForSystem(
+      world,
+      factionId,
+      sys.id,
+      "currency.materia",
+    );
+    const npcScale =
+      govSupply !== 1 || govMateria !== 1
+        ? (govSupply + govMateria) / 2
+        : 1;
+    const prodScale = logisticsProductionMult(sys, c) * npcScale;
     const pri =
       eco?.flowPriorities?.[sys.id] || eco?.flowPriorities?._faction || null;
     for (const p of sys.planets ?? []) {
@@ -460,23 +576,38 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
     }
   }
 
-  let fleetCount = 0;
-  let legionCount = 0;
+  let fleetD = 0;
+  let fleetE = 0;
+  let legionE = 0;
+  const ships = c.ships || {};
+  const units = c.units || {};
   for (const f of world.fleets ?? []) {
-    if (f.factionId === factionId)
-      fleetCount += (f.composition ?? []).reduce((s, g) => s + (g.count || 0), 0);
+    if (f.factionId !== factionId) continue;
+    for (const g of f.composition ?? []) {
+      const def = ships[g.defId] || ships[g.type];
+      const tier = Number(def?.tier ?? 1) || 1;
+      const rates = forceUpkeepRates("ship", tier, g.count || 0);
+      fleetD += rates.d;
+      fleetE += rates.e;
+    }
   }
   for (const l of world.legions ?? []) {
-    if (l.factionId === factionId) legionCount += l.strength || 1;
+    if (l.factionId !== factionId) continue;
+    const groups = l.composition ?? [];
+    if (!groups.length) {
+      legionE += forceUpkeepRates("unit", 2, l.strength || 1).e;
+      continue;
+    }
+    for (const g of groups) {
+      const def = units[g.defId] || units[g.type];
+      const tier = Number(def?.tier ?? 2) || 2;
+      legionE += forceUpkeepRates("unit", tier, g.count || 0).e;
+    }
   }
-  if (fleetCount > 0) {
-    flows.D[2].demand += Math.ceil(fleetCount * 0.3);
-    flows.E[3].demand += Math.ceil(fleetCount * 0.2);
-  }
-  if (legionCount > 0) {
-    flows.E[3].demand += Math.ceil(legionCount * 0.4);
-  }
-  if (pop > 0) flows.E[1].demand += Math.ceil(pop * 0.05);
+  if (fleetD > 0) flows.D[2].demand += Math.ceil(fleetD);
+  if (fleetE > 0) flows.E[3].demand += Math.ceil(fleetE);
+  if (legionE > 0) flows.E[3].demand += Math.ceil(legionE);
+  if (popBiosDemand > 0) flows.E[1].demand += popBiosDemand;
 
   const nets = computeNets(flows);
   return {
@@ -503,6 +634,7 @@ export function runEconomyTick(world, turn) {
     const effects = collectFactionEffects(world, fac.id, eco, content, turn);
     const stack = buildModifierStack(effects, {
       mergeOrder: content.rules?.economyMergeOrder,
+      modifierCaps: content.rules?.modifierCaps,
     });
 
     // --- Authoritative flow economy ---
@@ -528,13 +660,26 @@ export function runEconomyTick(world, turn) {
           stack.channels["upkeep:*"],
         ),
       );
+
+      // Category tax (materia/energia/bios slots) — treasury records; sink subtracts.
+      let taxRate = 0;
+      let taxAmt = 0;
+      for (const slot of primaryTaxSlots(content)) {
+        if (slot.resource !== cur) continue;
+        taxRate = taxRateFor(eco, content, slot.id);
+        if (taxRate > 0 && delta > 0) {
+          taxAmt = floor(delta * taxRate);
+          if (content.rules?.tax?.defaultMode === "sink") delta -= taxAmt;
+        }
+      }
+
       categoryNet[cur] = delta;
       channels[cur] = {
         base: floor(totals[cat]?.rate || 0),
         demand: floor(totals[cat]?.demand || 0),
         afterProd: floor(totals[cat]?.rate || 0),
-        taxRate: 0,
-        tax: 0,
+        taxRate,
+        tax: taxAmt,
         upkeep: floor(totals[cat]?.demand || 0),
         net: delta,
         category: cat,
@@ -575,8 +720,9 @@ export function runEconomyTick(world, turn) {
     let metalAfter = floor(bridgeMetal);
     let supplyAfter = floor(bridgeSupply);
 
-    const taxInd = taxRateFor(eco, content, "tax.industry");
-    const taxSup = taxRateFor(eco, content, "tax.supply");
+    // Legacy bridge tax mirrors category slots (materia→metal, bios→supply).
+    const taxInd = taxRateFor(eco, content, "tax.materia");
+    const taxSup = taxRateFor(eco, content, "tax.bios");
     const taxMetal = floor(metalAfter * taxInd);
     const taxSupply = floor(supplyAfter * taxSup);
     if (content.rules?.tax?.defaultMode === "sink") {
@@ -587,7 +733,7 @@ export function runEconomyTick(world, turn) {
     // Legacy fleet metal upkeep still on metal (ships cost metal to maintain)
     // Supply fleet/pop already represented as D/E demand in flows — avoid full double.
     // Keep a light metal fleet upkeep only.
-    let metalUpkeep = fleetUpkeep(world, fac.id)["currency.metal"] || 0;
+    let metalUpkeep = fleetUpkeep(world, fac.id, content)["currency.metal"] || 0;
     metalUpkeep = applyFlatThenMult(metalUpkeep, stack.channels["upkeep:currency.metal"]);
 
     // When category nets are negative, also drain legacy bridge stocks
@@ -627,6 +773,31 @@ export function runEconomyTick(world, turn) {
         reason: metalDelta >= 0 ? "bridge_income" : "bridge_upkeep",
       });
     }
+    // Treasury peg (solarit / blumatid / …): mirror fiscal bridge into the
+    // faction's commodity peg so Казна tracks state currency, not scrap metal.
+    const treasuryPeg =
+      typeof fac.treasuryPeg === "string" && fac.treasuryPeg.trim()
+        ? fac.treasuryPeg.trim()
+        : null;
+    if (
+      treasuryPeg &&
+      treasuryPeg !== "currency.metal" &&
+      metalDelta !== 0
+    ) {
+      adjustStock(ledger, fac.id, treasuryPeg, metalDelta, {
+        turn,
+        reason: metalDelta >= 0 ? "treasury_income" : "treasury_upkeep",
+      });
+      channels[treasuryPeg] = {
+        base: floor(bridgeMetal),
+        afterProd: floor(metalAfter),
+        taxRate: taxInd,
+        tax: taxMetal,
+        upkeep: floor(metalUpkeep),
+        net: metalDelta,
+        bridgedFrom: "B.materia→treasuryPeg",
+      };
+    }
     if (supplyDelta !== 0) {
       adjustStock(ledger, fac.id, "currency.supply", supplyDelta, {
         turn,
@@ -641,7 +812,7 @@ export function runEconomyTick(world, turn) {
     updateDeficit(eco, content);
     eco.bottlenecks = flowBreak.bottlenecks || {};
 
-    const apMax = resolveApMax(content.rules?.apPerTurn ?? 3, stack);
+    const apMax = resolveEmpireApMax(content.rules, stack);
 
     const net = {
       ...categoryNet,
@@ -716,7 +887,6 @@ export function runEconomyTick(world, turn) {
       }
       const hab = habitabilityForPlanet(p, content.races, composition);
       const cap = planetCap(p, content);
-      const overcrowd = pop > cap ? Math.max(0.2, 1 - (pop - cap) / cap) : 1;
 
       const growthEffects = [
         ...collectSystemPoiEffects(sys, content),
@@ -758,12 +928,26 @@ export function runEconomyTick(world, turn) {
       }
       const growthStack = buildModifierStack(growthEffects, {
         mergeOrder: content.rules?.economyMergeOrder,
+        modifierCaps: content.rules?.modifierCaps,
       });
       let habEff = hab;
       if (growthStack.channels.habitability) {
         habEff = applyFlatThenMult(hab, growthStack.channels.habitability);
       }
-      let natural = pop * rate * habEff * supplyFactor * overcrowd;
+      // GM/census lock: keep authored large populations (e.g. Amalfea ≤3M)
+      // without over-cap emigration; Bios upkeep still uses housing `cap`.
+      const growthCap =
+        p.censusLocked || p.censusLocked === true
+          ? Math.max(cap, pop)
+          : cap;
+      let natural = naturalPopDeltaBeforeModifiers(
+        pop,
+        growthCap,
+        rate,
+        habEff,
+        supplyFactor,
+        maxLoss,
+      );
       natural = applyFlatThenMult(natural, growthStack.channels.pop_growth);
 
       if (eco?.deficit === "empty") natural = Math.min(natural, -pop * 0.02);

@@ -5,7 +5,13 @@ import {
   useSpring,
   useReducedMotion,
 } from "motion/react";
-import { useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { useCardBoardOptional } from "./cardBoardContext";
 import { CardVisual } from "./CardVisual";
 
@@ -21,6 +27,8 @@ export type DragCardProps = {
   pinned?: boolean;
   /** 3D tilt while dragging (Aceternity-style). Honors prefers-reduced-motion. */
   tilt?: boolean;
+  /** Spring back to origin after release (default true). */
+  returnHome?: boolean;
   className?: string;
   /** Initial offset from layout position. */
   initialX?: number;
@@ -29,9 +37,20 @@ export type DragCardProps = {
 
 const SPRING = { stiffness: 380, damping: 32, mass: 0.7 };
 const TILT_MAX = 12;
+/** Above viewer chrome / docks / tooltips (eco-tip is 9000). */
+const DRAG_LAYER_Z = 12000;
+
+type DragOrigin = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
 
 /**
  * Draggable card with spring settle + optional tilt.
+ * While dragging, a fixed portal ghost paints above all menus
+ * (escapes parent stacking contexts / overflow).
  * Wrap with `<CardBoard>` when using DropZone hit-testing.
  */
 export function DragCard({
@@ -45,6 +64,7 @@ export function DragCard({
   onDropZone,
   pinned = false,
   tilt = true,
+  returnHome = true,
   className = "",
   initialX = 0,
   initialY = 0,
@@ -52,6 +72,8 @@ export function DragCard({
   const board = useCardBoardOptional();
   const reduceMotion = useReducedMotion();
   const [dragging, setDragging] = useState(false);
+  const [originBox, setOriginBox] = useState<DragOrigin | null>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const origin = useRef({ x: initialX, y: initialY });
 
   const x = useMotionValue(initialX);
@@ -63,14 +85,31 @@ export function DragCard({
   const springRotX = useSpring(rotateX, { stiffness: 260, damping: 22 });
   const springRotY = useSpring(rotateY, { stiffness: 260, damping: 22 });
 
+  useEffect(() => {
+    if (!dragging) return;
+    document.body.classList.add("is-gmap-dragging");
+    return () => document.body.classList.remove("is-gmap-dragging");
+  }, [dragging]);
+
   const bind = useDrag(
     ({ first, last, movement: [mx, my], xy: [px, py], memo, event }) => {
       if (pinned) return memo;
       event?.preventDefault?.();
 
       if (first) {
+        const el = shellRef.current;
+        if (el) {
+          const r = el.getBoundingClientRect();
+          setOriginBox({
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height,
+          });
+        }
         setDragging(true);
-        origin.current = { x: x.get(), y: y.get() };
+        board?.setDraggingCardId(cardId);
+        origin.current = { x: initialX, y: initialY };
       }
 
       const nextX = origin.current.x + mx;
@@ -92,14 +131,22 @@ export function DragCard({
 
       if (last) {
         setDragging(false);
+        setOriginBox(null);
+        board?.setDraggingCardId(null);
         rotateX.set(0);
         rotateY.set(0);
         board?.clearHover();
 
         const hit = board?.hitTest(px, py, cardId) ?? null;
         if (hit) {
-          hit.onDrop?.(cardId);
-          onDropZone?.(hit.zoneId);
+          // Prefer zone.onDrop as the single action. onDropZone is only a
+          // fallback when the zone has no handler — never fire both.
+          if (hit.onDrop) hit.onDrop(cardId);
+          else onDropZone?.(hit.zoneId);
+        }
+        if (returnHome) {
+          x.set(initialX);
+          y.set(initialY);
         }
         onDragEnd?.({ x: nextX, y: nextY });
       }
@@ -119,44 +166,89 @@ export function DragCard({
   const liveRotX = reduceMotion || !tilt ? 0 : springRotX;
   const liveRotY = reduceMotion || !tilt ? 0 : springRotY;
 
-  return (
-    <motion.div
-      className={[
-        "drag-card-shell",
-        dragging ? "drag-card-shell--dragging" : "",
-        pinned ? "drag-card-shell--pinned" : "",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      style={{
-        x: liveX,
-        y: liveY,
-        rotateX: liveRotX,
-        rotateY: liveRotY,
-        zIndex: dragging ? 40 : 1,
-      }}
-      data-card-id={cardId}
+  const cardInner = (
+    <CardVisual
+      title={title}
+      subtitle={subtitle}
+      icon={icon}
+      accent={accent}
+      dragging={dragging}
+      tilt={Boolean(tilt && dragging && !reduceMotion)}
+      pinned={pinned}
     >
-      {/* Plain div hosts use-gesture bind — avoids onDrag clash with motion */}
-      <div
-        className="drag-card-shell__hit"
-        style={{ touchAction: pinned ? "auto" : "none" }}
-        {...bind()}
+      {children}
+    </CardVisual>
+  );
+
+  const ghost =
+    dragging &&
+    originBox &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <motion.div
+        className={[
+          "drag-card-shell",
+          "drag-card-shell--dragging",
+          "drag-card-shell--ghost",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={{
+          position: "fixed",
+          left: originBox.left,
+          top: originBox.top,
+          width: originBox.width,
+          height: originBox.height,
+          x: liveX,
+          y: liveY,
+          rotateX: liveRotX,
+          rotateY: liveRotY,
+          zIndex: DRAG_LAYER_Z,
+          pointerEvents: "none",
+          margin: 0,
+        }}
+        data-card-id={cardId}
+        data-drag-ghost=""
+        aria-hidden
       >
-        <CardVisual
-          title={title}
-          subtitle={subtitle}
-          icon={icon}
-          accent={accent}
-          dragging={dragging}
-          tilt={Boolean(tilt && dragging && !reduceMotion)}
-          pinned={pinned}
+        {cardInner}
+      </motion.div>,
+      document.body,
+    );
+
+  return (
+    <>
+      <motion.div
+        ref={shellRef}
+        className={[
+          "drag-card-shell",
+          dragging ? "drag-card-shell--dragging drag-card-shell--placeholder" : "",
+          pinned ? "drag-card-shell--pinned" : "",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={{
+          // Keep layout slot; motion offset only on ghost while dragging
+          x: dragging ? 0 : liveX,
+          y: dragging ? 0 : liveY,
+          rotateX: dragging ? 0 : liveRotX,
+          rotateY: dragging ? 0 : liveRotY,
+          zIndex: 1,
+        }}
+        data-card-id={cardId}
+      >
+        <div
+          className="drag-card-shell__hit"
+          style={{ touchAction: pinned ? "auto" : "none" }}
+          {...bind()}
         >
-          {children}
-        </CardVisual>
-      </div>
-    </motion.div>
+          {cardInner}
+        </div>
+      </motion.div>
+      {ghost}
+    </>
   );
 }
 
@@ -175,15 +267,16 @@ export function DragCard({
  *     subtitle="1 AP"
  *     accent="var(--signal-attack, #e85d4c)"
  *     tilt
- *     onDropZone={(zoneId) => {
- *       if (zoneId === "frontline") commitPlay("atk-1");
- *     }}
  *   />
  * </CardBoard>
  *
  * Notes:
  * - Always wrap DragCard + DropZone in the same <CardBoard>.
+ * - Prefer DropZone.onDrop for the action; DragCard.onDropZone is fallback only
+ *   when the zone has no onDrop (never fires both).
  * - accepts?: string[] on DropZone filters by cardId ("*" = any).
  * - pinned disables drag; tilt is off under prefers-reduced-motion.
+ * - returnHome (default true) springs the card back after release.
+ * - While dragging, a fixed portal ghost paints above chrome (z-index 12000).
  * - Styles live in app.css (.drag-card*, .drop-zone*). No Tailwind.
  */

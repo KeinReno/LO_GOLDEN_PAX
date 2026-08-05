@@ -1,10 +1,22 @@
 {
-  "apPerTurn": 3,
+  "apPerTurn": 9,
+  "forceAp": {
+    "base": 2,
+    "perFleet": 1,
+    "perLegion": 1,
+    "max": 8
+  },
   "apBanking": false,
   "tickTimezone": "Europe/Moscow",
   "tickCron": "1 0 * * *",
   "conflictPolicy": "submitted_at_asc",
   "economyMergeOrder": ["flat", "mult"],
+  "modifierCaps": {
+    "production": { "min": 0.5, "max": 2.0 },
+    "upkeep": { "min": 0.5, "max": 1.5 },
+    "research": { "min": 0.5, "max": 1.0 },
+    "cost": { "min": 0.75, "max": 1.5 }
+  },
   "deficit": {
     "lowRatio": 0.15,
     "emptyAt": 0,
@@ -38,9 +50,35 @@
   },
   "cardBattle": {
     "handSize": 4,
-    "drawPerRound": 1,
-    "maxRounds": 8,
+    "maxHandSize": 7,
+    "drawPerRound": 2,
+    "maxRounds": 4,
+    "energyPerRound": 4,
+    "maxFront": 5,
+    "minDeckCards": 6,
     "forceCardThreshold": 5,
+    "stanceOrderCooldownRounds": 2,
+    "blockRetainHold": 0.25,
+    "vulnerableMult": 1.5,
+    "weakMult": 0.75,
+    "holdOrderBlock": 28,
+    "holdOpeningBlock": 12,
+    "braceBlockFactor": 0.35,
+    "braceBlockMin": 6,
+    "focusEnergyCost": 1,
+    "retreatLossMult": 0.45,
+    "freeReorderPerRound": 1,
+    "xpPerCardBattle": 50,
+    "overwhelmSplashMult": 0.35,
+    "trophies": {
+      "metalPerLostUnit": 1,
+      "metalFloor": 2,
+      "cognitioOnWin": 6,
+      "intelBump": 6,
+      "loyaltyHit": 5,
+      "styleCognitioPerBanner": 1,
+      "styleMaxCognitio": 3
+    },
     "triggers": {
       "mutualConsent": true,
       "gmForce": true,
@@ -94,6 +132,11 @@
     "blockadedIsDisconnected": true,
     "quarantineBreaksLogistics": true
   },
+  "movement": {
+    "rangeHops": 3,
+    "fleetRangeHops": null,
+    "legionRangeHops": null
+  },
   "fog": {
     "storage": "per_system",
     "fleetReveal": "ephemeral"
@@ -121,5 +164,13 @@
     "espionageCooldownTurns": 3,
     "tradeIntel": 2,
     "allianceIntel": 3
+  },
+  "alchemy": {
+    "attemptsPerTurn": 2,
+    "baseCost": 6,
+    "eraGapCost": 3,
+    "blindHit": 0.25,
+    "duplicateRefund": 0.5,
+    "comboCostFactor": 0
   }
 }

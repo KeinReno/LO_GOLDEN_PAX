@@ -55,7 +55,7 @@ import { fromIso, toIso } from "./iso";
 import { isoInBounds, isoViewportBounds } from "./viewportCull";
 import { isCorridorSystem, censusPlanets } from "../state/planets";
 import {
-  getVisibleSystemIds,
+  getVisibleSystemIdsWithFog,
   resolveEditorViewWorld,
 } from "../state/fog";
 import {
@@ -89,7 +89,14 @@ import { questsAtSystem } from "../state/mapFeatures";
 import { POI_PAINT_TOOLS } from "../state/types";
 import { hasSpaceObject } from "../state/spaceObjects";
 import { formatHopTurns, hopDistance, hopPath } from "../state/pathfinding";
-import { registerMapPngExporter } from "../io/mapExportBridge";
+import {
+  canAttackHostileUnit,
+  systemHasHostileInvaders,
+} from "../state/combatEligibility";
+import {
+  registerMapPngExporter,
+  type MapPngExportOptions,
+} from "../io/mapExportBridge";
 import { GESTURE } from "../ui/gestureMap";
 
 const SYSTEM_HIT_R = 20;
@@ -314,6 +321,11 @@ function fitSystemsInView(
   }
   const bw = Math.max(maxX - minX, 120);
   const bh = Math.max(maxY - minY, 120);
+  if (minX === Infinity || minY === Infinity) {
+    layer.position.set(screenW / 2, screenH / 2);
+    layer.scale.set(0.55);
+    return;
+  }
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
   const scale = Math.min(
@@ -360,13 +372,22 @@ function territoryFingerprint(world: WorldState): string {
   const fac = world.factions
     .map(
       (f) =>
-        `${f.id}:${f.color}:${f.fillColor ?? ""}:${f.borderColor ?? ""}:${f.systemColor ?? ""}`,
+        `${f.id}:${f.kind ?? ""}:${f.color}:${f.fillColor ?? ""}:${f.borderColor ?? ""}:${f.systemColor ?? ""}`,
     )
     .join("|");
   return `${sys}||${fac}`;
 }
 
 export type UnitDropIntent = "move" | "attack" | "claim";
+
+/** Hostile fleet/legion under drag pointer (viewer attack snap). */
+export type HostileUnitDropTarget = {
+  targetKind: "fleet" | "legion";
+  targetId: string;
+  systemId: string;
+  isoX: number;
+  isoY: number;
+};
 
 export type MapUnitDropPayload = {
   kind: "fleet" | "legion";
@@ -376,6 +397,10 @@ export type MapUnitDropPayload = {
   hops: number;
   /** Resolved from target ownership: own→move, enemy/contested→attack, unowned→claim. */
   intent?: UnitDropIntent;
+  /** Drop snapped to hostile unit glyph (not only system). */
+  targetUnitKind?: "fleet" | "legion";
+  targetUnitId?: string;
+  targetFactionId?: string;
 };
 
 /**
@@ -385,12 +410,21 @@ export type MapUnitDropPayload = {
 export function resolveDropIntent(
   target: StarSystem,
   playerFactionId: string | null,
+  world?: WorldState,
 ): UnitDropIntent {
   if (!playerFactionId) return "move";
   if (target.contested) return "attack";
   const owner = target.ownerFactionId;
   if (!owner) return "claim";
-  if (owner === playerFactionId) return "move";
+  if (owner === playerFactionId) {
+    if (
+      world &&
+      systemHasHostileInvaders(world, playerFactionId, target.id)
+    ) {
+      return "attack";
+    }
+    return "move";
+  }
   const co = target.coOwnerFactionIds ?? [];
   if (co.includes(playerFactionId)) return "move";
   return "attack";
@@ -420,6 +454,8 @@ interface MapCanvasProps {
   playerFactionId?: string | null;
   /** Viewer: drop after drag → submit move order (editor relocates in-store). */
   onUnitDrop?: (drop: MapUnitDropPayload) => void;
+  /** Viewer: drag-drop could not apply (show message). */
+  onUnitDropReject?: (message: string) => void;
   /** Viewer: highlight own unit while dragging (no sheet). */
   onUnitDragStart?: (kind: "fleet" | "legion", unitId: string) => void;
   /** Viewer RMB menu (editor uses worldStore contextMenu). */
@@ -482,6 +518,7 @@ export function MapCanvas({
   onLegionClick,
   playerFactionId = null,
   onUnitDrop,
+  onUnitDropReject,
   onUnitDragStart,
   onViewerContextMenu,
   onSystemHold,
@@ -582,6 +619,7 @@ export function MapCanvas({
     startScreenY: number;
     pointerId: number | null;
   } | null>(null);
+  const unitDropHoverRef = useRef<HostileUnitDropTarget | null>(null);
   const longPressRef = useRef<{
     timer: number;
     progressRaf?: number;
@@ -638,6 +676,7 @@ export function MapCanvas({
   const onFleetClickRef = useRef(onFleetClick);
   const onLegionClickRef = useRef(onLegionClick);
   const onUnitDropRef = useRef(onUnitDrop);
+  const onUnitDropRejectRef = useRef(onUnitDropReject);
   const onUnitDragStartRef = useRef(onUnitDragStart);
   const onViewerContextMenuRef = useRef(onViewerContextMenu);
   const onSystemHoldRef = useRef(onSystemHold);
@@ -652,6 +691,7 @@ export function MapCanvas({
   onFleetClickRef.current = onFleetClick;
   onLegionClickRef.current = onLegionClick;
   onUnitDropRef.current = onUnitDrop;
+  onUnitDropRejectRef.current = onUnitDropReject;
   onUnitDragStartRef.current = onUnitDragStart;
   onViewerContextMenuRef.current = onViewerContextMenu;
   onSystemHoldRef.current = onSystemHold;
@@ -670,6 +710,7 @@ export function MapCanvas({
         ? resolveEditorViewWorld(s.world, {
             activeFactionId: s.activeFactionId,
             gmOmniscientView: s.gmOmniscientView,
+            fogMask: s.fogMaskPreview,
           })
         : s.world;
     return {
@@ -714,11 +755,16 @@ export function MapCanvas({
     if (!host) return;
     let cancelled = false;
     let ready = false;
+    let ro: ResizeObserver | null = null;
     let onTick: ((ticker: { deltaMS: number }) => void) | null = null;
     const app = new Application();
     const getModel = () => readModelRef.current?.() ?? defaultRead();
 
     const safeDestroy = () => {
+      if (ro) {
+        ro.disconnect();
+        ro = null;
+      }
       if (zoomSettleTimerRef.current) {
         clearTimeout(zoomSettleTimerRef.current);
         zoomSettleTimerRef.current = null;
@@ -844,21 +890,6 @@ export function MapCanvas({
       });
       ready = true;
 
-      registerMapPngExporter(async () => {
-        try {
-          const extract = app.renderer.extract;
-          if (!extract) return null;
-          // Full stage (table + map) — avoids black WebGL buffer dump
-          const dataUrl = await extract.base64({
-            target: app.stage,
-            format: "png",
-          });
-          return dataUrl || null;
-        } catch (err) {
-          console.warn("[GMap] extract.base64 failed", err);
-          return null;
-        }
-      });
       if (cancelled) {
         safeDestroy();
         return;
@@ -982,6 +1013,11 @@ export function MapCanvas({
       worldLayer.addChild(fleetsG, legionsG, labelPlatesG, labels, brushG);
       app.stage.addChild(worldLayer);
 
+      if (cancelled) {
+        safeDestroy();
+        return;
+      }
+
       applyFit();
       requestAnimationFrame(() => {
         applyFit();
@@ -991,7 +1027,8 @@ export function MapCanvas({
         });
       });
 
-      const ro = new ResizeObserver(() => {
+      ro = new ResizeObserver(() => {
+        if (cancelled || !ready || !app.renderer) return;
         const prevW = app.screen.width;
         const prevH = app.screen.height;
         if (!syncRendererSize()) return;
@@ -1187,18 +1224,24 @@ export function MapCanvas({
         return best;
       };
 
-      const findFleetAt = (p: Point, model: MapViewModel): string | null => {
+      const findFleetAt = (
+        p: Point,
+        model: MapViewModel,
+        excludeFleetId?: string | null,
+        expandHit = false,
+      ): string | null => {
         if (model.showFleets === false) return null;
         const tip = toIso(p.x, p.y);
         const byId = new Map(model.world.systems.map((s) => [s.id, s]));
         const bySystem = new Map<string, typeof model.world.fleets>();
         for (const f of model.world.fleets) {
+          if (excludeFleetId && f.id === excludeFleetId) continue;
           const list = bySystem.get(f.systemId) ?? [];
           list.push(f);
           bySystem.set(f.systemId, list);
         }
         let bestId: string | null = null;
-        let bestD = isoHitR(FLEET_HIT_R) ** 2;
+        let bestD = isoHitR(expandHit ? FLEET_HIT_R * 1.45 : FLEET_HIT_R) ** 2;
         const anim = animRef.current;
         for (const [sysId, fleets] of bySystem) {
           const sys = byId.get(sysId);
@@ -1224,18 +1267,24 @@ export function MapCanvas({
         return bestId;
       };
 
-      const findLegionAt = (p: Point, model: MapViewModel): string | null => {
+      const findLegionAt = (
+        p: Point,
+        model: MapViewModel,
+        excludeLegionId?: string | null,
+        expandHit = false,
+      ): string | null => {
         if (model.showLegions === false) return null;
         const tip = toIso(p.x, p.y);
         const byId = new Map(model.world.systems.map((s) => [s.id, s]));
         const bySystem = new Map<string, typeof model.world.legions>();
-        for (const l of model.world.legions) {
+        for (const l of model.world.legions ?? []) {
+          if (excludeLegionId && l.id === excludeLegionId) continue;
           const list = bySystem.get(l.systemId) ?? [];
           list.push(l);
           bySystem.set(l.systemId, list);
         }
         let bestId: string | null = null;
-        let bestD = isoHitR(LEGION_HIT_R) ** 2;
+        let bestD = isoHitR(expandHit ? LEGION_HIT_R * 1.45 : LEGION_HIT_R) ** 2;
         const anim = animRef.current;
         for (const [sysId, legs] of bySystem) {
           const sys = byId.get(sysId);
@@ -1249,6 +1298,101 @@ export function MapCanvas({
           }
         }
         return bestId;
+      };
+
+      type HostileUnitDrop = HostileUnitDropTarget;
+
+      const findHostileUnitAt = (
+        p: Point,
+        model: MapViewModel,
+        playerFid: string | null,
+        dragKind: "fleet" | "legion",
+        dragId: string,
+      ): HostileUnitDrop | null => {
+        if (!playerFid) return null;
+        const anim = animRef.current;
+        const excludeFleet =
+          dragKind === "fleet" && unitDragRef.current?.moved ? dragId : null;
+        const excludeLegion =
+          dragKind === "legion" && unitDragRef.current?.moved ? dragId : null;
+
+        const tryLegion = (): HostileUnitDrop | null => {
+          const legionId = findLegionAt(p, model, excludeLegion, true);
+          if (!legionId) return null;
+          const leg = (model.world.legions ?? []).find((x) => x.id === legionId);
+          if (!leg || leg.factionId === playerFid) return null;
+          if (
+            !canAttackHostileUnit(
+              model.world,
+              playerFid,
+              leg.factionId,
+              leg.systemId,
+            )
+          ) {
+            return null;
+          }
+          const sys = model.world.systems.find((s) => s.id === leg.systemId);
+          if (!sys) return null;
+          const legs = (model.world.legions ?? []).filter(
+            (x) => x.systemId === sys.id && x.id !== excludeLegion,
+          );
+          for (const slot of layoutLegionsAroundSystem(sys, legs, anim)) {
+            if (slot.legion.id === legionId) {
+              return {
+                targetKind: "legion",
+                targetId: legionId,
+                systemId: leg.systemId,
+                isoX: slot.x,
+                isoY: slot.y,
+              };
+            }
+          }
+          return null;
+        };
+
+        const tryFleet = (): HostileUnitDrop | null => {
+          const fleetId = findFleetAt(p, model, excludeFleet, true);
+          if (!fleetId) return null;
+          const f = model.world.fleets.find((x) => x.id === fleetId);
+          if (!f || f.factionId === playerFid) return null;
+          if (
+            !canAttackHostileUnit(
+              model.world,
+              playerFid,
+              f.factionId,
+              f.systemId,
+            )
+          ) {
+            return null;
+          }
+          const sys = model.world.systems.find((s) => s.id === f.systemId);
+          if (!sys) return null;
+          const fleets = model.world.fleets.filter(
+            (x) => x.systemId === sys.id && x.id !== excludeFleet,
+          );
+          for (const slot of layoutFleetsAroundSystem(
+            sys,
+            fleets,
+            anim,
+            model.selectedFleetId,
+          )) {
+            if (slot.fleet.id === fleetId) {
+              return {
+                targetKind: "fleet",
+                targetId: fleetId,
+                systemId: f.systemId,
+                isoX: slot.x,
+                isoY: slot.y,
+              };
+            }
+          }
+          return null;
+        };
+
+        if (dragKind === "legion") {
+          return tryLegion() ?? tryFleet();
+        }
+        return tryFleet() ?? tryLegion();
       };
 
       app.stage.eventMode = "static";
@@ -1370,8 +1514,12 @@ export function MapCanvas({
           const state = useWorldStore.getState();
           state.setContextMenu(null);
           // Hit-test against the same sliced view the canvas draws (FoW).
+          const fullWorld = state.world;
           const viewSystems = getModel().world.systems;
           const viewLinks = getModel().world.links;
+          const fogTool =
+            state.tool === "fog_paint" || state.tool === "fog_erase";
+          const hitPool = fogTool ? fullWorld.systems : viewSystems;
 
           if (state.pendingUnitOrder) {
             const target = findSystemAt(worldPos, viewSystems);
@@ -1443,7 +1591,7 @@ export function MapCanvas({
             return;
           }
 
-          const hit = findSystemAt(worldPos, viewSystems);
+          const hit = findSystemAt(worldPos, hitPool);
           const fleetHit = findFleetAt(worldPos, getModel());
           const legionHit = findLegionAt(worldPos, getModel());
           const linkHit = findLinkAt(worldPos, viewLinks, viewSystems);
@@ -1549,27 +1697,34 @@ export function MapCanvas({
             const token = (
               window as unknown as { __GMAP_MASTER_TOKEN?: string }
             ).__GMAP_MASTER_TOKEN;
-            if (!token) return;
-            void fetch("/api/fog/paint", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Master-Token": token,
-              },
-              body: JSON.stringify({
-                factionId: fac,
-                systemIds: [hit.id],
-                mode: state.tool === "fog_erase" ? "erase" : "paint",
-              }),
-            }).then(async (res) => {
-              if (!res.ok) return;
-              const data = (await res.json()) as {
-                fog?: { masks?: Record<string, string[]> };
-              };
-              useWorldStore.getState().setFogMaskPreview(
-                data.fog?.masks?.[fac] ?? [],
-              );
-            });
+            const sync = (
+              window as unknown as { __GMAP_SYNC_MSG?: (msg: string) => void }
+            ).__GMAP_SYNC_MSG;
+            const ids =
+              state.selectedSystemIds.includes(hit.id) &&
+              state.selectedSystemIds.length > 1
+                ? state.selectedSystemIds
+                : [hit.id];
+            const mode = state.tool === "fog_erase" ? "erase" : "paint";
+            void state
+              .paintFogBrush(ids, mode, token ?? "")
+              .then((result) => {
+                dirtyRef.current = true;
+                if (!sync) return;
+                if (result.ok) {
+                  const names = ids
+                    .map(
+                      (id) =>
+                        fullWorld.systems.find((s) => s.id === id)?.name ?? id,
+                    )
+                    .join(", ");
+                  sync(
+                    `Туман${mode === "erase" ? "−" : "+"} · ${names} (${ids.length})`,
+                  );
+                } else {
+                  sync(result.error ?? "Ошибка тумана");
+                }
+              });
             return;
           }
 
@@ -1656,8 +1811,8 @@ export function MapCanvas({
             state.selectLegion(legionHit);
             state.selectFleet(null);
             state.selectLink(null);
-            state.selectSystem(
-              state.world.legions.find((l) => l.id === legionHit)?.systemId ??
+              state.selectSystem(
+              (state.world.legions ?? []).find((l) => l.id === legionHit)?.systemId ??
                 null,
             );
             unitDragRef.current = {
@@ -1777,6 +1932,37 @@ export function MapCanvas({
               clearLongPress();
               panRef.current.active = false;
             }
+            if (d.moved && mode === "viewer") {
+              const hover = findHostileUnitAt(
+                p,
+                getModel(),
+                playerFactionIdRef.current,
+                d.kind,
+                d.id,
+              );
+              if (
+                hover &&
+                playerFactionIdRef.current &&
+                !canAttackHostileUnit(
+                  getModel().world,
+                  playerFactionIdRef.current,
+                  hover.targetKind === "fleet"
+                    ? getModel().world.fleets.find(
+                        (f) => f.id === hover.targetId,
+                      )!.factionId
+                    : getModel().world.legions.find(
+                        (l) => l.id === hover.targetId,
+                      )!.factionId,
+                  hover.systemId,
+                )
+              ) {
+                unitDropHoverRef.current = null;
+              } else {
+                unitDropHoverRef.current = hover;
+              }
+            } else {
+              unitDropHoverRef.current = null;
+            }
             dirtyRef.current = true;
             return;
           }
@@ -1879,8 +2065,71 @@ export function MapCanvas({
             const drag = unitDragRef.current;
             releaseUnitPointer();
             unitDragRef.current = null;
+            unitDropHoverRef.current = null;
             if (drag.moved && !longFired) {
               const modelNow = getModel();
+              const playerFid = playerFactionIdRef.current;
+              let dropHandled = false;
+              const hostile = findHostileUnitAt(
+                lastPointerWorldRef.current,
+                modelNow,
+                playerFid,
+                drag.kind,
+                drag.id,
+              );
+              if (hostile && mode === "viewer" && playerFid) {
+                const unit =
+                  drag.kind === "fleet"
+                    ? modelNow.world.fleets.find((f) => f.id === drag.id)
+                    : (modelNow.world.legions ?? []).find((l) => l.id === drag.id);
+                const fromSystemId = unit?.systemId ?? "";
+                const travelMode =
+                  drag.kind === "fleet" ? "fleet" : "legion";
+                const hops = hopDistance(
+                  modelNow.world,
+                  fromSystemId,
+                  hostile.systemId,
+                  travelMode,
+                );
+                const targetFac =
+                  hostile.targetKind === "fleet"
+                    ? modelNow.world.fleets.find(
+                        (f) => f.id === hostile.targetId,
+                      )?.factionId
+                    : (modelNow.world.legions ?? []).find(
+                        (l) => l.id === hostile.targetId,
+                      )?.factionId;
+                const attackOk =
+                  !!targetFac &&
+                  canAttackHostileUnit(
+                    modelNow.world,
+                    playerFid,
+                    targetFac,
+                    hostile.systemId,
+                  ) &&
+                  Number.isFinite(hops) &&
+                  hops >= 0;
+                if (attackOk && fromSystemId) {
+                  onUnitDropRef.current?.({
+                    kind: drag.kind,
+                    unitId: drag.id,
+                    fromSystemId,
+                    toSystemId: hostile.systemId,
+                    hops,
+                    intent: "attack",
+                    targetUnitKind: hostile.targetKind,
+                    targetUnitId: hostile.targetId,
+                    targetFactionId: targetFac,
+                  });
+                  dropHandled = true;
+                } else if (hostile) {
+                  onUnitDropRejectRef.current?.(
+                    "Нельзя атаковать эту цель (нет войны или прав)",
+                  );
+                }
+              }
+
+              if (!dropHandled) {
               const target = findSystemAt(
                 lastPointerWorldRef.current,
                 modelNow.world.systems,
@@ -1890,7 +2139,7 @@ export function MapCanvas({
                 const unit =
                   drag.kind === "fleet"
                     ? modelNow.world.fleets.find((f) => f.id === drag.id)
-                    : modelNow.world.legions.find((l) => l.id === drag.id);
+                    : (modelNow.world.legions ?? []).find((l) => l.id === drag.id);
                 const fromSystemId = unit?.systemId ?? "";
                 const travelMode =
                   drag.kind === "fleet" ? "fleet" : "legion";
@@ -1901,15 +2150,18 @@ export function MapCanvas({
                   travelMode,
                 );
                 if (mode === "viewer") {
-                  if (
+                  const intent = resolveDropIntent(
+                    target,
+                    playerFactionIdRef.current,
+                    modelNow.world,
+                  );
+                  const sameSystem = fromSystemId === target.id;
+                  const canDrop =
                     fromSystemId &&
-                    fromSystemId !== target.id &&
-                    Number.isFinite(hops)
-                  ) {
-                    const intent = resolveDropIntent(
-                      target,
-                      playerFactionIdRef.current,
-                    );
+                    Number.isFinite(hops) &&
+                    hops >= 0 &&
+                    (!sameSystem || intent === "attack");
+                  if (canDrop && (hops > 0 || (sameSystem && intent === "attack"))) {
                     onUnitDropRef.current?.({
                       kind: drag.kind,
                       unitId: drag.id,
@@ -1927,6 +2179,7 @@ export function MapCanvas({
                     st.relocateLegion(drag.id, target.id);
                   }
                 }
+              }
               }
             } else if (mode === "viewer" && !longFired) {
               // Tap without drag → select
@@ -2048,8 +2301,8 @@ export function MapCanvas({
             );
           } else if (legionHit) {
             state.selectLegion(legionHit);
-            state.selectSystem(
-              state.world.legions.find((l) => l.id === legionHit)?.systemId ??
+              state.selectSystem(
+              (state.world.legions ?? []).find((l) => l.id === legionHit)?.systemId ??
                 null,
             );
           } else if (hit) {
@@ -2170,7 +2423,10 @@ export function MapCanvas({
         if (gfx.tableFx) {
           const ambient = ambientGRef.current;
           if (ambient) {
-            drawStarfield(ambient, anim, { lite, cinematic: cinematicBoost });
+            drawStarfield(ambient, anim, {
+              lite,
+              cinematic: cinematicBoost,
+            });
             // Nudge transform so WebGL presents even when the camera is still.
             ambient.rotation = (fxFrame & 1) * 1e-6;
           }
@@ -2260,7 +2516,7 @@ export function MapCanvas({
           /* mid-teardown */
         }
 
-        if (gfx.animations && tier !== "bare" && app.renderer) {
+        if (tier !== "bare" && app.renderer && gfx.animations) {
           // Explicit present: some GPUs skip frames until a layer moves.
           try {
             app.renderer.render(app.stage);
@@ -2276,7 +2532,10 @@ export function MapCanvas({
       (host as HTMLDivElement & {
         __gmapTouchCleanup?: () => void;
       }).__gmapTouchCleanup = () => {
-          ro.disconnect();
+          if (ro) {
+            ro.disconnect();
+            ro = null;
+          }
           try {
             app.canvas?.removeEventListener("touchstart", onTouchStart);
             app.canvas?.removeEventListener("touchmove", onTouchMove);
@@ -2323,6 +2582,17 @@ export function MapCanvas({
       }
       g.stroke({ width: 2, color: 0x7bdff2, alpha: 0.75 });
     }
+
+    const waitFrames = (n = 2) =>
+      new Promise<void>((resolve) => {
+        let left = n;
+        const step = () => {
+          left -= 1;
+          if (left <= 0) resolve();
+          else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
 
     /** @param pulseOnly skip territory/links/floor — idle glyph breathe only */
     function redrawAll(pulseOnly = false) {
@@ -2463,7 +2733,11 @@ export function MapCanvas({
         gmOmniscientView &&
         showFogPreview &&
         activeFactionId
-          ? getVisibleSystemIds(useWorldStore.getState().world, activeFactionId)
+          ? getVisibleSystemIdsWithFog(
+              useWorldStore.getState().world,
+              activeFactionId,
+              fogMaskPreview ?? [],
+            )
           : null;
       const maskSet =
         fogMaskPreview && fogMaskPreview.length > 0
@@ -2595,7 +2869,12 @@ export function MapCanvas({
         drawSupplyChains(linksG, world, activeFactionId ?? null, anim);
       }
 
-      if (showDiplomacy && !bare && tier !== "lite") {
+      if (
+        showDiplomacy &&
+        mode !== "viewer" &&
+        !bare &&
+        tier !== "lite"
+      ) {
         drawDiplomacyLines(diplomacyG, world, anim);
       } else {
         diplomacyG.clear();
@@ -2628,7 +2907,7 @@ export function MapCanvas({
           }
           if (!fromId && order.legionId) {
             fromId =
-              world.legions.find((l) => l.id === order.legionId)?.systemId ??
+              (world.legions ?? []).find((l) => l.id === order.legionId)?.systemId ??
               null;
           }
           const from = fromId ? byId.get(fromId) : null;
@@ -2796,11 +3075,13 @@ export function MapCanvas({
           (maskSet && maskSet.has(s.id))
         );
 
-        if (!fogged && gfx.animations && !bare) {
+        if (!fogged && !bare) {
           const col = s.ownerFactionId
             ? (factionSystem.get(s.ownerFactionId) ?? 0x8a93a5)
             : 0x6b7358;
-          breathSites.push({ ix: ip.x, iy: ip.y, color: col });
+          if (gfx.animations) {
+            breathSites.push({ ix: ip.x, iy: ip.y, color: col });
+          }
         }
 
         const emphasize =
@@ -3171,6 +3452,7 @@ export function MapCanvas({
         : null;
 
       let dropTarget: StarSystem | null = null;
+      const hostileUnitDrop = unitDropHoverRef.current;
       if (drag?.moved && dragIso) {
         const tip = dragIso;
         let bestD = SYSTEM_DROP_R * SYSTEM_DROP_R;
@@ -3184,13 +3466,94 @@ export function MapCanvas({
             dropTarget = s;
           }
         }
+        if (hostileUnitDrop) {
+          dropTarget =
+            world.systems.find((s) => s.id === hostileUnitDrop.systemId) ??
+            dropTarget;
+        }
       }
 
-      if (dropTarget && drag) {
+      if (hostileUnitDrop && drag) {
         const unit =
           drag.kind === "fleet"
             ? world.fleets.find((x) => x.id === drag.id)
-            : world.legions.find((x) => x.id === drag.id);
+            : (world.legions ?? []).find((x) => x.id === drag.id);
+        const travelMode = drag.kind === "fleet" ? "fleet" : "legion";
+        const hops = hopDistance(
+          world,
+          unit?.systemId,
+          hostileUnitDrop.systemId,
+          travelMode,
+        );
+        const path = hopPath(
+          world,
+          unit?.systemId,
+          hostileUnitDrop.systemId,
+          travelMode,
+        );
+        const reachable = Number.isFinite(hops) && hops > 0;
+        const same = hops === 0;
+        const ring = 0xe85d4c;
+        const ringSoft = 0xff8a7a;
+        const ringAlpha = reachable || same ? 0.92 : 0.5;
+        if (path.length >= 2) {
+          for (let pass = 0; pass < 2; pass++) {
+            for (let i = 0; i < path.length - 1; i++) {
+              const a = byId.get(path[i]!);
+              const b = byId.get(path[i + 1]!);
+              if (!a || !b) continue;
+              const ai = toIso(a.x, a.y);
+              const bi = toIso(b.x, b.y);
+              fleetsG.moveTo(ai.x, ai.y);
+              fleetsG.lineTo(bi.x, bi.y);
+            }
+            fleetsG.stroke(
+              pass === 0
+                ? { width: 5, color: 0x05070c, alpha: 0.55 }
+                : { width: 2.4, color: ring, alpha: ringAlpha },
+            );
+          }
+        }
+        fleetsG.circle(hostileUnitDrop.isoX, hostileUnitDrop.isoY, 22);
+        fleetsG.stroke({ width: 2.4, color: ring, alpha: 0.95 });
+        fleetsG.circle(hostileUnitDrop.isoX, hostileUnitDrop.isoY, 14);
+        fleetsG.stroke({ width: 1, color: ringSoft, alpha: 0.5 });
+        const targetName =
+          hostileUnitDrop.targetKind === "fleet"
+            ? world.fleets.find((f) => f.id === hostileUnitDrop!.targetId)
+                ?.name
+            : (world.legions ?? []).find((l) => l.id === hostileUnitDrop!.targetId)
+                ?.name;
+        const hint = same
+          ? `атака · ${targetName ?? "цель"}`
+          : reachable
+            ? `атака · ${formatHopTurns(hops)}`
+            : "нет пути";
+        let tip = dragHintLabelRef.current;
+        if (!tip) {
+          tip = new Text({
+            text: hint,
+            style: {
+              fontSize: 14,
+              fill: 0xffb0a4,
+              fontFamily: "Rajdhani, Segoe UI, sans-serif",
+              fontWeight: "700",
+              stroke: { color: 0x05070c, width: 3.5 },
+            },
+          });
+          tip.anchor.set(0.5, 1);
+          dragHintLabelRef.current = tip;
+          labels.addChild(tip);
+        }
+        tip.text = hint;
+        tip.style.fill = reachable || same ? 0xffb0a4 : 0xff8a7a;
+        tip.visible = true;
+        tip.position.set(hostileUnitDrop.isoX, hostileUnitDrop.isoY - 28);
+      } else if (dropTarget && drag) {
+        const unit =
+          drag.kind === "fleet"
+            ? world.fleets.find((x) => x.id === drag.id)
+            : (world.legions ?? []).find((x) => x.id === drag.id);
         const travelMode = drag.kind === "fleet" ? "fleet" : "legion";
         const hops = hopDistance(
           world,
@@ -3209,7 +3572,11 @@ export function MapCanvas({
         // Intent color: gold=move, red=attack, cyan=claim. Reachability dims it.
         const intent =
           mode === "viewer"
-            ? resolveDropIntent(dropTarget, playerFactionIdRef.current)
+            ? resolveDropIntent(
+                dropTarget,
+                playerFactionIdRef.current,
+                world,
+              )
             : "move";
         const intentColor =
           intent === "attack"
@@ -3223,7 +3590,7 @@ export function MapCanvas({
             : intent === "claim"
               ? 0x9be8f6
               : 0xffe08a;
-        const unreachable = !reachable && !same;
+        const unreachable = !reachable && !(same && intent === "attack");
         const ring = unreachable ? 0xe85d4c : intentColor;
         const ringSoft = unreachable ? 0xff8a7a : intentSoft;
         const ringAlpha = reachable ? 0.92 : same ? 0.6 : 0.5;
@@ -3265,7 +3632,9 @@ export function MapCanvas({
         const intentLabel =
           intent === "attack" ? "атака" : intent === "claim" ? "захват" : "";
         const hint = same
-          ? "уже здесь"
+          ? intent === "attack"
+            ? "атака · здесь"
+            : "уже здесь"
           : reachable
             ? `${intentLabel ? `${intentLabel} · ` : ""}${formatHopTurns(hops)}`
             : "нет пути";
@@ -3472,7 +3841,7 @@ export function MapCanvas({
           }
         }
         if (drag?.kind === "legion" && drag.moved && dragIso) {
-          const l = world.legions.find((x) => x.id === drag.id);
+          const l = (world.legions ?? []).find((x) => x.id === drag.id);
           if (l) {
             const col = factionSystem.get(l.factionId) ?? 0xcccccc;
             if (useUnitSprites) {
@@ -3566,6 +3935,94 @@ export function MapCanvas({
         brushG.stroke({ width: 1.5, color: 0xe8c547, alpha: 0.85 });
       }
     }
+
+    registerMapPngExporter(async (opts?: MapPngExportOptions) => {
+      if (!ready || !app.renderer?.extract) return null;
+      const extract = app.renderer.extract;
+      const scope = opts?.scope ?? "viewport";
+      const layer = worldLayerRef.current;
+      if (!layer) return null;
+
+      const ensureRendererSize = () => {
+        const w = Math.max(1, host.clientWidth || 0);
+        const h = Math.max(1, host.clientHeight || 0);
+        if (w < 2 || h < 2) return false;
+        if (app.renderer.width !== w || app.renderer.height !== h) {
+          app.renderer.resize(w, h);
+        }
+        return true;
+      };
+
+      const captureStage = async () => {
+        try {
+          dirtyRef.current = true;
+          redrawAll(false);
+          app.renderer.render(app.stage);
+          await waitFrames(1);
+          const dataUrl = await extract.base64({
+            target: app.stage,
+            format: "png",
+          });
+          return dataUrl || null;
+        } catch (err) {
+          console.warn("[GMap] extract.base64 failed", err);
+          return null;
+        }
+      };
+
+      if (scope !== "playerVisible") {
+        return captureStage();
+      }
+
+      const st = useWorldStore.getState();
+      const factionId = opts?.factionId ?? st.activeFactionId;
+      if (!factionId) return null;
+
+      const visible = getVisibleSystemIdsWithFog(
+        st.world,
+        factionId,
+        st.fogMaskPreview,
+      );
+      const visibleSystems = st.world.systems.filter((s) => visible.has(s.id));
+      if (visibleSystems.length === 0) return null;
+
+      const saved = {
+        gmOmniscientView: st.gmOmniscientView,
+        showFogPreview: st.showFogPreview,
+        activeFactionId: st.activeFactionId,
+        layerX: layer.x,
+        layerY: layer.y,
+        layerScale: layer.scale.x,
+      };
+
+      try {
+        useWorldStore.setState({
+          gmOmniscientView: false,
+          showFogPreview: false,
+          activeFactionId: factionId,
+        });
+        await waitFrames(2);
+        if (!ensureRendererSize()) return null;
+        fitSystemsInView(
+          layer,
+          visibleSystems,
+          app.screen.width,
+          app.screen.height,
+          0.14,
+        );
+        return await captureStage();
+      } finally {
+        useWorldStore.setState({
+          gmOmniscientView: saved.gmOmniscientView,
+          showFogPreview: saved.showFogPreview,
+          activeFactionId: saved.activeFactionId,
+        });
+        layer.position.set(saved.layerX, saved.layerY);
+        layer.scale.set(saved.layerScale);
+        dirtyRef.current = true;
+        redrawAll(false);
+      }
+    });
 
     return () => {
       cancelled = true;

@@ -206,7 +206,7 @@ export function SystemDiveDock({
             {reservedAp}/{apMax}
           </strong>
           <span>
-            AP · M{metal} · S{supply}
+            ОД · мет.{metal} · снаб.{supply}
           </span>
         </div>
       </div>

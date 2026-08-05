@@ -1,0 +1,55 @@
+{
+  "_meta": {
+    "version": 2,
+    "note": "Привязка к уже существующим валютам биржи (faction_currencies). Новые FX не выдумывать."
+  },
+  "bindings": {
+    "faction_belator": {
+      "fxCurrencyId": "fx.belator_solarit",
+      "treasuryPeg": "map.solari"
+    },
+    "faction_khanate": {
+      "fxCurrencyId": "fx.belator_solarit",
+      "treasuryPeg": "map.solari"
+    },
+    "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": {
+      "fxCurrencyId": "fx.belator_solarit",
+      "treasuryPeg": "map.solari"
+    },
+    "faction_amalfea": {
+      "fxCurrencyId": "fx.aphel_ilir",
+      "treasuryPeg": "map.blumatid"
+    },
+    "faction_karned": {
+      "fxCurrencyId": "fx.karned_trill",
+      "treasuryPeg": "map.blumatid"
+    },
+    "faction_turon": {
+      "fxCurrencyId": "fx.turon_credit",
+      "treasuryPeg": "map.glasssteel"
+    },
+    "faction_nomad_f_08a06270a3": {
+      "fxCurrencyId": "fx.turon_credit",
+      "treasuryPeg": "map.glasssteel"
+    },
+    "faction_nomad_f_f3466a10f0": {
+      "fxCurrencyId": "fx.elan_doubloon",
+      "treasuryPeg": null
+    },
+    "faction_nomad_pax_terrialis": {
+      "fxCurrencyId": "fx.terrial_credit",
+      "treasuryPeg": null
+    },
+    "64928514-afb3-4cdb-b79c-23dd39cdcbd0": {
+      "fxCurrencyId": "fx.terrial_credit",
+      "treasuryPeg": null
+    }
+  },
+  "seedStocks": {
+    "faction_belator": { "map.solari": 16000 },
+    "faction_khanate": { "map.solari": 2400 },
+    "faction_amalfea": { "map.blumatid": 9000 },
+    "faction_karned": { "map.blumatid": 3500 },
+    "faction_turon": { "map.glasssteel": 4000 }
+  }
+}

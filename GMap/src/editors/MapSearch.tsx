@@ -17,6 +17,7 @@ export function MapSearch() {
   const world = useWorldStore((s) => s.world);
   const activeFactionId = useWorldStore((s) => s.activeFactionId);
   const gmOmniscientView = useWorldStore((s) => s.gmOmniscientView);
+  const fogMaskPreview = useWorldStore((s) => s.fogMaskPreview);
   const selectSystem = useWorldStore((s) => s.selectSystem);
   const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
   const openPlanetView = useWorldStore((s) => s.openPlanetView);
@@ -25,9 +26,12 @@ export function MapSearch() {
 
   const viewSystems = useMemo(
     () =>
-      resolveEditorViewWorld(world, { activeFactionId, gmOmniscientView })
-        .systems,
-    [world, activeFactionId, gmOmniscientView],
+      resolveEditorViewWorld(world, {
+        activeFactionId,
+        gmOmniscientView,
+        fogMask: fogMaskPreview,
+      }).systems,
+    [world, activeFactionId, gmOmniscientView, fogMaskPreview],
   );
 
   const hits = useMemo(() => {

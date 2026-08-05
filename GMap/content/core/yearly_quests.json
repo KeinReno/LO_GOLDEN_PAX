@@ -2,42 +2,97 @@
   "yq.hunger_1": {
     "id": "yq.hunger_1",
     "name": "Недород на окраине",
-    "summary": "На окраинной планете неурожай, население голодает.",
-    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "summary": "Окраинная колония теряет урожай — склады пустеют к зиме.",
+    "detail": "Местные советы просят зерно и технику. Можно спасти людей, сжать пояс или устроить «добровольный» сбор.",
     "category": "hunger",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "relief",
+        "label": "Открыть запасы",
+        "description": "Потратить bios и supply — лояльность вырастет.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -5
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": 3
+              "amount": 5
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "ration",
+        "label": "Ввести пайки",
+        "description": "Жёсткий учёт: supply +2, лояльность −3.",
         "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 2
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -4
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "levy",
+        "label": "Чрезвычайный сбор",
+        "description": "Рискнуть: либо металл с окраин, либо бунт лояльности.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -6
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
             }
           }
         ]
@@ -48,42 +103,81 @@
   "yq.hunger_2": {
     "id": "yq.hunger_2",
     "name": "Срыв поставок зерна",
-    "summary": "Конвой с зерном не дошёл — склады пустеют.",
-    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "summary": "Конвой с зерном исчез на перегоне — голодные очереди у портов.",
+    "detail": "Флот винит пиратов, купцы — бюрократию. Нужно решить, чем платить за спокойствие.",
     "category": "hunger",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "escort",
+        "label": "Выслать эскорт и зерно",
+        "description": "Supply −5, лояльность +4, металл −2 на охрану.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -6
+              "resource": "currency.supply",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "blame",
+        "label": "Свалить на подрядчика",
+        "description": "Сэкономить, потерять доверие.",
         "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
-              "amount": -5
+              "amount": -4
+            }
+          }
+        ]
+      },
+      {
+        "id": "buyout",
+        "label": "Скупить у спекулянтов",
+        "description": "Дорогой bios, быстрый эффект.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -8
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
             }
           }
         ]
@@ -94,118 +188,97 @@
   "yq.hunger_3": {
     "id": "yq.hunger_3",
     "name": "Засуха в колониях",
-    "summary": "Несколько колоний теряют урожай из-за засухи.",
-    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "summary": "Несколько миров теряют урожай из‑за аномальной засухи.",
+    "detail": "Инженеры предлагают перекачку воды и энергии; народ ждёт хлеба сейчас.",
     "category": "hunger",
     "filterBy": {
       "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "pipeline",
+        "label": "Аварийный водовод",
+        "description": "Energia −10, supply +4, лояльность +3.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -7
+              "resource": "currency.energia",
+              "amount": -10
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 4
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
-              "amount": 2
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_karned",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.hunger_4": {
-    "id": "yq.hunger_4",
-    "name": "Порча хранилищ",
-    "summary": "Вредители уничтожили часть продовольственных запасов.",
-    "detail": "Категория: hunger. Ситуативный ежходный квест.",
-    "category": "hunger",
-    "filterBy": {},
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -4
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
               "amount": 3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "migrate",
+        "label": "Эвакуировать рабочих",
+        "description": "Bios −3, extracta −2, лояльность −2 — но спасём кадры.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": -2
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
-              "amount": -4
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 3
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "cloudseed",
+        "label": "Засев облаков",
+        "description": "Эксперимент: успех даст bios, провал сожжёт energia.",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 13
           }
         ],
         "onSuccess": [
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
+              "resource": "currency.bios",
+              "amount": 6
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
               "amount": 2
             }
           }
@@ -214,15 +287,109 @@
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -2
+              "resource": "currency.energia",
+              "amount": -8
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.hunger_4": {
+    "id": "yq.hunger_4",
+    "name": "Порча хранилищ",
+    "summary": "Вредители и плесень уничтожили часть продовольственных запасов.",
+    "detail": "Склады либо чистить, либо списать и скрыть масштаб.",
+    "category": "hunger",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "purge",
+        "label": "Санитарная чистка",
+        "description": "Supply −4, industria −1, лояльность +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
               "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "cover",
+        "label": "Замять отчёт",
+        "description": "Ничего не тратим — лояльность −5, когда всплывёт.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -5
+            }
+          }
+        ]
+      },
+      {
+        "id": "salvage",
+        "label": "Переработать порчу",
+        "description": "Алхимики обещают materia из отходов… или отравление.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
             }
           }
         ]
@@ -233,17 +400,17 @@
   "yq.hunger_5": {
     "id": "yq.hunger_5",
     "name": "Голод в шахтёрском поясе",
-    "summary": "Шахтёрские поселения просят экстренной помощи.",
-    "detail": "Категория: hunger. Ситуативный ежходный квест.",
+    "summary": "Шахтёрские поселения требуют экстренной помощи — иначе встанут рудники.",
+    "detail": "Extracta зависит от сытых рук. Можно кормить, давить или торговать пайками за руду.",
     "category": "hunger",
     "filterBy": {
-      "lowLoyaltyRace": "race_swarm"
+      "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "feed",
+        "label": "Пайки шахтёрам",
+        "description": "Bios −5, extracta +3, лояльность +4.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -253,45 +420,83 @@
             }
           },
           {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 3
+            }
+          },
+          {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "crackdown",
+        "label": "Военный надзор",
+        "description": "Лояльность −6, extracta +2 силой.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": -5
+              "amount": -6
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "trade_food",
+        "label": "Еда за руду",
+        "description": "Supply −3 ↔ extracta +5, лояльность 0.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 5
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
   "yq.revolt_1": {
     "id": "yq.revolt_1",
     "name": "Брожение на заводах",
-    "summary": "Рабочие требуют снижения налогов и гарантий.",
-    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "summary": "Цеховые советы грозят остановить конвейеры.",
+    "detail": "Индустрия стоит на волоске. Уступки, штрейкбрехеры или риск переговоров.",
     "category": "revolt",
-    "filterBy": {
-      "minEra": 1
-    },
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "raise",
+        "label": "Повысить пайки",
+        "description": "Bios −6, industria +2, лояльность +5.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -301,146 +506,256 @@
             }
           },
           {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": 2
+            }
+          },
+          {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
+              "amount": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": "scabs",
+        "label": "Ввести штрейкбрехеров",
+        "description": "Лояльность −5, industria +3 сейчас.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "talks",
+        "label": "Арбитраж",
+        "description": "Успех: мир без трат. Провал: простой и злость.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.revolt_2": {
+    "id": "yq.revolt_2",
+    "name": "Уличные беспорядки",
+    "summary": "В столичном секторе жгут склады и блокируют трассы.",
+    "detail": "Силы порядка просят металл и патроны; политики — амнистию.",
+    "category": "revolt",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "police",
+        "label": "Жёсткий порядок",
+        "description": "Metal −4, лояльность −2, supply сохранён (+2).",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
               "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.revolt_2": {
-    "id": "yq.revolt_2",
-    "name": "Уличные беспорядки",
-    "summary": "В столичном мире вспыхнули стычки с охраной.",
-    "detail": "Категория: revolt. Ситуативный ежходный квест.",
-    "category": "revolt",
-    "filterBy": {
-      "requiresRace": "race_human"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "amnesty",
+        "label": "Амнистия и хлеб",
+        "description": "Bios −5, лояльность +6.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -7
+              "amount": -5
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
-              "amount": 3
+              "amount": 6
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "curfew",
+        "label": "Комендантский час",
+        "description": "Energia −3 на патрули, лояльность −3, metal +2 конфискат.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
-              "amount": -4
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 2
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
   "yq.revolt_3": {
     "id": "yq.revolt_3",
     "name": "Саботаж логистики",
-    "summary": "Неизвестные повредили узлы снабжения.",
-    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "summary": "Кто‑то режет кабели и поджигает депо — потоки рвутся.",
+    "detail": "Можно чинить, запугивать или ловить диверсантов наудачу.",
     "category": "revolt",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "repair",
+        "label": "Аварийный ремонт",
+        "description": "Materia −3, energia −4, supply +3, лояльность +2.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
+              "resource": "currency.materia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
               "amount": -4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 3
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": 4
+              "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "terror",
+        "label": "Показательные аресты",
+        "description": "Лояльность −7, cognitio +2 (досье).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -5
+              "amount": -7
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "hunt",
+        "label": "Охота на саботажников",
+        "description": "Успех: extracta трофеи. Провал: ещё один склад горит.",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 14
           }
         ],
         "onSuccess": [
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
+              "resource": "currency.extracta",
+              "amount": 4
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
               "amount": 2
             }
           }
@@ -449,15 +764,14 @@
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -2
+              "resource": "currency.supply",
+              "amount": -5
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -4
+              "amount": -3
             }
           }
         ]
@@ -469,301 +783,439 @@
     "id": "yq.revolt_4",
     "name": "Мятеж гарнизона",
     "summary": "Часть гарнизона отказывается выполнять приказы.",
-    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "detail": "Жалование, расформирование или рискованный поединок командиров.",
     "category": "revolt",
     "filterBy": {
       "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "pay",
+        "label": "Выплатить жалование",
+        "description": "Bios −7, metal −2, лояльность +4.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -5
+              "amount": -7
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
-              "amount": 2
+              "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "disband",
+        "label": "Расформировать роты",
+        "description": "Metal +3 со складов, лояльность −5, industria −1.",
         "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "duel",
+        "label": "Суд чести",
+        "description": "Командиры решают спор. Успех — дисциплина, провал — кровь.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 1
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -6
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
               "amount": -3
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
   "yq.revolt_5": {
     "id": "yq.revolt_5",
     "name": "Пропаганда сепаратистов",
-    "summary": "Листовки призывают к отделению окраин.",
-    "detail": "Категория: revolt. Ситуативный ежходный квест.",
+    "summary": "В сетях гуляет манифест «свободных миров».",
+    "detail": "Контрпропаганда, цензура или ставка на правду с риском.",
     "category": "revolt",
-    "filterBy": {
-      "lowLoyaltyRace": "race_karned"
-    },
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "broadcast",
+        "label": "Контрпропаганда",
+        "description": "Cognitio −5, energia −2, лояльность +4.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -6
+              "resource": "currency.cognitio",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
-              "amount": 3
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_karned",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.trade_1": {
-    "id": "yq.trade_1",
-    "name": "Выгодный караван",
-    "summary": "Купеческий дом предлагает льготный контракт.",
-    "detail": "Категория: trade. Ситуативный ежходный квест.",
-    "category": "trade",
-    "filterBy": {
-      "borderWithWar": true
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -7
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "censor",
+        "label": "Глушить каналы",
+        "description": "Лояльность −3, cognitio +3 (контроль).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
-              "amount": -5
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "debate",
+        "label": "Публичный диспут",
+        "description": "Успех: лояльность +5. Провал: манифест становится хитом (−4).",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
+  },
+  "yq.trade_1": {
+    "id": "yq.trade_1",
+    "name": "Выгодный караван",
+    "summary": "Нейтральный караван предлагает редкий груз по завышенной цене.",
+    "detail": "Купить, обложить пошлиной или рискнуть контрактом «на честном слове».",
+    "category": "trade",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "buy",
+        "label": "Купить всё",
+        "description": "Bios −8 → materia +5, supply +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -8
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "tariff",
+        "label": "Пошлина и досмотр",
+        "description": "Bios +4, лояльность купцов −2 (фракция −2).",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "handshake",
+        "label": "Сделка на слово",
+        "description": "Успех: дёшево. Провал: пустые контейнеры.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 10
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 6
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
   },
   "yq.trade_2": {
     "id": "yq.trade_2",
     "name": "Контрабандный маршрут",
-    "summary": "Контрабандисты ищут крышу за долю.",
-    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "summary": "Разведка нашла «серый» коридор мимо таможен.",
+    "detail": "Легализовать, закрыть или самим сесть на поток.",
     "category": "trade",
     "filterBy": {
       "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "legalize",
+        "label": "Легализовать и обложить",
+        "description": "Cognitio −2, bios +6, лояльность +1.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
+              "resource": "currency.cognitio",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
               "resource": "currency.bios",
-              "amount": -4
+              "amount": 6
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": 2
+              "amount": 1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "shut",
+        "label": "Перекрыть коридор",
+        "description": "Лояльность +2 (закон), metal −1 на блокпосты.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": -3
+              "amount": 2
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "skim",
+        "label": "Сесть на поток",
+        "description": "Успех: bios и extracta. Провал: скандал и штраф лояльности.",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 13
           }
         ],
         "onSuccess": [
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
+              "resource": "currency.bios",
+              "amount": 10
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_swarm",
-              "amount": 2
+              "resource": "currency.extracta",
+              "amount": 3
             }
           }
         ],
         "onFail": [
           {
-            "effect": "upkeep_flat",
+            "effect": "loyalty_add",
             "args": {
-              "resource": "currency.bios",
-              "amount": -2
+              "amount": -6
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "upkeep_flat",
             "args": {
-              "raceId": "race_swarm",
-              "amount": -4
+              "resource": "currency.cognitio",
+              "amount": -3
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
   "yq.trade_3": {
     "id": "yq.trade_3",
     "name": "Дефицит металла",
-    "summary": "Рынок металла взлетел — соседи просят обмен.",
-    "detail": "Категория: trade. Ситуативный ежходный квест.",
+    "summary": "Верфи и арсеналы жалуются: металл дорожает с каждым ходом.",
+    "detail": "Импорт, замена сплавами или азартная ставка на старый склад.",
     "category": "trade",
-    "filterBy": {
-      "hasRefugees": true
-    },
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -5
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": 3
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.trade_4": {
-    "id": "yq.trade_4",
-    "name": "Ярмарка на границе",
-    "summary": "Пограничная ярмарка сулит прибыль и шум.",
-    "detail": "Категория: trade. Ситуативный ежходный квест.",
-    "category": "trade",
-    "filterBy": {
-      "requiresRace": "race_human"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "import",
+        "label": "Экстренный импорт",
+        "description": "Bios −6 → metal +8.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -773,132 +1225,51 @@
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_human",
-              "amount": 4
+              "resource": "currency.metal",
+              "amount": 8
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_human",
-              "amount": -5
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.trade_5": {
-    "id": "yq.trade_5",
-    "name": "Срыв биржевой сделки",
-    "summary": "Сорвалась крупная сделка на общем рынке.",
-    "detail": "Категория: trade. Ситуативный ежходный квест.",
-    "category": "trade",
-    "filterBy": {
-      "minEra": 1,
-      "lowLoyaltyRace": "race_belator"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "substitute",
+        "label": "Сплавы-заменители",
+        "description": "Materia −4, metal +5, industria −1.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -7
+              "resource": "currency.materia",
+              "amount": -4
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_belator",
-              "amount": 2
+              "resource": "currency.metal",
+              "amount": 5
             }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_belator",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.pirates_1": {
-    "id": "yq.pirates_1",
-    "name": "Рейд пиратов",
-    "summary": "Пиратская флотилия атакует торговые линии.",
-    "detail": "Категория: pirates. Ситуативный ежходный квест.",
-    "category": "pirates",
-    "filterBy": {},
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
+          },
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -4
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_synth",
-              "amount": 3
+              "resource": "currency.industria",
+              "amount": -1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_synth",
-              "amount": -4
-            }
-          }
-        ]
-      },
-      {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "cache",
+        "label": "Вскрыть старый склад",
+        "description": "Успех: metal +12. Провал: пусто и −лояльность у интендантов.",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
+            "label": "d20 проверка",
             "threshold": 11
           }
         ],
@@ -907,14 +1278,183 @@
             "effect": "production_flat",
             "args": {
               "resource": "currency.metal",
-              "amount": 3
+              "amount": 12
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.trade_4": {
+    "id": "yq.trade_4",
+    "name": "Ярмарка на границе",
+    "summary": "Пограничная ярмарка обещает прибыль — и шпионов в придачу.",
+    "detail": "Открыть, обложить охраной или сорвать как угрозу.",
+    "category": "trade",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "open",
+        "label": "Открыть ярмарку",
+        "description": "Supply −2, bios +5, лояльность +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 5
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
               "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "secure",
+        "label": "Ярмарка под охраной",
+        "description": "Metal −3, bios +7, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "ban",
+        "label": "Запретить сбор",
+        "description": "Лояльность −4, cognitio +2 (меньше шпионов).",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.trade_5": {
+    "id": "yq.trade_5",
+    "name": "Срыв биржевой сделки",
+    "summary": "Контрагент сорвал поставку — биржа требует компенсации.",
+    "detail": "Платить, судиться или блефовать.",
+    "category": "trade",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "pay",
+        "label": "Выплатить неустойку",
+        "description": "Bios −9, лояльность +2 (репутация).",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -9
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "sue",
+        "label": "Судебная война",
+        "description": "Cognitio −4, bios +3 через год… сейчас −лояльность 0, metal −1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "bluff",
+        "label": "Блеф на бирже",
+        "description": "Успех: bios +8. Провал: bios −5 и лояльность −3.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 14
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 8
             }
           }
         ],
@@ -923,14 +1463,122 @@
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -2
+              "amount": -5
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.pirates_1": {
+    "id": "yq.pirates_1",
+    "name": "Рейд пиратов",
+    "summary": "Пиратская флотилия ударила по конвою у ваших границ.",
+    "detail": "Контратака, выкуп груза или ловушка.",
+    "category": "pirates",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "hunt",
+        "label": "Карательный рейд",
+        "description": "Metal −5, energia −3, лояльность +3, extracta +2 трофеи.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ransom",
+        "label": "Выкупить груз",
+        "description": "Bios −6, supply +4.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "ambush",
+        "label": "Устроить засаду",
+        "description": "Успех: metal +6. Провал: ещё один конвой потерян.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
               "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
             }
           }
         ]
@@ -941,221 +1589,43 @@
   "yq.pirates_2": {
     "id": "yq.pirates_2",
     "name": "Выкуп за конвой",
-    "summary": "Пираты удерживают торговый конвой.",
-    "detail": "Категория: pirates. Ситуативный ежходный квест.",
+    "summary": "Пираты держат гражданский конвой и требуют выкуп.",
+    "detail": "Платить, штурмовать или тянуть время переговорами.",
     "category": "pirates",
-    "filterBy": {
-      "requiresBuilding": "building.farm"
-    },
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "pay",
+        "label": "Заплатить выкуп",
+        "description": "Bios −10, лояльность +4 (спасли людей).",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -5
+              "amount": -10
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_karned",
-              "amount": -5
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.pirates_3": {
-    "id": "yq.pirates_3",
-    "name": "База в поясе",
-    "summary": "Разведка нашла пиратскую базу в астероидах.",
-    "detail": "Категория: pirates. Ситуативный ежходный квест.",
-    "category": "pirates",
-    "filterBy": {
-      "minEra": 1
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "storm",
+        "label": "Штурм",
+        "description": "Metal −4, bios −2 потери, лояльность +2, metal +3 трофеи.",
         "effects": [
           {
             "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -6
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
-              "amount": 2
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.pirates_4": {
-    "id": "yq.pirates_4",
-    "name": "Корсары у врат",
-    "summary": "Корсары блокируют гиперврата системы.",
-    "detail": "Категория: pirates. Ситуативный ежходный квест.",
-    "category": "pirates",
-    "filterBy": {
-      "maxWarCount": 2
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -7
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_swarm",
-              "amount": 3
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_swarm",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.pirates_5": {
-    "id": "yq.pirates_5",
-    "name": "Чёрный флаг",
-    "summary": "Флагман пиратов объявился у вашей границы.",
-    "detail": "Категория: pirates. Ситуативный ежходный квест.",
-    "category": "pirates",
-    "filterBy": {
-      "lowLoyaltyRace": "race_voidborn"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -4
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": 4
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": -5
-            }
-          }
-        ]
-      },
-      {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
-        "diceRequired": [
-          {
-            "count": 1,
-            "sides": 20,
-            "label": "d20",
-            "threshold": 11
-          }
-        ],
-        "onSuccess": [
-          {
-            "effect": "production_flat",
             "args": {
               "resource": "currency.metal",
-              "amount": 3
+              "amount": -4
             }
           },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": 2
-            }
-          }
-        ],
-        "onFail": [
           {
             "effect": "upkeep_flat",
             "args": {
@@ -1166,124 +1636,190 @@
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.anomaly_1": {
-    "id": "yq.anomaly_1",
-    "name": "Сигнал из пустоты",
-    "summary": "Аномальный сигнал из некартографированного сектора.",
-    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
-    "category": "anomaly",
-    "filterBy": {
-      "minEra": 1,
-      "requiresRace": "race_human"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -5
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_human",
               "amount": 2
             }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_human",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.anomaly_2": {
-    "id": "yq.anomaly_2",
-    "name": "Искажение гиперполосы",
-    "summary": "Гиперполоса ведёт себя нестабильно.",
-    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
-    "category": "anomaly",
-    "filterBy": {
-      "borderWithWar": true
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -6
-            }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_belator",
+              "resource": "currency.metal",
               "amount": 3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
+        "id": "stall",
+        "label": "Тянуть переговоры",
+        "description": "Успех: освобождение дёшево. Провал: казнь заложников (−лояльность).",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 13
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -4
+              "amount": 3
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -7
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.anomaly_3": {
-    "id": "yq.anomaly_3",
-    "name": "Артефакт в обломках",
-    "summary": "В обломках найден непонятный артефакт.",
-    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
-    "category": "anomaly",
+  "yq.pirates_3": {
+    "id": "yq.pirates_3",
+    "name": "База в поясе",
+    "summary": "Разведка нашла пиратскую базу в астероидном поясе.",
+    "detail": "Ударить, обложить данью или завербовать.",
+    "category": "pirates",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "strike",
+        "label": "Уничтожить базу",
+        "description": "Metal −6, energia −4, лояльность +3, extracta +4.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "tribute",
+        "label": "Дань за проход",
+        "description": "Bios +5 каждый «раз», лояльность −3 (позор).",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "recruit",
+        "label": "Вербовать корсаров",
+        "description": "Bios −4, metal +2, лояльность −1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.pirates_4": {
+    "id": "yq.pirates_4",
+    "name": "Корсары у врат",
+    "summary": "Корсары блокируют один из ваших звёздных врат.",
+    "detail": "Прорыв, пошлина или обходной маршрут.",
+    "category": "pirates",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "break",
+        "label": "Пробить блокаду",
+        "description": "Metal −5, energia −5, лояльность +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "toll",
+        "label": "Заплатить пошлину",
+        "description": "Bios −7, supply проходит (+3).",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -1293,24 +1829,431 @@
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_synth",
-              "amount": 4
+              "resource": "currency.supply",
+              "amount": 3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "detour",
+        "label": "Обходной маршрут",
+        "description": "Energia −6, supply −1, лояльность −1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.pirates_5": {
+    "id": "yq.pirates_5",
+    "name": "Чёрный флаг",
+    "summary": "Известный капер предлагает «охранный контракт» — или войну.",
+    "detail": "Нанять, отвергнуть с честью или кинуть на встрече.",
+    "category": "pirates",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "hire",
+        "label": "Нанять капера",
+        "description": "Bios −8, metal +3 (рейды), лояльность −2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -8
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "refuse",
+        "label": "Отвергнуть с честью",
+        "description": "Лояльность +3, metal −2 на усиление патрулей.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "betray",
+        "label": "Засада на встрече",
+        "description": "Успех: трофеи. Провал: месть по торговым линиям.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 7
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 4
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.anomaly_1": {
+    "id": "yq.anomaly_1",
+    "name": "Сигнал из пустоты",
+    "summary": "С дальнего сектора идёт нерасшифрованный сигнал.",
+    "detail": "Исследовать, глушить или ответить — с риском.",
+    "category": "anomaly",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "probe",
+        "label": "Послать зонд",
+        "description": "Energia −4, cognitio +5.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": "jam",
+        "label": "Заглушить",
+        "description": "Energia −2, лояльность +1 (спокойствие).",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "answer",
+        "label": "Ответить в эфир",
+        "description": "Успех: cognitio +8. Провал: паника (−лояльность) и расход energia.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 14
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 8
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.anomaly_2": {
+    "id": "yq.anomaly_2",
+    "name": "Искажение гиперполосы",
+    "summary": "Гиперкоридор «плывёт» — караваны опаздывают на ходы.",
+    "detail": "Стабилизаторы, запрет полётов или слепой проход.",
+    "category": "anomaly",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "stabilize",
+        "label": "Стабилизаторы",
+        "description": "Materia −3, energia −6, supply +2, лояльность +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ground",
+        "label": "Запрет перелётов",
+        "description": "Bios −2 простой, лояльность −3, energia сэкономлена (+3).",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "blind",
+        "label": "Слепой проход",
+        "description": "Успех: supply +5. Провал: потеря конвоя.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 13
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
               "amount": -5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.anomaly_3": {
+    "id": "yq.anomaly_3",
+    "name": "Артефакт в обломках",
+    "summary": "В обломках чужого корабля нашли странный артефакт.",
+    "detail": "Изучить, продать или уничтожить как угрозу.",
+    "category": "anomaly",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "study",
+        "label": "Изучить в лаборатории",
+        "description": "Cognitio −3, materia +2, cognitio +6 итог.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 6
+            }
+          }
+        ]
+      },
+      {
+        "id": "sell",
+        "label": "Продать коллекционерам",
+        "description": "Bios +8, лояльность учёных −2.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 8
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "destroy",
+        "label": "Уничтожить",
+        "description": "Metal −1, лояльность +2 (безопасность).",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
             }
           }
         ]
@@ -1321,17 +2264,44 @@
   "yq.anomaly_4": {
     "id": "yq.anomaly_4",
     "name": "Теневой шторм",
-    "summary": "Теневой шторм грозит сорвать навигацию.",
-    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
+    "summary": "Теневой шторм рвёт щиты и глушит связь на окраине.",
+    "detail": "Укрепить щиты, эвакуировать или «оседлать» бурю.",
     "category": "anomaly",
     "filterBy": {
       "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "shields",
+        "label": "Укрепить щиты",
+        "description": "Energia −8, materia −2, лояльность +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -8
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "evac",
+        "label": "Эвакуация окраины",
+        "description": "Bios −4, supply −2, лояльность +1.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -1341,53 +2311,45 @@
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "upkeep_flat",
             "args": {
-              "raceId": "race_karned",
-              "amount": 2
+              "resource": "currency.supply",
+              "amount": -2
             }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
-              "amount": -3
+              "amount": 1
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "ride",
+        "label": "Оседлать бурю",
+        "description": "Успех: energia +10. Провал: потеря флота (metal −6).",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 15
           }
         ],
         "onSuccess": [
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
+              "resource": "currency.energia",
+              "amount": 10
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_karned",
-              "amount": 2
+              "resource": "currency.cognitio",
+              "amount": 3
             }
           }
         ],
@@ -1395,240 +2357,216 @@
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -2
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_karned",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.anomaly_5": {
-    "id": "yq.anomaly_5",
-    "name": "Зеркальный маяк",
-    "summary": "Маяк отвечает эхом чужих координат.",
-    "detail": "Категория: anomaly. Ситуативный ежходный квест.",
-    "category": "anomaly",
-    "filterBy": {
-      "lowLoyaltyRace": "race_psionic"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -5
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
-              "amount": 3
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.diplo_1": {
-    "id": "yq.diplo_1",
-    "name": "Дипломатический инцидент",
-    "summary": "Посланник оскорблён на приёме — нужен ответ.",
-    "detail": "Категория: diplo. Ситуативный ежходный квест.",
-    "category": "diplo",
-    "filterBy": {
-      "hasRefugees": true
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
+              "resource": "currency.metal",
               "amount": -6
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": 4
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_swarm",
-              "amount": -5
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.diplo_2": {
-    "id": "yq.diplo_2",
-    "name": "Просьба о посредничестве",
-    "summary": "Соседи просят выступить посредником.",
-    "detail": "Категория: diplo. Ситуативный ежходный квест.",
-    "category": "diplo",
-    "filterBy": {
-      "minEra": 1
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -7
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": 2
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
               "amount": -3
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.diplo_3": {
-    "id": "yq.diplo_3",
-    "name": "Утечка архивов",
-    "summary": "Утекли архивы переговоров — скандал.",
-    "detail": "Категория: diplo. Ситуативный ежходный квест.",
-    "category": "diplo",
-    "filterBy": {
-      "requiresRace": "race_human"
-    },
+  "yq.anomaly_5": {
+    "id": "yq.anomaly_5",
+    "name": "Зеркальный маяк",
+    "summary": "Маяк отражает ваши же сигналы — кто‑то слушает.",
+    "detail": "Замаскировать, выключить или провести контрразведку.",
+    "category": "anomaly",
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "mask",
+        "label": "Маскировка эфира",
+        "description": "Cognitio −4, energia −2, лояльность +1.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
+              "resource": "currency.cognitio",
               "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
-              "amount": 3
+              "amount": 1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "off",
+        "label": "Выключить маяк",
+        "description": "Supply −1 логистика, лояльность −1.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -1
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
-              "amount": -4
+              "amount": -1
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "counter",
+        "label": "Контрразведка",
+        "description": "Успех: cognitio +7. Провал: утечка (−лояльность).",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 12
           }
         ],
         "onSuccess": [
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
+              "resource": "currency.cognitio",
+              "amount": 7
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.diplo_1": {
+    "id": "yq.diplo_1",
+    "name": "Дипломатический инцидент",
+    "summary": "Посол другой державы публично оскорблён вашим офицером.",
+    "detail": "Извинения, выдача виновного или гордый отказ.",
+    "category": "diplo",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "apology",
+        "label": "Официальные извинения",
+        "description": "Bios −3 (дары), лояльность +1, cognitio +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
+              "amount": 1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": 2
             }
           }
-        ],
-        "onFail": [
+        ]
+      },
+      {
+        "id": "extradite",
+        "label": "Выдать офицера",
+        "description": "Лояльность армии −5, bios +2 (закрыли дело).",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "defiant",
+        "label": "Гордый отказ",
+        "description": "Лояльность +3, cognitio −2 (напряжение).",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.diplo_2": {
+    "id": "yq.diplo_2",
+    "name": "Просьба о посредничестве",
+    "summary": "Две державы просят вас рассудить спор о коридоре.",
+    "detail": "Посредничать дорого, отказаться — упустить влияние, встать на сторону — риск.",
+    "category": "diplo",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "mediate",
+        "label": "Стать посредником",
+        "description": "Cognitio −3, bios −2, лояльность +2, cognitio +5 влиянием.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -3
+            }
+          },
           {
             "effect": "upkeep_flat",
             "args": {
@@ -1639,27 +2577,169 @@
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": "refuse",
+        "label": "Отказаться",
+        "description": "Без эффектов — упущенный шанс (лояльность 0).",
+        "effects": []
+      },
+      {
+        "id": "pick_side",
+        "label": "Встать на сторону",
+        "description": "Успех: bios +6 от благодарных. Провал: скандал (−лояльность).",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 11
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 6
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
               "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -2
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.diplo_4": {
-    "id": "yq.diplo_4",
-    "name": "Визит делегации",
-    "summary": "Иностранная делегация просит аудиенцию.",
-    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+  "yq.diplo_3": {
+    "id": "yq.diplo_3",
+    "name": "Утечка архивов",
+    "summary": "В сеть утекли фрагменты ваших дипломатических архивов.",
+    "detail": "Зачистка, отрицание или контролируемый слив дезы.",
     "category": "diplo",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "scrub",
+        "label": "Зачистить следы",
+        "description": "Cognitio −6, energia −2, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "deny",
+        "label": "Отрицать всё",
+        "description": "Лояльность −3, когда уличат сильнее.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "dez",
+        "label": "Слить дезу",
+        "description": "Успех: cognitio +4. Провал: ещё больший скандал.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 13
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -6
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.diplo_4": {
+    "id": "yq.diplo_4",
+    "name": "Визит делегации",
+    "summary": "Иностранная делегация просит аудиенцию и банкет.",
+    "detail": "Пышный приём, скромный стол или отказ.",
+    "category": "diplo",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "banquet",
+        "label": "Пышный приём",
+        "description": "Bios −5, supply −2, лояльность +2, cognitio +3.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -1669,24 +2749,63 @@
             }
           },
           {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          },
+          {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": 4
+              "amount": 2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "modest",
+        "label": "Скромный стол",
+        "description": "Bios −2, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "snub",
+        "label": "Отказать в визите",
+        "description": "Лояльность двора +1, cognitio −3 (обида соседей).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -5
+              "amount": 1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -3
             }
           }
         ]
@@ -1697,91 +2816,193 @@
   "yq.diplo_5": {
     "id": "yq.diplo_5",
     "name": "Срыв протокола",
-    "summary": "Нарушен протокол встречи двух держав.",
-    "detail": "Категория: diplo. Ситуативный ежходный квест.",
+    "summary": "На переговорах нарушен протокол — стороны требуют сатисфакции.",
+    "detail": "Компенсация, отставка чиновника или жёсткая линия.",
     "category": "diplo",
     "filterBy": {
-      "minEra": 1,
-      "lowLoyaltyRace": "race_synth"
+      "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "gift",
+        "label": "Компенсация дарами",
+        "description": "Materia −2, bios −4, лояльность +2.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
+              "resource": "currency.materia",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
               "resource": "currency.bios",
-              "amount": -6
+              "amount": -4
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
               "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "fire",
+        "label": "Отставить чиновника",
+        "description": "Лояльность −2, cognitio +2 (порядок).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.science_1": {
-    "id": "yq.science_1",
-    "name": "Сбой лаборатории",
-    "summary": "В лаборатории авария — данные под угрозой.",
-    "detail": "Категория: science. Ситуативный ежходный квест.",
-    "category": "science",
-    "filterBy": {},
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -7
+              "amount": -2
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_karned",
-              "amount": 3
+              "resource": "currency.cognitio",
+              "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "hardline",
+        "label": "Жёсткая линия",
+        "description": "Лояльность +3, bios −1 на охрану.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.science_1": {
+    "id": "yq.science_1",
+    "name": "Сбой лаборатории",
+    "summary": "В главной лаборатории сгорел контур — эксперименты встали.",
+    "detail": "Ремонт, консервация или опасный перезапуск.",
+    "category": "science",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "repair",
+        "label": "Полный ремонт",
+        "description": "Materia −3, energia −5, cognitio +4, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "mothball",
+        "label": "Законсервировать",
+        "description": "Cognitio −2 (простой), energia +2 сэкономлено.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "restart",
+        "label": "Перезапуск под нагрузкой",
+        "description": "Успех: cognitio +8. Провал: ещё один пожар.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 8
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
               "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
             }
           }
         ]
@@ -1792,71 +3013,76 @@
   "yq.science_2": {
     "id": "yq.science_2",
     "name": "Прорыв гипотезы",
-    "summary": "Учёные на пороге прорыва, нужны ресурсы.",
-    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "summary": "Группа учёных клянётся, что на пороге прорыва — нужны ресурсы.",
+    "detail": "Финансировать, отклонить или дать минимум и надеяться.",
     "category": "science",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "fund",
+        "label": "Полное финансирование",
+        "description": "Cognitio −2 уже вложено… Bios −6, cognitio +10.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -4
+              "amount": -6
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 10
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
-              "amount": 4
+              "amount": 1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "reject",
+        "label": "Отклонить",
+        "description": "Лояльность учёных −3.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
-              "amount": -5
+              "amount": -3
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "seed",
+        "label": "Минимальный грант",
+        "description": "Успех: cognitio +6. Провал: деньги на ветер (bios −3).",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
+            "label": "d20 проверка",
             "threshold": 11
           }
         ],
         "onSuccess": [
           {
-            "effect": "production_flat",
+            "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
+              "resource": "currency.bios",
+              "amount": -3
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_psionic",
-              "amount": 2
+              "resource": "currency.cognitio",
+              "amount": 6
             }
           }
         ],
@@ -1865,14 +3091,13 @@
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -2
+              "amount": -3
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
-              "amount": -4
+              "amount": -1
             }
           }
         ]
@@ -1883,223 +3108,213 @@
   "yq.science_3": {
     "id": "yq.science_3",
     "name": "Утечка образцов",
-    "summary": "Опасные образцы исчезли из хранилища.",
-    "detail": "Категория: science. Ситуативный ежходный квест.",
+    "summary": "Биообразцы исчезли из карантинного блока.",
+    "detail": "Карантин, охота или замалчивание.",
     "category": "science",
     "filterBy": {
-      "minEra": 1,
-      "borderWithWar": true
+      "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "quarantine",
+        "label": "Жёсткий карантин",
+        "description": "Bios −3, supply −2, лояльность −1, cognitio +2.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -5
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_swarm",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.science_4": {
-    "id": "yq.science_4",
-    "name": "Запрос экспедиции",
-    "summary": "Научный совет просит финансировать экспедицию.",
-    "detail": "Категория: science. Ситуативный ежходный квест.",
-    "category": "science",
-    "filterBy": {
-      "requiresBuilding": "building.farm"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "hunt",
+        "label": "Охота за образцами",
+        "description": "Metal −2, cognitio +4.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -6
+              "resource": "currency.metal",
+              "amount": -2
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_voidborn",
-              "amount": 3
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.science_5": {
-    "id": "yq.science_5",
-    "name": "Конкурирующий патент",
-    "summary": "Соседняя держава опережает вас в исследовании.",
-    "detail": "Категория: science. Ситуативный ежходный квест.",
-    "category": "science",
-    "filterBy": {
-      "lowLoyaltyRace": "race_human",
-      "requiresRace": "race_human"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -7
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_human",
+              "resource": "currency.cognitio",
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "silence",
+        "label": "Замолчать",
+        "description": "Лояльность −5, когда всплывёт.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
               "amount": -5
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.military_1": {
-    "id": "yq.military_1",
-    "name": "Учения на границе",
-    "summary": "Соседи проводят крупные учения у границы.",
-    "detail": "Категория: military. Ситуативный ежходный квест.",
-    "category": "military",
+  "yq.science_4": {
+    "id": "yq.science_4",
+    "name": "Запрос экспедиции",
+    "summary": "Учёные просят снарядить экспедицию к аномалии.",
+    "detail": "Снарядить, отказать или послать зонд вместо людей.",
+    "category": "science",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "launch",
+        "label": "Снарядить экспедицию",
+        "description": "Supply −4, energia −4, bios −3, cognitio +7.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "deny",
+        "label": "Отказать",
+        "description": "Лояльность −2.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "drone",
+        "label": "Только зонды",
+        "description": "Energia −3, cognitio +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.science_5": {
+    "id": "yq.science_5",
+    "name": "Конкурирующий патент",
+    "summary": "Соседи регистрируют патент на технологию, близкую к вашей.",
+    "detail": "Выкупить, оспорить или украсть наработки.",
+    "category": "science",
     "filterBy": {
       "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "buy",
+        "label": "Выкупить патент",
+        "description": "Bios −10, cognitio +5.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -4
+              "amount": -10
             }
           },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_belator",
-              "amount": 2
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_belator",
-              "amount": -3
-            }
-          }
-        ]
-      },
-      {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
-        "diceRequired": [
-          {
-            "count": 1,
-            "sides": 20,
-            "label": "d20",
-            "threshold": 11
-          }
-        ],
-        "onSuccess": [
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
-              "amount": 3
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_belator",
-              "amount": 2
+              "resource": "currency.cognitio",
+              "amount": 5
             }
           }
-        ],
-        "onFail": [
+        ]
+      },
+      {
+        "id": "challenge",
+        "label": "Оспорить в суде",
+        "description": "Cognitio −5, bios −2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -5
+            }
+          },
           {
             "effect": "upkeep_flat",
             "args": {
@@ -2110,54 +3325,223 @@
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.military_2": {
-    "id": "yq.military_2",
-    "name": "Дезертирство",
-    "summary": "Группа солдат дезертировала с оружием.",
-    "detail": "Категория: military. Ситуативный ежходный квест.",
-    "category": "military",
-    "filterBy": {},
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -5
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_synth",
-              "amount": 3
+              "amount": 1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "steal",
+        "label": "Промышленный шпионаж",
+        "description": "Успех: cognitio +9. Провал: скандал.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 14
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 9
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.military_1": {
+    "id": "yq.military_1",
+    "name": "Учения на границе",
+    "summary": "Генштаб предлагает крупные учения у спорной границы.",
+    "detail": "Провести, урезать или отменить под давлением дипломатов.",
+    "category": "military",
+    "filterBy": {
+      "minEra": 1
+    },
+    "choices": [
+      {
+        "id": "full",
+        "label": "Полные учения",
+        "description": "Metal −4, supply −3, energia −3, лояльность +3, cognitio +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "lite",
+        "label": "Урезанные манёвры",
+        "description": "Metal −2, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "cancel",
+        "label": "Отменить",
+        "description": "Лояльность армии −3, bios +2 (экономия).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.military_2": {
+    "id": "yq.military_2",
+    "name": "Дезертирство",
+    "summary": "С линии фронта / гарнизона бегут солдаты.",
+    "detail": "Амнистия, трибунал или облавы.",
+    "category": "military",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "amnesty",
+        "label": "Амнистия и пайки",
+        "description": "Bios −4, лояльность +4.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
               "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "tribunal",
+        "label": "Показательный трибунал",
+        "description": "Лояльность −4, metal +1 конфискат.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "roundup",
+        "label": "Облавы",
+        "description": "Metal −2, supply −1, лояльность −2, extracta +1 труд.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 1
             }
           }
         ]
@@ -2168,44 +3552,76 @@
   "yq.military_3": {
     "id": "yq.military_3",
     "name": "Запрос подкреплений",
-    "summary": "Фронтовой командир требует подкреплений.",
-    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "summary": "Командир на окраине требует срочных подкреплений.",
+    "detail": "Послать, отказать или ограничиться снабжением.",
     "category": "military",
     "filterBy": {
-      "maxWarCount": 2
+      "borderWithWar": true
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "send",
+        "label": "Послать силы",
+        "description": "Metal −5, supply −3, bios −2, лояльность +4.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
+              "resource": "currency.metal",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
               "resource": "currency.bios",
-              "amount": -6
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "deny",
+        "label": "Отказать",
+        "description": "Лояльность −5.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
               "amount": -5
+            }
+          }
+        ]
+      },
+      {
+        "id": "supply_only",
+        "label": "Только снабжение",
+        "description": "Supply −4, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
             }
           }
         ]
@@ -2216,107 +3632,82 @@
   "yq.military_4": {
     "id": "yq.military_4",
     "name": "Потеря патруля",
-    "summary": "Патруль исчез в спорной системе.",
-    "detail": "Категория: military. Ситуативный ежходный квест.",
+    "summary": "Патруль не вышел на связь — сектор «серый».",
+    "detail": "Поиски, списание или рискованная вылазка.",
     "category": "military",
-    "filterBy": {
-      "minEra": 1,
-      "hasRefugees": true
-    },
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "search",
+        "label": "Поисковая операция",
+        "description": "Energia −4, metal −2, supply −2, лояльность +2.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -7
+              "resource": "currency.energia",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "writeoff",
+        "label": "Списать состав",
+        "description": "Лояльность −4, metal −3 потеря техники.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_psionic",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.military_5": {
-    "id": "yq.military_5",
-    "name": "Мобилизация резерва",
-    "summary": "Генштаб предлагает частичную мобилизацию.",
-    "detail": "Категория: military. Ситуативный ежходный квест.",
-    "category": "military",
-    "filterBy": {
-      "lowLoyaltyRace": "race_swarm"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Вмешаться силой",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
               "amount": -4
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "upkeep_flat",
             "args": {
-              "raceId": "race_swarm",
-              "amount": 3
+              "resource": "currency.metal",
+              "amount": -3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_swarm",
-              "amount": -4
-            }
-          }
-        ]
-      },
-      {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "raid",
+        "label": "Вылазка наудачу",
+        "description": "Успех: спасли и трофеи. Провал: ещё потери.",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 12
           }
         ],
         "onSuccess": [
@@ -2330,12 +3721,18 @@
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": 2
+              "amount": 3
             }
           }
         ],
         "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -4
+            }
+          },
           {
             "effect": "upkeep_flat",
             "args": {
@@ -2346,27 +3743,28 @@
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": -4
+              "amount": -2
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.migration_1": {
-    "id": "yq.migration_1",
-    "name": "Волна беженцев",
-    "summary": "К границе движется волна беженцев.",
-    "detail": "Категория: migration. Ситуативный ежходный квест.",
-    "category": "migration",
-    "filterBy": {},
+  "yq.military_5": {
+    "id": "yq.military_5",
+    "name": "Мобилизация резерва",
+    "summary": "Штаб предлагает частичную мобилизацию резервистов.",
+    "detail": "Мобилизовать, ограничить или отложить.",
+    "category": "military",
+    "filterBy": {
+      "minEra": 1
+    },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "mobilize",
+        "label": "Частичная мобилизация",
+        "description": "Bios −5, supply −3, metal +2, лояльность −2, industria −1.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -2376,24 +3774,169 @@
             }
           },
           {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 2
+            }
+          },
+          {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
-              "amount": 4
+              "amount": -2
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": -1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "limited",
+        "label": "Только специалисты",
+        "description": "Cognitio −2, metal +1, лояльность −1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "delay",
+        "label": "Отложить",
+        "description": "Лояльность штаба −2.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
-              "amount": -5
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.migration_1": {
+    "id": "yq.migration_1",
+    "name": "Волна беженцев",
+    "summary": "К границам идут колонны беженцев с соседнего театра.",
+    "detail": "Принять, квоты или закрыть врата.",
+    "category": "migration",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "accept",
+        "label": "Принять и расселить",
+        "description": "Bios −6, supply −4, лояльность +3, industria +1 труд.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -6
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "quota",
+        "label": "Жёсткие квоты",
+        "description": "Bios −2, лояльность −1, cognitio +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "seal",
+        "label": "Закрыть врата",
+        "description": "Лояльность −4, metal −1 на блокпосты, bios +2 (не тратим).",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 2
             }
           }
         ]
@@ -2404,91 +3947,154 @@
   "yq.migration_2": {
     "id": "yq.migration_2",
     "name": "Исход колонистов",
-    "summary": "Колонисты массово покидают окраину.",
-    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "summary": "С окраинной колонии уезжают лучшие специалисты.",
+    "detail": "Удержать льготами, отпустить или запретить выезд.",
     "category": "migration",
     "filterBy": {
-      "minEra": 1,
-      "requiresRace": "race_human"
+      "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "retain",
+        "label": "Льготы и жильё",
+        "description": "Bios −5, materia −2, лояльность +4, cognitio +2.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -6
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
+              "amount": 4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "letgo",
+        "label": "Отпустить с миром",
+        "description": "Лояльность −2, bios +1 экономия.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.migration_3": {
-    "id": "yq.migration_3",
-    "name": "Трудовой транзит",
-    "summary": "Мигранты ищут работу на ваших заводах.",
-    "detail": "Категория: migration. Ситуативный ежходный квест.",
-    "category": "migration",
-    "filterBy": {},
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
-              "amount": -7
+              "amount": -2
             }
           },
           {
-            "effect": "loyalty_add",
+            "effect": "production_flat",
             "args": {
-              "raceId": "race_belator",
-              "amount": 3
+              "resource": "currency.bios",
+              "amount": 1
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "forbid",
+        "label": "Запрет выезда",
+        "description": "Лояльность −6, extracta +2 (остались рабочие).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -4
+              "amount": -6
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.migration_3": {
+    "id": "yq.migration_3",
+    "name": "Трудовой транзит",
+    "summary": "Корпорации просят открыть коридор сезонных рабочих.",
+    "detail": "Открыть, обложить или запретить.",
+    "category": "migration",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "open",
+        "label": "Открыть коридор",
+        "description": "Supply −2, industria +3, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": 3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "tax",
+        "label": "Налог на транзит",
+        "description": "Bios +5, лояльность −1.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 5
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "ban",
+        "label": "Запретить",
+        "description": "Лояльность корпораций −3.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -3
             }
           }
         ]
@@ -2499,58 +4105,70 @@
   "yq.migration_4": {
     "id": "yq.migration_4",
     "name": "Переселение клана",
-    "summary": "Клан просит земли для переселения.",
-    "detail": "Категория: migration. Ситуативный ежходный квест.",
+    "summary": "Крупный клан просит землю и статус под вашим флагом.",
+    "detail": "Дать землю, отказать или принять как вассалов с риском.",
     "category": "migration",
     "filterBy": {
-      "borderWithWar": true
+      "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "land",
+        "label": "Выделить земли",
+        "description": "Supply −3, bios −3, лояльность +5, extracta +2.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
               "resource": "currency.bios",
-              "amount": -4
+              "amount": -3
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
-              "amount": 4
+              "amount": 5
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "refuse",
+        "label": "Отказать",
+        "description": "Лояльность −2.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
-              "amount": -5
+              "amount": -2
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "vassal",
+        "label": "Вассальный договор",
+        "description": "Успех: metal +4 дань. Провал: внутренний конфликт.",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
-            "threshold": 11
+            "label": "d20 проверка",
+            "threshold": 12
           }
         ],
         "onSuccess": [
@@ -2558,52 +4176,132 @@
             "effect": "production_flat",
             "args": {
               "resource": "currency.metal",
-              "amount": 3
+              "amount": 4
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
               "amount": 2
             }
           }
         ],
         "onFail": [
           {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -5
+            }
+          },
+          {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
               "amount": -2
             }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.migration_5": {
+    "id": "yq.migration_5",
+    "name": "Карантинный коридор",
+    "summary": "Беженцы идут через зону с подозрением на заразу.",
+    "detail": "Карантин, быстрый пропуск или сожжение лагеря (жёстко).",
+    "category": "migration",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "quarantine",
+        "label": "Карантинные лагеря",
+        "description": "Bios −4, supply −3, лояльность +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_synth",
-              "amount": -4
+              "amount": 2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "fast",
+        "label": "Быстрый пропуск",
+        "description": "Лояльность +1, риск (−cognitio медконтроль).",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "burn",
+        "label": "Сжечь лагерь",
+        "description": "Лояльность −8, metal −1.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -8
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.migration_5": {
-    "id": "yq.migration_5",
-    "name": "Карантинный коридор",
-    "summary": "Нужен коридор для эвакуации населения.",
-    "detail": "Категория: migration. Ситуативный ежходный квест.",
-    "category": "migration",
-    "filterBy": {
-      "minEra": 1,
-      "lowLoyaltyRace": "race_karned"
-    },
+  "yq.epidemic_1": {
+    "id": "yq.epidemic_1",
+    "name": "Вспышка лихорадки",
+    "summary": "В портовом мире вспыхнула лихорадка.",
+    "detail": "Лечение, изоляция или игнор «сезонной хвори».",
+    "category": "epidemic",
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "treat",
+        "label": "Массовое лечение",
+        "description": "Bios −5, supply −2, лояльность +5.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -2613,9 +4311,42 @@
             }
           },
           {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          },
+          {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
+              "amount": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": "isolate",
+        "label": "Изоляция кварталов",
+        "description": "Energia −3, лояльность −2, cognitio +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": 2
             }
           }
@@ -2623,60 +4354,13 @@
       },
       {
         "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "label": "«Сезонная хворь»",
+        "description": "Лояльность −6.",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_karned",
-              "amount": -3
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.epidemic_1": {
-    "id": "yq.epidemic_1",
-    "name": "Вспышка лихорадки",
-    "summary": "На планете вспышка неизвестной лихорадки.",
-    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
-    "category": "epidemic",
-    "filterBy": {},
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
-            "args": {
-              "resource": "currency.bios",
               "amount": -6
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
-              "amount": 3
-            }
-          }
-        ]
-      },
-      {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_psionic",
-              "amount": -4
             }
           }
         ]
@@ -2687,42 +4371,88 @@
   "yq.epidemic_2": {
     "id": "yq.epidemic_2",
     "name": "Карантинный спор",
-    "summary": "Медики требуют жёсткий карантин.",
-    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "summary": "Губернаторы спорят: закрывать ли всю систему.",
+    "detail": "Полный карантин, частичный или открытые врата.",
     "category": "epidemic",
     "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "full",
+        "label": "Полный карантин",
+        "description": "Bios −3, supply −4, energia −2, лояльность −1, cognitio +3.",
         "effects": [
           {
             "effect": "upkeep_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -7
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": 4
+              "amount": -1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "partial",
+        "label": "Частичный",
+        "description": "Supply −2, лояльность +1.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_swarm",
-              "amount": -5
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "open",
+        "label": "Врата открыты",
+        "description": "Bios +2 торговля, лояльность −4.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
             }
           }
         ]
@@ -2733,17 +4463,112 @@
   "yq.epidemic_3": {
     "id": "yq.epidemic_3",
     "name": "Заражённый груз",
-    "summary": "В порту обнаружен заражённый груз.",
-    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
+    "summary": "На таможне нашли контейнер с заражённой органикой.",
+    "detail": "Уничтожить, изучить или «accidentally» продать дальше.",
     "category": "epidemic",
     "filterBy": {
       "minEra": 1
     },
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "burn",
+        "label": "Уничтожить груз",
+        "description": "Supply −3, лояльность +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "lab",
+        "label": "В лабораторию",
+        "description": "Cognitio +5, bios −2 на охрану, лояльность −1.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "resell",
+        "label": "Сбыть тихий груз",
+        "description": "Успех: bios +7. Провал: эпидемия и скандал.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 15
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 7
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -8
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.epidemic_4": {
+    "id": "yq.epidemic_4",
+    "name": "Эпидемия на станции",
+    "summary": "Орбитальная станция закрыта — экипаж болеет.",
+    "detail": "Медбригада, эвакуация или герметизация.",
+    "category": "epidemic",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "medics",
+        "label": "Медбригада",
+        "description": "Bios −4, materia −1, лояльность +4.",
         "effects": [
           {
             "effect": "upkeep_flat",
@@ -2753,37 +4578,205 @@
             }
           },
           {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": -1
+            }
+          },
+          {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
+              "amount": 4
+            }
+          }
+        ]
+      },
+      {
+        "id": "evac",
+        "label": "Эвакуация",
+        "description": "Energia −4, supply −2, лояльность +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
               "amount": 2
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "seal",
+        "label": "Герметизация",
+        "description": "Лояльность −5, industria −1 (станция мертва).",
         "effects": [
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
+              "amount": -5
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": -1
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.epidemic_5": {
+    "id": "yq.epidemic_5",
+    "name": "Паника в колонии",
+    "summary": "Слухи о чуме вызвали панику — ещё до подтверждения диагноза.",
+    "detail": "Успокоить фактами, ввести военное положение или усилить слух.",
+    "category": "epidemic",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "facts",
+        "label": "Брифинг и факты",
+        "description": "Cognitio −3, energia −1, лояльность +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
             }
           }
         ]
       },
       {
-        "id": "gamble",
-        "label": "Рискнуть",
-        "description": "Исход решит бросок кубика.",
+        "id": "martial",
+        "label": "Военное положение",
+        "description": "Metal −2, лояльность −3, supply +1 порядок.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "stoke",
+        "label": "Подогреть слух",
+        "description": "Лояльность −4, bios +3 на спекуляции складов.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -4
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 3
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.neutral_1": {
+    "id": "yq.neutral_1",
+    "name": "Случай на рубеже: потерянный груз",
+    "summary": "На рубеже нашли бесхозный контейнер без пломб.",
+    "detail": "Универсальный рубежный случай. Три разных цены за спокойствие.",
+    "category": "neutral",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "claim",
+        "label": "Присвоить казне",
+        "description": "Bios +4, лояльность −1.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "return",
+        "label": "Вернуть владельцу",
+        "description": "Лояльность +3.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          }
+        ]
+      },
+      {
+        "id": "open",
+        "label": "Вскрыть на месте",
+        "description": "Успех: materia +3. Провал: ловушка (−bios).",
         "diceRequired": [
           {
             "count": 1,
             "sides": 20,
-            "label": "d20",
+            "label": "d20 проверка",
             "threshold": 11
           }
         ],
@@ -2791,15 +4784,8 @@
           {
             "effect": "production_flat",
             "args": {
-              "resource": "currency.metal",
+              "resource": "currency.materia",
               "amount": 3
-            }
-          },
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_voidborn",
-              "amount": 2
             }
           }
         ],
@@ -2814,208 +4800,231 @@
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_voidborn",
-              "amount": -4
+              "amount": -1
             }
           }
         ]
       }
     ],
-    "neutral": false
+    "neutral": true
   },
-  "yq.epidemic_4": {
-    "id": "yq.epidemic_4",
-    "name": "Эпидемия на станции",
-    "summary": "На орбитальной станции вспышка болезни.",
-    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
-    "category": "epidemic",
-    "filterBy": {
-      "requiresRace": "race_human"
-    },
+  "yq.neutral_2": {
+    "id": "yq.neutral_2",
+    "name": "Случай на рубеже: странный курьер",
+    "summary": "Курьер без документов просит пропуск «по срочному делу».",
+    "detail": "Универсальный рубежный случай. Три разных цены за спокойствие.",
+    "category": "neutral",
+    "filterBy": {},
     "choices": [
       {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
+        "id": "pass",
+        "label": "Пропустить",
+        "description": "Cognitio +2, лояльность −1 у пограничников.",
         "effects": [
           {
-            "effect": "upkeep_flat",
+            "effect": "production_flat",
             "args": {
-              "resource": "currency.bios",
-              "amount": -5
+              "resource": "currency.cognitio",
+              "amount": 2
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_human",
+              "amount": -1
+            }
+          }
+        ]
+      },
+      {
+        "id": "hold",
+        "label": "Задержать",
+        "description": "Metal −1, cognitio +3.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
               "amount": 3
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "bribe",
+        "label": "Взять «пошлину»",
+        "description": "Bios +3, лояльность −2.",
         "effects": [
           {
-            "effect": "loyalty_add",
-            "args": {
-              "raceId": "race_human",
-              "amount": -4
-            }
-          }
-        ]
-      }
-    ],
-    "neutral": false
-  },
-  "yq.epidemic_5": {
-    "id": "yq.epidemic_5",
-    "name": "Паника в колонии",
-    "summary": "Слухи о чуме сеют панику среди поселенцев.",
-    "detail": "Категория: epidemic. Ситуативный ежходный квест.",
-    "category": "epidemic",
-    "filterBy": {
-      "lowLoyaltyRace": "race_belator"
-    },
-    "choices": [
-      {
-        "id": "aid",
-        "label": "Помочь",
-        "description": "Потратить ресурсы ради стабильности.",
-        "effects": [
-          {
-            "effect": "upkeep_flat",
+            "effect": "production_flat",
             "args": {
               "resource": "currency.bios",
-              "amount": -6
+              "amount": 3
             }
           },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
+              "amount": -2
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.neutral_3": {
+    "id": "yq.neutral_3",
+    "name": "Случай на рубеже: обвал шахты",
+    "summary": "Небольшая шахта обвалилась — семьи ждут решения.",
+    "detail": "Универсальный рубежный случай. Три разных цены за спокойствие.",
+    "category": "neutral",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "rescue",
+        "label": "Спасательная операция",
+        "description": "Bios −3, energia −2, лояльность +4.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -2
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
               "amount": 4
             }
           }
         ]
       },
       {
-        "id": "ignore",
-        "label": "Игнорировать",
-        "description": "Не вмешиваться и принять последствия.",
+        "id": "seal",
+        "label": "Запечатать шахту",
+        "description": "Extracta −2, лояльность −3.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": -2
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
-              "raceId": "race_belator",
-              "amount": -5
+              "amount": -3
+            }
+          }
+        ]
+      },
+      {
+        "id": "comp",
+        "label": "Компенсации семьям",
+        "description": "Bios −4, лояльность +2.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
             }
           }
         ]
       }
     ],
-    "neutral": false
-  },
-  "yq.neutral_1": {
-    "id": "yq.neutral_1",
-    "name": "Случай на рубеже 1",
-    "summary": "Нейтральное событие без жёстких фильтров.",
-    "detail": "Доборный нейтральный квест для пула.",
-    "category": "neutral",
-    "filterBy": {},
-    "neutral": true,
-    "choices": [
-      {
-        "id": "accept",
-        "label": "Принять",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "amount": 1
-            }
-          }
-        ]
-      },
-      {
-        "id": "pass",
-        "label": "Отклонить",
-        "effects": []
-      }
-    ]
-  },
-  "yq.neutral_2": {
-    "id": "yq.neutral_2",
-    "name": "Случай на рубеже 2",
-    "summary": "Нейтральное событие без жёстких фильтров.",
-    "detail": "Доборный нейтральный квест для пула.",
-    "category": "neutral",
-    "filterBy": {},
-    "neutral": true,
-    "choices": [
-      {
-        "id": "accept",
-        "label": "Принять",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "amount": 1
-            }
-          }
-        ]
-      },
-      {
-        "id": "pass",
-        "label": "Отклонить",
-        "effects": []
-      }
-    ]
-  },
-  "yq.neutral_3": {
-    "id": "yq.neutral_3",
-    "name": "Случай на рубеже 3",
-    "summary": "Нейтральное событие без жёстких фильтров.",
-    "detail": "Доборный нейтральный квест для пула.",
-    "category": "neutral",
-    "filterBy": {},
-    "neutral": true,
-    "choices": [
-      {
-        "id": "accept",
-        "label": "Принять",
-        "effects": [
-          {
-            "effect": "loyalty_add",
-            "args": {
-              "amount": 1
-            }
-          }
-        ]
-      },
-      {
-        "id": "pass",
-        "label": "Отклонить",
-        "effects": []
-      }
-    ]
+    "neutral": true
   },
   "yq.neutral_4": {
     "id": "yq.neutral_4",
-    "name": "Случай на рубеже 4",
-    "summary": "Нейтральное событие без жёстких фильтров.",
-    "detail": "Доборный нейтральный квест для пула.",
+    "name": "Случай на рубеже: праздник цеха",
+    "summary": "Цех просит разрешить праздник и паёк сверхурочно.",
+    "detail": "Универсальный рубежный случай. Три разных цены за спокойствие.",
     "category": "neutral",
     "filterBy": {},
-    "neutral": true,
     "choices": [
       {
-        "id": "accept",
-        "label": "Принять",
+        "id": "fund",
+        "label": "Оплатить праздник",
+        "description": "Bios −3, supply −1, лояльность +3, industria +1.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.industria",
+              "amount": 1
+            }
+          }
+        ]
+      },
+      {
+        "id": "deny",
+        "label": "Отказать",
+        "description": "Лояльность −2.",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "half",
+        "label": "Полпайка",
+        "description": "Bios −1, лояльность +1.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": -1
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
@@ -3023,27 +5032,125 @@
             }
           }
         ]
-      },
-      {
-        "id": "pass",
-        "label": "Отклонить",
-        "effects": []
       }
-    ]
+    ],
+    "neutral": true
   },
   "yq.neutral_5": {
     "id": "yq.neutral_5",
-    "name": "Случай на рубеже 5",
-    "summary": "Нейтральное событие без жёстких фильтров.",
-    "detail": "Доборный нейтральный квест для пула.",
+    "name": "Случай на рубеже: ложный маяк",
+    "summary": "Навигаторы спорят: маяк врёт или это помехи.",
+    "detail": "Универсальный рубежный случай. Три разных цены за спокойствие.",
     "category": "neutral",
     "filterBy": {},
-    "neutral": true,
     "choices": [
       {
-        "id": "accept",
-        "label": "Принять",
+        "id": "fix",
+        "label": "Починить маяк",
+        "description": "Energia −3, materia −1, лояльность +2.",
         "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": -3
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.materia",
+              "amount": -1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Supply −2 (срывы маршрутов).",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -2
+            }
+          }
+        ]
+      },
+      {
+        "id": "trust",
+        "label": "Довериться старым картам",
+        "description": "Успех: без потерь +cognitio. Провал: потеря конвоя.",
+        "diceRequired": [
+          {
+            "count": 1,
+            "sides": 20,
+            "label": "d20 проверка",
+            "threshold": 12
+          }
+        ],
+        "onSuccess": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 2
+            }
+          }
+        ],
+        "onFail": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": -4
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
+      }
+    ],
+    "neutral": true
+  },
+  "yq.alchemy_archive": {
+    "id": "yq.alchemy_archive",
+    "name": "Чертежи из архива",
+    "summary": "В старом архиве нашли протокол синтеза технологий.",
+    "detail": "Можно вложить cognitio и получить рецепт «Гео-материалы», продать посредникам или отложить.",
+    "category": "science",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "study",
+        "label": "Изучить протокол",
+        "description": "Cognitio −8 → рецепт live_geo_materials.",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": -8
+            }
+          },
+          {
+            "effect": "grant_recipe",
+            "args": {
+              "recipeId": "recipe.live_geo_materials"
+            }
+          },
           {
             "effect": "loyalty_add",
             "args": {
@@ -3053,10 +5160,76 @@
         ]
       },
       {
-        "id": "pass",
-        "label": "Отклонить",
+        "id": "sell",
+        "label": "Продать посредникам",
+        "description": "Cognitio +6, рецепт не получить.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.cognitio",
+              "amount": 6
+            }
+          }
+        ]
+      },
+      {
+        "id": "wait",
+        "label": "Отложить",
+        "description": "Без эффекта — окно может закрыться.",
         "effects": []
       }
-    ]
+    ],
+    "neutral": true
+  },
+  "yq.alchemy_field_notes": {
+    "id": "yq.alchemy_field_notes",
+    "name": "Полевые заметки лаборатории",
+    "summary": "Полевой отряд привёз записи о связке энергосети и теплиц.",
+    "detail": "Каталогизация даёт рецепт Энерго-теплицы; можно продать или игнор.",
+    "category": "science",
+    "filterBy": {},
+    "choices": [
+      {
+        "id": "catalog",
+        "label": "Каталогизировать",
+        "description": "Рецепт live_grid_hydro, лояльность +2.",
+        "effects": [
+          {
+            "effect": "grant_recipe",
+            "args": {
+              "recipeId": "recipe.live_grid_hydro"
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "sell",
+        "label": "Продать записи",
+        "description": "Bios +5.",
+        "effects": [
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.bios",
+              "amount": 5
+            }
+          }
+        ]
+      },
+      {
+        "id": "ignore",
+        "label": "Игнорировать",
+        "description": "Без эффекта.",
+        "effects": []
+      }
+    ],
+    "neutral": true
   }
 }

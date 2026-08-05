@@ -4,6 +4,7 @@ import {
   useContext,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 
@@ -23,6 +24,9 @@ type CardBoardApi = {
   hitTest: (clientX: number, clientY: number, cardId: string) => DropZoneHit | null;
   setHoverZone: (zoneId: string | null) => void;
   clearHover: () => void;
+  /** Currently dragged card id (null when idle). */
+  draggingCardId: string | null;
+  setDraggingCardId: (cardId: string | null) => void;
 };
 
 const CardBoardContext = createContext<CardBoardApi | null>(null);
@@ -35,6 +39,7 @@ function zoneAccepts(zone: DropZoneHit, cardId: string): boolean {
 /** Shared registry so DragCard can hit-test DropZone rects during drag. */
 export function CardBoard({ children }: { children: ReactNode }) {
   const zonesRef = useRef(new Map<string, ZoneRecord>());
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
 
   const registerZone = useCallback((zone: ZoneRecord) => {
     zonesRef.current.set(zone.zoneId, zone);
@@ -55,6 +60,9 @@ export function CardBoard({ children }: { children: ReactNode }) {
 
   const hitTest = useCallback(
     (clientX: number, clientY: number, cardId: string): DropZoneHit | null => {
+      // Prefer the smallest overlapping zone (e.g. card over frontline).
+      let best: DropZoneHit | null = null;
+      let bestArea = Infinity;
       for (const z of zonesRef.current.values()) {
         if (!zoneAccepts(z, cardId)) continue;
         const r = z.el.getBoundingClientRect();
@@ -64,17 +72,35 @@ export function CardBoard({ children }: { children: ReactNode }) {
           clientY >= r.top &&
           clientY <= r.bottom
         ) {
-          return { zoneId: z.zoneId, accepts: z.accepts, onDrop: z.onDrop };
+          const area = Math.max(1, r.width * r.height);
+          if (area < bestArea) {
+            bestArea = area;
+            best = { zoneId: z.zoneId, accepts: z.accepts, onDrop: z.onDrop };
+          }
         }
       }
-      return null;
+      return best;
     },
     [],
   );
 
   const api = useMemo<CardBoardApi>(
-    () => ({ registerZone, hitTest, setHoverZone, clearHover }),
-    [registerZone, hitTest, setHoverZone, clearHover],
+    () => ({
+      registerZone,
+      hitTest,
+      setHoverZone,
+      clearHover,
+      draggingCardId,
+      setDraggingCardId,
+    }),
+    [
+      registerZone,
+      hitTest,
+      setHoverZone,
+      clearHover,
+      draggingCardId,
+      setDraggingCardId,
+    ],
   );
 
   return (

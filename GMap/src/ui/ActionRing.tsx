@@ -5,6 +5,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 export type ActionRingItem = {
   id: string;
@@ -58,10 +59,10 @@ export function ActionRing({
     if (!open) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
     };
 
     const onPointerDown = (e: PointerEvent) => {
@@ -70,19 +71,22 @@ export function ActionRing({
       if (root && !root.contains(e.target as Node)) onClose();
     };
 
-    window.addEventListener("keydown", onKeyDown);
+    // Capture so FloatingPanel Escape does not close the whole panel first.
+    window.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("pointerdown", onPointerDown, true);
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [open, onClose]);
 
-  if (!open || items.length === 0) return null;
+  if (!open || items.length === 0 || typeof document === "undefined") {
+    return null;
+  }
 
   const step = 360 / items.length;
 
-  return (
+  return createPortal(
     <div
       ref={rootRef}
       className="action-ring"
@@ -131,6 +135,7 @@ export function ActionRing({
           </button>
         );
       })}
-    </div>
+    </div>,
+    document.body,
   );
 }

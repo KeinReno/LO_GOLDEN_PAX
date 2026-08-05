@@ -51,8 +51,13 @@ export const COMBAT_ROLE_LABELS: Record<string, string> = {
   line: "Линия",
   capital: "Флагман",
   carrier: "Авианосец",
+  support: "Поддержка",
   bombard: "Обстрел",
   psi: "Пси",
+  infantry: "Пехота",
+  assault: "Штурм",
+  garrison: "Гарнизон",
+  armor: "Броня",
 };
 
 export const SLOT_ROLE_LABELS: Record<string, string> = {
@@ -82,8 +87,8 @@ export const DROP_ZONES: Array<{
 }> = [
   {
     id: "forge",
-    label: "КУЗНИЦА",
-    hint: "ветеран +1",
+    label: "Ремонт",
+    hint: "восстановить HP",
     Icon: Flame,
     revealColors: [
       [245, 158, 11],
@@ -92,7 +97,7 @@ export const DROP_ZONES: Array<{
   },
   {
     id: "disband",
-    label: "УТИЛЬ",
+    label: "Утилизация",
     hint: "списать · возврат",
     Icon: Recycle,
     revealColors: [
@@ -102,7 +107,7 @@ export const DROP_ZONES: Array<{
   },
   {
     id: "reserve",
-    label: "РЕЗЕРВ",
+    label: "Резерв",
     hint: "вывести из колоды",
     Icon: Package,
     revealColors: [
@@ -112,7 +117,7 @@ export const DROP_ZONES: Array<{
   },
   {
     id: "equip",
-    label: "ОСНАЩЕНИЕ",
+    label: "Оснащение",
     hint: "модули корабля",
     Icon: Settings2,
     revealColors: [
@@ -123,9 +128,11 @@ export const DROP_ZONES: Array<{
 ];
 
 export const METAL_CURRENCY = "currency.metal";
-export const FORGE_METAL_COST = 50;
-/** Fraction of forge cost refunded when scrapping one unit. */
-export const DISBAND_METAL_REFUND = 20;
+
+/** @deprecated Prefer forgeMetalCostClient() — kept for call sites. */
+export const FORGE_METAL_COST = 40;
+/** @deprecated Prefer disbandMetalRefundClient() */
+export const DISBAND_METAL_REFUND = 16;
 
 export type SlotRequire = {
   category?: string;

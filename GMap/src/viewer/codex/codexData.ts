@@ -55,7 +55,7 @@ export function knowledgeLabel(level: KnowledgeLevel): string {
     case 2:
       return "Базовые данные";
     case 3:
-      return "Детальная разведка";
+      return "Хорошо изучено";
     case 4:
       return "Полное изучение";
     default:

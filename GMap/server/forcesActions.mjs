@@ -13,10 +13,32 @@ import {
 } from "./ledger.mjs";
 import { writeLiveBoard } from "./tableStore.mjs";
 import { getContent } from "./contentLoader.mjs";
+import { forgeMetalCost, disbandMetalRefund } from "./forceEconomy.mjs";
 
 const METAL = "currency.metal";
-const FORGE_METAL_COST = 50;
-const DISBAND_METAL_REFUND = 20;
+
+/** Canonical id for composition/reserve counting (defId preferred, resolve display names). */
+function resolveUnitKey(g) {
+  if (!g || typeof g !== "object") return "";
+  const raw = String(g.defId || g.type || "").trim();
+  if (!raw) return "";
+  if (g.defId) return raw;
+  const content = getContent();
+  const pools = [
+    content.ships,
+    content.units,
+    content.ground_units,
+  ];
+  for (const pool of pools) {
+    if (!pool) continue;
+    if (pool[raw]) return raw;
+    for (const def of Object.values(pool)) {
+      if (!def || typeof def !== "object") continue;
+      if (def.id === raw || def.name === raw) return String(def.id || raw);
+    }
+  }
+  return raw;
+}
 
 function slotNeedForRole(group, role) {
   const content = getContent();
@@ -38,9 +60,9 @@ function normalizeGroup(g) {
     count,
   };
   if (g.defId) out.defId = String(g.defId);
-  if (g.hp != null) out.hp = Number(g.hp);
-  if (g.xp != null) out.xp = Number(g.xp);
-  if (g.level != null) out.level = Number(g.level);
+  if (g.hp != null && !isNaN(Number(g.hp))) out.hp = Math.max(0, Number(g.hp));
+  if (g.xp != null && !isNaN(Number(g.xp))) out.xp = Math.max(0, Number(g.xp));
+  if (g.level != null && !isNaN(Number(g.level))) out.level = Math.max(0, Number(g.level));
   if (g.filledSlots && typeof g.filledSlots === "object") {
     out.filledSlots = { ...g.filledSlots };
   }
@@ -65,6 +87,44 @@ function sumLevelUps(prev, next) {
     if (lb > la) ups += lb - la;
   }
   return ups;
+}
+
+/** Count stacks whose HP was restored toward max (repair zone). */
+function sumRepairs(prev, next) {
+  let n = 0;
+  const len = Math.max((prev || []).length, (next || []).length);
+  for (let i = 0; i < len; i++) {
+    const a = prev?.[i];
+    const b = next?.[i];
+    if (!a || !b) continue;
+    const ha = a.hp;
+    const hb = b.hp;
+    if (ha == null || hb == null) continue;
+    if (Number(hb) > Number(ha) + 0.5) n += 1;
+  }
+  return n;
+}
+
+/**
+ * Veterancy is battle-earned only — clamp level/xp so clients cannot buy ranks.
+ */
+function clampVeterancy(prevComp, nextComp) {
+  return (nextComp || []).map((g, i) => {
+    const p = prevComp?.[i];
+    if (!p) return g;
+    const out = { ...g };
+    const prevLv = Number(p.level) || 0;
+    const prevXp = Number(p.xp) || 0;
+    if ((Number(out.level) || 0) > prevLv) {
+      out.level = prevLv;
+      out.xp = prevXp;
+    }
+    if ((Number(out.xp) || 0) > prevXp && (Number(out.level) || 0) <= prevLv) {
+      // Allow xp within same level only if not exceeding; keep prev if jumped with level buy
+      if ((Number(g.level) || 0) > prevLv) out.xp = prevXp;
+    }
+    return out;
+  });
 }
 
 /** Resource units locked in filledSlots (respects slot.count). */
@@ -95,17 +155,49 @@ function reserveAmt(eco, currencyId) {
  * Validate / clamp client stockDeltas against composition change.
  * Allows spends; caps refunds to disband metal + unequipped modules.
  */
-function sanitizeStockDeltas(prevComp, nextComp, clientDeltas) {
-  const removed = Math.max(0, sumCount(prevComp) - sumCount(nextComp));
-  const forgeUps = sumLevelUps(prevComp, nextComp);
+function sanitizeStockDeltas(prevComp, nextComp, prevReserve, nextReserve, clientDeltas) {
+  const prevCounts = {};
+  for (const g of [...prevComp, ...prevReserve]) {
+    const id = resolveUnitKey(g);
+    if (!id) continue;
+    prevCounts[id] = (prevCounts[id] || 0) + (g.count || 0);
+  }
+  const nextCounts = {};
+  for (const g of [...nextComp, ...nextReserve]) {
+    const id = resolveUnitKey(g);
+    if (!id) continue;
+    nextCounts[id] = (nextCounts[id] || 0) + (g.count || 0);
+  }
+  
+  let removed = 0;
+  for (const [id, nextCount] of Object.entries(nextCounts)) {
+    const prevCount = prevCounts[id] || 0;
+    if (nextCount > prevCount) {
+      return { ok: false, error: `Нельзя создавать юниты напрямую (${id})` };
+    }
+  }
+  for (const [id, prevCount] of Object.entries(prevCounts)) {
+    const nextCount = nextCounts[id] || 0;
+    if (prevCount > nextCount) {
+      removed += prevCount - nextCount;
+    }
+  }
+
+  if (sumLevelUps(prevComp, nextComp) > 0) {
+    return {
+      ok: false,
+      error: "Ранг ветерана только из боёв (нельзя купить металлом)",
+    };
+  }
+  const repairs = sumRepairs(prevComp, nextComp);
   const prevFills = fillCounts(prevComp);
   const nextFills = fillCounts(nextComp);
-  const maxRefund = { [METAL]: DISBAND_METAL_REFUND * removed };
+  const maxRefund = { [METAL]: disbandMetalRefund() * removed };
   for (const id of Object.keys(prevFills)) {
     const d = (prevFills[id] || 0) - (nextFills[id] || 0);
     if (d > 0) maxRefund[id] = (maxRefund[id] || 0) + d;
   }
-  const minSpend = { [METAL]: FORGE_METAL_COST * forgeUps };
+  const minSpend = { [METAL]: forgeMetalCost() * repairs };
   for (const id of Object.keys(nextFills)) {
     const d = (nextFills[id] || 0) - (prevFills[id] || 0);
     if (d > 0) minSpend[id] = (minSpend[id] || 0) + d;
@@ -136,7 +228,7 @@ function sanitizeStockDeltas(prevComp, nextComp, clientDeltas) {
       }
       out[currencyId] = d; // client refund within cap
     } else {
-      // Spend: prefer client value (equip/forge may batch)
+      // Spend: prefer client value (equip/repair may batch)
       out[currencyId] = d;
     }
   }
@@ -181,12 +273,22 @@ export function applyForcesMutate(opts) {
   }
 
   const prevComp = normalizeComposition(unit.composition || []);
-  const nextComp = normalizeComposition(composition);
+  const nextRaw = normalizeComposition(composition);
+  if (sumLevelUps(prevComp, nextRaw) > 0) {
+    return {
+      ok: false,
+      error: "Ранг ветерана только из боёв (нельзя купить металлом)",
+    };
+  }
+  const nextComp = clampVeterancy(prevComp, nextRaw);
   const turn = world.meta?.turn ?? 0;
   const ledger = ensureAllFactions(readLedger(), world);
   const eco = ensureFactionEco(ledger, factionId);
 
-  const sanitized = sanitizeStockDeltas(prevComp, nextComp, stockDeltas);
+  const prevReserve = normalizeComposition(eco.forceReserve || []);
+  const nextReserve = forceReserve !== undefined ? normalizeComposition(forceReserve || []) : prevReserve;
+
+  const sanitized = sanitizeStockDeltas(prevComp, nextComp, prevReserve, nextReserve, stockDeltas);
   if (!sanitized.ok) return sanitized;
   const deltas = sanitized.deltas || {};
 
@@ -214,7 +316,7 @@ export function applyForcesMutate(opts) {
   }
 
   if (forceReserve !== undefined) {
-    eco.forceReserve = normalizeComposition(forceReserve || []);
+    eco.forceReserve = nextReserve;
   }
 
   unit.composition = nextComp;

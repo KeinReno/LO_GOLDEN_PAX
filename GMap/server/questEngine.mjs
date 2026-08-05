@@ -16,6 +16,8 @@ import {
   writeLedger,
 } from "./ledger.mjs";
 import { setKnowledgeLevel } from "./intel.mjs";
+import { grantRecipe } from "./alchemyActions.mjs";
+import { applyUnlockEffects } from "./techActions.mjs";
 
 function nowIso() {
   return new Date().toISOString();
@@ -156,7 +158,7 @@ export function matchesFilter(filterBy, ctx) {
   return true;
 }
 
-function buildFilterContext(world, factionId) {
+export function buildFilterContext(world, factionId) {
   const faction = factionById(world, factionId);
   return {
     era: world.meta?.era ?? 1,
@@ -288,6 +290,45 @@ function applyQuestEffects(world, factionId, effects, meta = {}) {
         });
         applied.push(e);
         notes.push(`intel ${entityType}:${entityId}→${level}`);
+      }
+      continue;
+    }
+    if (e.effect === "grant_recipe") {
+      const recipeId = args.recipeId || args.id;
+      if (recipeId) {
+        const gr = grantRecipe(factionId, recipeId, { ledger });
+        if (gr.ok) {
+          applied.push(e);
+          notes.push(
+            gr.added
+              ? `рецепт «${gr.recipe.name}»`
+              : `рецепт «${gr.recipe.name}» (уже был)`,
+          );
+        } else {
+          notes.push(`рецепт: ${gr.error}`);
+        }
+      }
+      continue;
+    }
+    if (e.effect === "grant_tech") {
+      const techId = args.techId || args.id;
+      if (techId) {
+        const content = getContent();
+        const def =
+          content.technologies?.[techId] || content.tech_combos?.[techId];
+        const eco = ensureFactionEco(ledger, factionId);
+        if (!def) {
+          notes.push(`tech неизвестен: ${techId}`);
+        } else if ((eco.unlockedTechs || []).includes(techId)) {
+          applied.push(e);
+          notes.push(`tech уже есть: ${def.name}`);
+        } else {
+          if (!Array.isArray(eco.unlockedTechs)) eco.unlockedTechs = [];
+          eco.unlockedTechs.push(techId);
+          applyUnlockEffects(eco, def.effects || []);
+          applied.push(e);
+          notes.push(`tech «${def.name}»`);
+        }
       }
       continue;
     }
@@ -499,7 +540,7 @@ export function resolveQuestChoice(questId, choiceId, world, content, opts = {})
     } else {
       quest.status = "done";
     }
-  } else if (quest.type === "yearly" || !quest.arc) {
+  } else {
     quest.status = "done";
   }
 
@@ -576,11 +617,15 @@ export function resolveQuestDice(questId, specIndex, world, content, opts = {}) 
       return { ok: false, error: effectResult.error, rolls, success, message };
     }
     // Consume choice after dice resolution for yearly quests
-    if (quest.type === "yearly" || !quest.arc) {
-      quest.status = "done";
-    } else if (choice.nextStageId && quest.arc?.stages?.length) {
+    if (choice.nextStageId && quest.arc?.stages?.length) {
       const sidx = quest.arc.stages.findIndex((s) => s.id === choice.nextStageId);
-      if (sidx >= 0) quest.arc.currentStage = sidx;
+      if (sidx >= 0) {
+        quest.arc.currentStage = sidx;
+      } else {
+        quest.status = "done";
+      }
+    } else {
+      quest.status = "done";
     }
     if (effectResult.notes.length) {
       pushHistory(quest, {

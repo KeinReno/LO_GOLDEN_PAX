@@ -1,7 +1,13 @@
 export { QuestsSection } from "./QuestsSection";
 export type { QuestsSectionProps, QuestActionHandlers } from "./QuestsSection";
-export { visiblePlayerQuests } from "./adaptQuest";
+export {
+  visiblePlayerQuests,
+  canAffordCosts,
+  formatChoiceCostLabel,
+  stockCostsFromEffects,
+} from "./adaptQuest";
 export { StoryTracker } from "./StoryTracker";
+export { AttentionInbox, collectAttention } from "./AttentionInbox";
 export type {
   Quest,
   QuestKind,
