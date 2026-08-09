@@ -99,6 +99,9 @@ export function normalizeWorld(raw) {
     planets: Array.isArray(s.planets)
       ? s.planets.map((p) => ({
           ...p,
+          resources: Array.isArray(p.resources)
+            ? p.resources.map((r) => resolveAlias("resources", r))
+            : [],
           loyalty:
             typeof p.loyalty === "number" && Number.isFinite(p.loyalty)
               ? Math.max(0, Math.min(100, p.loyalty))

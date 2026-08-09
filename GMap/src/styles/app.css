@@ -14407,6 +14407,89 @@ button.empire-res-pill:hover {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal-warning, #e8a54c) 35%, transparent);
 }
 
+.eco-stock-card__head {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.eco-stock-card__head .eco-tip-anchor {
+  flex: 1;
+  min-width: 0;
+}
+
+.eco-stock-card__expand {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 28px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid var(--line-hairline, rgba(255, 255, 255, 0.1));
+  border-radius: var(--r-soft, 6px);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary, #c8d0dc);
+  cursor: pointer;
+  transition: transform 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.eco-stock-card__expand:hover {
+  color: var(--text-primary, #e8dcc8);
+  border-color: color-mix(in srgb, var(--stock-accent, cyan) 35%, transparent);
+}
+
+.eco-stock-card__expand.is-open {
+  transform: rotate(180deg);
+  color: var(--stock-accent, var(--accent, #c9a227));
+}
+
+.eco-stock-tiers {
+  margin-top: 2px;
+  padding: 6px 4px 2px;
+  border-top: 1px solid var(--line-hairline, rgba(255, 255, 255, 0.06));
+}
+
+.eco-stock-tiers__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.eco-stock-tiers__table th,
+.eco-stock-tiers__table td {
+  padding: 3px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--line-hairline, rgba(255, 255, 255, 0.04));
+}
+
+.eco-stock-tiers__table th:first-child,
+.eco-stock-tiers__table td:first-child {
+  text-align: left;
+  color: var(--text-secondary, #c8d0dc);
+  font-weight: 600;
+}
+
+.eco-stock-tiers__table thead th {
+  font-weight: 500;
+  color: var(--text-muted, #8a96a8);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.eco-stock-tiers__table tbody tr.is-idle {
+  opacity: 0.45;
+}
+
+.eco-stock-tiers__note {
+  margin: 6px 0 0;
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
 .eco-stock-card .eco-tip-anchor {
   display: block;
   width: 100%;

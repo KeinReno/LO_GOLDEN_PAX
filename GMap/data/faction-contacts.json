@@ -1,12 +1,24 @@
 {
   "contacts": {
     "faction_karned": [
+      "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
       "faction_amalfea",
       "faction_belator",
+      "faction_federation",
+      "faction_free_traders",
+      "faction_heshah",
+      "faction_huchi",
+      "faction_korvun",
       "faction_nomad_f_0d845d87f2",
+      "faction_north_swarm",
+      "faction_or",
       "faction_pirates",
       "faction_rebels",
-      "faction_south_swarm"
+      "faction_sahale",
+      "faction_sikuri",
+      "faction_south_swarm",
+      "faction_taala",
+      "faction_turon"
     ],
     "faction_belator": [
       "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
@@ -76,6 +88,7 @@
       "faction_or",
       "faction_pirates",
       "faction_rebels",
+      "faction_south_swarm",
       "faction_turon"
     ],
     "faction_heshah": [
@@ -93,6 +106,7 @@
       "faction_turon"
     ],
     "faction_huchi": [
+      "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d",
       "faction_korvun",
       "faction_rebels"
     ],
@@ -103,6 +117,7 @@
       "faction_nomad_pax_terrialis",
       "faction_pirates",
       "faction_rebels",
+      "faction_taala",
       "faction_turon"
     ],
     "faction_balsagon": [
@@ -140,8 +155,9 @@
     ],
     "faction_amalfea": [
       "faction_belator",
+      "faction_karned",
       "faction_pirates",
-      "faction_karned"
+      "faction_rebels"
     ],
     "faction_khanate": [
       "faction_belator"
@@ -156,6 +172,7 @@
     ],
     "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d": [
       "faction_belator",
+      "faction_huchi",
       "faction_korvun",
       "faction_rebels"
     ],

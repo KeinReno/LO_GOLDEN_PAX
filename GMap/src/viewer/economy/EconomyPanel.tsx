@@ -292,6 +292,7 @@ export function EconomyPanel({
         {section === "stockpile" && (
           <StockpileSection
             payload={payload}
+            flowData={flowData}
             busy={stockBusy}
             onConvert={onConvert}
             onSellToMarket={onSellToMarket}

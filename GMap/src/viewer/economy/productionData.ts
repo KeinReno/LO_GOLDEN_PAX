@@ -63,11 +63,21 @@ export function buildProductionSystemRows(
     const resourceIds: string[] = [];
     let rate = 0;
 
+    const aliases = content?.id_aliases?.resources ?? {};
+    const resolveRes = (resName: string) => {
+      const aliased = aliases[resName] ?? aliases[resName?.toLowerCase?.()] ?? resName;
+      return (
+        content?.map_resources?.[aliased] ??
+        content?.map_resources?.[resName] ??
+        Object.values(content?.map_resources ?? {}).find(
+          (r) => r.name === resName || r.id === resName || r.name === aliased || r.id === aliased,
+        )
+      );
+    };
+
     for (const p of sys.planets ?? []) {
       for (const resName of p.resources ?? []) {
-        const def = Object.values(content?.map_resources ?? {}).find(
-          (r) => r.name === resName || r.id === resName,
-        );
+        const def = resolveRes(String(resName));
         if (def?.category) cats.add(String(def.category));
         const label = def?.name ?? String(resName);
         if (!resourceLabels.includes(label)) {
@@ -76,6 +86,25 @@ export function buildProductionSystemRows(
         }
         rate += Number(def?.tier ?? 1);
       }
+    }
+    // Belt deposits count toward «добыча» when a mining station is present.
+    const hasOwnMine = (sys.stations ?? []).some(
+      (st) => st.kind === "mining" && st.factionId === payload.factionId,
+    );
+    if (hasOwnMine) {
+      for (const resName of sys.resources ?? []) {
+        const def = resolveRes(String(resName));
+        if (def?.category) cats.add(String(def.category));
+        const label = def?.name ?? String(resName);
+        if (!resourceLabels.includes(label)) {
+          resourceLabels.push(label);
+          resourceIds.push(def?.id ?? String(resName));
+        }
+        rate += Number(def?.tier ?? 1);
+      }
+    }
+
+    for (const p of sys.planets ?? []) {
       const buildings = [
         ...(p.surfaceBuildings ?? []),
         ...(p.orbitalBuildings ?? []),

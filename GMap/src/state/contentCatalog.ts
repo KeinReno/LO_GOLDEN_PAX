@@ -127,6 +127,12 @@ export type PublicContent = {
     }
   >;
   map_resources?: Record<string, MapResourceDef>;
+  id_aliases?: {
+    version?: number;
+    resources?: Record<string, string>;
+    ships?: Record<string, string>;
+    units?: Record<string, string>;
+  };
   faction_currencies?: Record<
     string,
     {

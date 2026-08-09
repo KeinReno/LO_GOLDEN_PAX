@@ -465,6 +465,7 @@ export function getPublicContent() {
     faction_currencies: c.faction_currencies,
     faction_currency_bindings: c.faction_currency_bindings,
     market_quote_seed: c.market_quote_seed,
+    id_aliases: c.id_aliases,
     faction_traits: c.faction_traits,
     diplomacy_stances: c.diplomacy_stances,
     yearly_quests: c.yearly_quests,

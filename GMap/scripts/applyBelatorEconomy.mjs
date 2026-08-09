@@ -323,9 +323,9 @@ function applyLayout(world) {
       colonyType: "capital",
       loyalty: 92,
       races: CORE_MIX,
-      resources: ["железо", "соларид", "золото", "серебро"],
+      resources: ["map.iron", "map.solari", "map.gold", "map.silver", "map.blumatid"],
       notes:
-        "Столица Империи. Дворец, Церковь Сола, Золотой Банк, «Тихий Огонь». Промысел соларида и военный штаб.",
+        "Столица Империи. Дворец, Церковь Сола, Золотой Банк, «Тихий Огонь». Промысел соларита и блюматида + военный штаб.",
       surface: [
         b("Императорский дворец", "capitol"),
         b("Храм Сола · канонизация", "capitol"),
@@ -472,9 +472,9 @@ function applyLayout(world) {
       colonyType: "colony",
       loyalty: 80,
       races: CORE_MIX,
-      resources: ["железо", "минералы", "соларид"],
+      resources: ["map.iron", "map.minerals", "map.solari", "map.blumatid"],
       notes:
-        "Крупная ранняя колония. Пустынный промысел минералов и соларида + агрокупола.",
+        "Крупная ранняя колония. Пустынный промысел минералов, соларита и блюматида + агрокупола.",
       surface: [
         b("Администрация Десерти", "capitol"),
         b("Жильё Десерти", "residential"),
@@ -768,8 +768,8 @@ function applyLayout(world) {
       planet: "Мир Процион",
       pop: 950,
       role: "mixed",
-      res: ["железо", "соларид"],
-      note: "Смешанный мир: добыча соларида + агро.",
+      res: ["map.iron", "map.solari", "map.food", "map.blumatid"],
+      note: "Смешанный мир: добыча соларита и блюматида + агро.",
     },
     {
       sys: "Алькор",
@@ -819,8 +819,8 @@ function applyLayout(world) {
               b("Сборка", "factory", "surface", "industria.assembly"),
             ]
           : []),
-        ...(row.res.includes("соларид")
-          ? [b("Ловец соларида", "factory", "deep", "energia.solar_catcher")]
+        ...(row.res.includes("map.solari") || row.res.includes("соларид")
+          ? [b("Ловец соларита", "factory", "deep", "energia.solar_catcher")]
           : []),
         b("ТЭС", "factory", "surface", "energia.thermal_plant"),
         b("Гео", "factory", "surface", "energia.geo_hydro"),

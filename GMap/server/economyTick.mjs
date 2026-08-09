@@ -515,6 +515,16 @@ export function computeFlowBreakdown(world, factionId, content, eco = null) {
       }
       if (pPop > 0 || p.colonyType) inhabitedPlanets += 1;
     }
+    // Belt deposits: extracted when the polity has a mining station in-system.
+    const ownBeltMine = (sys.stations ?? []).some(
+      (st) => st.kind === "mining" && st.factionId === factionId,
+    );
+    if (ownBeltMine && (sys.resources?.length ?? 0) > 0) {
+      addPlanetExtraction(flows, sys.resources || [], c, {
+        maxTiers,
+        rateScale: prodScale,
+      });
+    }
     const objs = c.space_objects?.objects || {};
     for (const poiType of sys.spaceObjects || []) {
       const objDef = objs[poiType];

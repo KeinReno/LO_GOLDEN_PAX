@@ -16,9 +16,9 @@ import type { ViewerPayload } from "../../state/types";
 import { ResourceIcon } from "../../ui/ResourceIcon";
 import { ActionRing } from "../../ui/ActionRing";
 import { useLongPress } from "../../ui/useLongPress";
-import { AlertTriangle, Package, Store, Truck } from "lucide-react";
+import { AlertTriangle, ChevronDown, Package, Store, Truck } from "lucide-react";
 import { STOCK_DND_MIME } from "../research/constants";
-import { fmtInt } from "../../state/numberFormat";
+import { fmtInt, fmtSigned } from "../../state/numberFormat";
 import { buildSparkline, currencyShortLabel, reasonLabel } from "./chartData";
 import { Sparkline } from "./components/Sparkline";
 import { EmptyState } from "./components/EmptyState";
@@ -26,6 +26,8 @@ import { CATEGORY_LEGEND } from "./ecoCopy";
 import { isStockAlertOn } from "./stockAlerts";
 import { EcoTip } from "./components/EcoTip";
 import { NumberTicker } from "./components/NumberTicker";
+import type { EconomyFlowBreakdown } from "../economyFlowTypes";
+import { buildTierStockRows, type TierStockRow } from "./stockpileTierData";
 
 type StockCard = {
   id: string;
@@ -38,6 +40,7 @@ type StockCard = {
 
 type Props = {
   payload: ViewerPayload;
+  flowData?: EconomyFlowBreakdown | null;
   onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
   /** Open Market common tab with quick-sell preselect for this currency. */
   onSellToMarket?: (currencyId: string) => void;
@@ -48,10 +51,70 @@ type Props = {
   busy?: boolean;
 };
 
+function categoryLetterForCard(cardId: string): string | null {
+  return CATEGORY_CURRENCIES.find((c) => c.id === cardId)?.letter ?? null;
+}
+
+function TierBreakdownTable({
+  id,
+  rows,
+  showStockEstimate,
+}: {
+  id: string;
+  rows: TierStockRow[];
+  showStockEstimate: boolean;
+}) {
+  return (
+    <div className="eco-stock-tiers" id={id}>
+      <table className="eco-stock-tiers__table">
+        <thead>
+          <tr>
+            <th scope="col">Тир</th>
+            <th scope="col" title={showStockEstimate ? "Оценка доли категорийного запаса" : undefined}>
+              Запас
+            </th>
+            <th scope="col">Произв.</th>
+            <th scope="col">Расход</th>
+            <th scope="col">Итог</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.tier} className={row.active ? "" : "is-idle"}>
+              <th scope="row">T{row.tier}</th>
+              <td className="tabular-nums">{fmtInt(row.stock)}</td>
+              <td className="tabular-nums eco-up">
+                {row.production > 0 ? `+${fmtInt(row.production)}` : "—"}
+              </td>
+              <td className="tabular-nums empire-res-demand">
+                {row.consumption > 0 ? `−${fmtInt(row.consumption)}` : "—"}
+              </td>
+              <td
+                className={`tabular-nums ${row.net >= 0 ? "eco-up" : "eco-down"}`}
+              >
+                {row.production > 0 || row.consumption > 0
+                  ? fmtSigned(row.net)
+                  : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {showStockEstimate && (
+        <p className="hint eco-stock-tiers__note">
+          Запас по тирам — оценка по доле потоков (категория хранится суммарно).
+        </p>
+      )}
+    </div>
+  );
+}
+
 const StockRow = memo(function StockRow({
   card,
   spark,
   history,
+  tierRows,
+  showStockEstimate,
   onConvert,
   onReserve,
   onCaravan,
@@ -61,6 +124,8 @@ const StockRow = memo(function StockRow({
   card: StockCard;
   spark: number[];
   history: { delta: number; reason: string; turn: number | null }[];
+  tierRows: TierStockRow[];
+  showStockEstimate: boolean;
   onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
   onReserve?: (id: string, amount: number, label?: string) => void;
   onCaravan?: (id: string) => void;
@@ -70,6 +135,8 @@ const StockRow = memo(function StockRow({
   const dragRef = useRef<HTMLDivElement>(null);
   const [ring, setRing] = useState<{ x: number; y: number } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const tierPanelId = `eco-stock-tiers-${card.id.replace(/\./g, "-")}`;
 
   const openRing = useCallback((x: number, y: number) => {
     setRing({ x, y });
@@ -176,6 +243,17 @@ const StockRow = memo(function StockRow({
               : undefined
           }
         >
+          <div className="eco-stock-card__head">
+            <button
+              type="button"
+              className={`eco-stock-card__expand${expanded ? " is-open" : ""}`}
+              aria-expanded={expanded}
+              aria-controls={tierPanelId}
+              title={expanded ? "Свернуть тиры" : "Развернуть тиры T1–T10"}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              <ChevronDown size={16} strokeWidth={2} aria-hidden />
+            </button>
           <EcoTip
             content={
               <>
@@ -189,7 +267,7 @@ const StockRow = memo(function StockRow({
                 )}
                 <div className="hint">
                   Кнопки справа — действия. Удерживайте карточку — кольцо.
-                  Перетащите на систему ниже.
+                  Перетащите на систему ниже. Стрелка слева — тиры T1–T10.
                 </div>
               </>
             }
@@ -231,6 +309,14 @@ const StockRow = memo(function StockRow({
               )}
             </div>
           </EcoTip>
+          </div>
+          {expanded && (
+            <TierBreakdownTable
+              id={tierPanelId}
+              rows={tierRows}
+              showStockEstimate={showStockEstimate}
+            />
+          )}
           <div className="eco-stock-card__actions">
             <button
               type="button"
@@ -288,6 +374,7 @@ const StockRow = memo(function StockRow({
 
 export function StockpileSection({
   payload,
+  flowData,
   onConvert,
   onSellToMarket,
   onReserve,
@@ -344,19 +431,25 @@ export function StockpileSection({
 
   const stockRows = useMemo(() => {
     if (!eco) return [];
-    return cards.map((card) => ({
-      card,
-      spark: buildSparkline(eco, card.id),
-      history: (eco.recent ?? [])
-        .filter((r) => r.currencyId === card.id)
-        .slice(0, 3)
-        .map((r) => ({
-          delta: r.delta,
-          reason: r.reason,
-          turn: r.turn,
-        })),
-    }));
-  }, [cards, eco]);
+    return cards.map((card) => {
+      const letter = categoryLetterForCard(card.id);
+      const tierFlows = letter ? flowData?.flows?.[letter] : null;
+      return {
+        card,
+        spark: buildSparkline(eco, card.id),
+        history: (eco.recent ?? [])
+          .filter((r) => r.currencyId === card.id)
+          .slice(0, 3)
+          .map((r) => ({
+            delta: r.delta,
+            reason: r.reason,
+            turn: r.turn,
+          })),
+        tierRows: buildTierStockRows(card.stock, tierFlows),
+        showStockEstimate: letter != null,
+      };
+    });
+  }, [cards, eco, flowData]);
 
   if (!eco) {
     return (
@@ -374,16 +467,18 @@ export function StockpileSection({
   return (
     <div className="eco-stockpile">
       <p className="hint eco-stockpile__hint">
-        Кнопки на карточке — действия. Удерживайте — кольцо. Перетащите на
-        систему ниже — открыть систему.
+        Стрелка на карточке — развернуть тиры T1–T10. Кнопки — действия.
+        Удерживайте — кольцо. Перетащите на систему ниже — открыть систему.
       </p>
       <ul className="eco-stock-grid" aria-label="Запасы">
-        {stockRows.map(({ card, spark, history }) => (
+        {stockRows.map(({ card, spark, history, tierRows, showStockEstimate }) => (
           <StockRow
             key={card.id}
             card={card}
             spark={spark}
             history={history}
+            tierRows={tierRows}
+            showStockEstimate={showStockEstimate}
             onConvert={onConvert}
             onReserve={onReserve}
             onCaravan={onCaravan}

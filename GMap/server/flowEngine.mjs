@@ -11,6 +11,7 @@
  */
 import { getContent } from "./contentLoader.mjs";
 import { CATEGORY_CURRENCY } from "./ledger.mjs";
+import { resolveAlias } from "./normalizeWorld.mjs";
 
 export const CATEGORIES = ["A", "B", "C", "D", "E", "F"];
 export const TIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -85,14 +86,27 @@ function consumeRateAtLeast(flows, cat, minTier, amount) {
   return (Number(amount) || 0) - remaining;
 }
 
+/** Resolve map resource by id, Russian name, or id-aliases (соларид→map.solari). */
+export function lookupMapResource(content, nameOrId) {
+  const c = content || getContent();
+  if (!nameOrId) return null;
+  const raw = String(nameOrId);
+  const aliased = resolveAlias("resources", raw);
+  if (c.map_resources?.[aliased]) return c.map_resources[aliased];
+  if (c.map_resources?.[raw]) return c.map_resources[raw];
+  return (
+    Object.values(c.map_resources || {}).find(
+      (r) => r.name === raw || r.id === raw || r.name === aliased || r.id === aliased,
+    ) || null
+  );
+}
+
 export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
   const c = content || getContent();
   const maxTiers = opts.maxTiers || null;
   const scale = Number(opts.rateScale ?? 1);
   for (const name of resourceNames || []) {
-    const def = Object.values(c.map_resources || {}).find(
-      (r) => r.name === name || r.id === name,
-    );
+    const def = lookupMapResource(c, name);
     if (!def || def.category == null || def.tier == null) continue;
     const t = Number(def.tier);
     if (maxTiers && Number(maxTiers[def.category] ?? 1) < t) continue;
