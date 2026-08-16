@@ -105,6 +105,7 @@ export type PlayerSystemManageProps = {
   stocks: Record<string, number>;
   reservedAp: number;
   apMax: number;
+  unlockedProperties?: string[];
   ships: Record<string, { id: string; name: string; tier?: number; faction?: string }>;
   units: Record<string, { id: string; name: string; tier?: number; faction?: string }>;
   mapResourceNames?: Record<string, string>;
@@ -835,6 +836,7 @@ export function SystemView({
                 stocks={systemManage.stocks}
                 reservedAp={systemManage.reservedAp}
                 apMax={systemManage.apMax}
+                unlockedProperties={systemManage.unlockedProperties}
                 selectedPlanetId={null}
                 selectedStationId={selectedStationId}
                 ships={systemManage.ships}

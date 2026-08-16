@@ -304,6 +304,7 @@ export function ViewerSystemDive({
                 stocks: payload.economy?.stocks ?? {},
                 reservedAp,
                 apMax,
+                unlockedProperties: payload.economy?.unlockedProperties,
                 ships: shipsCatalog,
                 units: unitsCatalog,
                 mapResourceNames: resourceNames,
