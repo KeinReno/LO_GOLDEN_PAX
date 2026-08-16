@@ -65,8 +65,13 @@ export const SLOT_ROLE_LABELS: Record<string, string> = {
   weapon: "Орудие",
   shield: "Щит",
   reactor: "Реактор",
+  engine: "Двигатель",
+  armor: "Броня",
   crew: "Экипаж",
   structure: "Структура",
+  tactic: "Тактика",
+  small_arms: "Стрелковое",
+  kit: "Снаряжение",
 };
 
 export const TIER_COLORS: Record<number, string> = {
@@ -129,15 +134,11 @@ export const DROP_ZONES: Array<{
 
 export const METAL_CURRENCY = "currency.metal";
 
-/** @deprecated Prefer forgeMetalCostClient() — kept for call sites. */
-export const FORGE_METAL_COST = 40;
-/** @deprecated Prefer disbandMetalRefundClient() */
-export const DISBAND_METAL_REFUND = 16;
-
 export type SlotRequire = {
   category?: string;
   tier?: string;
   properties?: string[];
+  theater?: string;
 };
 
 export type CatalogSlot = {

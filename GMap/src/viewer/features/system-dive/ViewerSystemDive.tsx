@@ -1,0 +1,366 @@
+import { useEffect, useMemo } from "react";
+import type { ViewerPayload } from "../../../state/types";
+import type { MapResourceDef } from "../../../state/contentCatalog";
+import { useWorldStore } from "../../../state/worldStore";
+import { useViewerPanelFocusStore } from "../../../state/viewerPanelFocusStore";
+import { useViewerSessionStore } from "../../../state/viewerSessionStore";
+import { useViewerOrderSessionStore } from "../../../state/viewerOrderSessionStore";
+import { useViewerSystemDiveStore } from "../../../state/viewerSystemDiveStore";
+import { SystemView } from "../../../editors/SystemView";
+import { SystemCodex } from "../../SystemCodex";
+import type {
+  BuildingDef,
+  ColonyDef,
+  PlanetActionRequest,
+} from "../../PlayerPlanetManage";
+import type { SystemActionRequest } from "../../SystemCommandPanel";
+import type { BuildPreviewResult, BuildQueueItem } from "../../system/types";
+import { isInputFocused } from "../../hooks/isInputFocused";
+import { navigateViewerRoom } from "../rooms-router/navigateViewerRoom";
+import {
+  attackSystemTitle,
+  catalogDisplayNames,
+  claimSystemTitle,
+  systemDiveBackLabel,
+} from "./systemDiveCopy";
+
+type Recruit = {
+  world?: ViewerPayload["world"];
+  economy?: ViewerPayload["economy"];
+  intel?: ViewerPayload["intel"];
+  visibleSystemIds?: string[];
+};
+
+type UnitCat = Record<
+  string,
+  { id: string; name: string; tier?: number; faction?: string }
+>;
+
+type Props = {
+  payload: ViewerPayload;
+  password: string;
+  buildingsCatalog: Record<string, BuildingDef>;
+  coloniesCatalog: Record<string, ColonyDef>;
+  mapResourcesCatalog: Record<string, MapResourceDef> | undefined;
+  shipsCatalog: UnitCat;
+  unitsCatalog: UnitCat;
+  onClose: () => void;
+  onOpenPlanet: (systemId: string, planetId: string) => void;
+  onFocusSystem: (systemId: string) => void;
+  onPlanetAction: (req: PlanetActionRequest) => void;
+  onSystemAction: (req: SystemActionRequest) => void;
+  onFoundHybrid: (raceA: string, raceB: string) => void;
+  onRecruitSession: (data: Recruit) => void;
+  onOpenResearch: (techId: string) => void;
+  onChangeBuildQueue: (next: BuildQueueItem[]) => void;
+  onPreviewBuild: (opts: {
+    systemId: string;
+    planetId: string;
+    buildingId: string;
+  }) => Promise<BuildPreviewResult | null>;
+  onClaim: (systemId: string, fleetId?: string | null) => void;
+  onAttack: (fleetId: string, systemId: string) => void;
+};
+
+export function ViewerSystemDive({
+  payload,
+  password,
+  buildingsCatalog,
+  coloniesCatalog,
+  mapResourcesCatalog,
+  shipsCatalog,
+  unitsCatalog,
+  onClose,
+  onOpenPlanet,
+  onFocusSystem,
+  onPlanetAction,
+  onSystemAction,
+  onFoundHybrid,
+  onRecruitSession,
+  onOpenResearch,
+  onChangeBuildQueue,
+  onPreviewBuild,
+  onClaim,
+  onAttack,
+}: Props) {
+  const reservedAp = useViewerOrderSessionStore((s) => s.reservedAp);
+  const apMax = useViewerOrderSessionStore((s) => s.apMax);
+  const flowData = useViewerOrderSessionStore((s) => s.flowData);
+  const planetBusy = useViewerSystemDiveStore((s) => s.planetBusy);
+  const planetMsg = useViewerSystemDiveStore((s) => s.planetMsg);
+  const systemBusy = useViewerSystemDiveStore((s) => s.systemBusy);
+  const systemMsg = useViewerSystemDiveStore((s) => s.systemMsg);
+  const systemFocusId = useViewerSystemDiveStore((s) => s.systemFocusId);
+  const setSystemFocusId = useViewerSystemDiveStore((s) => s.setSystemFocusId);
+  const systemPreferDeck = useViewerSystemDiveStore((s) => s.systemPreferDeck);
+  const systemProduceTab = useViewerSystemDiveStore((s) => s.systemProduceTab);
+  const systemProduceFleetId = useViewerSystemDiveStore(
+    (s) => s.systemProduceFleetId,
+  );
+  const systemProduceLegionId = useViewerSystemDiveStore(
+    (s) => s.systemProduceLegionId,
+  );
+  const mapFocus = useWorldStore((s) => s.mapFocus);
+  const economyLinkedSystemId = useViewerPanelFocusStore(
+    (s) => s.economyLinkedSystemId,
+  );
+  const setEconomyLinkedSystemId = useViewerPanelFocusStore(
+    (s) => s.setEconomyLinkedSystemId,
+  );
+  const ecoHighlightCategory = useViewerPanelFocusStore(
+    (s) => s.ecoHighlightCategory,
+  );
+  const setEcoHighlightCategory = useViewerPanelFocusStore(
+    (s) => s.setEcoHighlightCategory,
+  );
+  const selectedFleetId = useViewerSessionStore((s) => s.selectedFleetId);
+  const selectFleet = useViewerSessionStore((s) => s.selectFleet);
+  const selectLegion = useViewerSessionStore((s) => s.selectLegion);
+  const setSelectedSystemId = useViewerSessionStore(
+    (s) => s.setSelectedSystemId,
+  );
+
+  const focusedSystem = useMemo(
+    () => payload.world.systems.find((s) => s.id === systemFocusId) ?? null,
+    [payload, systemFocusId],
+  );
+
+  const playerSystemNav = useMemo(() => {
+    if (!systemFocusId) return undefined;
+    return {
+      onGalaxyBack: onClose,
+      onOpenSystem: (id: string) => {
+        setSystemFocusId(id);
+        setSelectedSystemId(id);
+        useWorldStore.setState({
+          dossierSystemId: null,
+          mapFocus: { level: "system" as const, systemId: id },
+        });
+      },
+      onOpenPlanet,
+      selectedPlanetId:
+        mapFocus.level === "planet" && mapFocus.systemId === systemFocusId
+          ? mapFocus.planetId
+          : null,
+    };
+  }, [
+    systemFocusId,
+    mapFocus,
+    onClose,
+    onOpenPlanet,
+    setSystemFocusId,
+    setSelectedSystemId,
+  ]);
+
+  useEffect(() => {
+    if (!systemFocusId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        const dossierOpen = useWorldStore.getState().dossierSystemId;
+        if (dossierOpen) {
+          useWorldStore.setState({ dossierSystemId: null });
+          return;
+        }
+        onClose();
+        return;
+      }
+      if (
+        (e.key === "i" || e.key === "I" || e.key === "ш" || e.key === "Ш") &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        if (isInputFocused(e.target)) return;
+        e.preventDefault();
+        const open = useWorldStore.getState().dossierSystemId;
+        useWorldStore.setState({
+          dossierSystemId: open ? null : systemFocusId,
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [systemFocusId, onClose]);
+
+  const resourceNames = catalogDisplayNames(mapResourcesCatalog);
+  const faction = payload.world.factions.find((f) => f.id === payload.factionId);
+  const ownSystem =
+    focusedSystem?.ownerFactionId === payload.factionId;
+  const hasFleet = Boolean(selectedFleetId);
+  const economyLinked =
+    Boolean(focusedSystem) && economyLinkedSystemId === focusedSystem?.id;
+
+  return (
+    <>
+      {systemFocusId && focusedSystem && (
+        <div
+          className={`viewer-system-layer ${
+            economyLinked ? "viewer-system-layer--docked-right" : ""
+          }`}
+          role="region"
+          aria-label={focusedSystem.name}
+        >
+          <header className="viewer-system-head">
+            <button
+              type="button"
+              className="btn viewer-system-back"
+              onClick={onClose}
+            >
+              {systemDiveBackLabel(economyLinked)}
+              <span className="viewer-system-back-kbd">Esc</span>
+            </button>
+            <h2 className="viewer-system-title">
+              {economyLinked ? (
+                <span className="viewer-system-crumbs">
+                  <span className="hint">Экономика</span>
+                  <span className="hint" aria-hidden>
+                    →
+                  </span>
+                  <span>{focusedSystem.name}</span>
+                </span>
+              ) : (
+                focusedSystem.name
+              )}
+            </h2>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() =>
+                useWorldStore.setState({ dossierSystemId: focusedSystem.id })
+              }
+              title="Сведения: объекты, добыча, постройки"
+            >
+              Сведения
+              <kbd className="sys-codex__kbd">I</kbd>
+            </button>
+          </header>
+          <div className="viewer-system-body">
+            <SystemView
+              system={focusedSystem}
+              readOnly
+              playerFactionId={payload.factionId}
+              nav={playerSystemNav}
+              onSelectOwnFleet={(fleetId) => {
+                onClose();
+                const fleet = payload.world.fleets.find((f) => f.id === fleetId);
+                selectFleet(fleetId, fleet?.systemId);
+                if (fleet) onFocusSystem(fleet.systemId);
+                else navigateViewerRoom("map");
+              }}
+              onSelectOwnLegion={(legionId) => {
+                onClose();
+                const leg = payload.world.legions.find((l) => l.id === legionId);
+                selectLegion(legionId, leg?.systemId);
+                if (leg) onFocusSystem(leg.systemId);
+                else navigateViewerRoom("map");
+              }}
+              planetManage={{
+                factionId: payload.factionId,
+                stocks: payload.economy?.stocks ?? {},
+                reservedAp,
+                apMax,
+                buildings: buildingsCatalog,
+                colonies: coloniesCatalog,
+                mapResources: mapResourcesCatalog,
+                techEco: {
+                  techTiers: payload.economy?.techTiers,
+                  unlockedProperties: payload.economy?.unlockedProperties,
+                  unlockedLineages: payload.economy?.unlockedLineages,
+                },
+                defaultCultureId: faction?.defaultCultureId ?? "culture.baseline",
+                primaryFaith: faction?.primaryFaith ?? "faith.secular",
+                unlockedLineages: payload.economy?.unlockedLineages ?? [],
+                onFoundHybrid: (raceA, raceB) => onFoundHybrid(raceA, raceB),
+                password,
+                onForceRecruitSession: onRecruitSession,
+                busy: planetBusy,
+                message: planetMsg,
+                onAction: onPlanetAction,
+                onOpenResearch,
+                buildQueue: payload.economy?.buildQueue ?? [],
+                onChangeBuildQueue,
+                onPreviewBuild: (buildingId) => {
+                  const planetId =
+                    mapFocus.level === "planet" &&
+                    mapFocus.systemId === focusedSystem.id
+                      ? mapFocus.planetId
+                      : "";
+                  if (!planetId) return Promise.resolve(null);
+                  return onPreviewBuild({
+                    systemId: focusedSystem.id,
+                    planetId,
+                    buildingId,
+                  });
+                },
+                highlightCategory: ecoHighlightCategory,
+                onShowInEconomy: (category) => {
+                  setEcoHighlightCategory(category);
+                  setEconomyLinkedSystemId(focusedSystem.id);
+                  navigateViewerRoom("economy");
+                },
+              }}
+              systemManage={{
+                factionId: payload.factionId,
+                stocks: payload.economy?.stocks ?? {},
+                reservedAp,
+                apMax,
+                ships: shipsCatalog,
+                units: unitsCatalog,
+                mapResourceNames: resourceNames,
+                busy: systemBusy,
+                message: systemMsg,
+                onAction: onSystemAction,
+                flowData,
+                buildings: buildingsCatalog,
+                highlightCategory: ecoHighlightCategory,
+                onHighlightCategory: setEcoHighlightCategory,
+                preferDeck: systemPreferDeck,
+                preferProduceTab: systemProduceTab,
+                produceFleetId: systemProduceFleetId,
+                produceLegionId: systemProduceLegionId,
+              }}
+            />
+          </div>
+          <footer className="viewer-system-actions">
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={!hasFleet || ownSystem}
+              title={claimSystemTitle({ hasFleet, ownSystem })}
+              onClick={() => onClaim(focusedSystem.id, selectedFleetId)}
+            >
+              Захват
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={
+                !focusedSystem.ownerFactionId || ownSystem || !hasFleet
+              }
+              title={attackSystemTitle({ hasFleet, ownSystem })}
+              onClick={() => {
+                if (selectedFleetId) {
+                  onAttack(selectedFleetId, focusedSystem.id);
+                }
+              }}
+            >
+              Атака
+            </button>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => navigateViewerRoom("rp")}
+            >
+              Сцена с ГМом
+            </button>
+          </footer>
+        </div>
+      )}
+      <SystemCodex
+        factionId={payload.factionId}
+        mapResourceNames={resourceNames}
+        onClose={() => useWorldStore.setState({ dossierSystemId: null })}
+      />
+    </>
+  );
+}

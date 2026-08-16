@@ -9,7 +9,7 @@ type Props = {
   onClose: () => void;
   signals: EconomySystemSignal[];
   onFocusSystem: (systemId: string) => void;
-  onOpenHq?: () => void;
+  onOpenEconomy?: () => void;
 };
 
 export function EconomySignalPopover({
@@ -18,7 +18,7 @@ export function EconomySignalPopover({
   onClose,
   signals,
   onFocusSystem,
-  onOpenHq,
+  onOpenEconomy,
 }: Props) {
   return (
     <FloatingPopover
@@ -64,9 +64,19 @@ export function EconomySignalPopover({
                   <span className="economy-signal-text">
                     <strong>{sig.systemName}</strong>
                     <span className="hint">
-                      {ECO_CATEGORY_NAMES[sig.category]
-                        ? `${ECO_CATEGORY_NAMES[sig.category]} · ${sig.reason}`
-                        : sig.reason}
+                      {[
+                        ECO_CATEGORY_NAMES[sig.category]
+                          ? `${ECO_CATEGORY_NAMES[sig.category]} · ${sig.reason}`
+                          : sig.reason,
+                        sig.turnsUntil === 0
+                          ? "уже не хватает"
+                          : sig.turnsUntil != null
+                            ? `через ~${sig.turnsUntil} ход.`
+                            : null,
+                        sig.consequence,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </span>
                 </button>
@@ -83,9 +93,19 @@ export function EconomySignalPopover({
                   <span className="economy-signal-text">
                     <strong>{sig.systemName}</strong>
                     <span className="hint">
-                      {ECO_CATEGORY_NAMES[sig.category]
-                        ? `${ECO_CATEGORY_NAMES[sig.category]} · ${sig.reason}`
-                        : sig.reason}
+                      {[
+                        ECO_CATEGORY_NAMES[sig.category]
+                          ? `${ECO_CATEGORY_NAMES[sig.category]} · ${sig.reason}`
+                          : sig.reason,
+                        sig.turnsUntil === 0
+                          ? "уже не хватает"
+                          : sig.turnsUntil != null
+                            ? `через ~${sig.turnsUntil} ход.`
+                            : null,
+                        sig.consequence,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </span>
                 </div>
@@ -95,10 +115,10 @@ export function EconomySignalPopover({
         </ul>
       )}
 
-      {onOpenHq ? (
+      {onOpenEconomy ? (
         <footer className="economy-signal-foot">
-          <button type="button" className="btn ghost block" onClick={onOpenHq}>
-            Подробнее в штабе / науке
+          <button type="button" className="btn ghost block" onClick={onOpenEconomy}>
+            Открыть экономику
           </button>
         </footer>
       ) : null}

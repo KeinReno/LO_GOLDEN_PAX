@@ -1,0 +1,16 @@
+# agent-tasks
+
+Implementation handoff specs — written *by* Claude (with full context of this project's history and every design decision behind a feature) *for* a delegated implementing agent (currently Grok 4.6) to build from, then hand back for review. Not design documents: the design is already settled through a grill-me session (see `notes/`) before a spec here gets written. Not carried over from GMap — everything here is authored for this project specifically.
+
+Each spec is self-contained: it names the exact files/functions to touch, states settled design decisions ("don't deviate without checking"), flags first-pass numeric defaults explicitly, and lists what's out of scope on purpose. Each ends with a "How this gets checked" section — the reviewing agent (Claude) verifies parity claims, dead code, full test suite, and live HTTP behavior, the same discipline used everywhere else in this project, not just "tests pass."
+
+- `CURRENCY_AND_FORCES_INTEGRATION_SPEC.md` — metal/supply income floor, forces-combat integration, planet slot-grade progression, space-object economy/combat/depletion. **Status: implemented and reviewed** (2026-08-14).
+- `TECH_TREE_2_INTEGRATION_SPEC.md` — tech grading, resource-slot sockets, offer/reroll acquisition with a paid bypass, 6-direction taxonomy, race-identity offer-weighting, Military mechanics. **Status: implemented and reviewed** (2026-08-14).
+- `BOARDING_AND_FORCE_KIND_GUARD_SPEC.md` — legion↔fleet engage guard, crew-as-militia boarding with capture-on-win. **Status: implemented, pending review.**
+- `COURT_AND_NPC_ROSTER_SPEC.md` — new NPC-roster domain (GM CRUD), council seats/portfolios, governor/commander/admiral postings, NPC tasks, internal blocs (display-only), modifier-stack wiring for 5 of 7 real effect channels. **Status: implemented, pending review.**
+- `STABILITY_AND_REVOLT_SPEC.md` — new stability accumulator feeding a 3-stage revolt (production debuff → rebel forces → real secession into a new faction). **Status: implemented, pending review.** Depends on boarding + court roster.
+- `SYSTEM_ADJACENCY_AND_MOVEMENT_SPEC.md` — real GMap port (links graph, pathfinding, logistics/supply-range) plus new engine-range + fuel-movement-points fleet/legion movement. **Status: implemented, pending review.** Unblocks Military power-projection and the galaxy migration below. Sectors table deferred.
+- `GALAXY_MIGRATION_SPEC.md` — the actual data-transfer script moving GMap's real galaxy (978 systems/2774 planets) into Golden_PAX's schema. **Status: implemented, pending review.** Depends on `SYSTEM_ADJACENCY_AND_MOVEMENT_SPEC.md`'s schema (landed). Sectors table added here (adjacency had deferred it).
+- `CURRENCY_PEG_SPEC.md` — gold-standard mechanic converting a pegged strategic resource into real metal/supply income, plus new economic-relation types (exchange deals, currency unions) alongside political relations. **Status: implemented, pending review.** Dependency (real flow income) already satisfied.
+
+Source design reasoning for these lives in `../notes/*-grill.md`; durable summaries live in this session's memory (see the project's `MEMORY.md` index) — read those before extending a spec here, not just the spec file itself.

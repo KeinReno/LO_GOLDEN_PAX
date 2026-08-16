@@ -1,0 +1,16 @@
+---
+description: STATUS milestone sync — NOT every chat turn; keep live ≤120 lines
+alwaysApply: true
+---
+
+# STATUS sync (replaces per-turn tmp summaries)
+
+**Не** писать `tmp/summary-*.json` каждый ход — это жжёт токены и не читается.
+
+Обновляй `agent-tasks/STATUS.md` **только** когда:
+- закончена нетривиальная сессия / веха;
+- сменился трек или появился блокер;
+- владелец явно просит статус.
+
+Формат блока: дата · статус · сделано · блокеры · файлы · дальше. Live ≤~120 строк; иначе архивируй в `agent-tasks/_archive/status/`.
+MEMORY — только устойчивые факты (см. PROJECT.md §5).

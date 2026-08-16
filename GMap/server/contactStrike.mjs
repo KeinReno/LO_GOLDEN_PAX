@@ -156,6 +156,15 @@ export function runContactStrike({
 
   }
 
+  const attackerKind = payload?.fleetId
+    ? "fleet"
+    : payload?.legionId
+      ? "legion"
+      : null;
+  if (isUnitDuel && attackerKind && targetUnitKind && attackerKind !== targetUnitKind) {
+    return { ok: false, error: "cross_kind_engage_not_allowed" };
+  }
+
 
 
   const strikePayload = enrichPayload(payload, targetUnitKind, targetUnitId);
@@ -204,11 +213,13 @@ export function runContactStrike({
 
     cancelIntent(submitted.intent.id, factionId);
 
+    const cross = journal.find((j) => j.type === "cross_kind_engage_not_allowed");
+
     return {
 
       ok: false,
 
-      error: "Нет цели для боя в этой системе",
+      error: cross ? "cross_kind_engage_not_allowed" : "Нет цели для боя в этой системе",
 
       journal,
 

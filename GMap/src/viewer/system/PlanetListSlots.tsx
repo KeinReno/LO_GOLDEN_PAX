@@ -1,8 +1,11 @@
 import type { Planet } from "../../state/types";
 import type { BuildingDef, PlanetActionRequest } from "../PlayerPlanetManage";
 import { BuildingKindIcon, buildingKindColor } from "../BuildingKindIcon";
+import { LaborPips, laborPipStyle } from "../LaborPips";
+import { buildingStaffedUnits, consumesLabor } from "../../state/planetLabor";
 import { HoldRevealButton } from "../../ui/HoldRevealButton";
 import { PLANET_BUILDING_KIND_LABELS } from "../../state/defaults";
+import { GESTURE } from "../../ui/gestureMap";
 
 type Props = {
   planet: Planet;
@@ -15,6 +18,16 @@ type Props = {
   onAction: (req: PlanetActionRequest) => void;
   onInspect: (instanceId: string, kind: string) => void;
   onRequestBuild: (zone: "surface" | "orbital") => void;
+  laborPickFrom?: string | null;
+  laborDragging?: boolean;
+  onLaborPickBuilding?: (instanceId: string, amount: number) => void;
+  onLaborDragBuilding?: (
+    instanceId: string,
+    x: number,
+    y: number,
+    amount: number,
+  ) => void;
+  onLaborTapBuilding?: (instanceId: string) => void;
 };
 
 function resolveDef(
@@ -33,6 +46,43 @@ function resolveDef(
   );
 }
 
+function startLaborPointer(
+  e: React.PointerEvent,
+  instanceId: string,
+  busy: boolean | undefined,
+  laborPickFrom: string | null | undefined,
+  onPick?: (id: string, amount: number) => void,
+  onDrag?: (id: string, x: number, y: number, amount: number) => void,
+  onTap?: (id: string) => void,
+) {
+  if (busy || e.button !== 0) return;
+  e.stopPropagation();
+  const amount = e.shiftKey ? 5 : 1;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const onMove = (ev: PointerEvent) => {
+    if (
+      Math.hypot(ev.clientX - startX, ev.clientY - startY) <
+      GESTURE.dragThresholdPx
+    )
+      return;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    onDrag?.(instanceId, ev.clientX, ev.clientY, amount);
+  };
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    if (laborPickFrom && laborPickFrom !== instanceId) {
+      onTap?.(instanceId);
+      return;
+    }
+    onPick?.(instanceId, amount);
+  };
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+}
+
 function SlotSection({
   title,
   used,
@@ -49,6 +99,12 @@ function SlotSection({
   onAction,
   onInspect,
   onRequestBuild,
+  planet,
+  laborPickFrom,
+  laborDragging,
+  onLaborPickBuilding,
+  onLaborDragBuilding,
+  onLaborTapBuilding,
 }: {
   title: string;
   used: number;
@@ -65,6 +121,17 @@ function SlotSection({
   onAction: (req: PlanetActionRequest) => void;
   onInspect: (instanceId: string, kind: string) => void;
   onRequestBuild: (zone: "surface" | "orbital") => void;
+  planet: Planet;
+  laborPickFrom?: string | null;
+  laborDragging?: boolean;
+  onLaborPickBuilding?: (instanceId: string, amount: number) => void;
+  onLaborDragBuilding?: (
+    instanceId: string,
+    x: number,
+    y: number,
+    amount: number,
+  ) => void;
+  onLaborTapBuilding?: (instanceId: string) => void;
 }) {
   return (
     <div className="sys-list-slots__section">
@@ -81,15 +148,29 @@ function SlotSection({
           const hot =
             (highlightCategory && cat === highlightCategory) ||
             (def && highlightBuildingIds?.includes(def.id));
+          const laborOk = !!def && consumesLabor(def);
+          const laborInfo = laborOk
+            ? buildingStaffedUnits(planet, b, buildings)
+            : null;
+          const laborArmed = laborPickFrom === b.id;
+          const laborDrop =
+            laborOk &&
+            !!laborPickFrom &&
+            laborPickFrom !== b.id;
+          const laborGlow = laborOk && (laborDragging || laborDrop);
           return (
             <li
               key={b.id}
-              className={`sys-list-slots__card${hot ? " is-hot" : ""}`}
+              className={`sys-list-slots__card${hot ? " is-hot" : ""}${laborArmed ? " is-labor-armed" : ""}${laborGlow ? " is-labor-drop" : ""}`}
+              data-labor-drop={laborOk ? b.id : undefined}
               style={
                 {
                   ["--slot-accent" as string]: buildingKindColor(b.kind),
                 } as React.CSSProperties
               }
+              onClick={() => {
+                if (laborPickFrom && laborOk) onLaborTapBuilding?.(b.id);
+              }}
             >
               <div className="sys-list-slots__card-head">
                 <BuildingKindIcon kind={b.kind} size={16} />
@@ -102,12 +183,42 @@ function SlotSection({
                     {cat ? ` · ${cat}` : ""}
                   </div>
                 </div>
+                {laborInfo ? (
+                  <span
+                    className="sys-list-slots__pips"
+                    style={laborPipStyle(buildingKindColor(b.kind))}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) =>
+                      startLaborPointer(
+                        e,
+                        b.id,
+                        busy,
+                        laborPickFrom,
+                        onLaborPickBuilding,
+                        onLaborDragBuilding,
+                        onLaborTapBuilding,
+                      )
+                    }
+                  >
+                    <LaborPips
+                      staffed={laborInfo.staffed}
+                      slots={laborInfo.slots}
+                      pinned={laborInfo.pinned}
+                    />
+                  </span>
+                ) : null}
               </div>
-              <div className="sys-list-slots__card-actions">
+              <div
+                className="sys-list-slots__card-actions"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <button
                   type="button"
                   className="btn ghost"
-                  onClick={() => onInspect(b.id, b.kind)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onInspect(b.id, b.kind);
+                  }}
                 >
                   Инфо
                 </button>
@@ -177,6 +288,11 @@ export function PlanetListSlots({
   onAction,
   onInspect,
   onRequestBuild,
+  laborPickFrom,
+  laborDragging,
+  onLaborPickBuilding,
+  onLaborDragBuilding,
+  onLaborTapBuilding,
 }: Props) {
   const surface = planet.surfaceBuildings ?? [];
   const orbital = planet.orbitalBuildings ?? [];
@@ -201,6 +317,12 @@ export function PlanetListSlots({
         onAction={onAction}
         onInspect={onInspect}
         onRequestBuild={onRequestBuild}
+        planet={planet}
+        laborPickFrom={laborPickFrom}
+        laborDragging={laborDragging}
+        onLaborPickBuilding={onLaborPickBuilding}
+        onLaborDragBuilding={onLaborDragBuilding}
+        onLaborTapBuilding={onLaborTapBuilding}
       />
       <SlotSection
         title="Орбита"
@@ -218,6 +340,12 @@ export function PlanetListSlots({
         onAction={onAction}
         onInspect={onInspect}
         onRequestBuild={onRequestBuild}
+        planet={planet}
+        laborPickFrom={laborPickFrom}
+        laborDragging={laborDragging}
+        onLaborPickBuilding={onLaborPickBuilding}
+        onLaborDragBuilding={onLaborDragBuilding}
+        onLaborTapBuilding={onLaborTapBuilding}
       />
     </div>
   );

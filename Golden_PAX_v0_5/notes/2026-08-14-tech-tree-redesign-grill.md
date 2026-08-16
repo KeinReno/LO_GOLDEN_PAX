@@ -1,0 +1,88 @@
+# Tech Tree Redesign ("Tech Tree 2.0"): Grill / Discovery Notes
+
+Date: 2026-08-14 · Goal: extract the full design for a reimagined tech-acquisition and tech-depth system, following a long freeform design conversation (Stellaris comparison, procedural offer/reroll model, alchemy revival, tech grading, resource-slot sockets, race-trait sockets, and a discovered military/weapons content gap). This grill turns that conversation into a sequenced, buildable spec. Content/balance authoring of the eventual tree content is likely still a separate, later pass — scope that explicitly once the mechanics are settled.
+
+## Summary / key decisions
+
+**Where this came from**: morning audit found 387/432 techs (89.6%) are auto-generated placeholder stubs with zero design behind them (`notes/2026-08-14-tech-tree-audit.md`, mechanics fixed same day). Viewing the tree through 5 player archetypes found race trait effects — rich, real content in `races.json` — are never wired anywhere (`raceRegistry.mjs`/`collectRaceEffects` are dead code). A Stellaris comparison turned into a full freeform redesign conversation, captured here as 8 real decisions.
+
+**The settled design, end to end:**
+1. **Content scope**: all 387 catalog techs get individually redesigned eventually (not trimmed) — large, separate, incremental content-authoring effort. Mechanics below get built now against whatever real content already exists.
+2. **Progression axis**: `techGrade` (1-5) replaces the old, dead `.efficiency`/`.austerity`/`.feature` "upgrades" branch entirely — one ladder per gradeable tech, mirrors `planetGrade.mjs`'s exact shape (counter + real purchase cost per step + magnitude table). Not every tech is gradeable — a content decision.
+3. **Acquisition model**: each turn, 3 candidate techs are offered per "direction," 1 reroll available. This is the default, efficient path — but a player can still research any prerequisite-satisfied tech outside the offer at a real cognitio premium (hybrid-with-bypass, same pattern as `recruitment.mjs`'s `overrideCeiling`).
+4. **Directions (6, final)**: Industry (the existing A-F economy backbone, unified into one lane), Military, Culture, Commerce, Diplomacy, Governance/Society. Industry/Military/Culture/Commerce have some existing content signal to build from (buildings, `faction_traits.json`'s 22 doctrine traits, `cultures.json`/`faiths.json`, `civic_paths.json`'s trade+culture pair); Diplomacy/Governance need fully new content, but are included from the start anyway.
+5. **Race identity → tech**: primary mechanism is **offer-weighting** — a faction's race/civic identity biases which candidates are more likely to appear in their offered 3-per-direction (real Stellaris-style curation). Passive empire-wide trait application (`collectRaceEffects` → modifier stack) and tactical per-tech trait-socketing were both raised earlier and are NOT rejected, just not prioritized in this pass — genuinely open.
+6. **Resource-slot sockets**: a tech can have a socket that a resource is inserted into, structurally changing its behavior (e.g. swapping which currency a building class draws upkeep from). One-time spend, permanent until replaced; replacing costs the new resource's own price again — no ongoing drain, no lapse risk.
+7. **Military scope**: real unit/ship unlocks + evolution (not just stat bonuses), tech-gated weapon-type equipment slots (replacing the current always-open generic "weapon" property), real anti-role combat bonuses (making `combat_matchups.json`'s existing counter-system an actual researchable strategy) — plus a newly-added **power-projection** sub-mechanic (system defense installations, cross-system attack range via the corridor graph).
+
+**Real dependency surfaced, not yet resolved**: cross-system attack range needs system adjacency (`links`) data that doesn't exist in the live schema — this was already flagged and deferred in yesterday's `notes/2026-08-13-galaxy-migration-grill.md` ("Schema gaps: no x/y/links/sectors/stars"). Military's power-projection piece can't be built until that's picked back up.
+
+## Q&A log
+
+### Q1 — fate of the 387 catalog techs
+
+- Asked: recommended a smaller, fully hand-authored core (retire most catalog stubs) vs. lift the block now and redesign incrementally vs. redesign all 387 in full.
+- Captured: user chose **redesign all 387 in full** — full content scale preserved, no trimming.
+- Decided: the tree stays at its current ~432-node scale; all catalog stubs get real, individually-designed content eventually. This is a large, separate content-authoring effort — will not happen inside this grill or soon after. **Mechanics work (offers, grading, sockets, race slots, military content structure) proceeds now against whatever real content already exists** (45 backbone + upgrades, a handful of hand fixtures) — full 387-tech authoring is explicitly incremental/later, matching this project's established "mechanics now, content later" pattern from earlier today.
+- Flags: none blocking — this just confirms scope stays large; sequencing of mechanics work doesn't wait on it.
+
+### Q2 — do tech grades (1-5) replace the old, currently-unreachable "upgrades" system, or run alongside it?
+
+- Asked: the existing `.efficiency`/`.austerity`/`.feature` upgrade sub-techs are 3 DIFFERENT optional effects to choose from (a branch), while "grading" is ONE effect scaled by repeated purchase (a ladder, like `planetGrade.mjs`). Replace, or two parallel axes?
+- Captured: user confirmed the recommendation — **grades replace upgrades**.
+- Decided: one progression axis per (gradeable) tech: grade 1→5, each step a real purchase, each step's content reinterprets what the old 3-way upgrade branch used to offer (e.g. grade 2 = what `.efficiency` gave, grade 3 = `.feature`, grade 4 = `.austerity`, or however the eventual content redesign wants to sequence it) — not a player choice between branches, a fixed ladder. The dead `unlockedUpgrades` persisted field and the `.efficiency`/`.austerity`/`.feature` content shape both go away in favor of a `techGrade` counter per unlocked tech, mirroring `planetGrade.mjs`'s exact shape (grade counter + real purchase cost per step + magnitude-per-grade table).
+- Flags: not every tech is necessarily gradeable (some are one-shot unlocks, e.g. `unlock_tech_tier`/`unlock_property`-only techs) — which techs get a grade ladder vs. stay a flat one-time unlock is a content-authoring decision, not a mechanics one; the mechanics just need to support "some techs have grades, some don't."
+
+### Q3 — offer strictness: confirmed as a real decision, not a chat aside
+
+- Asked: formalize which of the three earlier-discussed options (soft suggestion / hard gate / hybrid-with-premium-bypass) is the actual decision.
+- Captured: user confirmed **hybrid with premium bypass** — the option floated earlier in freeform conversation.
+- Decided: offers are the default, efficient path (3 candidates per direction, 1 reroll). A player may still research any tech whose prerequisites are met even if it's not currently offered, at a real cognitio premium — same pattern as `domain/forces/recruitment.mjs`'s `overrideCeiling` (normal path capped/curated, override path costs more, both real, neither silently free). Exact premium multiplier is a first-pass number, not yet set (candidate: 1.5-2x, matching the `overrideCeiling`'s own precedent of `OVER_CEILING_POPULATION_MULT = 1.5`).
+
+### Q4 — "direction" taxonomy: not just A-F, and not just +military
+
+- Asked: keep offer-directions = the 6 A-F economy categories with military folded in somewhere, or give military its own 7th lane?
+- Captured: user went further — A-F is fine as the *internal economy mechanic* but isn't player-legible as a tech-offer framing; wants real, distinct, player-recognizable directions for military, culture, AND commerce too, not just a military patch.
+- Assistant research: found substantial existing content that already implies a natural taxonomy, previously unsurfaced in this grill: `content/core/faction_traits.json` has 22 real doctrine traits (`trait.war_economy`, `trait.merchant_guilds`, `trait.standing_army`, `trait.void_navy`, `trait.scholar_knights`, `trait.psi_doctrine`, etc.) plus 7 separate broader "ethics"-shaped traits (`trait.faction.aggressive`/`.diplomatic`/`.isolationist`/`.merchant`/`.expansionist`/`.technocrat`/`.puritan` — structurally close to Stellaris' Ethics pairs). `content/core/cultures.json` has 9 real cultures (baseline/imperial_court/frontier/mercantile/machine_cult/stone_clan/hive_caste/dust_liturgy/syncretic) and `faiths.json` 7 real faiths — both already partially wired (`domain/narrative/cultureFaith.mjs` exists, parity-tested).
+- Decided so far: military gets its own real lane (not folded into an economy category) — confirmed. The exact full direction set (how many lanes, what they're called, whether Culture/Commerce/Science are separate lanes or grouped) is not yet settled — this needs its own focused pass rather than being decided inside this already-long question.
+- Flags: **the exact direction set/taxonomy** -> next to ask, as its own focused question, informed by the trait/culture/faith content just found.
+
+### Q5 — final direction set: 4 now, or all 6 (including the zero-content Diplomacy/Governance pair)?
+
+- Asked: ship with 4 well-seeded directions (Industry/Military/Culture/Commerce) now and add Diplomacy/Governance later, or commit to all 6 immediately even though the last two need fully new content?
+- Captured: user's actual answer goes beyond either offered option — **new content will be authored across every direction regardless** (not just the zero-signal ones), but existing content gets reused/ported wherever it already exists (e.g. `civic_paths.json`'s trade/culture pair, `diplomacy_stances.json` treaty effects, `domain/court`'s civicPaths). This effectively means: **commit to all 6 directions now** — Industry, Military, Culture, Commerce, Diplomacy, Governance/Society — content authoring treats "already exists" vs "from scratch" as a per-tech starting point, not a reason to exclude a whole direction.
+- Decided: **final direction set (6): Industry, Military, Culture, Commerce, Diplomacy, Governance/Society.** Offer size becomes 6×3=18 simultaneously visible candidates (with reroll) — larger than the original 4-direction estimate, closer to the tree's real scale. Content authoring for all 6 (the 387-catalog-tech redesign from Q1) will pull from existing domain content where it already exists (civic_paths, diplomacy_stances, cultures/faiths, race traits) rather than inventing blind, and write new where nothing exists yet (bulk of Military, most of Diplomacy/Governance).
+- Flags: exact Russian/English naming for the 6 directions not finalized (used working names: Industry/ВоенноеДело/Культура/Коммерция/Дипломатия/Управление) — cosmetic, low priority.
+
+### Q6 — how does race identity actually plug into the tech tree? (multi-select: passive-always / tactical-slot / offer-weighting)
+
+- Asked: three non-exclusive mechanisms — (a) passive, always-on (`collectRaceEffects` → modifier stack, this morning's original Phase 2 idea), (b) tactical, player-spent slotting of a race trait into a specific tech, (c) new idea — race/civic identity biases the WEIGHTS of which candidates appear in the offer (real Stellaris-style curation).
+- Captured: user selected **only (c), offer-weighting** — did not select passive-always or tactical-slotting in this pass.
+- Decided: **race/faction identity's primary tech-tree role is biasing offer weights** — a Swarm player sees Swarm-aligned techs turn up in their 3-per-direction offer more often, not guaranteed, just weighted. This is the mechanism to actually build. Passive empire-wide race-trait application (this morning's Phase 2 plan) and tactical trait-socketing are NOT rejected, just **not selected as a priority in this pass** — genuinely open, not decided against. Revisit later if empire identity still feels thin once offer-weighting alone is live.
+- Flags: exact weighting algorithm (how much does a race-aligned tag boost a candidate's odds; is alignment binary tag-match or graduated) -> implementation detail, first-pass default, propose+confirm later. Needs techs to carry some kind of race/civic alignment tag for this to work at all — ties into the Q1 catalog-redesign content work (tag each authored tech with which race(s)/civic(s) it resonates with, if any).
+
+### Q7 — resource-slot sockets: one-shot or ongoing drain?
+
+- Asked: does inserting a resource into a tech's socket permanently apply its structural effect (one-time spend, like a grade purchase), or does the effect persist only while the resource is actively being consumed (ongoing drain, can lapse if the resource runs out)?
+- Captured: **one-time spend, permanent** (matches the established "instant spend, no queue" pattern) — **but the player can later replace the slotted resource with a different one, changing the result, and each fill/refill costs the inserted resource's own defined amount again** (swapping isn't free — you pay again for the new resource, same as the first fill).
+- Decided: a tech's resource socket holds one "currently slotted resource" state (or empty). Filling/refilling it is an instant, real-cost action (spend N units of resource X once) that changes the tech's active structural effect to whatever X implies; there's no ongoing consumption or lapse risk — the effect is stable once paid for, until/unless the player pays again to replace it with a different resource.
+- Flags: exact cost-per-resource-type table and which techs get sockets at all are content-authoring decisions (Q1's redesign work), not mechanics; the mechanics only need: a socket-state field per tech instance, a fill/refill action (afford-check + spend + swap effect), and a way for content to declare "which resources are valid for this socket and what each one does" (a small per-tech lookup table, e.g. `socket: { "resource.X": {effect...}, "resource.Y": {effect...} }`).
+
+### Q8 — Military scope: which of the 10 candidate mechanics are real (code), not just content?
+
+- Asked (multi-select, 10 options presented — unit/ship unlocks, unit evolution, real stat_mult, weapon-type slots, veterancy, stances, anti-role bonuses, upkeep reduction, mobilization bonuses, space-object combat modifiers): which need real mechanics work.
+- Captured: user broadly agreed with the recommended set (1-2 unit unlocks/evolution, 4 weapon-type slots, 7 anti-role bonuses) but added a **new, not-yet-covered dimension**: ships/defenses that operate beyond direct in-system engagement — (a) planetary/system defense installations (a military object sitting in a system, similar in shape to yesterday's space objects — passive defense bonus or an active combatant), and (b) extended attack range — ships that can strike an **adjacent** system via the corridor graph, not just fight forces already colocated with them.
+- Decided: Military's scope grows to include a real **power-projection** sub-mechanic, not just tech-driven stat/unlock bonuses on existing in-place combat.
+- Flags: **this has a real, currently-missing prerequisite** — system adjacency (`links`, the corridor graph) doesn't exist in this project's live schema yet. This was already flagged and explicitly deferred during yesterday's galaxy-migration grill (`notes/2026-08-13-galaxy-migration-grill.md`'s "Schema gaps: no x/y/links/sectors/stars columns exist yet"). Building real cross-system attack range means picking that flag back up — not a tech-tree-only concern anymore, it's a systems/planets schema dependency. Needs its own follow-up: how `resolveExchange`/`engage` would even address a target in a different system (a new route shape, not just a new tech effect), and whether planetary defense objects reuse `domain/planets/spaceObjects.mjs`'s existing shape (owner-follows-system, combat modifier already has the right hook: `spaceObjectCombatModifier`) or need something new.
+
+## Open flags (pending input)
+
+Resolved by this grill (Q1-Q8, see above): catalog-tech fate, grades-replace-upgrades, offer strictness, direction taxonomy (6 lanes), race→offer-weighting, resource-socket shape, Military's mechanic scope. The old `unlockedUpgrades`-research-action gap is moot — grades replace that system rather than fixing it.
+
+Still genuinely open:
+- **System adjacency (`links`) schema gap** — real blocker for Military's power-projection piece, inherited from yesterday's galaxy-migration grill, needs its own follow-up (how `resolveExchange`/an `engage`-like route would address a cross-system target; whether planetary defense objects reuse `domain/planets/spaceObjects.mjs`'s shape).
+- Reroll scope (per-offer-slot / per-category-per-turn / per-game) — first-pass detail, propose+confirm at implementation time.
+- Alchemy wiring specifics (exact route/action shape for combining 2 owned techs via `tech_combos.json`/`tech_recipes.json`) — conceptually settled (parallel, un-gated channel), implementation detail not yet drafted.
+- Race identity: passive empire-wide (`collectRaceEffects` → modifier stack) and tactical per-tech socketing — explicitly not decided against, just deprioritized behind offer-weighting. Revisit if empire identity still feels thin.
+- First-pass numeric defaults not yet set: offer-bypass premium multiplier, offer-weighting algorithm strength, grade cost curves, resource-socket cost tables — all standard "propose a number, document as first-pass, confirm/tune later" items matching this project's established discipline.
+- Exact naming (Russian/English) for the 6 directions — cosmetic.

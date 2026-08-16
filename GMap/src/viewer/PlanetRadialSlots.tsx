@@ -8,6 +8,11 @@ import { canBuildWithTech, type TechEcoSlice } from "../state/techGate";
 import { intentApCost } from "../state/contentCatalog";
 import { GESTURE } from "../ui/gestureMap";
 import { BuildingKindIcon, buildingKindColor } from "./BuildingKindIcon";
+import { LaborPips, laborPipStyle } from "./LaborPips";
+import {
+  buildingStaffedUnits,
+  consumesLabor,
+} from "../state/planetLabor";
 import { BuildDeck } from "./BuildDeck";
 import { FloatingPanel } from "../ui/FloatingPanel";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
@@ -37,16 +42,14 @@ const ZONE_BADGE: Record<PaletteZone, string> = {
   deep: "Г",
 };
 
-/** Hard ceiling for surface slots, derived from planet body size. */
+/** Unlocked surface slots — grade-derived, set by the server. */
 export function surfaceSlotsMax(planet: Planet): number {
-  const size = planet.size ?? 1;
-  return Math.max(8, Math.min(16, Math.round(size * 8)));
+  return planet.surfaceSlots ?? 8;
 }
 
-/** Hard ceiling for orbital slots, derived from planet body size. */
+/** Unlocked orbital slots — grade-derived, set by the server. */
 export function orbitalSlotsMax(planet: Planet): number {
-  const size = planet.size ?? 1;
-  return Math.max(4, Math.min(8, Math.round(size * 4)));
+  return planet.orbitalSlots ?? 4;
 }
 
 type SlotState = "occupied" | "empty-open" | "expandable" | "blocked";
@@ -112,9 +115,30 @@ function buildSlots(
   return slots;
 }
 
-const DISC_R = 44;
+function slotBuilding(
+  planet: Planet,
+  slot: Slot,
+) {
+  const list =
+    slot.zone === "orbital"
+      ? planet.orbitalBuildings
+      : planet.surfaceBuildings;
+  return list?.[slot.index];
+}
+
+function slotBuildingDef(
+  planet: Planet,
+  slot: Slot,
+  buildings: Record<string, BuildingDef>,
+): BuildingDef | undefined {
+  const b = slotBuilding(planet, slot);
+  if (!b) return undefined;
+  if (b.buildingId && buildings[b.buildingId]) return buildings[b.buildingId];
+  return Object.values(buildings).find((d) => d.kind === b.kind);
+}
 const SLOT_R = 14;
 const SLOT_GAP = 8;
+const DISC_R = 44;
 /** Surface sits on the world — closer to the disc. */
 const SURFACE_R_MIN = 80;
 /** Orbit wraps the world — further out than surface. */
@@ -178,6 +202,11 @@ export function PlanetRadialSlots({
   highlightCategory,
   highlightBuildingIds,
   onSelectBuilding,
+  laborPickFrom,
+  laborDragging,
+  onLaborPickBuilding,
+  onLaborDragBuilding,
+  onLaborTapBuilding,
 }: {
   planet: Planet;
   systemId: string;
@@ -196,6 +225,16 @@ export function PlanetRadialSlots({
   highlightCategory?: string | null;
   highlightBuildingIds?: string[];
   onSelectBuilding?: (buildingId: string) => void;
+  laborPickFrom?: string | null;
+  laborDragging?: boolean;
+  onLaborPickBuilding?: (instanceId: string, amount: number) => void;
+  onLaborDragBuilding?: (
+    instanceId: string,
+    x: number,
+    y: number,
+    amount: number,
+  ) => void;
+  onLaborTapBuilding?: (instanceId: string) => void;
 }) {
   const surfaceSlots = buildSlots(planet, "surface", buildings);
   const orbitalSlots = buildSlots(planet, "orbital", buildings);
@@ -389,6 +428,10 @@ export function PlanetRadialSlots({
       onInspect?.(null);
       /* Build commits via hold on deck card — tap only arms the slot. */
     } else if (slot.state === "occupied" && slot.buildingInstanceId) {
+      if (laborPickFrom && onLaborTapBuilding) {
+        onLaborTapBuilding(slot.buildingInstanceId);
+        return;
+      }
       const key = slotKey(slot.zone, slot.index);
       setInspectKey(key);
       setOpenSlot(null);
@@ -439,12 +482,19 @@ export function PlanetRadialSlots({
     const isTarget =
       openSlot?.zone === slot.zone && openSlot.index === slot.index;
     const isInspect = inspectKey === key;
-    const isDrop = dropHoverKey === key;
+    const isArmedPick =
+      !!laborPickFrom && slot.buildingInstanceId === laborPickFrom;
+    const laborDef = slotBuildingDef(planet, slot, buildings);
+    const laborTarget =
+      slot.state === "occupied" && consumesLabor(laborDef);
+    const isDrop =
+      dropHoverKey === key || (!!laborDragging && laborTarget && !isArmedPick);
     const dim =
       focusActive &&
       !isTarget &&
       !isInspect &&
       !isDrop &&
+      !isArmedPick &&
       slot.state !== "empty-open";
 
     let fill = "transparent";
@@ -476,6 +526,9 @@ export function PlanetRadialSlots({
       <g
         key={key}
         data-slot-key={key}
+        {...(slot.buildingInstanceId && laborTarget
+          ? { "data-labor-drop": slot.buildingInstanceId }
+          : {})}
         opacity={dim ? 0.35 : 1}
         className={isDrop ? "planet-slot-drop" : undefined}
       >
@@ -485,9 +538,12 @@ export function PlanetRadialSlots({
           r={SLOT_R}
           fill={fill}
           stroke={stroke}
-          strokeWidth={isTarget || isInspect || isDrop ? 2.4 : 1.5}
+          strokeWidth={isTarget || isInspect || isDrop || isArmedPick ? 2.4 : 1.5}
           strokeDasharray={strokeDash}
           data-slot-key={key}
+          {...(slot.buildingInstanceId && laborTarget
+            ? { "data-labor-drop": slot.buildingInstanceId }
+            : {})}
           style={{
             cursor:
               slot.state === "empty-open" || slot.state === "occupied"
@@ -512,7 +568,11 @@ export function PlanetRadialSlots({
             if (slot.state === "occupied") {
               setHoverTip({
                 name: slot.buildingName ?? "Постройка",
-                meta: "тап — слоты · удерж./ПКМ — снос",
+                meta: laborDragging && laborTarget
+                  ? "отпусти — назначить рабочих"
+                  : laborPickFrom
+                    ? "тап — перевести рабочих сюда"
+                    : "тап — слоты · удерж./ПКМ — снос",
               });
             } else if (slot.state === "empty-open") {
               setHoverTip({
@@ -816,7 +876,7 @@ export function PlanetRadialSlots({
           {surfaceSlots.map(renderSlot)}
           {orbitalSlots.map(renderSlot)}
         </svg>
-          <div className="planet-radial-icons" aria-hidden>
+          <div className="planet-radial-icons">
             {[...surfaceSlots, ...orbitalSlots]
               .filter((s) => s.state === "occupied")
               .map((slot) => {
@@ -831,6 +891,12 @@ export function PlanetRadialSlots({
                   layout.orbitalR,
                 );
                 const key = slotKey(slot.zone, slot.index);
+                const laborInst = slotBuilding(planet, slot);
+                const laborDef = slotBuildingDef(planet, slot, buildings);
+                const laborInfo =
+                  laborInst && laborDef
+                    ? buildingStaffedUnits(planet, laborInst, buildings)
+                    : { staffed: 0, slots: 0, pinned: false, free: 0 };
                 const dim =
                   focusActive &&
                   inspectKey !== key &&
@@ -849,6 +915,53 @@ export function PlanetRadialSlots({
                     }}
                   >
                     <BuildingKindIcon kind={slot.buildingKind} size={14} />
+                    {laborInst && laborDef && consumesLabor(laborDef) ? (
+                      <span
+                        className="planet-radial-pips"
+                        data-labor-drop={laborInst.id}
+                        style={laborPipStyle(buildingKindColor(slot.buildingKind))}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          if (busy || e.button !== 0) return;
+                          const amount = e.shiftKey ? 5 : 1;
+                          const startX = e.clientX;
+                          const startY = e.clientY;
+                          const onMove = (ev: PointerEvent) => {
+                            if (
+                              Math.hypot(ev.clientX - startX, ev.clientY - startY) <
+                              GESTURE.dragThresholdPx
+                            )
+                              return;
+                            window.removeEventListener("pointermove", onMove);
+                            window.removeEventListener("pointerup", onUp);
+                            onLaborDragBuilding?.(
+                              laborInst.id,
+                              ev.clientX,
+                              ev.clientY,
+                              amount,
+                            );
+                          };
+                          const onUp = () => {
+                            window.removeEventListener("pointermove", onMove);
+                            window.removeEventListener("pointerup", onUp);
+                            if (laborPickFrom && laborPickFrom !== laborInst.id) {
+                              onLaborTapBuilding?.(laborInst.id);
+                              return;
+                            }
+                            onLaborPickBuilding?.(laborInst.id, amount);
+                          };
+                          window.addEventListener("pointermove", onMove);
+                          window.addEventListener("pointerup", onUp);
+                        }}
+                      >
+                        <LaborPips
+                          staffed={laborInfo.staffed}
+                          slots={laborInfo.slots}
+                          pinned={laborInfo.pinned}
+                          compact
+                        />
+                      </span>
+                    ) : null}
                   </span>
                 );
               })}

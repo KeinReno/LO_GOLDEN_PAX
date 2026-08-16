@@ -1,31 +1,26 @@
 /**
  * Cancel open engagements when participating fleets/legions disappear.
- * Standalone (no import from engagements.mjs / no cycle with tableStore write path).
+ * Uses tableStore readJson/writeJson so C4 SQLite backend stays in sync.
+ * Path is local (not DATA_DIR from tableStore) to avoid TDZ on the circular import
+ * tableStore → engagementReconcile → tableStore.
  */
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readJson, writeJson } from "./tableStore.mjs";
 
-const DATA_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../data",
+const ENGAGEMENTS_PATH = path.join(
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../data"),
+  "engagements.json",
 );
-const ENGAGEMENTS_PATH = path.join(DATA_DIR, "engagements.json");
 const OPEN = new Set(["active", "commit", "contact"]);
 
 function readList() {
-  try {
-    if (!fs.existsSync(ENGAGEMENTS_PATH)) return [];
-    const raw = JSON.parse(fs.readFileSync(ENGAGEMENTS_PATH, "utf8"));
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
+  const raw = readJson(ENGAGEMENTS_PATH, []);
+  return Array.isArray(raw) ? raw : [];
 }
 
 function writeList(list) {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(ENGAGEMENTS_PATH, JSON.stringify(list, null, 2) + "\n", "utf8");
+  writeJson(ENGAGEMENTS_PATH, list);
 }
 
 function sideFleetIds(side) {

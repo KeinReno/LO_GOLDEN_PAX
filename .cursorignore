@@ -1,0 +1,44 @@
+# Dependencies & build
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+*.tsbuildinfo
+
+# GMap runtime / DB / journals (not source)
+GMap/data/**/*.sqlite
+GMap/data/**/*.sqlite-shm
+GMap/data/**/*.sqlite-wal
+GMap/data/tick-journal.json
+
+# Art & media (never index as text)
+art/
+**/*.{png,jpg,jpeg,webp,gif,psd,fbx,blend,wav,mp3,ogg,mp4,webm}
+
+# Binaries / archives
+**/*.{dll,so,dylib,exe,pdb,a,lib,apk,ipa,zip,7z,rar}
+**/tools/cloudpub/**
+
+# Logs / tmp / profiler-ish
+tmp/
+**/tmp/
+**/*.log
+Logs/
+MemoryCaptures/
+Profiler/
+
+# Engine leftovers (if any appear)
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+.godot/
+.import/
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+UserSettings/

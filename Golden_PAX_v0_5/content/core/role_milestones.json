@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "version": 1,
+    "pilot": true,
+    "note": "B2 RoleScore pilot — only structural + energy. Thresholds are placeholders (not final balance). Authoritative for B5 path gates."
+  },
+  "structural": {
+    "id": "structural",
+    "label": "Структурный",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.fortress_station",
+        "name": "Крепость-станция"
+      }
+    ]
+  },
+  "energy": {
+    "id": "energy",
+    "label": "Энергетический",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.solar_forge",
+        "name": "Солнечная кузница"
+      }
+    ]
+  }
+}

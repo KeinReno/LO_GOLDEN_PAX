@@ -1,0 +1,54 @@
+# Tech Tree Audit: Findings + Mechanics Fix
+
+Date: 2026-08-14 · Trigger: user's complaint that the tech tree "feels illogical" — race-flavored techs (Swarm/Synth/Psionic) available to any faction, and T3-era techs that feel disproportionately strong. Goal: investigate deeply, propose options, then (per user's choice) fix the mechanical gaps first, leave the 387-tech content/balance problem for a later, separate pass.
+
+## Summary of findings
+
+`content/core/technologies.json` (432 entries) is really two very different things wearing one content file:
+
+- **45 "backbone" techs** (no `catalog` tag) — real, hand-authored, each with a real `unlock_tech_tier` effect that's supposed to gate which building/deposit tiers a faction can access per category (A-F).
+- **387 "catalog" techs** (89.6% of the tree) — tagged `catalog`, `catalogPending: true`, flavor text literally `"Каталог · эффект-заглушка до балансировки"` ("catalog · placeholder effect pending balancing"), `balanceBudget: 0`. Every single one of the `production_mult`-effect entries checked had the exact same `1.02` multiplier regardless of era — a template stamped out, never individually tuned. Cost scales 12→220 cognitio across eras 1-5 for the identical 2% bonus.
+
+**The deeper bug (not just unbalanced content — broken wiring):**
+- `techTiers` (what the 45 backbone techs raise) was **read nowhere** in `domain/planets` — `construction.mjs`'s `canPlaceBuilding` never checked it. A faction could place a tier-10 building turn 1 with zero research. Confirmed this was an already-known, explicitly-documented gap in `construction.mjs`'s own header comment ("tech-gating... not required here since a building being *listed* already implies it's available") — a reasonable assumption when there was going to be a client filtering the list, which doesn't exist yet.
+- The 387 catalog techs' effect types (`production_mult`/`production_flat`/`upkeep_mult`) are only ever consumed by GMap's real `modifierStack.mjs` — confirmed live in GMap's `economyTick.mjs` (`buildModifierStack(collectFactionEffects(...))`, called every tick, real working machinery there). This project's `domain/tech/unlockEffects.mjs` only ever handled `unlock_tech_tier`/`unlock_property` — meaning **researching any of the 387 catalog techs currently has zero mechanical effect**, an already-known, documented gap ("modifier stack... accepted gap everywhere else in this project") whose blast radius — 90% of the tech tree being a pure cognitio sink — hadn't been spelled out until this audit.
+- `raceLock` exists on only 3/432 techs (`tech.psionic.resonance`→race_psionic, `tech.swarm.adaptation`→race_swarm, `tech.synth.uplift`→race_synth) and `factionTraitLock` on 3 (possibly overlapping). The check that enforces these (GMap's `checkTechLocks`) was explicitly dropped when `researchTech.mjs` was ported — documented as a scope cut, not silent.
+
+## Decision (user, 2026-08-14)
+
+Presented three options: (a) mechanics first, content later; (b) full rebuild of the 387-tech catalog into something small and hand-designed; (c) a minimal "wire the existing numbers through anyway" patch. **User chose (a).**
+
+## What got built this session (mechanics only)
+
+1. **`domain/tech/techGate.mjs`** (new) — `factionMaxTier`/`canBuildWithTech`, ported from GMap's real formula (`max = Math.max(3, techTier + 1)` — base tier 1-3 always buildable, matching GMap's actual intent). NOT ported: `canBuildWithTech`'s `requireRoleMilestone` branch (GMap's RoleScore/`role_milestones` pilot system, `tech_paths.json` — not built anywhere in this project, same class of scope cut as everything else RoleScore-related).
+2. **`domain/planets/construction.mjs`** — `canPlaceBuilding`/`placeBuilding` now take an optional `techAccount` param and actually call `canBuildWithTech`. Omitting it defaults to "researched nothing" (tier cap 3), the correct fallback, not a bypass.
+3. **`domain/tech/techLocks.mjs`** (new) — `checkTechLocks` restores the `raceLock` (>=30% population share, ported threshold) and `requireProperties` checks from GMap. NOT restored: `factionTraitLock` — this project's `factions` table has no `traits` field at all, no data source to check against (a real, separate gap, not fixed here).
+4. **`researchTech.mjs`** — wires `checkTechLocks` in, and adds a **new, not-a-port** rule: refuses `catalogPending: true` techs outright with a clear error, rather than letting them be researched for a real cost and a verified-zero effect. This is a deliberate content decision (block the 90% until it's actually redesigned or the modifier stack lands), not a technical necessity — flagged for revisit if the user wants a different interim behavior (e.g. reduced-cost "flavor research" instead of an outright block).
+5. Both persisted (`server/api/routes/campaign.mjs`) and stateless-preview (`server/api/routes/tech.mjs`) research routes updated to pass `factionPlanets` for the raceLock check; the build route now passes the faction's real `techAccount`.
+6. **Found + fixed along the way (unrelated pre-existing bug)**: `/research`'s route never defaulted `turn` when the request omitted it (every other route in that file does `getCurrentTurn ?? 0`) — crashed on `ledger_entries.turn`'s NOT NULL constraint. Fixed to match the established pattern.
+
+**Live-verified** (real HTTP, real content, not just unit tests): tier-5 building blocked pre-tech (`requires B tier >= 4`), tier-3 building still free with zero tech, `race_swarm`-locked tech blocked for a human-only faction, a catalog tech refused outright, and researching the real `Геология` (unlock_tech_tier A→2) both succeeds and actually raises `techTiers.A` — the number the tier-gate now genuinely reads. 290 tests green (was 273 before this session's earlier ambient-flow work).
+
+## Phase 1: modifier stack (2026-08-14, same day, user asked for "конкретика")
+
+Investigated GMap's real `modifierStack.mjs` (289 lines, mostly pure) and its real integration point in `economyTick.mjs`. Key finding that shrank the scope a lot: **GMap applies it as a post-processing step on the already-computed final category net** (`delta = applyProductionChannel(floor(totals[cat].net), channel)`), not woven into the per-building conversion machinery — meaning it doesn't interact at all with the primary/secondary contention fix from earlier in the day.
+
+Counted real effect-type usage across all 432 techs: `production_mult` 563, `upkeep_mult` 345, `capacity_add` 339 (already handled at the building level, not yet at tech level), `production_flat` 23 — **1270 of ~1400 total effect instances are economy production/upkeep**, touching all 6 flow currencies plus `currency.metal`. A narrow, tech-only modifier stack covers the overwhelming majority of what the tree's content actually contains.
+
+**Built**: `domain/economy/modifierStack.mjs` (port of `buildModifierStack`/`applyFlatThenMult`/channel-key logic, byte-parity tested; `applyProductionChannel`/`applyUpkeepChannel`/`mergeChannels` behavior-derived from `economyTick.mjs`, not directly diffable there — module-private). `domain/tech/techModifierEffects.mjs` (port of `collectTechModifierEffects`, byte-parity tested). Wired into `flowIncome.mjs` as a new Pass 4, applied after the existing 3 passes to the final per-category net; `computeFactionFlowIncome` takes an optional `techAccount` (omitting it = no tech researched, not a bypass). `turn.mjs` now loads the real `techAccount` for this. 297 tests green (was 290).
+
+**Live-verified against real content**: with `tech.antimatter_singularity` researched (production_mult energia ×1.2), a real 4-building chain's energia income went **17 → 20**. Confirms the mechanism works end to end, not just in synthetic test fixtures.
+
+**Scope, explicitly**: only tech effects feed the stack right now. GMap's full version also folds in race/culture/faith/tax/deficit/POI/loyalty/treaty/faction-trait effects — none of that is wired. `domain/diplomacy/treaties.mjs` already has a real, working `collectTreatyEffects` that isn't plugged in anywhere — an attractive, cheap Phase 2 candidate since the hard part (the stack itself) already exists now.
+
+**Two new gaps found while verifying, NOT fixed (flagging, not silently expanding scope):**
+
+1. **`currency.metal`/`currency.supply` are outside this pass's reach.** They're not one of the 6 RPS flow categories — they're computed separately (`legacyIncome.mjs`'s floor + `currencyPeg.mjs`'s peg conversion). Of the 6 non-catalog techs with a *direct* production/upkeep effect, one (`tech.war_economy.doctrine`, metal ×1.025) targets a currency this Phase 1 pass can't touch. Its effect is currently still a no-op — same class of problem as the catalog techs, just for a different reason (wrong pipeline, not "no pipeline at all").
+2. **Bigger finding: tech *upgrades* (the `.efficiency`/`.austerity`/`.feature` sub-techs nested under a parent tech) have no research action anywhere.** `techAccount.unlockedUpgrades` is a real, persisted field that nothing ever writes to — `resolveTechDef` only resolves top-level `content.technologies[id]`/`content.tech_combos[id]` keys, never an upgrade's nested id. Checked: **24 of the 45 non-catalog "real" backbone techs carry their actual production/upkeep payoff only in upgrades** (e.g. `tech.geology` itself only does `unlock_tech_tier`; its three upgrades — `tech.geology.efficiency`/`.austerity`/`.feature` — carry the `production_mult`/`upkeep_mult`/`capacity_add`). Right now those are permanently unreachable, for every faction, always. This is a bigger practical blocker to "tech feels meaningful" than the catalogPending block was — most of the backbone tree's real economic payoff is currently locked behind a research action that doesn't exist.
+
+## Explicitly deferred (separate, later pass — not started)
+
+- **Redesigning the 387 catalog techs** — this is real game-design work (what should each one actually do, is 387 even the right count, should some be merged/cut), not a mechanics fix. The block added this session just stops them from silently wasting cognitio in the meantime; it doesn't decide their eventual fate.
+- **The modifier stack itself** — a cross-cutting system already known to be missing across economy/tech/combat/diplomacy. Porting it is what would eventually let catalog-tech-style `production_mult`/`upkeep_mult` effects (and race/culture/treaty effects elsewhere) actually apply. Out of scope for this pass.
+- **`tech_paths.json`'s soft race-affinity discounts** and **`factionTraitLock`** (needs a `faction.traits` data model this project doesn't have) — both real GMap mechanics, neither built here.
+- **Tech alchemy/combo** (`tech_combos.json`/`tech_recipes.json`), **hybrid race lineages** (`hybridRegistry.mjs`), **tech market/bazaar** (`tech_market.json`) — all still untouched, per the original menu of options presented before this audit started.

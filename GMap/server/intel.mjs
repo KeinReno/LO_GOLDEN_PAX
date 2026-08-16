@@ -2,12 +2,18 @@
  * Intel Fog — knowledge levels 0–4 per entity type for each faction.
  * Monotonic only (never decreases). Own entities always level 4.
  * No decay, no disinformation.
+ * Local DATA_DIR avoids TDZ on circular import through tableStore/normalizeWorld.
  */
 import path from "node:path";
-import { DATA_DIR, readJson, writeJson } from "./tableStore.mjs";
+import { fileURLToPath } from "node:url";
+import { readJson, writeJson } from "./tableStore.mjs";
 import { rememberedContacts } from "./factionIntel.mjs";
 import { getContent } from "./contentLoader.mjs";
 
+const DATA_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../data",
+);
 export const INTEL_PATH = path.join(DATA_DIR, "faction-intel.json");
 
 /** @typedef {0|1|2|3|4} KnowledgeLevel */

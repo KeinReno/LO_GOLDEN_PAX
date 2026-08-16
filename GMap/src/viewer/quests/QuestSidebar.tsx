@@ -76,7 +76,7 @@ function QuestRow({
   onSelect: (id: string) => void;
 }) {
   const from =
-    quest.giverFactionName || quest.systemName || quest.giverSystemId || "";
+    quest.giverFactionName || quest.giverNpcName || quest.systemName || "";
   const logCount = quest.log?.length ?? 0;
   return (
     <motion.li

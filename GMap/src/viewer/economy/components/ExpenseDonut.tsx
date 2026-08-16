@@ -8,6 +8,8 @@ type Props = {
   slices: ExpenseSlice[];
   recent: LedgerRow[];
   title?: string;
+  /** When set, sector/legend click also notifies parent (e.g. journal filter). */
+  onSelectReason?: (reason: string | null) => void;
 };
 
 function Tip({
@@ -31,8 +33,13 @@ export function ExpenseDonut({
   slices,
   recent,
   title = "Расходы по статьям",
+  onSelectReason,
 }: Props) {
   const [activeReason, setActiveReason] = useState<string | null>(null);
+  const pickReason = (reason: string | null) => {
+    setActiveReason(reason);
+    onSelectReason?.(reason);
+  };
   const sliceTurn = slices[0]?.turn ?? null;
   const detail = useMemo(
     () =>
@@ -61,7 +68,7 @@ export function ExpenseDonut({
           <button
             type="button"
             className="btn sm ghost"
-            onClick={() => setActiveReason(null)}
+            onClick={() => pickReason(null)}
           >
             Сбросить
           </button>
@@ -83,7 +90,9 @@ export function ExpenseDonut({
                 isAnimationActive={false}
                 onClick={(_, idx) => {
                   const s = slices[idx as number];
-                  if (s) setActiveReason(s.reason);
+                  if (s) {
+                    pickReason(activeReason === s.reason ? null : s.reason);
+                  }
                 }}
                 style={{ cursor: "pointer" }}
               >
@@ -111,7 +120,7 @@ export function ExpenseDonut({
                   activeReason === s.reason ? "is-active" : ""
                 }`}
                 onClick={() =>
-                  setActiveReason((r) => (r === s.reason ? null : s.reason))
+                  pickReason(activeReason === s.reason ? null : s.reason)
                 }
               >
                 <span

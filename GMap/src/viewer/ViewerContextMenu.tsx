@@ -1,5 +1,6 @@
 import type { MapContextPick } from "../renderers/MapCanvas";
 import type { ViewerPayload } from "../state/types";
+import { boardableFleets, ownedLegionsInSystem } from "../state/boardForce";
 import { canAttackSystem } from "../state/combatEligibility";
 import { formatHopDistance, hopDistance } from "../state/pathfinding";
 import { isWithinMoveRange } from "../state/movementRange";
@@ -42,6 +43,8 @@ type Props = {
   apMax?: number;
   reservedForceAp?: number;
   forceApMax?: number;
+  /** Owned legion + other-faction fleet, same system → POST /api/forces/board. */
+  onBoard?: (legionId: string, targetFleetId: string) => void;
 };
 
 /** Player-facing RMB menu — Floating UI flip/shift, action-at-source. */
@@ -61,6 +64,7 @@ export function ViewerContextMenu({
   scoutApCost = 1,
   reservedAp = 0,
   apMax = 15,
+  onBoard,
 }: Props) {
   if (!menu) return null;
 
@@ -213,6 +217,18 @@ export function ViewerContextMenu({
         },
       });
     }
+    if (onBoard && system && system.id === ownLegion.systemId) {
+      const targets = boardableFleets(world, factionId, ownLegion.systemId);
+      const many = targets.length > 1;
+      for (const tf of targets) {
+        items.push({
+          type: "action",
+          label: many ? `Абордаж · ${tf.name}` : "Абордаж",
+          danger: true,
+          run: () => onBoard(ownLegion.id, tf.id),
+        });
+      }
+    }
     items.push({
       type: "action",
       label: "Открыть приказы…",
@@ -225,6 +241,18 @@ export function ViewerContextMenu({
       label: "Смотреть на карте",
       run: () => onSelectFleet(fleet.id),
     });
+    if (onBoard && fleet.factionId !== factionId) {
+      const legs = ownedLegionsInSystem(world, factionId, fleet.systemId);
+      const many = legs.length > 1;
+      for (const leg of legs) {
+        items.push({
+          type: "action",
+          label: many ? `Абордаж · ${leg.name}` : "Абордаж",
+          danger: true,
+          run: () => onBoard(leg.id, fleet.id),
+        });
+      }
+    }
   } else if (legion) {
     items.push({ type: "label", text: `Легион · ${legion.name}` });
     items.push({

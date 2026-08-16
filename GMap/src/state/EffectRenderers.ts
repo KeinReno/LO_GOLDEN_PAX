@@ -55,6 +55,11 @@ const RENDERERS: Record<string, Renderer> = {
     short: `свойство «${a.property}»`,
     tip: `Открывает свойство ${a.property}`,
   }),
+  open_path: (a) => ({
+    icon: "🗺",
+    short: `путь «${a.pathId}»`,
+    tip: `Открывает путь развития ${a.pathId}`,
+  }),
   production_mult: (a) => {
     const pct = Math.round((Number(a.mult) - 1) * 100);
     const label = resourceLabel(a);
@@ -127,6 +132,11 @@ const RENDERERS: Record<string, Renderer> = {
     icon: "⛓",
     short: `логистика ${a.mult ?? a.amount ?? ""}`,
     tip: `Штраф отключённой логистики`,
+  }),
+  combat_role_mult: (a) => ({
+    icon: "⚔",
+    short: `vs ${a.role} ×${a.mult}`,
+    tip: `Множитель силы против роли ${a.role}`,
   }),
 };
 

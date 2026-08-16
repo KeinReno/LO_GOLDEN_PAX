@@ -1,8 +1,21 @@
 /**
  * Instant force movement within hop radius (hyperlane graph).
+ *
+ * Hop graph stays here (`hopPath` / `checkMoveRange` / teleport). Engine range
+ * + fuel MP + `move_cost_mult` are a layer from `forceMp.mjs` — instant/AP
+ * hop orders still call this function; they are not replaced.
  */
 import { hopPath, neighborIds } from "./pathfinding.mjs";
 import { getContent } from "./contentLoader.mjs";
+import { ensureFactionEco, readLedger } from "./ledger.mjs";
+import {
+  assertMoveAffordable,
+  applyMpSpend,
+  collectMoveCostEffects,
+  currentMovementPoints,
+  resolveEngineRangeHops,
+  techMoveCostEffects,
+} from "./forceMp.mjs";
 
 export function hopDistance(world, fromId, toId, mode = "any") {
   const path = hopPath(world, fromId, toId, mode);
@@ -22,8 +35,25 @@ export function resolveMoveRangeHops(content, mode = "fleet") {
   return Math.max(0, Math.floor(Number(mov.rangeHops ?? 3)));
 }
 
-export function checkMoveRange(world, content, fromId, toId, mode) {
-  const maxHops = resolveMoveRangeHops(content, mode);
+function liveMoveCostEffects(world, unit, content) {
+  const fac = (world.factions ?? []).find((f) => f.id === unit?.factionId);
+  let tech = [];
+  try {
+    if (unit?.factionId) {
+      const ledger = readLedger();
+      const eco = ensureFactionEco(ledger, unit.factionId);
+      tech = techMoveCostEffects(eco, content);
+    }
+  } catch {
+    tech = [];
+  }
+  return collectMoveCostEffects(fac?.activeEffects, tech, unit);
+}
+
+export function checkMoveRange(world, content, fromId, toId, mode, unit) {
+  const maxHops = unit
+    ? resolveEngineRangeHops(unit, content, mode === "legion" ? "legion" : "fleet")
+    : resolveMoveRangeHops(content, mode);
   const hops = hopDistance(world, fromId, toId, mode);
   if (!Number.isFinite(hops)) {
     return { ok: false, error: "Нет пути", hops, maxHops };
@@ -87,7 +117,8 @@ export function completeForceTravel(
 ) {
   const mode = kind === "legion" ? "legion" : "fleet";
   const fromId = unit.systemId;
-  const content = getContent();
+  const content = meta?.content ?? getContent();
+  const effects = meta?.effects ?? liveMoveCostEffects(world, unit, content);
   const leftBlockade =
     kind === "fleet" &&
     unit.stance === "blockade" &&
@@ -108,7 +139,7 @@ export function completeForceTravel(
       const sys = (world.systems ?? []).find((s) => s.id === toId);
       if (sys) sys.blockaded = true;
     }
-    return { ok: true, fromId, toId, arrived: true, hopsLeft: 0 };
+    return { ok: true, fromId, toId, arrived: true, hopsLeft: 0, hops: 0, movementPointsSpent: 0 };
   }
 
   const path = hopPath(world, fromId, toId, mode);
@@ -122,10 +153,10 @@ export function completeForceTravel(
       fromId,
       toId,
     });
-    return { ok: false };
+    return { ok: false, reason: "no_path" };
   }
 
-  const range = checkMoveRange(world, content, fromId, toId, mode);
+  const range = checkMoveRange(world, content, fromId, toId, mode, unit);
   if (!range.ok) {
     journal?.push?.({
       at: new Date().toISOString(),
@@ -138,8 +169,38 @@ export function completeForceTravel(
       hops: range.hops,
       maxHops: range.maxHops,
     });
-    return { ok: false };
+    return { ok: false, reason: "out_of_range", hops: range.hops, maxHops: range.maxHops };
   }
+
+  const afford = assertMoveAffordable(unit, range.hops, content, effects, kind);
+  if (!afford.ok) {
+    journal?.push?.({
+      at: new Date().toISOString(),
+      type: "reject",
+      intentId: meta?.intentId,
+      reason: afford.reason,
+      [`${kind}Id`]: unit.id,
+      fromId,
+      toId,
+      hops: range.hops,
+      movementPoints: afford.pool,
+      movementPointsNeeded: afford.spent,
+    });
+    return {
+      ok: false,
+      reason: afford.reason,
+      error: afford.error,
+      hops: range.hops,
+      maxHops: range.maxHops,
+      movementPointsNeeded: afford.spent,
+      movementPoints: afford.pool,
+    };
+  }
+
+  if (unit.movementPoints == null || !Number.isFinite(Number(unit.movementPoints))) {
+    unit.movementPoints = currentMovementPoints(unit, content, kind);
+  }
+  applyMpSpend(unit, afford.spent);
 
   unit.lastSystemId = fromId;
   unit.systemId = toId;
@@ -170,6 +231,8 @@ export function completeForceTravel(
     instant: true,
     arrived: true,
     hopsLeft: 0,
+    movementPointsSpent: afford.spent,
+    movementPoints: unit.movementPoints,
     factionId: meta?.factionId,
   });
 
@@ -180,6 +243,8 @@ export function completeForceTravel(
     arrived: true,
     hopsLeft: 0,
     hops: range.hops,
+    movementPointsSpent: afford.spent,
+    movementPoints: unit.movementPoints,
   };
 }
 
@@ -214,7 +279,7 @@ export function applyInstantForceMove(world, intent) {
       },
     );
     if (!travel.ok) {
-      return { ok: false, error: "Нет пути или цель вне радиуса" };
+      return { ok: false, error: travel.error || "Нет пути, цель вне радиуса или нет очков движения" };
     }
     if (
       intent.defId === "intent.move_fleet" &&
@@ -244,7 +309,7 @@ export function applyInstantForceMove(world, intent) {
       },
     );
     if (!travel.ok) {
-      return { ok: false, error: "Нет пути или цель вне радиуса" };
+      return { ok: false, error: travel.error || "Нет пути, цель вне радиуса или нет очков движения" };
     }
     if (toId !== legion.pendingAttackSystemId) {
       delete legion.pendingAttackSystemId;

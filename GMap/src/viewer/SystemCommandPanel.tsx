@@ -43,7 +43,13 @@ type StationCat = {
   cost: Record<string, number>;
 };
 
-type UnitLike = { id: string; name: string; tier?: number; faction?: string };
+type UnitLike = {
+  id: string;
+  name: string;
+  tier?: number;
+  faction?: string;
+  raisableWithoutBuilding?: boolean;
+};
 
 const STATION_ICON: Record<StationKind, typeof Pickaxe> = {
   mining: Pickaxe,
@@ -195,6 +201,18 @@ export function SystemCommandPanel({
     return false;
   }, [system, factionId]);
 
+  const raisePop = useMemo(() => {
+    const owned = (system.planets ?? []).filter(
+      (p) => (p.ownerFactionId || system.ownerFactionId) === factionId,
+    );
+    const planet = selectedPlanetId
+      ? owned.find((p) => p.id === selectedPlanetId)
+      : [...owned].sort(
+          (a, b) => (Number(b.population) || 0) - (Number(a.population) || 0),
+        )[0];
+    return Number(planet?.population) || 0;
+  }, [system, factionId, selectedPlanetId]);
+
   const shipList = useMemo(
     () =>
       Object.values(ships).filter(
@@ -329,11 +347,17 @@ export function SystemCommandPanel({
         </p>
       )}
       {tab === "units" && !hasBarracks && (
-        <p className="hint">Нужны казармы на подконтрольной планете.</p>
+        <p className="hint">
+          Нужны казармы (ополчение — без них). Набор стоит население.
+        </p>
       )}
       <p className="hint hold-reveal-tip">
-        Зажми карту, чтобы нанять / спустить со стапелей.
+        Стоит население (потолок 30%) + металл/снабжение. ОД сил — налог
+        приказа, валюта не списывается дважды. Зажми карту.
       </p>
+      {raisePop <= 0 && (
+        <p className="hint">Нет населения для набора на выбранной планете.</p>
+      )}
       <div className="system-cmd-deck">
         {(tab === "ships" ? shipList : unitList).map((def) => {
           const cost = produceForceCostClient(
@@ -343,9 +367,14 @@ export function SystemCommandPanel({
           );
           const costM = cost["currency.metal"] ?? 0;
           const costS = cost["currency.supply"] ?? 0;
+          const buildingOk =
+            tab === "ships"
+              ? hasShipyard
+              : hasBarracks || !!def.raisableWithoutBuilding;
           const ok =
             !busy &&
-            (tab === "ships" ? hasShipyard : hasBarracks) &&
+            buildingOk &&
+            raisePop > 0 &&
             apLeft >= 1 &&
             (stocks["currency.metal"] ?? 0) >= costM &&
             (stocks["currency.supply"] ?? 0) >= costS;
@@ -355,7 +384,7 @@ export function SystemCommandPanel({
               className="system-cmd-card"
               disabled={!ok}
               holdMs={720}
-              title={`${def.name} — зажми, чтобы произвести`}
+              title={`${def.name} — зажми, чтобы произвести (стоит население)`}
               onHoldComplete={() =>
                 onAction(
                   tab === "ships"
@@ -364,6 +393,9 @@ export function SystemCommandPanel({
                         systemId: system.id,
                         shipId: def.id,
                         count,
+                        ...(selectedPlanetId
+                          ? { planetId: selectedPlanetId }
+                          : {}),
                         ...(produceFleetId ? { fleetId: produceFleetId } : {}),
                       }
                     : {
@@ -371,6 +403,9 @@ export function SystemCommandPanel({
                         systemId: system.id,
                         unitId: def.id,
                         count,
+                        ...(selectedPlanetId
+                          ? { planetId: selectedPlanetId }
+                          : {}),
                         ...(produceLegionId
                           ? { legionId: produceLegionId }
                           : {}),
@@ -381,7 +416,8 @@ export function SystemCommandPanel({
               <span className="system-cmd-card__body">
                 <strong>{def.name}</strong>
                 <span className="hint">
-                  T{def.tier ?? "?"} · M{costM} · S{costS} · ×{count} · зажми
+                  T{def.tier ?? "?"} · M{costM} · S{costS} · нас. · ×{count} ·
+                  зажми
                 </span>
               </span>
             </HoldRevealButton>

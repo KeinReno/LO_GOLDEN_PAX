@@ -1,10 +1,16 @@
 /**
  * Faction contact / intel memory.
  * A polity remembers others after sensor contact or non-neutral diplomacy.
+ * Local DATA_DIR avoids TDZ on circular import through tableStore.
  */
 import path from "node:path";
-import { DATA_DIR, readJson, writeJson } from "./tableStore.mjs";
+import { fileURLToPath } from "node:url";
+import { readJson, writeJson } from "./tableStore.mjs";
 
+const DATA_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../data",
+);
 export const CONTACTS_PATH = path.join(DATA_DIR, "faction-contacts.json");
 
 /** Relations that imply mutual awareness even without sensors. */
@@ -41,8 +47,9 @@ export function getDiplomacyRelation(world, aId, bId) {
   if (!aId || !bId || aId === bId) return "neutral";
   const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
   return (
-    (world.diplomacy ?? []).find((d) => d.aId === x && d.bId === y)?.relation ??
-    "neutral"
+    (world.diplomacy ?? []).find(
+      (d) => d.aId === x && d.bId === y && (!d.track || d.track === "political"),
+    )?.relation ?? "neutral"
   );
 }
 

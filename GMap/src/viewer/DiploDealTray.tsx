@@ -1,4 +1,3 @@
-import { CardBoard } from "../ui/cardBoardContext";
 import { DragCard } from "../ui/DragCard";
 import { DropZone } from "../ui/DropZone";
 import { ResourceIcon } from "../ui/ResourceIcon";
@@ -13,6 +12,14 @@ const QUICK_TREATIES: DiplomacyRelation[] = [
   "research_pact",
   "alliance",
   "truce",
+];
+
+/** Exact card ids this tray's own DragCards can produce — replaces "*" now
+ * that CardBoard is shared app-wide (a wildcard here would also accept
+ * cards dragged in from unrelated panels, e.g. Court/Quests/CardBattle). */
+const DIPLO_TRAY_CARD_IDS = [
+  ...CATEGORY_CURRENCIES.map((c) => `res:${c.id}`),
+  ...QUICK_TREATIES.map((t) => `treaty:${t}`),
 ];
 
 /**
@@ -52,14 +59,14 @@ export function DiploDealTray({
       <p className="hint gc-deal-tray__hint">
         Перетащите карту в «Отдаю» или «Прошу» · жест вместо кликов
       </p>
-      <CardBoard>
+      <>
         <div className="gc-deal-tray__zones">
           <DropZone
             zoneId="diplo-give"
             label="Отдаю"
             className="gc-deal-tray__zone gc-deal-tray__zone--give"
             armWhileDragging
-            accepts={["*"]}
+            accepts={DIPLO_TRAY_CARD_IDS}
             onDrop={(id) => parseDrop(id, "give")}
           />
           <DropZone
@@ -67,7 +74,7 @@ export function DiploDealTray({
             label="Прошу"
             className="gc-deal-tray__zone gc-deal-tray__zone--want"
             armWhileDragging
-            accepts={["*"]}
+            accepts={DIPLO_TRAY_CARD_IDS}
             onDrop={(id) => parseDrop(id, "want")}
           />
         </div>
@@ -106,7 +113,7 @@ export function DiploDealTray({
             />
           ))}
         </div>
-      </CardBoard>
+      </>
     </div>
   );
 }

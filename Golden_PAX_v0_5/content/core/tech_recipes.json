@@ -1,0 +1,1622 @@
+{
+  "recipe.geo_materials": {
+    "id": "recipe.geo_materials",
+    "name": "Гео-материалы",
+    "ingredients": [
+      "tech.a_geology",
+      "tech.b_materials_science"
+    ],
+    "results": [
+      "tech.combo_geo_materials"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.ore_alloys": {
+    "id": "recipe.ore_alloys",
+    "name": "Рудные сплавы",
+    "ingredients": [
+      "tech.a_ore_extraction",
+      "tech.b_basic_alloys"
+    ],
+    "results": [
+      "tech.combo_ore_alloys"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.drill_composites": {
+    "id": "recipe.drill_composites",
+    "name": "Буровые композиты",
+    "ingredients": [
+      "tech.a_deep_drilling",
+      "tech.b_composite_materials"
+    ],
+    "results": [
+      "tech.combo_drill_composites"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.mining_metallurgy": {
+    "id": "recipe.mining_metallurgy",
+    "name": "Шахтная металлургия",
+    "ingredients": [
+      "tech.a_mining_networks",
+      "tech.b_metallurgy"
+    ],
+    "results": [
+      "tech.combo_mining_metallurgy"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.crystal_prospect": {
+    "id": "recipe.crystal_prospect",
+    "name": "Кристалл-разведка",
+    "ingredients": [
+      "tech.a_crystal_mining",
+      "tech.b_crystal_growing"
+    ],
+    "results": [
+      "tech.combo_crystal_prospect"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.slag_recycle": {
+    "id": "recipe.slag_recycle",
+    "name": "Шлак-цикл",
+    "ingredients": [
+      "tech.a_slag_reclamation",
+      "tech.b_material_recycling"
+    ],
+    "results": [
+      "tech.combo_slag_recycle"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.quantum_mining": {
+    "id": "recipe.quantum_mining",
+    "name": "Квантовая добыча",
+    "ingredients": [
+      "tech.a_quantum_extraction",
+      "tech.b_quantum_materials"
+    ],
+    "results": [
+      "tech.combo_quantum_mining"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.nano_extract": {
+    "id": "recipe.nano_extract",
+    "name": "Нано-экстракция",
+    "ingredients": [
+      "tech.a_nanite_mining",
+      "tech.b_nanomaterials"
+    ],
+    "results": [
+      "tech.combo_nano_extract"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.alloy_lines": {
+    "id": "recipe.alloy_lines",
+    "name": "Сплавные линии",
+    "ingredients": [
+      "tech.b_basic_alloys",
+      "tech.c_assembly_lines"
+    ],
+    "results": [
+      "tech.combo_alloy_lines"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.plasma_forging": {
+    "id": "recipe.plasma_forging",
+    "name": "Плазменная кузница",
+    "ingredients": [
+      "tech.b_metallurgy",
+      "tech.c_planetary_forges"
+    ],
+    "results": [
+      "tech.combo_plasma_yard"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.armor_yards": {
+    "id": "recipe.armor_yards",
+    "name": "Броневые верфи",
+    "ingredients": [
+      "tech.b_ablative_hull_plates",
+      "tech.c_fleet_batch_builds"
+    ],
+    "results": [
+      "tech.combo_armor_yards"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.printer_matter": {
+    "id": "recipe.printer_matter",
+    "name": "Печать материи",
+    "ingredients": [
+      "tech.b_programmable_matter",
+      "tech.c_printer_foundries"
+    ],
+    "results": [
+      "tech.combo_matter_printers"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.composite_prefab": {
+    "id": "recipe.composite_prefab",
+    "name": "Композит-префаб",
+    "ingredients": [
+      "tech.b_advanced_composites",
+      "tech.c_prefab_bay_standards"
+    ],
+    "results": [
+      "tech.combo_composite_prefab"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.shield_modules": {
+    "id": "recipe.shield_modules",
+    "name": "Щитовые модули",
+    "ingredients": [
+      "tech.b_transparent_armor",
+      "tech.c_module_hotswap"
+    ],
+    "results": [
+      "tech.combo_shield_modules"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.powered_lines": {
+    "id": "recipe.powered_lines",
+    "name": "Энерголинии цехов",
+    "ingredients": [
+      "tech.c_assembly_lines",
+      "tech.d_power_grid_mgmt"
+    ],
+    "results": [
+      "tech.combo_powered_lines"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.yard_reactors": {
+    "id": "recipe.yard_reactors",
+    "name": "Реакторы верфей",
+    "ingredients": [
+      "tech.c_orbital_manufacturing",
+      "tech.d_fusion_reactors"
+    ],
+    "results": [
+      "tech.combo_yard_reactors"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.mobile_power": {
+    "id": "recipe.mobile_power",
+    "name": "Мобильное питание",
+    "ingredients": [
+      "tech.c_mobile_shipyards",
+      "tech.d_fleet_tanker_doctrine"
+    ],
+    "results": [
+      "tech.combo_mobile_power"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.siege_beams": {
+    "id": "recipe.siege_beams",
+    "name": "Осадные лучи",
+    "ingredients": [
+      "tech.c_siege_works_kits",
+      "tech.d_beam_artillery_power"
+    ],
+    "results": [
+      "tech.combo_siege_beams"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.drydock_caps": {
+    "id": "recipe.drydock_caps",
+    "name": "Конденсаторы доков",
+    "ingredients": [
+      "tech.c_drydock_expansion",
+      "tech.d_capacitor_banks"
+    ],
+    "results": [
+      "tech.combo_drydock_caps"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.night_grid": {
+    "id": "recipe.night_grid",
+    "name": "Ночная сеть",
+    "ingredients": [
+      "tech.c_night_shift_ai",
+      "tech.d_distributed_microgrids"
+    ],
+    "results": [
+      "tech.combo_night_grid"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.bio_fusion": {
+    "id": "recipe.bio_fusion",
+    "name": "Био-термояд",
+    "ingredients": [
+      "tech.d_fusion_reactors",
+      "tech.e_bioengineering"
+    ],
+    "results": [
+      "tech.combo_bio_fusion"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.greenhouse_power": {
+    "id": "recipe.greenhouse_power",
+    "name": "Энерго-теплицы",
+    "ingredients": [
+      "tech.d_solar_arrays",
+      "tech.e_hydroponics"
+    ],
+    "results": [
+      "tech.combo_greenhouse_power"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.med_batteries": {
+    "id": "recipe.med_batteries",
+    "name": "Медбатареи",
+    "ingredients": [
+      "tech.d_battery_tech",
+      "tech.e_medical_advances"
+    ],
+    "results": [
+      "tech.combo_med_batteries"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.cryo_power": {
+    "id": "recipe.cryo_power",
+    "name": "Криопитание",
+    "ingredients": [
+      "tech.d_energy_storage",
+      "tech.e_cryosleep_wards"
+    ],
+    "results": [
+      "tech.combo_cryo_power"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.terra_heat": {
+    "id": "recipe.terra_heat",
+    "name": "Геотерма-терраформ",
+    "ingredients": [
+      "tech.d_geothermal_taps",
+      "tech.e_terraforming"
+    ],
+    "results": [
+      "tech.combo_terra_heat"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.life_support_bus": {
+    "id": "recipe.life_support_bus",
+    "name": "Шина жизнеобеспечения",
+    "ingredients": [
+      "tech.d_fleet_power_bus",
+      "tech.e_closed_ecology_ships"
+    ],
+    "results": [
+      "tech.combo_life_support_bus"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.psionic_genetics": {
+    "id": "recipe.psionic_genetics",
+    "name": "Псио-генетика",
+    "ingredients": [
+      "tech.e_genetic_engineering",
+      "tech.f_psionic_theory"
+    ],
+    "results": [
+      "tech.combo_psionic_genetics"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.bio_compute": {
+    "id": "recipe.bio_compute",
+    "name": "Био-вычисления",
+    "ingredients": [
+      "tech.e_bio_computing",
+      "tech.f_neural_networks"
+    ],
+    "results": [
+      "tech.combo_bio_compute"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.gene_archives": {
+    "id": "recipe.gene_archives",
+    "name": "Геноархивы",
+    "ingredients": [
+      "tech.e_gene_bank_vaults",
+      "tech.f_archive_compression"
+    ],
+    "results": [
+      "tech.combo_gene_archives"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.mind_rehab": {
+    "id": "recipe.mind_rehab",
+    "name": "Реабилитация разума",
+    "ingredients": [
+      "tech.e_neural_rehab",
+      "tech.f_cognitive_enhancement"
+    ],
+    "results": [
+      "tech.combo_mind_rehab"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.species_oracle": {
+    "id": "recipe.species_oracle",
+    "name": "Оракул видов",
+    "ingredients": [
+      "tech.e_species_design_labs",
+      "tech.f_oracle_clusters"
+    ],
+    "results": [
+      "tech.combo_species_oracle"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.memory_labs": {
+    "id": "recipe.memory_labs",
+    "name": "Лаборатории памяти",
+    "ingredients": [
+      "tech.e_memory_inheritance",
+      "tech.f_mnemonic_implants"
+    ],
+    "results": [
+      "tech.combo_memory_labs"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.survey_science": {
+    "id": "recipe.survey_science",
+    "name": "Наука разведки недр",
+    "ingredients": [
+      "tech.a_mineral_surveying",
+      "tech.f_astronomy"
+    ],
+    "results": [
+      "tech.combo_survey_science"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.anomaly_prospect": {
+    "id": "recipe.anomaly_prospect",
+    "name": "Аномальная разведка",
+    "ingredients": [
+      "tech.a_anomaly_tapping",
+      "tech.f_anomaly_detection"
+    ],
+    "results": [
+      "tech.combo_anomaly_prospect"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.ore_oracle_link": {
+    "id": "recipe.ore_oracle_link",
+    "name": "Связь рудного оракула",
+    "ingredients": [
+      "tech.a_ore_oracle",
+      "tech.f_hypothesis_engines"
+    ],
+    "results": [
+      "tech.combo_ore_oracle_link"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.relic_seams": {
+    "id": "recipe.relic_seams",
+    "name": "Реликтовые жилы",
+    "ingredients": [
+      "tech.a_isotope_prospecting",
+      "tech.f_relic_decoding"
+    ],
+    "results": [
+      "tech.combo_relic_seams"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.extract_doctrine": {
+    "id": "recipe.extract_doctrine",
+    "name": "Логистика экстракции",
+    "ingredients": [
+      "tech.a_mining_networks",
+      "tech.a_ore_train_networks"
+    ],
+    "results": [
+      "tech.combo_extract_logistics"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.hull_doctrine": {
+    "id": "recipe.hull_doctrine",
+    "name": "Доктрина корпуса",
+    "ingredients": [
+      "tech.b_ablative_hull_plates",
+      "tech.b_layered_reactive_armor"
+    ],
+    "results": [
+      "tech.combo_hull_doctrine"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.yard_doctrine": {
+    "id": "recipe.yard_doctrine",
+    "name": "Доктрина верфей",
+    "ingredients": [
+      "tech.c_fleet_batch_builds",
+      "tech.c_rapid_repair_bays"
+    ],
+    "results": [
+      "tech.combo_yard_doctrine"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.grid_doctrine": {
+    "id": "recipe.grid_doctrine",
+    "name": "Доктрина сетей",
+    "ingredients": [
+      "tech.d_grid_islanding",
+      "tech.d_power_grid_mgmt"
+    ],
+    "results": [
+      "tech.combo_grid_doctrine"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": true,
+    "catalogPending": true
+  },
+  "recipe.pop_doctrine": {
+    "id": "recipe.pop_doctrine",
+    "name": "Доктрина населения",
+    "ingredients": [
+      "tech.e_creche_networks",
+      "tech.e_population_growth"
+    ],
+    "results": [
+      "tech.combo_pop_doctrine"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.lab_doctrine": {
+    "id": "recipe.lab_doctrine",
+    "name": "Доктрина лабораторий",
+    "ingredients": [
+      "tech.f_basic_research",
+      "tech.f_experiment_schedulers"
+    ],
+    "results": [
+      "tech.combo_lab_doctrine"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "catalog"
+    ],
+    "costOverride": null,
+    "flavor": "Каталожный рецепт: ингредиенты появятся после миграции каталога.",
+    "discoverableBlind": false,
+    "catalogPending": true
+  },
+  "recipe.live_geo_materials": {
+    "id": "recipe.live_geo_materials",
+    "name": "Гео-материалы",
+    "ingredients": [
+      "tech.geology",
+      "tech.materials_science"
+    ],
+    "results": [
+      "tech.combo_live_geo_materials"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_deep_pyro": {
+    "id": "recipe.live_deep_pyro",
+    "name": "Глубинная пирометаллургия",
+    "ingredients": [
+      "tech.deep_prospecting",
+      "tech.pyrometallurgy"
+    ],
+    "results": [
+      "tech.combo_live_deep_pyro"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_asteroid_crystal": {
+    "id": "recipe.live_asteroid_crystal",
+    "name": "Астероидный кристалл",
+    "ingredients": [
+      "tech.asteroid_mining",
+      "tech.crystal_integration"
+    ],
+    "results": [
+      "tech.combo_live_asteroid_crystal"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_anomaly_meta": {
+    "id": "recipe.live_anomaly_meta",
+    "name": "Аномальные метаматериалы",
+    "ingredients": [
+      "tech.anomaly_tapping",
+      "tech.metamaterials"
+    ],
+    "results": [
+      "tech.combo_live_anomaly_meta"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_geo_pyro": {
+    "id": "recipe.live_geo_pyro",
+    "name": "Гео-плавка",
+    "ingredients": [
+      "tech.geology",
+      "tech.pyrometallurgy"
+    ],
+    "results": [
+      "tech.combo_live_geo_pyro"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_mat_industry": {
+    "id": "recipe.live_mat_industry",
+    "name": "Материалы цеха",
+    "ingredients": [
+      "tech.industrial_org",
+      "tech.materials_science"
+    ],
+    "results": [
+      "tech.combo_live_mat_industry"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_pyro_modular": {
+    "id": "recipe.live_pyro_modular",
+    "name": "Модульная плавка",
+    "ingredients": [
+      "tech.modular_construction",
+      "tech.pyrometallurgy"
+    ],
+    "results": [
+      "tech.combo_live_pyro_modular"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_crystal_cyber": {
+    "id": "recipe.live_crystal_cyber",
+    "name": "Кристалл-кибернетика",
+    "ingredients": [
+      "tech.crystal_integration",
+      "tech.cybernetics"
+    ],
+    "results": [
+      "tech.combo_live_crystal_cyber"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_meta_nano": {
+    "id": "recipe.live_meta_nano",
+    "name": "Мета-нано",
+    "ingredients": [
+      "tech.metamaterials",
+      "tech.nanotech"
+    ],
+    "results": [
+      "tech.combo_live_meta_nano"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_black_iron_mega": {
+    "id": "recipe.live_black_iron_mega",
+    "name": "Чёрное железо мегаструктур",
+    "ingredients": [
+      "tech.black_iron_forges",
+      "tech.planetary_megastructures"
+    ],
+    "results": [
+      "tech.combo_live_black_iron_mega"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_cold_foundry_synth": {
+    "id": "recipe.live_cold_foundry_synth",
+    "name": "Холодный синтуплифт",
+    "ingredients": [
+      "tech.hybrid.cold_foundry",
+      "tech.synth.uplift"
+    ],
+    "results": [
+      "tech.combo_live_cold_synth"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_industry_grid": {
+    "id": "recipe.live_industry_grid",
+    "name": "Цех-сеть",
+    "ingredients": [
+      "tech.energy_grid",
+      "tech.industrial_org"
+    ],
+    "results": [
+      "tech.combo_live_industry_grid"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_modular_plasma": {
+    "id": "recipe.live_modular_plasma",
+    "name": "Плазмо-модули",
+    "ingredients": [
+      "tech.modular_construction",
+      "tech.plasma_engineering"
+    ],
+    "results": [
+      "tech.combo_live_modular_plasma"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_cyber_fusion": {
+    "id": "recipe.live_cyber_fusion",
+    "name": "Кибер-термояд",
+    "ingredients": [
+      "tech.cybernetics",
+      "tech.fusion"
+    ],
+    "results": [
+      "tech.combo_live_cyber_fusion"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_nano_antimatter": {
+    "id": "recipe.live_nano_antimatter",
+    "name": "Нано-антиматерия",
+    "ingredients": [
+      "tech.antimatter",
+      "tech.nanotech"
+    ],
+    "results": [
+      "tech.combo_live_nano_antimatter"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_war_plasma": {
+    "id": "recipe.live_war_plasma",
+    "name": "Военная плазма",
+    "ingredients": [
+      "tech.plasma_engineering",
+      "tech.war_economy.doctrine"
+    ],
+    "results": [
+      "tech.combo_live_war_plasma"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_mega_singularity": {
+    "id": "recipe.live_mega_singularity",
+    "name": "Мега-сингулярность",
+    "ingredients": [
+      "tech.antimatter_singularity",
+      "tech.planetary_megastructures"
+    ],
+    "results": [
+      "tech.combo_live_mega_singularity"
+    ],
+    "era": 5,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_grid_hydro": {
+    "id": "recipe.live_grid_hydro",
+    "name": "Энерго-теплицы",
+    "ingredients": [
+      "tech.energy_grid",
+      "tech.hydroponics"
+    ],
+    "results": [
+      "tech.combo_live_grid_hydro"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_plasma_med": {
+    "id": "recipe.live_plasma_med",
+    "name": "Плазмомедицина",
+    "ingredients": [
+      "tech.medicine",
+      "tech.plasma_engineering"
+    ],
+    "results": [
+      "tech.combo_live_plasma_med"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_fusion_bio": {
+    "id": "recipe.live_fusion_bio",
+    "name": "Био-термояд",
+    "ingredients": [
+      "tech.biocatalysis",
+      "tech.fusion"
+    ],
+    "results": [
+      "tech.combo_live_fusion_bio"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_antimatter_xeno": {
+    "id": "recipe.live_antimatter_xeno",
+    "name": "Ксено-антиматерия",
+    "ingredients": [
+      "tech.antimatter",
+      "tech.xenobiology"
+    ],
+    "results": [
+      "tech.combo_live_antimatter_xeno"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_void_swarm": {
+    "id": "recipe.live_void_swarm",
+    "name": "Пустотный рой",
+    "ingredients": [
+      "tech.hybrid.void_interface",
+      "tech.swarm.adaptation"
+    ],
+    "results": [
+      "tech.combo_live_void_swarm"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_hydro_charter": {
+    "id": "recipe.live_hydro_charter",
+    "name": "Хартия теплиц",
+    "ingredients": [
+      "tech.hydroponics",
+      "tech.scientific_charter"
+    ],
+    "results": [
+      "tech.combo_live_hydro_charter"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_med_archaeology": {
+    "id": "recipe.live_med_archaeology",
+    "name": "Медархеология",
+    "ingredients": [
+      "tech.archaeology",
+      "tech.medicine"
+    ],
+    "results": [
+      "tech.combo_live_med_archaeology"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_bio_psi": {
+    "id": "recipe.live_bio_psi",
+    "name": "Биопсионика",
+    "ingredients": [
+      "tech.biocatalysis",
+      "tech.psionics"
+    ],
+    "results": [
+      "tech.combo_live_bio_psi"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_xeno_corridors": {
+    "id": "recipe.live_xeno_corridors",
+    "name": "Ксено-коридоры",
+    "ingredients": [
+      "tech.white_corridors",
+      "tech.xenobiology"
+    ],
+    "results": [
+      "tech.combo_live_xeno_corridors"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_med_psi": {
+    "id": "recipe.live_med_psi",
+    "name": "Псио-генетика",
+    "ingredients": [
+      "tech.medicine",
+      "tech.psionics"
+    ],
+    "results": [
+      "tech.combo_live_med_psi"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_swarm_chorus": {
+    "id": "recipe.live_swarm_chorus",
+    "name": "Роевой хор",
+    "ingredients": [
+      "tech.psi_doctrine.chorus",
+      "tech.swarm.adaptation"
+    ],
+    "results": [
+      "tech.combo_live_swarm_chorus"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_charter_geo": {
+    "id": "recipe.live_charter_geo",
+    "name": "Хартия недр",
+    "ingredients": [
+      "tech.geology",
+      "tech.scientific_charter"
+    ],
+    "results": [
+      "tech.combo_live_charter_geo"
+    ],
+    "era": 1,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_arch_deep": {
+    "id": "recipe.live_arch_deep",
+    "name": "Архео-скважины",
+    "ingredients": [
+      "tech.archaeology",
+      "tech.deep_prospecting"
+    ],
+    "results": [
+      "tech.combo_live_arch_deep"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_psi_asteroid": {
+    "id": "recipe.live_psi_asteroid",
+    "name": "Пси-астероиды",
+    "ingredients": [
+      "tech.asteroid_mining",
+      "tech.psionics"
+    ],
+    "results": [
+      "tech.combo_live_psi_asteroid"
+    ],
+    "era": 3,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_corridors_anomaly": {
+    "id": "recipe.live_corridors_anomaly",
+    "name": "Коридоры аномалий",
+    "ingredients": [
+      "tech.anomaly_tapping",
+      "tech.white_corridors"
+    ],
+    "results": [
+      "tech.combo_live_corridors_anomaly"
+    ],
+    "era": 4,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": false,
+    "catalogPending": false
+  },
+  "recipe.live_ai_geo": {
+    "id": "recipe.live_ai_geo",
+    "name": "ИИ-разведка недр",
+    "ingredients": [
+      "tech.geology",
+      "tech.technocracy.ai_research"
+    ],
+    "results": [
+      "tech.combo_live_ai_geo"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_extract_chain": {
+    "id": "recipe.live_extract_chain",
+    "name": "Цепь экстракции",
+    "ingredients": [
+      "tech.deep_prospecting",
+      "tech.geology"
+    ],
+    "results": [
+      "tech.combo_live_extract_chain"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_alloy_chain": {
+    "id": "recipe.live_alloy_chain",
+    "name": "Цепь сплавов",
+    "ingredients": [
+      "tech.materials_science",
+      "tech.pyrometallurgy"
+    ],
+    "results": [
+      "tech.combo_live_alloy_chain"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_yard_chain": {
+    "id": "recipe.live_yard_chain",
+    "name": "Цепь верфей",
+    "ingredients": [
+      "tech.industrial_org",
+      "tech.modular_construction"
+    ],
+    "results": [
+      "tech.combo_live_yard_chain"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_grid_chain": {
+    "id": "recipe.live_grid_chain",
+    "name": "Цепь сетей",
+    "ingredients": [
+      "tech.energy_grid",
+      "tech.plasma_engineering"
+    ],
+    "results": [
+      "tech.combo_live_grid_chain"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_life_chain": {
+    "id": "recipe.live_life_chain",
+    "name": "Цепь жизни",
+    "ingredients": [
+      "tech.hydroponics",
+      "tech.medicine"
+    ],
+    "results": [
+      "tech.combo_live_life_chain"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  },
+  "recipe.live_lab_chain": {
+    "id": "recipe.live_lab_chain",
+    "name": "Цепь лабораторий",
+    "ingredients": [
+      "tech.archaeology",
+      "tech.scientific_charter"
+    ],
+    "results": [
+      "tech.combo_live_lab_chain"
+    ],
+    "era": 2,
+    "tags": [
+      "alchemy",
+      "live_bridge"
+    ],
+    "costOverride": null,
+    "flavor": "Live-мост: ингредиенты из текущего technologies.json.",
+    "discoverableBlind": true,
+    "catalogPending": false
+  }
+}

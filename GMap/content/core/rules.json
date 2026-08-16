@@ -10,12 +10,27 @@
   "tickTimezone": "Europe/Moscow",
   "tickCron": "1 0 * * *",
   "conflictPolicy": "submitted_at_asc",
-  "economyMergeOrder": ["flat", "mult"],
+  "economyMergeOrder": [
+    "flat",
+    "mult"
+  ],
   "modifierCaps": {
-    "production": { "min": 0.5, "max": 2.0 },
-    "upkeep": { "min": 0.5, "max": 1.5 },
-    "research": { "min": 0.5, "max": 1.0 },
-    "cost": { "min": 0.75, "max": 1.5 }
+    "production": {
+      "min": 0.5,
+      "max": 2
+    },
+    "upkeep": {
+      "min": 0.5,
+      "max": 1.5
+    },
+    "research": {
+      "min": 0.5,
+      "max": 1.5
+    },
+    "cost": {
+      "min": 0.75,
+      "max": 1.5
+    }
   },
   "deficit": {
     "lowRatio": 0.15,
@@ -29,12 +44,25 @@
       {
         "min": 3,
         "effects": [
-          { "effect": "cost_mult", "args": { "mult": 1.1, "tag": "build" } }
+          {
+            "effect": "cost_mult",
+            "args": {
+              "mult": 1.1,
+              "tag": "build"
+            }
+          }
         ]
       },
       {
         "min": 6,
-        "effects": [{ "effect": "ap_add", "args": { "amount": -1 } }]
+        "effects": [
+          {
+            "effect": "ap_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ]
       }
     ]
   },
@@ -70,6 +98,11 @@
     "freeReorderPerRound": 1,
     "xpPerCardBattle": 50,
     "overwhelmSplashMult": 0.35,
+    "formationAuras": {
+      "escortIncomingMult": 0.85,
+      "supportOutgoingMult": 1.15,
+      "escortNeighborBlock": 4
+    },
     "trophies": {
       "metalPerLostUnit": 1,
       "metalFloor": 2,
@@ -77,28 +110,68 @@
       "intelBump": 6,
       "loyaltyHit": 5,
       "styleCognitioPerBanner": 1,
-      "styleMaxCognitio": 3
+      "styleMaxCognitio": 3,
+      "salvageOfferMax": 3
     },
     "triggers": {
       "mutualConsent": true,
       "gmForce": true,
-      "powerCorridor": { "min": 0.40, "max": 0.60 }
+      "powerCorridor": {
+        "min": 0.4,
+        "max": 0.6
+      }
     }
   },
   "engagement": {
     "maxRounds": 3,
     "requiresPlayerInput": true,
-    "assaultPhases": ["bombard", "landing", "ground", "occupation"]
+    "assaultPhases": [
+      "bombard",
+      "landing",
+      "ground",
+      "occupation"
+    ]
   },
   "veterancy": {
-    "thresholds": [0, 100, 250, 500, 900, 1500],
+    "thresholds": [
+      0,
+      100,
+      250,
+      500,
+      900,
+      1500
+    ],
     "bonuses": [
       {},
-      { "stat_mult": { "defense": 1.05 } },
-      { "stat_mult": { "defense": 1.1, "damage": 1.05 } },
-      { "stat_mult": { "defense": 1.15, "damage": 1.1 } },
-      { "stat_mult": { "defense": 1.2, "damage": 1.15 } },
-      { "stat_mult": { "defense": 1.25, "damage": 1.2 } }
+      {
+        "stat_mult": {
+          "defense": 1.05
+        }
+      },
+      {
+        "stat_mult": {
+          "defense": 1.1,
+          "damage": 1.05
+        }
+      },
+      {
+        "stat_mult": {
+          "defense": 1.15,
+          "damage": 1.1
+        }
+      },
+      {
+        "stat_mult": {
+          "defense": 1.2,
+          "damage": 1.15
+        }
+      },
+      {
+        "stat_mult": {
+          "defense": 1.25,
+          "damage": 1.2
+        }
+      }
     ],
     "xpPerBattle": 50,
     "xpLossOnUnitUpgrade": 0.5
@@ -115,9 +188,17 @@
     "connectedBonuses": [
       {
         "effect": "production_mult",
-        "args": { "resource": "currency.industria", "mult": 1.05 }
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
       },
-      { "effect": "ap_add", "args": { "amount": 1 } }
+      {
+        "effect": "ap_add",
+        "args": {
+          "amount": 1
+        }
+      }
     ],
     "disconnectedPenalties": [
       {
@@ -135,7 +216,13 @@
   "movement": {
     "rangeHops": 3,
     "fleetRangeHops": null,
-    "legionRangeHops": null
+    "legionRangeHops": null,
+    "defaultFleetSpeed": 10,
+    "legionSpeed": 4,
+    "engineRangeHops": { "0": 2, "1": 3, "2": 4, "3": 5, "4": 6, "5": 7 },
+    "fuelMovementPoints": { "0": 3, "1": 4, "2": 6, "3": 8, "4": 10, "5": 12 },
+    "movementPointsPerHop": 1,
+    "legionMovementPoints": 3
   },
   "fog": {
     "storage": "per_system",

@@ -114,9 +114,11 @@ export const DIPLOMACY_LABELS: Record<string, string> = {
   research_pact: "Научный пакт",
   migration_treaty: "Миграционный договор",
   embargo: "Эмбарго",
+  currency_exchange: "Валютный договор",
+  currency_union: "Валютный союз",
 };
 
-/** All selectable diplomacy relations (GM matrix + deal desk). */
+/** Political matrix only — economic types live on a separate track. */
 export const DIPLOMACY_RELATIONS = [
   "neutral",
   "alliance",
@@ -128,6 +130,11 @@ export const DIPLOMACY_RELATIONS = [
   "research_pact",
   "migration_treaty",
   "embargo",
+] as const;
+
+export const ECONOMIC_RELATIONS = [
+  "currency_exchange",
+  "currency_union",
 ] as const;
 
 export const LEGION_STATUS_LABELS: Record<string, string> = {

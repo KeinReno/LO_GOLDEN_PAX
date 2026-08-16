@@ -1,5 +1,17 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import {
+  Dna,
+  Factory,
+  FlaskConical,
+  FolderOpen,
+  Globe2,
+  Landmark,
+  Rocket,
+  Scale,
+  ScrollText,
+  Swords,
+} from "lucide-react";
 import { useWorldStore } from "../state/worldStore";
 import { resolvePolityKind } from "../state/territory";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
@@ -90,7 +102,6 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
     cloudpubTokenInput,
     setCloudpubTokenInput,
     masterToken,
-    setMasterToken,
     setSyncMsg,
   } = useCampaignSessionCtx();
 
@@ -144,25 +155,117 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             ? "btn primary"
             : "btn ghost";
 
-  const atelier = gmShellMode === "atelier";
-
   const modeSwitch = (
-    <div className="gm-mode-switch" role="group" aria-label="Режим ГМа">
+    <div className="gm-mode-switch gm-mode-switch--studios" role="group" aria-label="Режимы и студии GM">
       <button
         type="button"
         className={`gm-mode-btn ${gmShellMode === "gm" ? "on" : ""}`}
         onClick={() => setGmShellMode("gm")}
-        title="Карта, кисти, домены F1–F9, тик"
+        title="Карта галактики, кисти, домены F1–F9, тик"
       >
-        ГМ
+        <span className="gm-mode-icon">
+          <Globe2 size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Карта</span>
       </button>
       <button
         type="button"
-        className={`gm-mode-btn ${atelier ? "on" : ""}`}
-        onClick={() => setGmShellMode("atelier")}
-        title="Контент и баланс (каталоги)"
+        className={`gm-mode-btn ${gmShellMode === "rp" ? "on" : ""}`}
+        onClick={() => setGmShellMode("rp")}
+        title="Ролевой стол: Хроники, каналы, маски NPC, дайсы"
       >
-        Atelier
+        <span className="gm-mode-icon">
+          <ScrollText size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>RP Стол</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "simulator" ? "on" : ""}`}
+        onClick={() => setGmShellMode("simulator")}
+        title="Боевой полигон & Тир (флот, легион, осада, бенчмарк)"
+      >
+        <span className="gm-mode-icon">
+          <Swords size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Симулятор</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "tech" ? "on" : ""}`}
+        onClick={() => setGmShellMode("tech")}
+        title="Конструктор технологий, грейдов I–V, сокетов"
+      >
+        <span className="gm-mode-icon">
+          <FlaskConical size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Наука</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "units" ? "on" : ""}`}
+        onClick={() => setGmShellMode("units")}
+        title="Конструктор кораблей и легионов с живой ККИ-карточкой"
+      >
+        <span className="gm-mode-icon">
+          <Rocket size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Карты & Юниты</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "buildings" ? "on" : ""}`}
+        onClick={() => setGmShellMode("buildings")}
+        title="Конструктор зданий, станций и космо-объектов"
+      >
+        <span className="gm-mode-icon">
+          <Factory size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Сооружения</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "races" ? "on" : ""}`}
+        onClick={() => setGmShellMode("races")}
+        title="Конструктор рас и видовых признаков"
+      >
+        <span className="gm-mode-icon">
+          <Dna size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Расы</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "polities" ? "on" : ""}`}
+        onClick={() => setGmShellMode("polities")}
+        title="Редактор государств и фракций"
+      >
+        <span className="gm-mode-icon">
+          <Landmark size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Державы</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "rules" ? "on" : ""}`}
+        onClick={() => setGmShellMode("rules")}
+        title="Настройки темпа игры (Блиц, Стандарт, Хардкор) и правил"
+      >
+        <span className="gm-mode-icon">
+          <Scale size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Баланс</span>
+      </button>
+      <button
+        type="button"
+        className={`gm-mode-btn ${gmShellMode === "atelier" ? "on" : ""}`}
+        onClick={() => setGmShellMode("atelier")}
+        title="Сырые каталоги контента (JSON)"
+      >
+        <span className="gm-mode-icon">
+          <FolderOpen size={13} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+        <span>Ателье</span>
       </button>
     </div>
   );
@@ -587,13 +690,9 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             </button>
           </div>
           <DesktopHostBadge />
-          <label className="field">
-            <span>Мастер-токен</span>
-            <input
-              value={masterToken}
-              onChange={(e) => setMasterToken(e.target.value)}
-            />
-          </label>
+          <p className="hint">
+            Мастер-токен настраивается в Toolbar → Сессия.
+          </p>
           <label className="check">
             <input
               type="checkbox"

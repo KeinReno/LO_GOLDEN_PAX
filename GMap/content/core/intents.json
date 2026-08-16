@@ -1,24 +1,25 @@
 {
   "intent.move_fleet": {
     "id": "intent.move_fleet",
-    "ap": 0,
+    "category": "eta",
+    "ap": 1,
     "forceAp": 1,
-    "instant": true,
     "legacyOrderType": "move_fleet",
     "ops": ["move_fleet"],
     "params": ["fleetId", "toSystemId"]
   },
   "intent.move_legion": {
     "id": "intent.move_legion",
+    "category": "eta",
     "ap": 0,
     "forceAp": 1,
-    "instant": true,
     "legacyOrderType": "move_legion",
     "ops": ["move_legion"],
     "params": ["legionId", "toSystemId"]
   },
   "intent.attack_system": {
     "id": "intent.attack_system",
+    "category": "eta",
     "ap": 1,
     "forceAp": 1,
     "legacyOrderType": "attack_system",
@@ -27,18 +28,21 @@
   },
   "intent.combat_stance": {
     "id": "intent.combat_stance",
+    "category": "instant",
     "ap": 0,
     "ops": ["combat_stance"],
     "params": ["engagementId", "stance"]
   },
   "intent.request_card_battle": {
     "id": "intent.request_card_battle",
+    "category": "instant",
     "ap": 0,
     "ops": ["request_card_battle"],
     "params": ["engagementId"]
   },
   "intent.play_card": {
     "id": "intent.play_card",
+    "category": "instant",
     "ap": 0,
     "ops": ["play_card"],
     "params": ["engagementId", "cardId"]
@@ -46,6 +50,7 @@
 
   "intent.claim_system": {
     "id": "intent.claim_system",
+    "category": "instant",
     "ap": 1,
     "legacyOrderType": "claim_system",
     "ops": ["claim_system"],
@@ -53,30 +58,35 @@
   },
   "intent.transfer": {
     "id": "intent.transfer",
+    "category": "instant",
     "ap": 0,
     "ops": ["transfer"],
     "params": ["toFactionId", "currencyId", "amount"]
   },
   "intent.market_convert": {
     "id": "intent.market_convert",
+    "category": "instant",
     "ap": 0,
     "ops": ["market_convert"],
     "params": ["fromCurrency", "toCurrency", "amountFrom", "amountTo"]
   },
   "intent.market_offer": {
     "id": "intent.market_offer",
+    "category": "pending",
     "ap": 1,
     "ops": ["market_offer"],
     "params": ["side", "giveCurrency", "giveAmount", "wantCurrency", "wantAmount"]
   },
   "intent.market_cancel": {
     "id": "intent.market_cancel",
+    "category": "instant",
     "ap": 0,
     "ops": ["market_cancel"],
     "params": ["offerId"]
   },
   "intent.set_tax": {
     "id": "intent.set_tax",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["set_tax"],
@@ -84,6 +94,7 @@
   },
   "intent.blockade": {
     "id": "intent.blockade",
+    "category": "eta",
     "ap": 0,
     "forceAp": 1,
     "legacyOrderType": "blockade",
@@ -92,6 +103,7 @@
   },
   "intent.fortify": {
     "id": "intent.fortify",
+    "category": "eta",
     "ap": 0,
     "forceAp": 1,
     "legacyOrderType": "fortify",
@@ -100,12 +112,14 @@
   },
   "intent.scout_reveal": {
     "id": "intent.scout_reveal",
+    "category": "eta",
     "ap": 0,
     "ops": ["scout_reveal"],
     "params": ["systemId"]
   },
   "intent.scout_world": {
     "id": "intent.scout_world",
+    "category": "eta",
     "ap": 0,
     "forceAp": 1,
     "ops": ["gather_intel"],
@@ -115,6 +129,7 @@
   },
   "intent.espionage": {
     "id": "intent.espionage",
+    "category": "eta",
     "ap": 2,
     "ops": ["gather_intel"],
     "params": ["targetFactionId", "intelCategory"],
@@ -126,25 +141,29 @@
   },
   "intent.refugee_convoy": {
     "id": "intent.refugee_convoy",
+    "category": "eta",
     "ap": 1,
     "ops": ["refugee_convoy"],
     "params": ["fromSystemId", "toSystemId", "amount"]
   },
   "intent.give_npc_task": {
     "id": "intent.give_npc_task",
+    "category": "eta",
     "ap": 1,
     "ops": ["give_npc_task"],
     "params": ["npcId", "taskLabel", "etaTurn", "effects", "linkedQuestId", "taskId"]
   },
   "intent.assign_npc_posting": {
     "id": "intent.assign_npc_posting",
+    "category": "instant",
     "ap": 1,
     "ops": ["assign_npc_posting"],
-    "params": ["npcId", "kind", "systemId", "legionId", "fleetId"],
+    "params": ["npcId", "kind", "systemId", "legionId", "fleetId", "forceId"],
     "description": "Назначить NPC губернатором / командующим / флотоводцем"
   },
   "intent.recall_npc_posting": {
     "id": "intent.recall_npc_posting",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["recall_npc_posting"],
@@ -153,6 +172,7 @@
   },
   "intent.seat_npc_council": {
     "id": "intent.seat_npc_council",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["seat_npc_council"],
@@ -161,6 +181,7 @@
   },
   "intent.unseat_npc_council": {
     "id": "intent.unseat_npc_council",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["unseat_npc_council"],
@@ -169,6 +190,7 @@
   },
   "intent.set_council_portfolio": {
     "id": "intent.set_council_portfolio",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["set_council_portfolio"],
@@ -177,6 +199,7 @@
   },
   "intent.assign_bloc_leader": {
     "id": "intent.assign_bloc_leader",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["assign_bloc_leader"],
@@ -185,6 +208,7 @@
   },
   "intent.assign_race_leader": {
     "id": "intent.assign_race_leader",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["assign_race_leader"],
@@ -194,13 +218,14 @@
 
   "intent.build": {
     "id": "intent.build",
-    "ap": 0,
-    "instant": true,
+    "category": "eta",
+    "ap": 1,
     "ops": ["build"],
     "params": ["systemId", "planetId", "buildingId"]
   },
   "intent.demolish": {
     "id": "intent.demolish",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["demolish"],
@@ -208,6 +233,7 @@
   },
   "intent.colonize": {
     "id": "intent.colonize",
+    "category": "instant",
     "ap": 1,
     "instant": true,
     "ops": ["colonize"],
@@ -215,21 +241,32 @@
   },
   "intent.set_colony_type": {
     "id": "intent.set_colony_type",
+    "category": "instant",
     "ap": 1,
     "instant": true,
     "ops": ["set_colony_type"],
     "params": ["systemId", "planetId", "colonyType"]
   },
+  "intent.upgrade_grade": {
+    "id": "intent.upgrade_grade",
+    "category": "instant",
+    "ap": 1,
+    "instant": true,
+    "ops": ["upgrade_grade"],
+    "params": ["systemId", "planetId", "zone"],
+    "description": "Купить следующий грейд слотов (surface | orbital)"
+  },
   "intent.make_diplo_offer": {
     "id": "intent.make_diplo_offer",
+    "category": "pending",
     "ap": 0,
-    "instant": true,
     "ops": ["make_diplo_offer"],
     "params": ["toFactionId", "give", "want", "note"],
     "description": "Дипломатическое предложение (give/want). Обычно через /api/diplo/offers."
   },
   "intent.break_treaty": {
     "id": "intent.break_treaty",
+    "category": "instant",
     "ap": 1,
     "ops": ["break_treaty"],
     "params": ["withFactionId", "treatyType"],
@@ -237,13 +274,14 @@
   },
   "intent.research_upgrade": {
     "id": "intent.research_upgrade",
-    "ap": 0,
-    "instant": true,
+    "category": "eta",
+    "ap": 1,
     "ops": ["research_upgrade"],
     "params": ["techId", "upgradeId"]
   },
   "intent.set_research_queue": {
     "id": "intent.set_research_queue",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["set_research_queue"],
@@ -252,6 +290,7 @@
   },
   "intent.set_build_queue": {
     "id": "intent.set_build_queue",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["set_build_queue"],
@@ -260,6 +299,7 @@
   },
   "intent.set_flow_priority": {
     "id": "intent.set_flow_priority",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["set_flow_priority"],
@@ -268,14 +308,24 @@
   },
   "intent.reserve_stock": {
     "id": "intent.reserve_stock",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["reserve_stock"],
     "params": ["currencyId", "amount", "label"],
     "description": "Резерв ресурса под стройку/цель (не списывает со склада)"
   },
+  "intent.send_caravan": {
+    "id": "intent.send_caravan",
+    "category": "eta",
+    "ap": 1,
+    "ops": ["send_caravan"],
+    "params": ["currencyId", "amount", "fromSystemId", "toSystemId"],
+    "description": "Отправить караван с грузом в свою систему"
+  },
   "intent.set_economic_policy": {
     "id": "intent.set_economic_policy",
+    "category": "instant",
     "ap": 1,
     "ops": ["set_economic_policy"],
     "params": ["policyId"],
@@ -283,6 +333,7 @@
   },
   "intent.found_hybrid_lineage": {
     "id": "intent.found_hybrid_lineage",
+    "category": "eta",
     "ap": 2,
     "ops": ["found_hybrid_lineage"],
     "params": ["systemId", "planetId", "raceA", "raceB"],
@@ -291,6 +342,7 @@
 
   "intent.throw_quest_dice": {
     "id": "intent.throw_quest_dice",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["throw_quest_dice"],
@@ -299,6 +351,7 @@
   },
   "intent.resolve_quest_choice": {
     "id": "intent.resolve_quest_choice",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["resolve_quest_choice"],
@@ -307,6 +360,7 @@
   },
   "intent.resolve_quest_dice": {
     "id": "intent.resolve_quest_dice",
+    "category": "instant",
     "ap": 0,
     "instant": true,
     "ops": ["resolve_quest_dice"],
@@ -315,10 +369,21 @@
   },
   "intent.trade_tech": {
     "id": "intent.trade_tech",
+    "category": "pending",
     "ap": 2,
     "ops": ["transfer_tech"],
     "params": ["techId", "targetFactionId", "price"],
     "requires": { "diplomacy": ["trade", "alliance"] },
     "description": "Обмен технологией с другой фракцией"
+  },
+  "intent.gm.grant_power_touch": {
+    "id": "intent.gm.grant_power_touch",
+    "category": "instant",
+    "ap": 0,
+    "instant": true,
+    "gmOnly": true,
+    "ops": ["grant_power_touch"],
+    "params": ["factionId", "powerPath"],
+    "description": "GM: касание Хивера — выдать Путь Силы фракции (mind|will|chaos|shadow)"
   }
 }

@@ -21,6 +21,9 @@ import {
   syncTreatiesFromEdge,
   bumpOpinion,
   ensureFactionDiplomacy,
+  getRelation,
+  TRACK_POLITICAL,
+  findDiplomacyEdge,
 } from "./opinionTick.mjs";
 import { recomputeUnlocksFromTechs } from "./techActions.mjs";
 import { applyUnitUpgradeEffectsToWorld } from "./combatResolve.mjs";
@@ -64,11 +67,7 @@ export const MUTUAL_TREATIES = new Set([
 export const UNILATERAL_STANCES = new Set(["war", "embargo", "break"]);
 
 function getEdgeRelation(world, aId, bId) {
-  const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
-  return (
-    (world.diplomacy ?? []).find((d) => d.aId === x && d.bId === y)?.relation ??
-    "neutral"
-  );
+  return getRelation(world, aId, bId);
 }
 
 function cancelPendingOffersBetween(aId, bId, turn, reason) {
@@ -399,15 +398,17 @@ function refundEscrow(offer, turn, reason) {
 function setDiplomacyRelation(world, aId, bId, relation, turn) {
   const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
   const list = world.diplomacy ?? [];
-  const idx = list.findIndex((d) => d.aId === x && d.bId === y);
-  if (idx >= 0) {
-    list[idx] = { ...list[idx], relation };
+  const existing = findDiplomacyEdge(world, aId, bId, TRACK_POLITICAL);
+  if (existing) {
+    existing.relation = relation;
+    existing.track = TRACK_POLITICAL;
   } else {
     list.push({
       id: `dip_${x}_${y}`,
       aId: x,
       bId: y,
       relation,
+      track: TRACK_POLITICAL,
     });
   }
   world.diplomacy = list;

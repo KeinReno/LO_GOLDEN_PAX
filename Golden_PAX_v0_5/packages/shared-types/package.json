@@ -1,0 +1,13 @@
+{
+  "name": "@golden-pax/shared-types",
+  "private": true,
+  "version": "0.5.0",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

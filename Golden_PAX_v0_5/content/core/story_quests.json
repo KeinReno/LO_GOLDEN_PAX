@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Сюжетные, фракционные и прочие квесты — каталог для ручной выдачи ГМ и авто-spawn по условиям."
+  },
+  "quests": {
+    "sq.template_info": {
+      "id": "sq.template_info",
+      "name": "Шаблон: информационный квест",
+      "summary": "Краткий hook — что видит игрок в инбоксе.",
+      "detail": "Полный текст для досье квеста. Можно вставить канон, ссылки на ход, NPC.",
+      "kind": "side",
+      "narrative": true,
+      "secret": false,
+      "hasChoices": false,
+      "choices": [],
+      "objectives": [
+        { "id": "obj_read", "text": "Прочитать брифинг" }
+      ],
+      "placement": {
+        "onMap": false,
+        "systemPick": "none",
+        "systemId": null
+      },
+      "audience": {
+        "factionIds": [],
+        "allFactions": true,
+        "minEra": 1
+      },
+      "completion": {
+        "mode": "manual",
+        "expiresTurns": null
+      },
+      "filterBy": {},
+      "sourceNpcId": null,
+      "tags": ["template"]
+    },
+    "sq.template_choice": {
+      "id": "sq.template_choice",
+      "name": "Шаблон: квест с выбором",
+      "summary": "Ситуация требует решения — три пути.",
+      "detail": "Опишите контекст, ставки и последствия каждого выбора.",
+      "kind": "faction",
+      "narrative": true,
+      "hasChoices": true,
+      "choices": [
+        {
+          "id": "accept",
+          "label": "Принять",
+          "description": "Пойти на риск ради выгоды.",
+          "effects": [
+            { "effect": "loyalty_add", "args": { "amount": 2 } },
+            { "effect": "upkeep_flat", "args": { "resource": "currency.supply", "amount": -4 } }
+          ]
+        },
+        {
+          "id": "decline",
+          "label": "Отказать",
+          "description": "Сохранить ресурсы, потерять доверие.",
+          "effects": [
+            { "effect": "loyalty_add", "args": { "amount": -3 } }
+          ]
+        },
+        {
+          "id": "gamble",
+          "label": "Рискнуть (d20)",
+          "description": "Бросок на удачу.",
+          "diceRequired": [
+            { "count": 1, "sides": 20, "label": "d20", "threshold": 14 }
+          ],
+          "onSuccess": [
+            { "effect": "production_flat", "args": { "resource": "currency.metal", "amount": 8 } }
+          ],
+          "onFail": [
+            { "effect": "loyalty_add", "args": { "amount": -4 } }
+          ]
+        }
+      ],
+      "placement": {
+        "onMap": true,
+        "systemPick": "random_owned",
+        "systemId": null
+      },
+      "audience": {
+        "factionIds": [],
+        "allFactions": false,
+        "minEra": 1
+      },
+      "completion": {
+        "mode": "choice",
+        "expiresTurns": 5
+      },
+      "sourceNpcId": null,
+      "tags": ["template"]
+    }
+  }
+}

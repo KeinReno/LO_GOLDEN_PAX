@@ -1,0 +1,37 @@
+{
+  "name": "golden-pax",
+  "private": true,
+  "version": "0.5.0",
+  "type": "module",
+  "description": "Golden Pax — multiplayer GM-run 4X roleplay strategy. Foundation rebuild of GMap.",
+  "workspaces": [
+    "client-web",
+    "packages/shared-types"
+  ],
+  "scripts": {
+    "dev:server": "node server/serve.mjs",
+    "dev:client": "npm run dev -w client-web",
+    "dev": "concurrently -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "build": "npm run build -w client-web",
+    "start": "node server/serve.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:tech": "node scripts/validateTechnologies.mjs",
+    "validate:recipes": "node scripts/validateTechRecipes.mjs",
+    "validate:races": "node scripts/validateRaces.mjs",
+    "lint:balance": "node scripts/lintBalance.mjs",
+    "validate:content": "npm run validate:tech && npm run validate:recipes && npm run validate:races && npm run lint:balance"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "localtunnel": "^2.0.2",
+    "uuid": "^14.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "vitest": "^3.2.4"
+  }
+}

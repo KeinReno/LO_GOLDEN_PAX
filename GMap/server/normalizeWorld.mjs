@@ -1,11 +1,55 @@
 /**
  * Soft-normalize WorldState for live table (P0.4).
  * Does not strip unknown fields — only fills safe defaults.
+ *
+ * Note (B2): faction eco.roleScores lives in ledger.json, not WorldState.
+ * Migration/init is ledger.ensureFactionEco → roleScores.ensureRoleScores (8 keys).
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncNpcPassiveEffects } from "./courtGovernance.mjs";
+import { normalizeGmPegMultipliers } from "./currencyPeg.mjs";
+import { derivedGradeFields } from "./planetGrade.mjs";
+import { getContent } from "./contentLoader.mjs";
+// NOTE: do not import orderEngine here — it pulls tableStore and causes DATA_DIR TDZ.
+// Order migration helpers are inlined below (kept in sync with orderEngine.normalizePlayerOrder).
+
+const HOURS_PER_TURN = 24;
+
+function gameHourAtTurn(turn) {
+  return Math.max(0, Math.floor(Number(turn) || 0)) * HOURS_PER_TURN;
+}
+
+/** Local copy of orderEngine.normalizePlayerOrder — avoid circular import. */
+function normalizePlayerOrder(raw, currentTurn = 0) {
+  if (!raw || typeof raw !== "object") return raw;
+  const category = raw.category ?? "eta";
+  let status = raw.status ?? "pending";
+  if (category === "eta" && raw.resolvesAt == null) {
+    if (status === "pending" || status === "applied" || status === "accepted") {
+      status = "resolved";
+    }
+  }
+  if (status === "applied") status = "resolved";
+  const { apCost, forceApCost } =
+    raw.apCost != null
+      ? { apCost: raw.apCost, forceApCost: raw.forceApCost ?? 0 }
+      : { apCost: 0, forceApCost: 0 };
+  return {
+    ...raw,
+    category,
+    status,
+    resolvesAt: raw.resolvesAt ?? null,
+    startedAt: raw.startedAt ?? gameHourAtTurn(raw.turn ?? currentTurn),
+    baseDuration: raw.baseDuration ?? null,
+    modifiers: Array.isArray(raw.modifiers) ? raw.modifiers : [],
+    progress: raw.progress ?? undefined,
+    ratePerTurn: raw.ratePerTurn ?? undefined,
+    apCost,
+    forceApCost,
+  };
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ALIASES_PATH = path.resolve(
@@ -71,6 +115,7 @@ export function normalizeWorld(raw) {
     throw new Error("normalizeWorld: expected object");
   }
   const aliases = loadAliases();
+  const content = getContent();
   const meta = {
     schemaVersion: raw.meta?.schemaVersion ?? 9,
     name: raw.meta?.name ?? "Кампания",
@@ -85,6 +130,7 @@ export function normalizeWorld(raw) {
       raw.meta?.yearlyQuestRolls && typeof raw.meta.yearlyQuestRolls === "object"
         ? raw.meta.yearlyQuestRolls
         : {},
+    gmPegMultipliers: normalizeGmPegMultipliers(raw.meta?.gmPegMultipliers),
   };
 
   const systems = (raw.systems ?? []).map((s) => ({
@@ -93,6 +139,10 @@ export function normalizeWorld(raw) {
       ? s.visibleToFactionIds
       : [],
     spaceObjects: Array.isArray(s.spaceObjects) ? s.spaceObjects : [],
+    spaceObjectRemaining:
+      s.spaceObjectRemaining && typeof s.spaceObjectRemaining === "object"
+        ? s.spaceObjectRemaining
+        : {},
     resources: Array.isArray(s.resources)
       ? s.resources.map((r) => resolveAlias("resources", r))
       : [],
@@ -106,6 +156,10 @@ export function normalizeWorld(raw) {
             typeof p.loyalty === "number" && Number.isFinite(p.loyalty)
               ? Math.max(0, Math.min(100, p.loyalty))
               : 50,
+          stability:
+            typeof p.stability === "number" && Number.isFinite(p.stability)
+              ? Math.max(0, Math.min(100, p.stability))
+              : p.stability,
           raceComposition: Array.isArray(p.raceComposition)
             ? p.raceComposition
             : [],
@@ -123,6 +177,7 @@ export function normalizeWorld(raw) {
                 percent: Number(row.percent ?? row.share ?? 0),
               }))
             : undefined,
+          ...derivedGradeFields(p, content),
         }))
       : [],
     logistics:
@@ -239,6 +294,7 @@ export function normalizeWorld(raw) {
           startedTurn: raw.meta?.turn ?? 0,
           expiresTurn: null,
           effects,
+          track: edge.track === "economic" ? "economic" : "political",
           ...(edge.subjectFactionId || edge.vassalFactionId
             ? {
                 subjectFactionId:
@@ -292,6 +348,14 @@ export function normalizeWorld(raw) {
       dominantIdeology: f?.dominantIdeology ?? undefined,
       fxCurrencyId: f?.fxCurrencyId ?? null,
       treasuryPeg: f?.treasuryPeg ?? null,
+      pegChangedTurn:
+        f?.pegChangedTurn == null || !Number.isFinite(Number(f.pegChangedTurn))
+          ? null
+          : Number(f.pegChangedTurn),
+      lastTreasuryPeg:
+        typeof f?.lastTreasuryPeg === "string" && f.lastTreasuryPeg.trim()
+          ? f.lastTreasuryPeg.trim()
+          : null,
       activeEffects: Array.isArray(f?.activeEffects) ? f.activeEffects : [],
       diplomacy: diplo,
       npcs: Array.isArray(f?.npcs)
@@ -311,18 +375,35 @@ export function normalizeWorld(raw) {
                 typeof postingRaw?.sinceTurn === "number"
                   ? postingRaw.sinceTurn
                   : (meta?.turn ?? 0),
-              ...(postingKind === "governor" && postingRaw?.systemId
-                ? { systemId: postingRaw.systemId }
+              ...(postingKind === "governor" &&
+              (postingRaw?.systemId || postingRaw?.targetId)
+                ? { systemId: postingRaw.systemId || postingRaw.targetId }
                 : {}),
-              ...(postingKind === "commander" && postingRaw?.legionId
-                ? { legionId: postingRaw.legionId }
+              ...(postingKind === "commander"
+                ? {
+                    ...(postingRaw?.legionId || postingRaw?.forceId
+                      ? {
+                          legionId: postingRaw.legionId || postingRaw.forceId,
+                          forceId: postingRaw.forceId || postingRaw.legionId,
+                        }
+                      : {}),
+                  }
                 : {}),
-              ...(postingKind === "admiral" && postingRaw?.fleetId
-                ? { fleetId: postingRaw.fleetId }
+              ...(postingKind === "admiral"
+                ? {
+                    ...(postingRaw?.fleetId || postingRaw?.forceId
+                      ? {
+                          fleetId: postingRaw.fleetId || postingRaw.forceId,
+                          forceId: postingRaw.forceId || postingRaw.fleetId,
+                        }
+                      : {}),
+                  }
                 : {}),
             };
             return {
               ...n,
+              raceId:
+                typeof n.raceId === "string" && n.raceId ? n.raceId : n.raceId ?? null,
               traitIds: Array.isArray(n.traitIds)
                 ? n.traitIds.filter((id) => typeof id === "string")
                 : [],
@@ -446,18 +527,48 @@ export function normalizeWorld(raw) {
     };
   });
 
+  // Stub faction for leftover revolt legions (stabilityRevolt.mjs also mints rebel.<planet>.<turn>).
+  const REBEL_FACTION_ID = "faction_rebels";
+  const hasRebelForces =
+    fleets.some((f) => f.factionId === REBEL_FACTION_ID) ||
+    legions.some((l) => l.factionId === REBEL_FACTION_ID);
+  const factionsOut =
+    hasRebelForces && !factions.some((f) => f.id === REBEL_FACTION_ID)
+      ? [
+          ...factions,
+          {
+            id: REBEL_FACTION_ID,
+            name: "Мятежники",
+            color: "#6b2b2b",
+            kind: "neutral",
+            capitalSystemId: null,
+            primaryRaceId: null,
+            traits: [],
+            activeEffects: [],
+            diplomacy: { opinions: {}, treaties: [], history: [] },
+            npcs: [],
+            defaultCultureId: "culture.baseline",
+            primaryFaith: "faith.secular",
+            fxCurrencyId: null,
+            treasuryPeg: null,
+          },
+        ]
+      : factions;
+
   const out = {
     ...raw,
     meta,
     systems,
     links: raw.links ?? [],
     sectors: raw.sectors ?? [],
-    factions,
+    factions: factionsOut,
     races,
     fleets,
     legions,
     diplomacy: diplomacyEdges,
-    orders: raw.orders ?? [],
+    orders: (raw.orders ?? []).map((o) =>
+      normalizePlayerOrder(o, meta.turn ?? 0),
+    ),
     turnHistory: raw.turnHistory ?? [],
     caravans: raw.caravans ?? [],
     quests: (raw.quests ?? []).map((q) => ({

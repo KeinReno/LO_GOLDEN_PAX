@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDrag } from "@use-gesture/react";
 import { motion, useMotionValue, useTransform, useReducedMotion } from "motion/react";
-import { HoldButton } from "../ui/HoldButton";
+import { HoldButton } from "./shared/HoldButton";
 import { useRipple } from "../ui/aceternityFx";
 
 /**

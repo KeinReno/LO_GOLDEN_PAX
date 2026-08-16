@@ -251,9 +251,9 @@ export class MapFxOverlay {
 
   destroy(): void {
     for (const n of this.nodes.values()) {
-      n.root.destroy({ children: true });
+      if (!n.root.destroyed) n.root.destroy({ children: true });
     }
     this.nodes.clear();
-    this.root.destroy({ children: true });
+    if (!this.root.destroyed) this.root.destroy({ children: true });
   }
 }

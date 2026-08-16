@@ -29,7 +29,7 @@ export function GmMarketRatesEditor({
   const [rows, setRows] = useState<MarketRateRow[]>([]);
   const [source, setSource] = useState<"override" | "content">("content");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
 
   const refresh = useCallback(async () => {
     setBusy(true);
@@ -100,7 +100,14 @@ export function GmMarketRatesEditor({
     }
   };
 
-  if (!market) return null;
+  if (!market) {
+    return (
+      <section className="hq-card market-panel">
+        <h3>Рынок · курсы GM</h3>
+        <p className="hint">Загрузка курсов...</p>
+      </section>
+    );
+  }
 
   return (
     <section className="hq-card market-panel">

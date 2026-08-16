@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   Planet,
   PlanetBuilding,
   PlanetBuildingZone,
   StarSystem,
 } from "../state/types";
+import { useWorldStore } from "../state/worldStore";
 import { COLONY_TYPE_LABELS } from "../state/defaults";
 import { HABIT_LABELS, classifyPlanet } from "../state/planets";
 import {
@@ -27,7 +29,18 @@ import {
   economyCategoryLabel,
 } from "../state/displayLabels";
 import { formatPlayerCost } from "../state/economyLabels";
+import {
+  gradeUpgradeCost,
+  MAX_PLANET_GRADE,
+  orbitalSlotsForGrade,
+  planetOrbitalGrade,
+  planetSurfaceGrade,
+  surfaceSlotsForGrade,
+} from "../state/planetGrade";
 import { BuildingKindIcon } from "./BuildingKindIcon";
+import { BuildingLaborPanel } from "./BuildingLaborPanel";
+import { PlanetLaborTray, type LaborDragFrom } from "./PlanetLaborTray";
+import { planetLaborSummary } from "../state/planetLabor";
 import { FloatingPanel } from "../ui/FloatingPanel";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
 import type { MapResourceDef } from "../state/contentCatalog";
@@ -45,6 +58,9 @@ import {
   type SlotViewMode,
 } from "./system";
 import { PlanetSocietyPanel } from "./society/PlanetSocietyPanel";
+import { PlanetRaisePanel } from "./PlanetRaisePanel";
+import { PlanetRevoltReadout } from "./PlanetRevoltReadout";
+import type { ForceRecruitSession } from "../state/forceRaiseClient";
 
 export type BuildingSlotDef = {
   role: string;
@@ -68,6 +84,9 @@ export type BuildingDef = {
   biome_restrictions?: string[];
   slots?: BuildingSlotDef[];
   upkeep_slots?: BuildingSlotDef[];
+  laborSlots?: number;
+  extractsCategory?: string | string[];
+  extractsDeposits?: string | string[];
   effects?: Array<{ effect: string; args: Record<string, unknown> }>;
 };
 
@@ -75,6 +94,7 @@ function resolveBuildingDef(
   buildings: Record<string, BuildingDef>,
   b: PlanetBuilding,
 ): BuildingDef | undefined {
+  if (b.buildingId && buildings[b.buildingId]) return buildings[b.buildingId];
   if (buildings[b.id]) return buildings[b.id];
   const byName = Object.values(buildings).find((d) => d.name === b.name);
   if (byName) return byName;
@@ -89,6 +109,7 @@ export type ColonyDef = {
   name: string;
   colonizeAp?: number;
   colonizeCost?: Record<string, number>;
+  colonizePopulation?: number;
   setTypeAp?: number;
   setTypeCost?: Record<string, number>;
 };
@@ -100,15 +121,23 @@ export type PlanetActionRequest = {
     | "colonize"
     | "set_colony_type"
     | "fill_slot"
-    | "rename";
+    | "staff"
+    | "staff_transfer"
+    | "rename"
+    | "upgrade_grade";
   systemId: string;
   planetId: string;
   buildingId?: string;
   instanceId?: string;
   colonyType?: string;
+  sourcePlanetId?: string;
   slotRole?: string;
   slotResourceId?: string;
+  assignedLabor?: number | null;
+  fromInstanceId?: string | "idle";
+  transferAmount?: number;
   name?: string;
+  zone?: "surface" | "orbital";
 };
 
 function normalizeColonyType(t?: string | null): string {
@@ -147,6 +176,8 @@ export function PlayerPlanetManage({
   primaryFaith,
   unlockedLineages,
   onFoundHybrid,
+  password,
+  onForceRecruitSession,
 }: {
   system: StarSystem;
   planet: Planet;
@@ -160,6 +191,8 @@ export function PlayerPlanetManage({
   techEco?: TechEcoSlice;
   busy?: boolean;
   message?: string | null;
+  password?: string;
+  onForceRecruitSession?: (data: ForceRecruitSession) => void;
   onAction: (req: PlanetActionRequest) => void;
   onBack: () => void;
   onOpenResearch?: (techId: string) => void;
@@ -189,8 +222,52 @@ export function PlayerPlanetManage({
   const orbital = planet.orbitalBuildings ?? [];
   const surfaceMax = planet.surfaceSlots ?? 8;
   const orbitalMax = planet.orbitalSlots ?? 4;
+  const surfaceGrade = planetSurfaceGrade(planet);
+  const orbitalGrade = planetOrbitalGrade(planet);
+  const surfaceUpgradeCost = gradeUpgradeCost(surfaceGrade);
+  const orbitalUpgradeCost = gradeUpgradeCost(orbitalGrade);
 
   const colonyOptions = useMemo(() => Object.values(colonies), [colonies]);
+  const systems = useWorldStore((s) => s.world.systems);
+  const currentTurn = useWorldStore((s) => s.world.meta.turn ?? 0);
+  const colonizeSources = useMemo(() => {
+    if (!canColonize) return [];
+    const ownerOf = (sys: StarSystem, p: Planet) =>
+      p.ownerFactionId || sys.ownerFactionId || null;
+    const same: Array<{
+      id: string;
+      name: string;
+      population: number;
+      systemName: string;
+      sameSystem: boolean;
+    }> = [];
+    const other: typeof same = [];
+    for (const sys of systems ?? []) {
+      for (const p of sys.planets ?? []) {
+        if (p.id === planet.id) continue;
+        if (ownerOf(sys, p) !== factionId) continue;
+        if ((p.population ?? 0) <= 0) continue;
+        const row = {
+          id: p.id,
+          name: p.name || p.id,
+          population: p.population ?? 0,
+          systemName: sys.name || sys.id,
+          sameSystem: sys.id === system.id,
+        };
+        (row.sameSystem ? same : other).push(row);
+      }
+    }
+    same.sort((a, b) => b.population - a.population);
+    other.sort((a, b) => b.population - a.population);
+    return same.length ? [...same, ...other] : other;
+  }, [canColonize, systems, system.id, planet.id, factionId]);
+  const [colonizeSourceId, setColonizeSourceId] = useState("");
+  useEffect(() => {
+    setColonizeSourceId((prev) => {
+      if (prev && colonizeSources.some((p) => p.id === prev)) return prev;
+      return colonizeSources[0]?.id ?? "";
+    });
+  }, [planet.id, colonizeSources]);
   const apLeft = Math.max(0, apMax - reservedAp);
   const [inspect, setInspect] = useState<PlanetRadialInspect | null>(null);
   const [viewMode, setViewMode] = useState<SlotViewMode>(() =>
@@ -201,11 +278,23 @@ export function PlayerPlanetManage({
   const [listDeckZone, setListDeckZone] = useState<"surface" | "orbital" | null>(
     null,
   );
+  const [laborPick, setLaborPick] = useState<{
+    from: LaborDragFrom;
+    amount: number;
+  } | null>(null);
+  const [laborDrag, setLaborDrag] = useState<{
+    from: LaborDragFrom;
+    amount: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     setInspect(null);
     setPreview(null);
     setListDeckZone(null);
+    setLaborPick(null);
+    setLaborDrag(null);
   }, [planet.id]);
 
   const highlightBuildingIds = useMemo(() => {
@@ -227,6 +316,89 @@ export function PlayerPlanetManage({
     const def = resolveBuildingDef(buildings, inst);
     return { inst, def };
   }, [inspect, surface, orbital, buildings]);
+
+  const laborSum = useMemo(
+    () => planetLaborSummary(planet, buildings),
+    [planet, buildings],
+  );
+
+  const clearLaborUi = () => {
+    setLaborPick(null);
+    setLaborDrag(null);
+  };
+
+  const transferLabor = useCallback(
+    (from: LaborDragFrom, to: LaborDragFrom, amount = 1) => {
+      if (busy) return;
+      if (from === to) {
+        clearLaborUi();
+        return;
+      }
+      onAction({
+        action: "staff_transfer",
+        systemId: system.id,
+        planetId: planet.id,
+        fromInstanceId: from,
+        instanceId: to,
+        transferAmount: amount,
+      });
+      clearLaborUi();
+    },
+    [busy, onAction, system.id, planet.id],
+  );
+
+  useEffect(() => {
+    if (!laborDrag) return;
+    const onMove = (e: PointerEvent) => {
+      setLaborDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : null));
+    };
+    const onUp = (e: PointerEvent) => {
+      const stack = document.elementsFromPoint(e.clientX, e.clientY);
+      let dest: LaborDragFrom | null = null;
+      for (const el of stack) {
+        if (!(el instanceof Element)) continue;
+        const tray = el.closest("[data-labor-tray]");
+        if (tray) {
+          dest = "idle";
+          break;
+        }
+        const drop = el.closest("[data-labor-drop]") as HTMLElement | null;
+        if (drop?.dataset.laborDrop) {
+          dest = drop.dataset.laborDrop;
+          break;
+        }
+      }
+      const src = laborDrag.from;
+      const amt = laborDrag.amount;
+      setLaborDrag(null);
+      if (dest && dest !== src) transferLabor(src, dest, amt);
+      else setLaborPick(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [laborDrag?.from, laborDrag?.amount, busy, transferLabor]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        clearLaborUi();
+        return;
+      }
+      if (!inspectBuilding?.inst || !inspectBuilding.def) return;
+      if (e.key !== "[" && e.key !== "]") return;
+      e.preventDefault();
+      const amount = e.shiftKey ? 5 : 1;
+      const id = inspectBuilding.inst.id;
+      if (e.key === "]") transferLabor("idle", id, amount);
+      else transferLabor(id, "idle", amount);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [inspectBuilding, busy, transferLabor]);
 
   const faithTaboos = useMemo(
     () => collectFaithTabooProperties(planet, primaryFaith),
@@ -292,11 +464,14 @@ export function PlayerPlanetManage({
         <div className="planet-manage-metric">
           <span className="hint">Слоты</span>
           <strong>
-            пов. {surface.length}/{surfaceMax} · орб. {orbital.length}/
-            {orbitalMax}
+            пов. {surface.length}/{surfaceMax} · г.{surfaceGrade}/{MAX_PLANET_GRADE}
+            {" · "}
+            орб. {orbital.length}/{orbitalMax} · г.{orbitalGrade}/{MAX_PLANET_GRADE}
           </strong>
         </div>
       </div>
+
+      <PlanetRevoltReadout planet={planet} currentTurn={currentTurn} />
 
       {highlightCategory && (
         <div className="sys-eco-hint fx-glow" role="status">
@@ -314,14 +489,41 @@ export function PlayerPlanetManage({
         <section className="planet-manage-block">
           <h4>Колонизация</h4>
           <p className="hint">
-            Зажми карту: списывает ресурсы и ОД, колония появляется сразу.
+            Переселенцы уходят с выбранной планеты (расовый состав колонии —
+            с источника). Зажми карту: ресурсы и ОД списываются сразу.
           </p>
+          {colonizeSources.length === 0 ? (
+            <p className="hint">
+              Нет своей населённой планеты — переселять некого.
+            </p>
+          ) : (
+            <label className="hint">
+              Источник населения
+              <select
+                value={colonizeSourceId}
+                onChange={(e) => setColonizeSourceId(e.target.value)}
+                disabled={busy}
+              >
+                {colonizeSources.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.sameSystem
+                      ? `${p.name} · ${p.population}`
+                      : `${p.name} · ${p.systemName} · ${p.population}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="planet-manage-grid">
             {colonyOptions.map((c) => (
               <HoldRevealButton
                 key={c.id}
                 className="btn ghost planet-manage-card"
-                disabled={busy || apLeft < (c.colonizeAp ?? 1)}
+                disabled={
+                  busy ||
+                  !colonizeSourceId ||
+                  apLeft < (c.colonizeAp ?? 1)
+                }
                 holdMs={800}
                 title={`${c.name} — зажми, чтобы колонизировать`}
                 onHoldComplete={() =>
@@ -330,12 +532,17 @@ export function PlayerPlanetManage({
                     systemId: system.id,
                     planetId: planet.id,
                     colonyType: c.colonyType,
+                    sourcePlanetId: colonizeSourceId,
                   })
                 }
               >
                 <strong>{c.name}</strong>
                 <span className="hint">
-                  {formatPlayerCost(c.colonizeCost)} · {c.colonizeAp ?? 1} ОД · зажми
+                  {formatPlayerCost(c.colonizeCost)} · {c.colonizeAp ?? 1} ОД
+                  {c.colonizePopulation
+                    ? ` · ${c.colonizePopulation} нас.`
+                    : ""}{" "}
+                  · зажми
                 </span>
               </HoldRevealButton>
             ))}
@@ -349,6 +556,73 @@ export function PlayerPlanetManage({
 
       {managed && !empty && (
         <>
+          <section className="planet-manage-block">
+            <h4>Грейд слотов</h4>
+            <p className="hint">
+              Слоты растут покупкой грейда (1–5), не от размера столицы.
+              Поверхность {surfaceSlotsForGrade(surfaceGrade)} →{" "}
+              {surfaceGrade < MAX_PLANET_GRADE
+                ? surfaceSlotsForGrade(surfaceGrade + 1)
+                : surfaceSlotsForGrade(MAX_PLANET_GRADE)}
+              ; орбита {orbitalSlotsForGrade(orbitalGrade)} →{" "}
+              {orbitalGrade < MAX_PLANET_GRADE
+                ? orbitalSlotsForGrade(orbitalGrade + 1)
+                : orbitalSlotsForGrade(MAX_PLANET_GRADE)}
+              .
+            </p>
+            <div className="planet-manage-grid">
+              <HoldRevealButton
+                className="btn ghost planet-manage-card"
+                disabled={
+                  busy ||
+                  !surfaceUpgradeCost ||
+                  apLeft < 1
+                }
+                holdMs={800}
+                title="Зажми, чтобы расширить поверхность"
+                onHoldComplete={() =>
+                  onAction({
+                    action: "upgrade_grade",
+                    systemId: system.id,
+                    planetId: planet.id,
+                    zone: "surface",
+                  })
+                }
+              >
+                <strong>Поверхность {surfaceGrade}→{Math.min(MAX_PLANET_GRADE, surfaceGrade + 1)}</strong>
+                <span className="hint">
+                  {surfaceUpgradeCost
+                    ? `${formatPlayerCost(surfaceUpgradeCost)} · 1 ОД · зажми`
+                    : "максимум"}
+                </span>
+              </HoldRevealButton>
+              <HoldRevealButton
+                className="btn ghost planet-manage-card"
+                disabled={
+                  busy ||
+                  !orbitalUpgradeCost ||
+                  apLeft < 1
+                }
+                holdMs={800}
+                title="Зажми, чтобы расширить орбиту"
+                onHoldComplete={() =>
+                  onAction({
+                    action: "upgrade_grade",
+                    systemId: system.id,
+                    planetId: planet.id,
+                    zone: "orbital",
+                  })
+                }
+              >
+                <strong>Орбита {orbitalGrade}→{Math.min(MAX_PLANET_GRADE, orbitalGrade + 1)}</strong>
+                <span className="hint">
+                  {orbitalUpgradeCost
+                    ? `${formatPlayerCost(orbitalUpgradeCost)} · 1 ОД · зажми`
+                    : "максимум"}
+                </span>
+              </HoldRevealButton>
+            </div>
+          </section>
           <section className="planet-manage-block">
             <h4>Тип колонии</h4>
             <div className="order-type-chips">
@@ -389,10 +663,26 @@ export function PlayerPlanetManage({
             onFoundHybrid={onFoundHybrid}
           />
 
+          {password && onForceRecruitSession && (
+            <PlanetRaisePanel
+              system={system}
+              planet={planet}
+              factionId={factionId}
+              password={password}
+              stocks={stocks}
+              busy={busy}
+              onSession={onForceRecruitSession}
+            />
+          )}
+
           <section className="planet-manage-block">
             <div className="planet-detail-head" style={{ marginBottom: 8 }}>
               <h4 style={{ margin: 0 }}>Строительство</h4>
               <div className="planet-radial-stats">
+                <span className="hint tabular">
+                  занято {Math.round(laborSum.used)}/{Math.round(laborSum.slots)} · свободно{" "}
+                  {Math.round(laborSum.free)}
+                </span>
                 <span className="hint">
                   ОД {reservedAp}/{apMax}
                   {apLeft === 0 ? " · нет ОД" : ""}
@@ -441,6 +731,20 @@ export function PlayerPlanetManage({
               />
             )}
 
+            <PlanetLaborTray
+              planet={planet}
+              catalog={buildings}
+              busy={busy}
+              pickFrom={laborPick?.from ?? null}
+              dragging={!!laborDrag}
+              onPickIdle={() =>
+                setLaborPick({ from: "idle", amount: 1 })
+              }
+              onDragIdle={(x, y, amount) =>
+                setLaborDrag({ from: "idle", amount, x, y })
+              }
+            />
+
             {viewMode === "radial" ? (
               <PlanetRadialSlots
                 planet={planet}
@@ -460,6 +764,19 @@ export function PlayerPlanetManage({
                 highlightCategory={highlightCategory}
                 highlightBuildingIds={highlightBuildingIds}
                 onSelectBuilding={(id) => void requestPreview(id)}
+                laborPickFrom={laborPick?.from ?? null}
+                laborDragging={!!laborDrag}
+                onLaborPickBuilding={(id, amount) =>
+                  setLaborPick({ from: id, amount })
+                }
+                onLaborDragBuilding={(id, x, y, amount) =>
+                  setLaborDrag({ from: id, amount, x, y })
+                }
+                onLaborTapBuilding={(id) => {
+                  if (laborPick) {
+                    transferLabor(laborPick.from, id, laborPick.amount);
+                  }
+                }}
               />
             ) : (
               <PlanetListSlots
@@ -482,6 +799,19 @@ export function PlayerPlanetManage({
                   });
                 }}
                 onRequestBuild={(zone) => setListDeckZone(zone)}
+                laborPickFrom={laborPick?.from ?? null}
+                laborDragging={!!laborDrag}
+                onLaborPickBuilding={(id, amount) =>
+                  setLaborPick({ from: id, amount })
+                }
+                onLaborDragBuilding={(id, x, y, amount) =>
+                  setLaborDrag({ from: id, amount, x, y })
+                }
+                onLaborTapBuilding={(id) => {
+                  if (laborPick) {
+                    transferLabor(laborPick.from, id, laborPick.amount);
+                  }
+                }}
               />
             )}
 
@@ -577,6 +907,22 @@ export function PlayerPlanetManage({
                   В экономике ({economyCategoryLabel(String(inspectBuilding.def!.category))})
                 </button>
               )}
+              <BuildingLaborPanel
+                planet={planet}
+                inst={inspectBuilding.inst}
+                def={inspectBuilding.def}
+                catalog={buildings}
+                busy={busy}
+                onStaff={(assignedLabor) =>
+                  onAction({
+                    action: "staff",
+                    systemId: system.id,
+                    planetId: planet.id,
+                    instanceId: inspectBuilding.inst.id,
+                    assignedLabor,
+                  })
+                }
+              />
               <p className="hint">
                 Слоты ресурсов: tier режет узкое место. Тап по кольцу выбирает
                 постройку.
@@ -614,6 +960,19 @@ export function PlayerPlanetManage({
           )}
         </>
       )}
+      {laborDrag &&
+        createPortal(
+          <div
+            className="labor-token-ghost"
+            style={{ left: laborDrag.x, top: laborDrag.y }}
+          >
+            <i className="labor-pip is-on" />
+            {laborDrag.amount > 1 ? (
+              <span>×{laborDrag.amount}</span>
+            ) : null}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

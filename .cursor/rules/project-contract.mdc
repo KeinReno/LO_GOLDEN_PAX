@@ -1,0 +1,11 @@
+---
+description: Branch/secrets/commit contract — do not break main
+alwaysApply: true
+---
+
+# Project contract
+
+- **Git:** не коммитить в `main`/`master` без явной просьбы; feature-ветка. Коммит/push — только по просьбе владельца. Не `--force` на main, не ослаблять hooks.
+- **Секреты:** `.env`, store/signing keys, `cloudpub-token`, certs — ни в чат, ни в MEMORY/STATUS, ни в коммит.
+- **Публичный expose / store upload / players tunnel с новым ключом** — только с явного апрува.
+- **Качество:** не «упрощать» security/economy/combat ради скорости без спроса.

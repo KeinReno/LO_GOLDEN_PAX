@@ -279,13 +279,19 @@ export function listNpcHats(
     hats.push({
       kind: "commander",
       label: "Командующий",
-      detail: opts?.postingTargetLabel || npc.posting?.legionId,
+      detail:
+        opts?.postingTargetLabel ||
+        npc.posting?.legionId ||
+        npc.posting?.forceId,
     });
   } else if (pk === "admiral") {
     hats.push({
       kind: "admiral",
       label: "Флотоводец",
-      detail: opts?.postingTargetLabel || npc.posting?.fleetId,
+      detail:
+        opts?.postingTargetLabel ||
+        npc.posting?.fleetId ||
+        npc.posting?.forceId,
     });
   }
   return hats;

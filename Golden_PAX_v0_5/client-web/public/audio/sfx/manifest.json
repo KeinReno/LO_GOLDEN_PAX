@@ -1,0 +1,122 @@
+[
+  {
+    "cue": "radio_squelch",
+    "variant": 1,
+    "file": "sfx/radio_squelch__01.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "radio_squelch",
+    "variant": 2,
+    "file": "sfx/radio_squelch__02.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "radio_squelch",
+    "variant": 3,
+    "file": "sfx/radio_squelch__03.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "radio_squelch",
+    "variant": 4,
+    "file": "sfx/radio_squelch__04.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "turn_advance",
+    "variant": 1,
+    "file": "sfx/turn_advance__01.wav",
+    "bytes": 61782
+  },
+  {
+    "cue": "turn_advance",
+    "variant": 2,
+    "file": "sfx/turn_advance__02.wav",
+    "bytes": 61782
+  },
+  {
+    "cue": "turn_advance",
+    "variant": 3,
+    "file": "sfx/turn_advance__03.wav",
+    "bytes": 61782
+  },
+  {
+    "cue": "turn_advance",
+    "variant": 4,
+    "file": "sfx/turn_advance__04.wav",
+    "bytes": 61782
+  },
+  {
+    "cue": "contact_alert",
+    "variant": 1,
+    "file": "sfx/contact_alert__01.wav",
+    "bytes": 52964
+  },
+  {
+    "cue": "contact_alert",
+    "variant": 2,
+    "file": "sfx/contact_alert__02.wav",
+    "bytes": 52964
+  },
+  {
+    "cue": "contact_alert",
+    "variant": 3,
+    "file": "sfx/contact_alert__03.wav",
+    "bytes": 52964
+  },
+  {
+    "cue": "contact_alert",
+    "variant": 4,
+    "file": "sfx/contact_alert__04.wav",
+    "bytes": 52964
+  },
+  {
+    "cue": "seal_stamp",
+    "variant": 1,
+    "file": "sfx/seal_stamp__01.wav",
+    "bytes": 48554
+  },
+  {
+    "cue": "seal_stamp",
+    "variant": 2,
+    "file": "sfx/seal_stamp__02.wav",
+    "bytes": 48554
+  },
+  {
+    "cue": "seal_stamp",
+    "variant": 3,
+    "file": "sfx/seal_stamp__03.wav",
+    "bytes": 48554
+  },
+  {
+    "cue": "seal_stamp",
+    "variant": 4,
+    "file": "sfx/seal_stamp__04.wav",
+    "bytes": 48554
+  },
+  {
+    "cue": "token_drop",
+    "variant": 1,
+    "file": "sfx/token_drop__01.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "token_drop",
+    "variant": 2,
+    "file": "sfx/token_drop__02.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "token_drop",
+    "variant": 3,
+    "file": "sfx/token_drop__03.wav",
+    "bytes": 44144
+  },
+  {
+    "cue": "token_drop",
+    "variant": 4,
+    "file": "sfx/token_drop__04.wav",
+    "bytes": 44144
+  }
+]

@@ -45,7 +45,7 @@ import {
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
 import { IntentsInbox } from "./IntentsInbox";
-import { EconomyPanel } from "./EconomyPanel";
+import { GmLedgerPanel } from "./GmLedgerPanel";
 import { CombatPanel } from "./CombatPanel";
 import { GmOpsPanel } from "./GmOpsPanel";
 import { GmSystemsPanel } from "./GmSystemsPanel";
@@ -54,6 +54,7 @@ import { GmLiveConductor } from "./gm";
 import type { GmLiveDomainId } from "../state/types";
 import { RESOURCE_POOL } from "../state/defaults";
 import { RESOURCE_ICON_SLUGS } from "../state/resourcePool.generated";
+import { MAP_STYLE_OPTIONS } from "../ui/mapStylePrefs";
 
 type TabId = "tools" | "layers" | "file" | "session" | "campaign";
 
@@ -373,6 +374,8 @@ export function Toolbar({
   const applyMapLayerFlags = useWorldStore((s) => s.applyMapLayerFlags);
   const editorGraphics = useWorldStore((s) => s.editorGraphics);
   const toggleEditorGraphic = useWorldStore((s) => s.toggleEditorGraphic);
+  const mapStyle = useWorldStore((s) => s.mapStyle);
+  const setMapStyle = useWorldStore((s) => s.setMapStyle);
   const layerFlags = useWorldStore(
     useShallow(
       (s): MapLayerFlags => ({
@@ -943,6 +946,28 @@ export function Toolbar({
                   </button>
                 ))}
               </div>
+              <h4 className="layer-group-title" style={{ marginTop: "0.75rem" }}>
+                Язык карты
+              </h4>
+              <div
+                className="viewer-perf-row"
+                role="radiogroup"
+                aria-label="Язык карты"
+              >
+                {MAP_STYLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={mapStyle === opt.id}
+                    className={`btn ghost ${mapStyle === opt.id ? "active" : ""}`}
+                    title={opt.hint}
+                    onClick={() => setMapStyle(opt.id)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
         )}
@@ -1219,7 +1244,7 @@ export function Toolbar({
                 </section>
 
                 <IntentsInbox variant="panel" />
-                <EconomyPanel />
+                <GmLedgerPanel />
                 <CombatPanel />
                 <GmOpsPanel />
                 <GmSystemsPanel />

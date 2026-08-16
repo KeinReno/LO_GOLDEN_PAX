@@ -101,6 +101,12 @@
       "format": { "stat": "string", "from_slot": "string", "scale": "string" },
       "description": "Боевая стат вычисляется из tier-а ресурсов, вложенных в слот"
     },
+    "combat_role_mult": {
+      "id": "combat_role_mult",
+      "format": { "role": "string", "mult": "number" },
+      "channel": "combat_role:${role}",
+      "description": "Множитель силы против вражеской роли (когда у противника есть эта роль)"
+    },
     "flow_convert": {
       "id": "flow_convert",
       "format": { "from": "object", "to": "object", "rate": "number" },
@@ -189,6 +195,20 @@
       "id": "npc_task_speed_mult",
       "format": { "mult": "number" },
       "description": "Множитель скорости NPC-задач двора"
+    },
+    "power_mind_strike": {
+      "id": "power_mind_strike",
+      "format": { "stat": "string?", "mult": "number", "damageMult": "number?" },
+      "requiresPowerPath": "mind",
+      "channel": "power:mind",
+      "description": "Псионический удар — боевой дебафф/урон (только Разум)"
+    },
+    "power_will_sway": {
+      "id": "power_will_sway",
+      "format": { "amount": "number", "raceId": "string?" },
+      "requiresPowerPath": "will",
+      "channel": "power:will",
+      "description": "Псионическое влияние — снижение лояльности (только Воля)"
     }
   }
 }

@@ -1,67 +1,60 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import type {
-  Quest,
-  QuestChoice,
-  QuestHistoryEntry,
-  WorldState,
-} from "../state/types";
-import { QUEST_HISTORY_KIND_LABELS } from "../state/displayLabels";
-import { CardBoard } from "../ui/cardBoardContext";
-import { DragCard } from "../ui/DragCard";
-import { DropZone } from "../ui/DropZone";
+import type { Quest as WorldQuest, WorldState } from "../state/types";
 import { StatefulButton } from "../ui/StatefulButton";
 import { DiceRoller } from "../ui/DiceRoller";
+import { adaptQuest, canAffordCosts } from "./quests/adaptQuest";
+import {
+  openCourtForNpc,
+  QuestAssignedChip,
+  QuestChoiceResolveBoard,
+  QuestDossierView,
+  QuestObjectiveList,
+} from "./quests/QuestDossierView";
+import type { QuestLogEntry } from "./quests/types";
+import { QUEST_KIND_META } from "./quests/types";
 
-const STATUS_LABELS: Record<Quest["status"], string> = {
-  active: "активен",
-  done: "завершён",
-  hidden: "скрыт",
-  expired: "истёк",
+const LOG_AUTHOR_LABEL: Record<QuestLogEntry["author"], string> = {
+  player: "Игрок",
+  gm: "GM",
+  npc: "NPC",
+  system: "Система",
 };
 
 type QuestDossierProps = {
-  quest: Quest;
+  quest: WorldQuest;
   world: WorldState;
+  stocks?: Record<string, number>;
   onClose: () => void;
   onFocusSystem?: (systemId: string) => void;
+  onOpenCourt?: () => void;
   onResolveChoice?: (questId: string, choiceId: string) => Promise<boolean>;
   onResolveDice?: (
     questId: string,
     specIndex: number,
     choiceId?: string,
-  ) => Promise<{ ok: boolean; rolls?: number[]; success?: boolean | null; message?: string }>;
+  ) => Promise<{
+    ok: boolean;
+    rolls?: number[];
+    success?: boolean | null;
+    message?: string;
+  }>;
 };
-
-function activeChoices(quest: Quest): QuestChoice[] {
-  if (quest.arc?.stages?.length) {
-    const stage =
-      quest.arc.stages[quest.arc.currentStage] ?? quest.arc.stages[0];
-    if (stage?.choices?.length) return stage.choices;
-  }
-  return quest.choices ?? [];
-}
-
-function activeDice(quest: Quest, choice?: QuestChoice | null) {
-  if (choice?.diceRequired?.length) return choice.diceRequired;
-  if (quest.diceRequired?.length) return quest.diceRequired;
-  const stage = quest.arc?.stages?.[quest.arc.currentStage];
-  return stage?.diceRequired ?? [];
-}
 
 /** Quest detail with history timeline, choice cards, and dice. */
 export function QuestDossier({
   quest,
   world,
+  stocks,
   onClose,
   onFocusSystem,
+  onOpenCourt,
   onResolveChoice,
   onResolveDice,
 }: QuestDossierProps) {
-  const system = quest.systemId
-    ? world.systems.find((s) => s.id === quest.systemId)
-    : null;
-  const choices = useMemo(() => activeChoices(quest), [quest]);
+  const adapted = useMemo(() => adaptQuest(quest, world), [quest, world]);
+  const interactive = adapted.status === "active";
+  const choices = interactive ? adapted.choices ?? [] : [];
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [pendingDiceChoice, setPendingDiceChoice] = useState<string | null>(
@@ -73,13 +66,13 @@ export function QuestDossier({
     message?: string;
     sides?: number;
   } | null>(null);
-  const history: QuestHistoryEntry[] = quest.history ?? [];
-  const interactive = quest.status === "active";
+  const log = adapted.log ?? [];
 
   const dropChoice = async (choiceId: string) => {
     if (!interactive || !onResolveChoice) return;
     const choice = choices.find((c) => c.id === choiceId);
-    if (choice?.diceRequired?.length) {
+    if (!choice || !canAffordCosts(choice.costs, stocks)) return;
+    if (choice.needsDice) {
       setPendingDiceChoice(choiceId);
       return;
     }
@@ -96,209 +89,167 @@ export function QuestDossier({
     setBusy(true);
     const res = await onResolveDice(
       quest.id,
-      0,
+      adapted.diceCheck?.specIndex ?? 0,
       pendingDiceChoice ?? undefined,
     );
     setBusy(false);
     if (!res.ok) return;
     const value = res.rolls?.[0] ?? 1;
-    const choice = choices.find((c) => c.id === pendingDiceChoice);
-    const sides =
-      choice?.diceRequired?.[0]?.sides ??
-      (value > 6 ? 20 : 6);
+    const sides = adapted.diceCheck?.dice ?? (value > 6 ? 20 : 6);
     setDiceResult({ value, rolling: true, message: res.message, sides });
   };
 
   return (
-    <div
-      className="dossier-backdrop"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
+    <QuestDossierView
+      kicker={QUEST_KIND_META[adapted.kind].label}
+      title={adapted.title}
+      status={adapted.status}
+      systemName={adapted.systemName}
+      expiresTurn={adapted.expiresTurn}
+      onClose={onClose}
+      wide
+      panelClassName="quest-dossier"
+      bodyClassName="quest-dossier-body"
     >
-      <div
-        className="dossier-panel dossier-panel-wide quest-dossier"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="dossier-head">
-          <div>
-            <p className="dossier-kicker">
-              {quest.type === "yearly"
-                ? "Ежходный квест"
-                : quest.type === "main"
-                  ? "Основной сюжет"
-                  : "Квест"}
-            </p>
-            <h2>{quest.name}</h2>
-            <p className="hint">
-              {STATUS_LABELS[quest.status]}
-              {system ? ` · ${system.name}` : ""}
-              {quest.expiresTurn != null
-                ? ` · до хода ${quest.expiresTurn}`
-                : ""}
-            </p>
-          </div>
-          <button type="button" className="btn ghost" onClick={onClose}>
-            Закрыть
-          </button>
-        </header>
-
-        <div className="dossier-body quest-dossier-body">
-          <p className="quest-summary">{quest.summary}</p>
-          {quest.detail && (
-            <div className="quest-detail">
-              {quest.detail.split("\n").map((line, i) => (
-                <p key={i}>{line}</p>
-              ))}
-            </div>
-          )}
-
-          {quest.arc?.stages?.length ? (
-            <ol className="quest-arc-stages" aria-label="Арка">
-              {quest.arc.stages.map((s, i) => (
-                <li
-                  key={s.id}
-                  className={
-                    i === (quest.arc?.currentStage ?? 0)
-                      ? "is-current"
-                      : i < (quest.arc?.currentStage ?? 0)
-                        ? "is-done"
-                        : ""
-                  }
-                >
-                  <strong>{s.label}</strong>
-                  {s.summary && <span className="hint">{s.summary}</span>}
-                </li>
-              ))}
-            </ol>
+      <p className="quest-summary">{adapted.hook}</p>
+      {(adapted.giverFactionName ||
+        adapted.giverNpcName ||
+        adapted.assignedNpcName) && (
+        <div className="quest-card-face__chips">
+          {adapted.giverFactionName ? (
+            <span className="quest-card-chip">{adapted.giverFactionName}</span>
           ) : null}
-
-          <section className="quest-history-block">
-            <h3>История</h3>
-            {history.length === 0 ? (
-              <p className="hint">Пока нет записей.</p>
-            ) : (
-              <ol className="quest-timeline" aria-label="История квеста">
-                {history.map((h, i) => (
-                  <li
-                    key={`${h.at}-${i}`}
-                    className={i === history.length - 1 ? "is-current" : "is-done"}
-                  >
-                    <span className="quest-timeline-dot" aria-hidden />
-                    <div>
-                      <strong>
-                        {QUEST_HISTORY_KIND_LABELS[h.kind] ?? h.kind}
-                        {h.authorName ? ` · ${h.authorName}` : ""}
-                      </strong>
-                      <p className="quest-summary">{h.body}</p>
-                      {h.outcome && (
-                        <p className="hint">Исход: {h.outcome}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-
-          {interactive && choices.length > 0 && (
-            <section className="quest-choice-board">
-              <h3>Стол решений</h3>
-              <p className="hint">
-                Перетащите карточку выбора на стол решений (или нажмите
-                кнопку).
-              </p>
-              <CardBoard>
-                <div className="quest-choice-layout">
-                  <div className="quest-choice-cards">
-                    {choices.map((c) => (
-                      <DragCard
-                        key={c.id}
-                        cardId={c.id}
-                        title={c.label}
-                        subtitle={c.description}
-                        onDropZone={(zoneId) => {
-                          if (zoneId === "quest-resolve") void dropChoice(c.id);
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="btn sm ghost"
-                          disabled={busy}
-                          onClick={() => void dropChoice(c.id)}
-                        >
-                          Выбрать
-                        </button>
-                      </DragCard>
-                    ))}
-                  </div>
-                  <DropZone
-                    zoneId="quest-resolve"
-                    label="Стол решений"
-                    accepts={["*"]}
-                    className="quest-drop-resolve"
-                  />
-                </div>
-              </CardBoard>
-            </section>
-          )}
-
-          {(pendingDiceChoice || activeDice(quest).length > 0) &&
-            interactive && (
-              <section className="quest-dice-block">
-                <h3>Кубик</h3>
-                <AnimatePresence mode="wait">
-                  {diceResult ? (
-                    <motion.div
-                      key="dice"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      <DiceRoller
-                        value={diceResult.value}
-                        sides={diceResult.sides ?? 6}
-                        rolling={diceResult.rolling}
-                        onSettled={() =>
-                          setDiceResult((d) =>
-                            d ? { ...d, rolling: false } : d,
-                          )
-                        }
-                      />
-                      {diceResult.message && !diceResult.rolling && (
-                        <p className="dice-result-text" data-reveal>
-                          {diceResult.message}
-                        </p>
-                      )}
-                    </motion.div>
-                  ) : (
-                    <StatefulButton
-                      key="btn"
-                      className="btn primary"
-                      busy={busy}
-                      success={success}
-                      onClick={() => void throwDice()}
-                    >
-                      Бросить кубик
-                    </StatefulButton>
-                  )}
-                </AnimatePresence>
-              </section>
-            )}
-
-          {system && onFocusSystem && (
-            <div className="btn-col">
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => onFocusSystem(system.id)}
-              >
-                На карте к системе
-              </button>
-            </div>
-          )}
+          {adapted.giverNpcName ? (
+            <span className="quest-card-chip">{adapted.giverNpcName}</span>
+          ) : null}
+          {adapted.assignedNpcName ? (
+            <QuestAssignedChip
+              name={adapted.assignedNpcName}
+              etaTurn={adapted.assignedNpcEtaTurn}
+              onOpenCourt={
+                onOpenCourt
+                  ? () => openCourtForNpc(adapted.assignedNpcId, onOpenCourt)
+                  : undefined
+              }
+            />
+          ) : null}
         </div>
-      </div>
-    </div>
+      )}
+      {adapted.description && adapted.description !== adapted.hook ? (
+        <div className="quest-detail">
+          {adapted.description.split("\n").map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      ) : null}
+
+      {adapted.stageLabels?.length ? (
+        <ol className="quest-arc-stages" aria-label="Арка">
+          {adapted.stageLabels.map((label, i) => (
+            <li
+              key={`${label}-${i}`}
+              className={
+                i === (adapted.stage ?? 0)
+                  ? "is-current"
+                  : i < (adapted.stage ?? 0)
+                    ? "is-done"
+                    : ""
+              }
+            >
+              <strong>{label}</strong>
+            </li>
+          ))}
+        </ol>
+      ) : adapted.objectives?.length ? (
+        <QuestObjectiveList objectives={adapted.objectives} />
+      ) : null}
+
+      <section className="quest-history-block">
+        <h3>История</h3>
+        {log.length === 0 ? (
+          <p className="hint">Пока нет записей.</p>
+        ) : (
+          <ol className="quest-timeline" aria-label="История квеста">
+            {log.map((h, i) => (
+              <li
+                key={h.id}
+                className={i === log.length - 1 ? "is-current" : "is-done"}
+              >
+                <span className="quest-timeline-dot" aria-hidden />
+                <div>
+                  <strong>
+                    {h.authorName ?? LOG_AUTHOR_LABEL[h.author]}
+                  </strong>
+                  <p className="quest-summary">{h.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      {interactive && choices.length > 0 ? (
+        <QuestChoiceResolveBoard
+          choices={choices}
+          stocks={stocks}
+          busy={busy}
+          onChoose={(id) => void dropChoice(id)}
+        />
+      ) : null}
+
+      {(pendingDiceChoice || adapted.diceCheck) && interactive ? (
+        <section className="quest-dice-block">
+          <h3>Кубик</h3>
+          <AnimatePresence mode="wait">
+            {diceResult ? (
+              <motion.div
+                key="dice"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                <DiceRoller
+                  value={diceResult.value}
+                  sides={diceResult.sides ?? 6}
+                  rolling={diceResult.rolling}
+                  onSettled={() =>
+                    setDiceResult((d) =>
+                      d ? { ...d, rolling: false } : d,
+                    )
+                  }
+                />
+                {diceResult.message && !diceResult.rolling ? (
+                  <p className="dice-result-text" data-reveal>
+                    {diceResult.message}
+                  </p>
+                ) : null}
+              </motion.div>
+            ) : (
+              <StatefulButton
+                key="btn"
+                className="btn primary"
+                busy={busy}
+                success={success}
+                onClick={() => void throwDice()}
+              >
+                Бросить кубик
+              </StatefulButton>
+            )}
+          </AnimatePresence>
+        </section>
+      ) : null}
+
+      {adapted.systemId && onFocusSystem ? (
+        <div className="btn-col">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => onFocusSystem(adapted.systemId!)}
+          >
+            На карте к системе
+          </button>
+        </div>
+      ) : null}
+    </QuestDossierView>
   );
 }

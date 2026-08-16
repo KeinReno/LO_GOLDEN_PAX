@@ -2,11 +2,17 @@ import { create } from "zustand";
 import { v4 as uuid } from "uuid";
 import { generateAlongBrush, type Point } from "../generators/brushGenerator";
 import { createRandomSystem, createRng } from "../generators/systemFactory";
-import { createEmptyWorld, DEFAULT_MASTER_TOKEN, RESOURCE_POOL } from "./defaults";
+import {
+  createEmptyWorld,
+  DEFAULT_MASTER_TOKEN,
+  DIPLOMACY_LABELS,
+  RESOURCE_POOL,
+} from "./defaults";
 import {
   POI_PAINT_TOOLS,
   type Caravan,
   type DiplomacyRelation,
+  type EconomicRelation,
   type EditorTool,
   type Faction,
   type Fleet,
@@ -43,13 +49,30 @@ import {
   type GraphicsPrefKey,
   type ViewerGraphicsPrefs,
 } from "../ui/viewerGraphics";
+import {
+  readStoredMapStyle,
+  writeStoredMapStyle,
+} from "../ui/mapStylePrefs";
+import type { MapStyleId } from "../renderers/styles/mapTheme";
 const GM_SHELL_KEY = "gmap-gm-shell-mode";
 const GM_GESTURES_KEY = "gmap-gm-gestures";
 
 function readGmShellMode(): GmShellMode {
   try {
     const v = localStorage.getItem(GM_SHELL_KEY);
-    if (v === "atelier") return "atelier";
+    if (
+      v === "atelier" ||
+      v === "rp" ||
+      v === "simulator" ||
+      v === "tech" ||
+      v === "units" ||
+      v === "buildings" ||
+      v === "races" ||
+      v === "polities" ||
+      v === "rules"
+    ) {
+      return v;
+    }
     // Legacy prep/live → unified GM session
     if (v === "gm" || v === "prep" || v === "live") return "gm";
   } catch {
@@ -120,6 +143,8 @@ interface WorldStore extends UiState {
   toggleShowQuests: () => void;
   editorGraphics: ViewerGraphicsPrefs;
   toggleEditorGraphic: (key: GraphicsPrefKey) => void;
+  mapStyle: MapStyleId;
+  setMapStyle: (style: MapStyleId) => void;
   applyMapLayerFlags: (flags: Partial<{
     showLinks: boolean;
     showOwnership: boolean;
@@ -228,6 +253,12 @@ interface WorldStore extends UiState {
   setCampaignTurn: (turn: number) => void;
   restoreTurnSnapshot: (index: number) => void;
   setDiplomacy: (aId: string, bId: string, relation: DiplomacyRelation) => void;
+  setEconomicRelation: (
+    aId: string,
+    bId: string,
+    kind: EconomicRelation | "none",
+    extras?: { unitsQuotePerBase?: number },
+  ) => void;
   addOrder: (order: Omit<PlayerOrder, "id" | "createdAt" | "status" | "turn">) => void;
   setOrderStatus: (id: string, status: PlayerOrder["status"]) => void;
   clearOrders: (factionId?: string) => void;
@@ -242,6 +273,8 @@ interface WorldStore extends UiState {
   openPlanetView: (systemId: string, planetId: string) => void;
   closeSystemView: () => void;
   setContextMenu: (menu: import("./types").ContextMenuState | null) => void;
+  altInspector: import("./types").AltInspectorState | null;
+  setAltInspector: (inspector: import("./types").AltInspectorState | null) => void;
 }
 
 function snapshotFromWorld(world: WorldState, label: string): TurnSnapshot {
@@ -427,6 +460,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   showLoyalty: false,
   openQuestId: null,
   editorGraphics: readStoredEditorGraphics(),
+  mapStyle: readStoredMapStyle(),
   diplomacyPanelOpen: false,
   rpFloatOpen: false,
   rpFocusFactionId: null,
@@ -434,6 +468,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   gmLiveDomain: null,
   gmGesturesEnabled: readGmGestures(),
   contextMenu: null,
+  altInspector: null,
 
   setTool: (tool) =>
     set({
@@ -563,6 +598,11 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
       const next = { ...s.editorGraphics, [key]: !s.editorGraphics[key] };
       writeStoredEditorGraphics(next);
       return { editorGraphics: next };
+    }),
+  setMapStyle: (style) =>
+    set(() => {
+      writeStoredMapStyle(style);
+      return { mapStyle: style };
     }),
   applyMapLayerFlags: (flags) => set((s) => ({ ...s, ...flags })),
   setDiplomacyPanelOpen: (open) => set({ diplomacyPanelOpen: open }),
@@ -754,6 +794,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   },
 
   setContextMenu: (menu) => set({ contextMenu: menu }),
+  setAltInspector: (inspector) => set({ altInspector: inspector }),
   beginUnitOrder: (unitKind, unitId, intent) =>
     set({
       pendingUnitOrder: { unitKind, unitId, intent },
@@ -1973,7 +2014,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
         history: [],
       };
       const treaties = (prev.treaties ?? []).filter(
-        (t) => t.withFactionId !== otherId,
+        (t) => t.withFactionId !== otherId || (t.track || "political") !== "political",
       );
       if (relation !== "neutral") {
         treaties.push({
@@ -1983,6 +2024,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
           startedTurn: turn,
           expiresTurn: null,
           effects: [],
+          track: "political",
         });
       }
       const history = [
@@ -1991,7 +2033,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
           turn,
           type: "relation",
           withFactionId: otherId,
-          label: `Отношения: ${relation}`,
+          label: `Отношения: ${DIPLOMACY_LABELS[relation] ?? relation}`,
         },
       ].slice(-40);
       return {
@@ -2002,6 +2044,74 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     set({
       world: touch({ ...world, diplomacy, factions }),
       _coalesce: `diplo:${x}:${y}`,
+    } as HistoryPatch);
+  },
+
+  setEconomicRelation: (aId, bId, kind, extras = {}) => {
+    if (aId === bId) return;
+    const { world } = get();
+    const turn = world.meta?.turn ?? 0;
+    const host = (world.factions ?? []).find((f) => f.id === bId);
+    const hostPeg = host?.treasuryPeg || null;
+    const quote = Number(extras.unitsQuotePerBase) > 0 ? Number(extras.unitsQuotePerBase) : 1;
+    const factions = (world.factions ?? []).map((fac) => {
+      if (fac.id !== aId && fac.id !== bId) return fac;
+      const otherId = fac.id === aId ? bId : aId;
+      const prev = fac.diplomacy ?? { opinions: {}, treaties: [], history: [] };
+      const treaties = (prev.treaties ?? []).filter(
+        (t) => t.withFactionId !== otherId || (t.track || "political") !== "economic",
+      );
+      if (kind === "currency_exchange") {
+        treaties.push({
+          id: `treaty_${fac.id}_${otherId}_${kind}`,
+          type: kind,
+          withFactionId: otherId,
+          startedTurn: turn,
+          expiresTurn: null,
+          effects: [],
+          track: "economic",
+          basePeg: fac.id === aId ? fac.treasuryPeg || null : hostPeg,
+          quotePeg: fac.id === aId ? hostPeg : fac.treasuryPeg || null,
+          unitsQuotePerBase: quote,
+        });
+      } else if (kind === "currency_union") {
+        treaties.push({
+          id: `treaty_${fac.id}_${otherId}_${kind}`,
+          type: kind,
+          withFactionId: otherId,
+          startedTurn: turn,
+          expiresTurn: null,
+          effects: [],
+          track: "economic",
+          hostFactionId: bId,
+          adoptedPeg: hostPeg,
+        });
+      }
+      const history = [
+        ...(prev.history ?? []),
+        {
+          turn,
+          type: "relation",
+          withFactionId: otherId,
+          label: `Экономика: ${kind}`,
+        },
+      ].slice(-40);
+      const next = {
+        ...fac,
+        diplomacy: { ...prev, treaties, history },
+      };
+      if (kind === "currency_union" && fac.id === aId && hostPeg) {
+        next.treasuryPeg = hostPeg;
+        if (fac.treasuryPeg && fac.treasuryPeg !== hostPeg) {
+          next.pegChangedTurn = turn;
+        }
+        next.lastTreasuryPeg = hostPeg;
+      }
+      return next;
+    });
+    set({
+      world: touch({ ...world, factions }),
+      _coalesce: `econ:${aId}:${bId}`,
     } as HistoryPatch);
   },
 

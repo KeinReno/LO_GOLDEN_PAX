@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { TurnBriefing, TurnBriefingEvent, ViewerPayload, WorldState } from "../state/types";
 import { formatHopDistance, formatHopTurns, hopDistance } from "../state/pathfinding";
 import { isWithinMoveRange } from "../state/movementRange";
-import { FlowPanel } from "./FlowPanel";
-import { ResourceIcon } from "../ui/ResourceIcon";
-import { ExpandableSection } from "../ui/ExpandableSection";
-import { intentApCost, getCachedContent } from "../state/contentCatalog";
-import { CATEGORY_CURRENCIES } from "../state/economyLabels";
+import { intentApCost } from "../state/contentCatalog";
 import {
   formatOdCost,
+  formatOdMeter,
+  formatForceOdMeter,
   OD,
   OD_TOOLTIP,
+  FORCE_OD_TOOLTIP,
   QUEUE_UNTIL_TURN_LABEL,
   TURN_RESOLVE_HINT,
 } from "../state/playerUiTerms";
@@ -19,232 +18,47 @@ import {
   type CombatStanceId,
   type ViewerEngagement,
 } from "./PlayerEngagementPanel";
-import { loadTaxSlots } from "./economy/policyData";
+import type { AlertItem } from "./ViewerAlertFab";
+import {
+  computeMetrics,
+  resolveFactionTreasuryCurrency,
+} from "./economy/economyMath";
+import { currencyShortLabel } from "./economy/chartData";
+import { orderTypeLabel } from "./orderEtaLabels";
 
-export const ORDER_TYPE_LABELS: Record<string, string> = {
-  move_fleet: "Переместить флот",
-  claim_system: "Захват системы",
-  attack_system: "Атака",
-  move_legion: "Переместить легион",
-  blockade: "Блокада",
-  fortify: "Укрепление",
-  transfer: "Перевод ресурсов",
-  market_convert: "Обмен на рынке",
-  market_offer: "Заявка на рынке",
-  market_cancel: "Отмена заявки",
-  set_tax: "Смена налога",
-  scout_reveal: "Разведка",
-  refugee_convoy: "Караван беженцев",
-  combat_stance: "Боевая стойка",
-  build: "Постройка",
-  demolish: "Снос",
-  colonize: "Колонизация",
-  set_colony_type: "Тип колонии",
-};
-
-const LEGACY_CURRENCIES: { id: string; label: string }[] = [
-  { id: "currency.metal", label: "Металл" },
-  { id: "currency.supply", label: "Обеспечение" },
-];
-
-function bottleneckCount(
-  eco: ViewerPayload["economy"],
-): number | null {
-  if (!eco) return null;
-  if (eco.bottlenecks && typeof eco.bottlenecks === "object") {
-    return Object.keys(eco.bottlenecks).length;
+function alertTone(kind: AlertItem["kind"]): "danger" | "warn" | "hot" | "info" {
+  switch (kind) {
+    case "engagement":
+      return "danger";
+    case "economy":
+      return "warn";
+    case "rp":
+      return "hot";
+    default:
+      return "info";
   }
-  return null;
 }
 
-/** Per-currency net for the current turn. */
-function useEconomyBreakdown(
-  eco: ViewerPayload["economy"],
-  turn: number,
-): Record<string, { net: number }> {
-  return useMemo(() => {
-    const recent = eco?.recent ?? [];
-    const byTurn = recent.filter((e) => e.turn === turn);
-    const out: Record<string, { net: number }> = {};
-    for (const e of byTurn) {
-      if (!out[e.currencyId]) out[e.currencyId] = { net: 0 };
-      out[e.currencyId].net += e.delta;
-    }
-    return out;
-  }, [eco?.recent, turn]);
-}
-
-function EconomyWhyPanel({
-  explain,
-}: {
-  explain: NonNullable<ViewerPayload["economy"]>["explain"];
-}) {
-  if (!explain) return null;
-  const { lines, raceTraits, factionTraits } = explain;
-  const hasLines = lines && lines.length > 0;
-  const hasRace = raceTraits && raceTraits.length > 0;
-  const hasFaction = factionTraits && factionTraits.length > 0;
-  if (!hasLines && !hasRace && !hasFaction) return null;
-
-  return (
-    <details className="eco-why-panel">
-      <summary>Почему так</summary>
-      {hasLines && (
-        <ul className="eco-reasons" aria-label="Модификаторы экономики">
-          {lines.map((line, i) => {
-            const mod = line.modifier ?? "";
-            return (
-            <li key={`${line.category}-${line.label}-${i}`}>
-              <span className="hint">{line.label}</span>{" "}
-              <strong className={mod.startsWith("−") || mod.startsWith("-") ? "eco-down" : mod.startsWith("+") ? "eco-up" : ""}>
-                {mod || "—"}
-              </strong>
-              {line.sources?.length ? (
-                <span className="hint"> · {line.sources.join(", ")}</span>
-              ) : null}
-            </li>
-            );
-          })}
-        </ul>
-      )}
-      {hasRace && (
-        <ul className="eco-race-traits" aria-label="Расовые черты">
-          {raceTraits!.map((r, i) => (
-            <li key={`race-${r.label}-${i}`}>
-              <strong>{r.label}</strong>
-              <span className="hint"> · {r.summary}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {hasFaction && (
-        <ul className="eco-faction-traits" aria-label="Черты державы">
-          {factionTraits!.map((r, i) => (
-            <li key={`faction-${r.label}-${i}`}>
-              <strong>{r.label}</strong>
-              <span className="hint"> · {r.summary}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </details>
-  );
-}
-
-function TaxSelect({
-  taxSlot,
-  label,
-  tiers,
-  value,
-  pending,
-  onSetTax,
-}: {
-  taxSlot: string;
-  label: string;
-  tiers: readonly { id: string; label: string }[];
-  value: string;
-  pending?: string;
-  onSetTax: (taxSlot: string, tierId: string) => void;
-}) {
-  return (
-    <label className="field eco-tax-field">
-      <span>{label}</span>
-      <select
-        value={pending ?? value}
-        disabled={Boolean(pending)}
-        onChange={(e) => onSetTax(taxSlot, e.target.value)}
-      >
-        {tiers.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      {pending && (
-        <span className="hint">
-          В очереди → {tiers.find((t) => t.id === pending)?.label ?? pending} (со
-          след. хода)
-        </span>
-      )}
-    </label>
-  );
-}
-
-type PressureThreshold = {
-  min: number;
-  effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
-};
-
-function describePressureEffects(
-  effects: PressureThreshold["effects"],
-): string {
-  const parts: string[] = [];
-  for (const e of effects || []) {
-    if (e.effect === "cost_mult") {
-      const mult = Number(e.args?.mult ?? 1);
-      const pct = Math.round((mult - 1) * 100);
-      if (pct === 0) continue;
-      const tag = e.args?.tag === "build" ? "построек" : "затрат";
-      parts.push(`+${pct}% к стоимости ${tag}`);
-    } else if (e.effect === "ap_add") {
-      const amt = Number(e.args?.amount ?? 0);
-      if (amt < 0) parts.push(`${amt} ОД за ход`);
-      else if (amt > 0) parts.push(`+${amt} ОД за ход`);
-    }
-  }
-  return parts.join(" · ") || "штраф";
-}
-
-function TaxPressureHint({ pressure }: { pressure: number }) {
-  const thresholds =
-    getCachedContent()?.rules?.tax?.pressureThresholds ?? [];
-  if (thresholds.length === 0) {
-    return (
-      <p className="hint eco-tax-pressure">
-        Налоговое давление: <strong>{pressure}</strong>
-      </p>
-    );
-  }
-
-  const sorted = [...thresholds].sort((a, b) => a.min - b.min);
-  const active = sorted.filter((t) => pressure >= t.min);
-  const next = sorted.find((t) => pressure < t.min);
-  const isHigh = pressure >= (sorted[sorted.length - 1]?.min ?? 99);
-  const isWarn = pressure >= (sorted[0]?.min ?? 99) || (next != null && pressure >= next.min - 1);
-
-  return (
-    <div
-      className={`eco-tax-pressure${isHigh ? " is-high" : isWarn ? " is-warn" : ""}`}
-    >
-      <p className="hint">
-        Налоговое давление: <strong>{pressure}</strong>
-        {next ? (
-          <>
-            {" · "}
-            следующий порог при <strong>{next.min}</strong>:{" "}
-            {describePressureEffects(next.effects)}
-          </>
-        ) : (
-          <> · все пороги достигнуты</>
-        )}
-      </p>
-      {active.length > 0 && (
-        <p className="hint">
-          Активно:{" "}
-          {active
-            .map((t) => `от ${t.min} — ${describePressureEffects(t.effects)}`)
-            .join(" · ")}
-        </p>
-      )}
-      {isWarn && (
-        <p className="eco-tax-pressure-warn">
-          {isHigh
-            ? "Высокое давление — постройки дороже и меньше ОД. Снизьте налоги."
-            : "Давление растёт — высокие ставки усилят штрафы со следующих ходов."}
-        </p>
-      )}
-    </div>
-  );
+function roleScoreLeader(
+  scores?: Record<string, number>,
+): string | null {
+  if (!scores) return null;
+  const labels: Record<string, string> = {
+    structural: "Структура",
+    energy: "Энергия",
+    offensive: "Удар",
+    defensive: "Защита",
+    mobility: "Мобильность",
+    cognitive: "Когниция",
+    biological: "Биология",
+    exotic: "Экзотика",
+  };
+  const rows = Object.entries(scores)
+    .map(([id, v]) => ({ id, label: labels[id] ?? id, v: Number(v) || 0 }))
+    .filter((r) => r.v > 0);
+  if (!rows.length) return null;
+  rows.sort((a, b) => b.v - a.v);
+  return `${rows[0]!.label} ${Math.round(rows[0]!.v)}`;
 }
 
 function systemName(world: WorldState, id: string | null | undefined): string {
@@ -486,13 +300,12 @@ export function TurnBriefingCard({
 
 export function PlayerHqHome({
   payload,
-  password,
   reservedAp,
   apMax,
-  rpUnread,
-  pendingOrders,
+  forceApUsed = 0,
+  forceApMax = 0,
+  attentionItems = [],
   orderMsg,
-  onSetTax,
   onScoutReveal,
   mapSelectedSystemId,
   onOpenForces,
@@ -507,8 +320,6 @@ export function PlayerHqHome({
   onOpenEconomy,
   affordableResearch,
   tradePartnerCount,
-  marketMyOffers,
-  marketPeerLots,
   activeQuestCount,
   warCount,
   openEngagementCount,
@@ -520,13 +331,15 @@ export function PlayerHqHome({
   onOpenCardBattle,
 }: {
   payload: ViewerPayload;
+  /** @deprecated Kept for call-site compat; HQ no longer embeds FlowPanel. */
   password?: string;
   reservedAp: number;
   apMax: number;
-  rpUnread: number;
-  pendingOrders: number;
+  forceApUsed?: number;
+  forceApMax?: number;
+  /** Shared with ViewerAlertFab — buildViewerAlerts(). */
+  attentionItems?: AlertItem[];
   orderMsg?: string | null;
-  onSetTax: (taxSlot: string, tierId: string) => void;
   onScoutReveal?: (systemId: string) => void;
   mapSelectedSystemId?: string | null;
   onOpenForces: () => void;
@@ -541,8 +354,6 @@ export function PlayerHqHome({
   onOpenEconomy?: () => void;
   affordableResearch?: number;
   tradePartnerCount?: number;
-  marketMyOffers?: number;
-  marketPeerLots?: number;
   activeQuestCount?: number;
   warCount?: number;
   openEngagementCount?: number;
@@ -558,7 +369,6 @@ export function PlayerHqHome({
 }) {
   const eco = payload.economy;
   const fac = payload.world.factions.find((f) => f.id === payload.factionId);
-  const breakdown = useEconomyBreakdown(eco, payload.world.meta.turn);
   const scoutAp = intentApCost("intent.scout_reveal");
   const [scoutTargetId, setScoutTargetId] = useState(
     () => mapSelectedSystemId ?? "",
@@ -572,57 +382,111 @@ export function PlayerHqHome({
     !!onScoutReveal &&
     (scoutAp <= 0 || reservedAp + scoutAp <= apMax);
 
-  const bn = eco ? bottleneckCount(eco) : null;
   const courtNpc =
     fac?.npcs?.filter((n) => n.status !== "hidden" && n.status !== "dead")
       .length ?? 0;
 
+  const treasuryCurrencyId = resolveFactionTreasuryCurrency(payload);
+  const treasuryHint = currencyShortLabel(treasuryCurrencyId);
+  const metrics = eco
+    ? computeMetrics(eco, payload.world.meta.turn, treasuryCurrencyId)
+    : null;
+  const fleetCount = (payload.world.fleets ?? []).filter(
+    (f) => f.factionId === payload.factionId,
+  ).length;
+  const legionCount = (payload.world.legions ?? []).filter(
+    (l) => l.factionId === payload.factionId,
+  ).length;
+  const roleLeader = roleScoreLeader(eco?.roleScores);
+
+  const attentionShown = attentionItems.slice(0, 5);
+
   return (
-    <div className="hq-panel">
-      <header className="hq-panel-head">
-        <h2>Штаб</h2>
-        <p className="hint">
-          Сводка хода. Приказы — на карте (drag / ПКМ). Комнаты — в нижнем доке.
-        </p>
+    <div className="hq-command">
+      <header className="hq-command__identity" aria-label="Держава">
+        <div className="hq-command__faction">
+          <span
+            className="hq-command__swatch"
+            style={{ background: fac?.color }}
+            aria-hidden
+          />
+          <div>
+            <strong className="hq-command__name">{fac?.name ?? "—"}</strong>
+            <p className="hint">
+              Ход {payload.world.meta.turn} · видно {payload.visibleSystemIds.length}{" "}
+              систем ·{" "}
+              <span title={OD_TOOLTIP}>
+                {OD} {reservedAp}/{apMax}
+              </span>
+            </p>
+          </div>
+        </div>
+        {orderMsg ? <p className="hq-command__toast hint">{orderMsg}</p> : null}
       </header>
 
-      <div className="hq-bento" aria-label="Оперативные показатели">
-        <div className="hq-bento-cell">
-          <span className="hq-stat-label">Ход</span>
-          <strong>{payload.world.meta.turn}</strong>
-        </div>
-        <div className="hq-bento-cell hq-bento-cell--accent">
-          <span className="hq-stat-label" title={OD_TOOLTIP}>
-            {OD}
-          </span>
-          <strong>
-            {reservedAp}/{apMax}
-          </strong>
-        </div>
-        <div className="hq-bento-cell">
-          <span className="hq-stat-label">Обзор</span>
-          <strong>{payload.visibleSystemIds.length}</strong>
-        </div>
-        <div className="hq-bento-cell hq-bento-cell--wide">
-          <span className="hq-stat-label">Держава</span>
-          <strong style={{ color: fac?.color }}>{fac?.name ?? "—"}</strong>
-        </div>
-      </div>
+      <section className="hq-command__attention" aria-label="Требует внимания">
+        <div className="hq-command__section-label">Внимание</div>
+        {attentionShown.length === 0 ? (
+          <p className="hint hq-command__calm">
+            Спокойный ход — нет срочных сигналов. Приказы отдавайте на карте.
+          </p>
+        ) : (
+          <ul className="hq-attention-list">
+            {attentionShown.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={`hq-attention-item hq-attention-item--${alertTone(item.kind)}`}
+                  onClick={() => item.onFocus()}
+                >
+                  <strong>{item.verb}</strong>
+                  <span>
+                    {item.title}
+                    {item.subtitle ? ` · ${item.subtitle}` : ""}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <TurnBriefingCard
-        briefing={payload.briefing}
-        world={payload.world}
-        factionId={payload.factionId}
-      />
+      <section className="hq-command__summary" aria-label="Сводка державы">
+        <div className="hq-command__section-label">Сводка</div>
+        <dl className="hq-summary-grid">
+          <div className="hq-summary-stat">
+            <dt>Казна</dt>
+            <dd>
+              {metrics != null
+                ? `${Math.round(metrics.treasury)} ${treasuryHint}`
+                : "—"}
+            </dd>
+          </div>
+          <div className="hq-summary-stat" title={OD_TOOLTIP}>
+            <dt>{OD}</dt>
+            <dd>{formatOdMeter(reservedAp, apMax)}</dd>
+          </div>
+          <div className="hq-summary-stat" title={FORCE_OD_TOOLTIP}>
+            <dt>Силы</dt>
+            <dd>
+              {formatForceOdMeter(forceApUsed, forceApMax)} · {fleetCount}ф/
+              {legionCount}л
+            </dd>
+          </div>
+          {roleLeader ? (
+            <div className="hq-summary-stat">
+              <dt>RoleScore</dt>
+              <dd>{roleLeader}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </section>
 
       {(openEngagementCount ?? 0) > 0 &&
         engagements &&
         onSubmitCombatStance && (
-          <section className="hq-card eng-hq-alert">
-            <h3>
-              Активные сражения
-              {openEngagementCount! > 1 ? ` · ${openEngagementCount}` : ""}
-            </h3>
+          <section className="hq-command__combat" aria-label="Активные сражения">
+            <div className="hq-command__section-label">Сражения</div>
             <PlayerEngagementPanel
               payload={payload}
               engagements={engagements}
@@ -637,416 +501,154 @@ export function PlayerHqHome({
           </section>
         )}
 
-      <section className="hq-card hq-signal-row" aria-label="Быстрые сигналы">
-        {onOpenResearch && (
-          <button
-            type="button"
-            className={`hq-signal-chip ${(affordableResearch ?? 0) > 0 ? "is-hot" : ""}`}
-            onClick={onOpenResearch}
-          >
-            <strong>Наука</strong>
-            <span className="hint">
-              {(affordableResearch ?? 0) > 0
-                ? `можно: ${affordableResearch}`
-                : "6 категорий наук"}
-            </span>
-          </button>
-        )}
-        {onOpenEconomy && (
-          <button
-            type="button"
-            className="hq-signal-chip"
-            onClick={onOpenEconomy}
-          >
-            <strong>Экономика</strong>
-            <span className="hint">производство · склад</span>
-          </button>
-        )}
-        {onOpenMarket && (
-          <button
-            type="button"
-            className={`hq-signal-chip ${
-              (marketMyOffers ?? 0) > 0 || (marketPeerLots ?? 0) > 0
-                ? "is-hot"
-                : ""
-            }`}
-            onClick={onOpenMarket}
-          >
-            <strong>Биржа</strong>
-            <span className="hint">
-              {(marketMyOffers ?? 0) > 0
-                ? `${marketMyOffers} моих`
-                : (marketPeerLots ?? 0) > 0
-                  ? `${marketPeerLots} лотов`
-                  : tradePartnerCount
-                    ? `${tradePartnerCount} партнёров`
-                    : "котировки"}
-            </span>
-          </button>
-        )}
-        <button
-          type="button"
-          className={`hq-signal-chip ${pendingOrders > 0 ? "is-hot" : ""}`}
-          onClick={onOpenOrders}
-        >
-          <strong>Очередь</strong>
-          <span className="hint">
-            {pendingOrders > 0 ? `${pendingOrders} приказов` : "пусто"}
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`hq-signal-chip ${(warCount ?? 0) > 0 ? "is-warn" : ""}`}
-          onClick={onOpenDiplomacy}
-        >
-          <strong>Дипломатия</strong>
-          <span className="hint">
-            {(warCount ?? 0) > 0 ? `${warCount} войн` : "контакты"}
-          </span>
-        </button>
-      </section>
-
-      <section className="hq-card">
-        <h3>Казна</h3>
-        {eco ? (
-          <>
-            <div className="eco-cat-grid" aria-label="Шесть категорий ресурсов">
-              {CATEGORY_CURRENCIES.map((c) => {
-                const stock = eco.stocks?.[c.id] ?? 0;
-                const v = breakdown[c.id];
-                const net = v?.net;
-                const hasNet = typeof net === "number" && net !== 0;
-                const isDeficit = hasNet && net < 0;
-                return (
-                  <div
-                    className={`eco-cat-cell ${isDeficit ? "is-deficit" : ""}`}
-                    key={c.id}
-                    style={{ borderLeftColor: c.cssVar }}
-                    title={c.name}
-                  >
-                    <ResourceIcon
-                      resourceId={c.id}
-                      stocks={eco.stocks}
-                      size={18}
-                      className="eco-cat-icon"
-                    />
-                    <strong className="eco-cat-stock">{stock}</strong>
-                    {hasNet && (
-                      <span className={`eco-delta ${net > 0 ? "up" : "down"}`}>
-                        {net > 0 ? `+${net}` : net}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="eco-legacy-row">
-              {LEGACY_CURRENCIES.map((c) => {
-                const stock = eco.stocks?.[c.id] ?? 0;
-                const v = breakdown[c.id];
-                const net = v?.net;
-                const hasNet = typeof net === "number" && net !== 0;
-                return (
-                  <span key={c.id} className="eco-legacy-item">
-                    <ResourceIcon
-                      resourceId={c.id}
-                      stocks={eco.stocks}
-                      size={16}
-                    />{" "}
-                    <strong>{stock}</strong>
-                    {hasNet && (
-                      <span className={`eco-delta ${net > 0 ? "up" : "down"}`}>
-                        {" "}
-                        {net > 0 ? `+${net}` : net}
-                      </span>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-            <p className="hint">
-              Дефицит: {eco.deficit ?? "нет"}
-              {bn != null && bn > 0 ? ` · узких мест: ${bn}` : ""}
-            </p>
-            <ExpandableSection
-              title="Налоги и модификаторы"
-              badge={`давление ${eco.pressure ?? 0}`}
-              defaultOpen={(eco.pressure ?? 0) >= 2}
-            >
-              <EconomyWhyPanel explain={eco.explain} />
-              <div className="eco-tax-row">
-                {loadTaxSlots().map((slot) => (
-                  <TaxSelect
-                    key={slot.id}
-                    taxSlot={slot.id}
-                    label={`${slot.name} (со след. хода)`}
-                    tiers={slot.tiers.map((t) => ({
-                      id: t.id,
-                      label: t.label,
-                    }))}
-                    value={eco.taxes?.[slot.id] ?? "none"}
-                    pending={eco.pendingPolicy?.taxes?.[slot.id]}
-                    onSetTax={onSetTax}
-                  />
-                ))}
-              </div>
-              <TaxPressureHint pressure={eco.pressure ?? 0} />
-            </ExpandableSection>
-          </>
-        ) : (
-          <p className="hint">Нет данных казны — перелогиньтесь после тика.</p>
-        )}
-        {orderMsg && <p className="hint">{orderMsg}</p>}
-      </section>
-
-      <ExpandableSection
-        title="Потоки ресурсов по категориям"
-        badge={bn != null && bn > 0 ? `узких: ${bn}` : "сводка"}
-        defaultOpen={bn != null && bn > 0}
-        className="hq-card hq-expandable--flush"
-      >
-        <FlowPanel
+      <details className="hq-command__more">
+        <summary>Сводка хода</summary>
+        <TurnBriefingCard
+          briefing={payload.briefing}
+          world={payload.world}
           factionId={payload.factionId}
-          password={password}
-          compact
         />
-      </ExpandableSection>
+      </details>
 
-      {(fac?.notes || courtNpc > 0) && (
-        <ExpandableSection
-          title="Двор и политика"
-          badge={courtNpc > 0 ? `${courtNpc} лиц` : undefined}
-          className="hq-card hq-expandable--flush"
-        >
+      <section className="hq-command__deep" aria-label="Основные комнаты">
+        <div className="hq-command__section-label">Комнаты</div>
+        <div className="hq-deep-primary">
+          {onOpenEconomy ? (
+            <button
+              type="button"
+              className="hq-deep-btn hq-deep-btn--primary"
+              onClick={onOpenEconomy}
+            >
+              <strong>Экономика</strong>
+              <span className="hint">казна · склад · налоги</span>
+            </button>
+          ) : null}
+          {onOpenResearch ? (
+            <button
+              type="button"
+              className={`hq-deep-btn hq-deep-btn--primary ${
+                (affordableResearch ?? 0) > 0 ? "is-hot" : ""
+              }`}
+              onClick={onOpenResearch}
+            >
+              <strong>Наука</strong>
+              <span className="hint">
+                {(affordableResearch ?? 0) > 0
+                  ? `доступно ${affordableResearch}`
+                  : "колесо знаний"}
+              </span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="hq-deep-btn hq-deep-btn--primary"
+            onClick={onOpenMap}
+          >
+            <strong>Карта</strong>
+            <span className="hint">приказы · drag / ПКМ</span>
+          </button>
+        </div>
+        <div className="hq-deep-secondary">
+          <button type="button" className="hq-deep-chip" onClick={onOpenForces}>
+            Силы
+            {(openEngagementCount ?? 0) > 0
+              ? ` · ${openEngagementCount}`
+              : ""}
+          </button>
+          <button
+            type="button"
+            className="hq-deep-chip"
+            onClick={onOpenDiplomacy}
+          >
+            Дипло
+            {(warCount ?? 0) > 0 ? ` · ${warCount}` : ""}
+          </button>
+          {onOpenMarket ? (
+            <button type="button" className="hq-deep-chip" onClick={onOpenMarket}>
+              Биржа
+              {tradePartnerCount ? ` · ${tradePartnerCount}` : ""}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`hq-deep-chip ${(activeQuestCount ?? 0) > 0 ? "is-pulse" : ""}`}
+            onClick={onOpenQuests}
+          >
+            Квесты
+            {activeQuestCount ? ` · ${activeQuestCount}` : ""}
+          </button>
+          {onOpenCourt ? (
+            <button type="button" className="hq-deep-chip" onClick={onOpenCourt}>
+              Двор{courtNpc > 0 ? ` · ${courtNpc}` : ""}
+            </button>
+          ) : null}
+          <button type="button" className="hq-deep-chip" onClick={onOpenRp}>
+            Хроника
+          </button>
+          <button type="button" className="hq-deep-chip" onClick={onOpenOrders}>
+            Очередь
+          </button>
+        </div>
+      </section>
+
+      {(fac?.notes || courtNpc > 0 || (onScoutReveal && scoutSystems.length > 0)) && (
+        <details className="hq-command__more">
+          <summary>Разведка и двор</summary>
           {fac?.notes ? (
             <p className="hint" style={{ whiteSpace: "pre-wrap" }}>
               {fac.notes}
             </p>
           ) : null}
-          {fac?.npcs && fac.npcs.length > 0 ? (
+          {fac?.npcs && courtNpc > 0 ? (
             <ul className="hq-npc-list">
               {fac.npcs
                 .filter((n) => n.status !== "hidden" && n.status !== "dead")
+                .slice(0, 6)
                 .map((n) => (
                   <li key={n.id} className="hq-npc-item">
                     <strong>{n.name}</strong>
                     {n.title ? (
                       <span className="hint"> — {n.title}</span>
                     ) : null}
-                    {n.locationSystemName || n.locationPlanetName ? (
-                      <span className="hint">
-                        {" "}
-                        · {[n.locationPlanetName, n.locationSystemName]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    ) : null}
-                    {n.publicNotes ? (
-                      <p className="hint" style={{ margin: "0.25rem 0 0" }}>
-                        {n.publicNotes}
-                      </p>
-                    ) : null}
                   </li>
                 ))}
             </ul>
           ) : null}
-        </ExpandableSection>
-      )}
-
-      {onScoutReveal && scoutSystems.length > 0 && (
-        <ExpandableSection
-          title="Разведка"
-          badge={scoutAp > 0 ? formatOdCost(scoutAp) : "бесплатно"}
-          className="hq-card hq-expandable--flush"
-        >
-          <p className="hint">
-            Постоянно открыть систему на карте · применится на тике
-          </p>
-          <label className="field">
-            <span>Система</span>
-            <select
-              value={scoutTargetId}
-              onChange={(e) => setScoutTargetId(e.target.value)}
-            >
-              <option value="">— выберите —</option>
-              {scoutSystems.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="btn block"
-            disabled={!scoutCanSubmit}
-            onClick={() => {
-              if (!scoutCanSubmit) return;
-              onScoutReveal(scoutTargetId);
-            }}
-          >
-            {scoutAp > 0
-              ? `Открыть разведкой (${formatOdCost(scoutAp)})`
-              : "Открыть разведкой"}
-          </button>
-        </ExpandableSection>
-      )}
-
-      <section className="hq-card hq-actions">
-        <button type="button" className="btn block" onClick={onOpenForces}>
-          Силы (флоты / легионы)
-          {(openEngagementCount ?? 0) > 0 ? ` · ${openEngagementCount} боёв` : ""}
-        </button>
-        <button type="button" className="btn block" onClick={onOpenQuests}>
-          Квесты
-          {activeQuestCount != null && activeQuestCount > 0
-            ? ` · ${activeQuestCount}`
-            : ""}
-        </button>
-        {onOpenCourt ? (
-          <button type="button" className="btn block" onClick={onOpenCourt}>
-            Двор
-            {courtNpc > 0 ? ` · ${courtNpc} лиц` : ""}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className={`btn block ${rpUnread > 0 ? "is-pulse" : ""}`}
-          onClick={onOpenRp}
-        >
-          Хроника{rpUnread > 0 ? ` · ${rpUnread} новых` : ""}
-        </button>
-        <button type="button" className="btn primary block" onClick={onOpenMap}>
-          Открыть карту
-        </button>
-      </section>
-    </div>
-  );
-}
-
-/** @deprecated Prefer ForcesDeck via goView("forces"). Thin HQ summary only. */
-export function PlayerForcesPanel({
-  payload,
-  selectedFleetId,
-  selectedLegionId,
-  onSelectFleet,
-  onSelectLegion,
-  onSelectSystem,
-  onOrderWithFleet,
-  onOrderWithLegion,
-  onOpenMap,
-  onOpenForces,
-}: {
-  payload: ViewerPayload;
-  selectedFleetId?: string | null;
-  selectedLegionId?: string | null;
-  onSelectFleet?: (fleetId: string) => void;
-  onSelectLegion?: (legionId: string) => void;
-  onSelectSystem?: (systemId: string) => void;
-  onOrderWithFleet?: (fleetId: string) => void;
-  onOrderWithLegion?: (legionId: string) => void;
-  onOpenMap?: () => void;
-  onOpenForces?: () => void;
-}) {
-  const fid = payload.factionId;
-  const fleets = (payload.world.fleets ?? []).filter((f) => f.factionId === fid);
-  const legions = (payload.world.legions ?? []).filter(
-    (l) => l.factionId === fid,
-  );
-
-  return (
-    <div className="hq-panel">
-      <header className="hq-panel-head">
-        <h2>Силы</h2>
-        <p className="hint">
-          Флоты: {fleets.length} · Легионы: {legions.length}. Loadout — в разделе
-          Силы; приказы — на карте.
-        </p>
-        {onOpenForces && (
-          <button type="button" className="btn" onClick={onOpenForces}>
-            Открыть колоды
-          </button>
-        )}
-        {onOpenMap && (
-          <button type="button" className="btn ghost" onClick={onOpenMap}>
-            На карту
-          </button>
-        )}
-      </header>
-
-      <section className="hq-card">
-        <h3>Флоты</h3>
-        {fleets.length === 0 && (
-          <p className="hint">Нет своих флотов в зоне видимости.</p>
-        )}
-        <ul className="hq-list">
-          {fleets.slice(0, 8).map((f) => (
-            <li key={f.id}>
+          {onScoutReveal && scoutSystems.length > 0 ? (
+            <div className="hq-command__scout">
+              <p className="hint">
+                Постоянно открыть систему · на тике
+                {scoutAp > 0 ? ` · ${formatOdCost(scoutAp)}` : ""}
+              </p>
+              <label className="field">
+                <span>Система</span>
+                <select
+                  value={scoutTargetId}
+                  onChange={(e) => setScoutTargetId(e.target.value)}
+                >
+                  <option value="">— выберите —</option>
+                  {scoutSystems.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
-                className={`hq-list-item ${selectedFleetId === f.id ? "on" : ""}`}
+                className="btn sm"
+                disabled={!scoutCanSubmit}
                 onClick={() => {
-                  onSelectFleet?.(f.id);
-                  onSelectSystem?.(f.systemId);
-                  onOpenForces?.();
+                  if (!scoutCanSubmit) return;
+                  onScoutReveal(scoutTargetId);
                 }}
               >
-                <strong>{f.name}</strong>
-                <span className="hint">
-                  {systemName(payload.world, f.systemId)} · {f.stance}
-                </span>
+                Открыть разведкой
               </button>
-              {onOrderWithFleet && (
-                <button
-                  type="button"
-                  className="btn ghost block"
-                  style={{ marginTop: 4 }}
-                  onClick={() => onOrderWithFleet(f.id)}
-                >
-                  Приказ на карте…
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="hq-card">
-        <h3>Легионы</h3>
-        {legions.length === 0 && (
-          <p className="hint">Нет своих легионов в зоне видимости.</p>
-        )}
-        <ul className="hq-list">
-          {legions.slice(0, 8).map((l) => (
-            <li key={l.id}>
-              <button
-                type="button"
-                className={`hq-list-item ${selectedLegionId === l.id ? "on" : ""}`}
-                onClick={() => {
-                  onSelectLegion?.(l.id);
-                  onSelectSystem?.(l.systemId);
-                  onOpenForces?.();
-                }}
-              >
-                <strong>{l.name}</strong>
-                <span className="hint">
-                  {systemName(payload.world, l.systemId)} · {l.status}
-                </span>
-              </button>
-              {onOrderWithLegion && (
-                <button
-                  type="button"
-                  className="btn ghost block"
-                  style={{ marginTop: 4 }}
-                  onClick={() => onOrderWithLegion(l.id)}
-                >
-                  Приказ на карте…
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+            </div>
+          ) : null}
+        </details>
+      )}
     </div>
   );
 }
@@ -1193,7 +795,7 @@ export function PlayerOrdersPanel({
               const legionName =
                 payload.world.legions.find((l) => l.id === o.legionId)?.name ??
                 null;
-              const label = ORDER_TYPE_LABELS[o.type] || o.type;
+              const label = orderTypeLabel(o.type);
               return (
                 <li key={o.id} className="order-timeline-item">
                   <span className="order-timeline-idx" aria-hidden>

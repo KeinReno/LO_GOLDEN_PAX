@@ -1,0 +1,212 @@
+{
+  "unit.belator_guard": {
+    "id": "unit.belator_guard",
+    "name": "Гвардия Белатора",
+    "faction": "belator",
+    "tier": 4,
+    "roles": [
+      "garrison",
+      "infantry"
+    ],
+    "stats": {
+      "damage": 16,
+      "defense": 28,
+      "hp": 140,
+      "speed": 3
+    },
+    "targeting": "assault_first",
+    "theaterMult": {
+      "ground": 1.15,
+      "assault": 0.95,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 5
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=3"
+        },
+        "count": 2
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_belator": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Гвардия Белатора · элита"
+      }
+    }
+  },
+  "unit.swarm_skitter": {
+    "id": "unit.swarm_skitter",
+    "name": "Скиттеры Роя",
+    "faction": "generic",
+    "tier": 3,
+    "roles": [
+      "assault",
+      "infantry"
+    ],
+    "stats": {
+      "damage": 20,
+      "defense": 10,
+      "hp": 80,
+      "speed": 8
+    },
+    "targeting": "infantry_first",
+    "theaterMult": {
+      "ground": 1,
+      "assault": 1.25,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=2"
+        },
+        "count": 5
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=2"
+        },
+        "count": 2
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=2"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=2"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_swarm": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Скиттеры Роя · элита"
+      }
+    }
+  },
+  "unit.psi_cadre": {
+    "id": "unit.psi_cadre",
+    "name": "Пси-кадр",
+    "faction": "generic",
+    "tier": 4,
+    "roles": [
+      "psi",
+      "assault"
+    ],
+    "stats": {
+      "damage": 24,
+      "defense": 12,
+      "hp": 90,
+      "speed": 5
+    },
+    "targeting": "garrison_first",
+    "theaterMult": {
+      "ground": 1.05,
+      "assault": 1.15,
+      "space": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      },
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon_amp"
+          ],
+          "tier": ">=3"
+        },
+        "count": 3
+      },
+      {
+        "role": "crew",
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=3"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "raceVariants": {
+      "race_psionic": {
+        "statsMult": {
+          "damage": 1.05
+        },
+        "name": "Пси-кадр · элита"
+      }
+    }
+  }
+}

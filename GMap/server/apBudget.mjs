@@ -33,15 +33,33 @@ export function countFactionForces(world, factionId) {
 }
 
 /**
- * Force OD = min(max, base + fleets*perFleet + legions*perLegion).
+ * Diminishing per-force bonus by ordinal index (1-based):
+ *   1–3 → full perUnit, 4–6 → half, 7+ → quarter.
+ * Keeps typical small empires (1–3 fleets/legions) at legacy totals;
+ * splitting one large force into many tiny ones no longer scales AP linearly.
+ */
+function diminishingForceBonus(count, perUnit) {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  const p = Number(perUnit) || 0;
+  let sum = 0;
+  for (let i = 1; i <= n; i++) {
+    if (i <= 3) sum += p;
+    else if (i <= 6) sum += p * 0.5;
+    else sum += p * 0.25;
+  }
+  return sum;
+}
+
+/**
+ * Force OD = min(max, base + diminishing(fleets, perFleet) + diminishing(legions, perLegion)).
  */
 export function resolveForceApMax(world, factionId, rules) {
   const cfg = { ...DEFAULT_FORCE_AP, ...(rules?.forceAp || {}) };
   const { fleets, legions } = countFactionForces(world, factionId);
   const raw =
     Number(cfg.base ?? 2) +
-    fleets * Number(cfg.perFleet ?? 1) +
-    legions * Number(cfg.perLegion ?? 1);
+    diminishingForceBonus(fleets, cfg.perFleet ?? 1) +
+    diminishingForceBonus(legions, cfg.perLegion ?? 1);
   const max = Math.max(0, Number(cfg.max ?? 8));
   return Math.max(0, Math.min(max, Math.floor(raw)));
 }

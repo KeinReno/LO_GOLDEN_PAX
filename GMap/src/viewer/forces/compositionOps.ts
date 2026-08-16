@@ -121,19 +121,6 @@ export function disbandAt(
   return { next, removed };
 }
 
-/** @deprecated Buy-level removed — veterancy only from battles. Prefer repairAt. */
-export function upgradeAt(
-  composition: UnitCardModel[],
-  index: number,
-): { ok: true; next: ShipGroup[] } | { ok: false; reason: string } {
-  void composition;
-  void index;
-  return {
-    ok: false,
-    reason: "Ранг только из боёв — используйте ремонт HP",
-  };
-}
-
 /** Restore stack HP to catalog max (veterancy-aware). Metal cost applied by caller. */
 export function repairAt(
   composition: UnitCardModel[],

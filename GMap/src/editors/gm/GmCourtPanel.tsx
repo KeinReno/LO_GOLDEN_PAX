@@ -10,6 +10,14 @@ import {
   stanceLabel,
 } from "../../state/courtGovernance";
 import { GmEffectAudit } from "./GmEffectAudit";
+import {
+  courtMasterFetch,
+  postCourtNpcRemove,
+  postCourtNpcSetRuler,
+  postCourtNpcUpsert,
+  postCourtSeatLock,
+} from "../../state/courtRoster";
+import { ConfirmModal } from "../../viewer/shared/ConfirmModal";
 import type {
   FactionCouncil,
   FactionNpc,
@@ -238,12 +246,16 @@ export function GmCourtPanel() {
   const [draftsErr, setDraftsErr] = useState("");
   const [draftsBusy, setDraftsBusy] = useState<string | null>(null);
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    { type: "removeBloc" | "removeNpc"; id: string } | null
+  >(null);
 
   const refreshDrafts = useCallback(async () => {
     try {
-      const res = await fetch("/api/court/proposals?status=pending", {
-        headers: { "X-Master-Token": masterToken },
-      });
+      const res = await courtMasterFetch(
+        "/api/court/proposals?status=pending",
+        masterToken,
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(
@@ -259,17 +271,11 @@ export function GmCourtPanel() {
   }, [masterToken]);
 
   useEffect(() => {
-    void refreshDrafts();
-  }, [refreshDrafts, world.meta.tableRevision]);
-
-  useEffect(() => {
     if (tab === "drafts") void refreshDrafts();
   }, [tab, refreshDrafts]);
 
   const reloadLiveBoard = useCallback(async () => {
-    const res = await fetch("/api/table", {
-      headers: { "X-Master-Token": masterToken },
-    });
+    const res = await courtMasterFetch("/api/table", masterToken);
     if (!res.ok) return;
     const data = (await res.json()) as { world?: typeof world };
     if (data.world) loadWorld(data.world);
@@ -278,10 +284,11 @@ export function GmCourtPanel() {
   const acceptDraft = async (id: string) => {
     setDraftsBusy(id);
     try {
-      const res = await fetch(`/api/court/proposals/${id}/accept`, {
-        method: "POST",
-        headers: { "X-Master-Token": masterToken },
-      });
+      const res = await courtMasterFetch(
+        `/api/court/proposals/${id}/accept`,
+        masterToken,
+        { method: "POST" },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (data.world) loadWorld(data.world);
@@ -298,10 +305,11 @@ export function GmCourtPanel() {
   const rejectDraft = async (id: string) => {
     setDraftsBusy(id);
     try {
-      const res = await fetch(`/api/court/proposals/${id}/reject`, {
-        method: "POST",
-        headers: { "X-Master-Token": masterToken },
-      });
+      const res = await courtMasterFetch(
+        `/api/court/proposals/${id}/reject`,
+        masterToken,
+        { method: "POST" },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       setSyncMsg(`Черновик отклонён: ${data.proposal?.summary ?? id}`);
@@ -351,24 +359,57 @@ export function GmCourtPanel() {
   };
 
   const addNpc = () => {
+    const raceId =
+      faction.primaryRaceId || world.races[0]?.id || "race_human";
     const npc: FactionNpc = {
       id: uid("npc"),
       name: "Новый советник",
       role: "other",
       status: "active",
+      raceId,
       posting: { kind: "court", sinceTurn: world.meta.turn },
     };
     updateFaction(faction.id, { npcs: [...npcs, npc] });
     setEditNpcId(npc.id);
     setTab("pool");
+    if (masterToken) {
+      void postCourtNpcUpsert({
+        factionId: faction.id,
+        masterToken,
+        npc: npc as unknown as Record<string, unknown>,
+      }).then((res) => {
+        if (!res.ok && !/опубликована|not found|404/i.test(res.error)) {
+          setSyncMsg(res.error);
+        }
+      });
+    }
   };
 
   const removeNpc = (npcId: string) => {
-    if (!confirm("Удалить NPC из двора?")) return;
+    setConfirmAction({ type: "removeNpc", id: npcId });
+  };
+
+  const applyRemoveNpc = (npcId: string) => {
+    const target = npcs.find((n) => n.id === npcId);
+    const isRuler =
+      faction.rulerNpcId === npcId || !!target?.isPlayerRuler;
     updateFaction(faction.id, {
       npcs: npcs.filter((n) => n.id !== npcId),
+      rulerNpcId: isRuler ? null : faction.rulerNpcId,
     });
     if (editNpcId === npcId) setEditNpcId(null);
+    if (masterToken) {
+      void postCourtNpcRemove({
+        factionId: faction.id,
+        masterToken,
+        npcId,
+        confirmSetRuler: isRuler,
+      }).then((res) => {
+        if (!res.ok && !/опубликована|not found|404/i.test(res.error)) {
+          setSyncMsg(res.error);
+        }
+      });
+    }
   };
 
   const seatNpc = (npc: FactionNpc, seatId: string | null) => {
@@ -438,6 +479,17 @@ export function GmCourtPanel() {
       },
       npcs: nextNpcs,
     });
+    if (masterToken) {
+      void postCourtSeatLock({
+        factionId: faction.id,
+        masterToken,
+        seatId,
+      }).then((res) => {
+        if (!res.ok && !/опубликована|not found|404/i.test(res.error)) {
+          setSyncMsg(res.error);
+        }
+      });
+    }
   };
 
   const assignCatalogTask = (npc: FactionNpc) => {
@@ -484,7 +536,10 @@ export function GmCourtPanel() {
   };
 
   const removeBloc = (blocId: string) => {
-    if (!confirm("Удалить внутренний дом? NPC отвяжутся.")) return;
+    setConfirmAction({ type: "removeBloc", id: blocId });
+  };
+
+  const applyRemoveBloc = (blocId: string) => {
     updateFaction(faction.id, {
       internalBlocs: blocs.filter((b) => b.id !== blocId),
       npcs: npcs.map((n) =>
@@ -707,12 +762,52 @@ export function GmCourtPanel() {
               npc={editing}
               turn={world.meta.turn}
               blocs={blocs}
+              races={world.races.map((r) => ({ id: r.id, name: r.name }))}
               systems={systems.map((s) => ({ id: s.id, name: s.name }))}
               fleets={fleets.map((f) => ({ id: f.id, name: f.name }))}
               legions={legions.map((l) => ({ id: l.id, name: l.name }))}
               onPatch={(p) => patchNpc(editing.id, p)}
+              onSetRuler={() => {
+                if (!confirm("Назначить правителем? Это снимет текущего с трона.")) return;
+                const next = npcs.map((n) =>
+                  n.id === editing.id
+                    ? { ...n, isPlayerRuler: true, councilSeat: "seat.ruler" }
+                    : { ...n, isPlayerRuler: false, councilSeat: n.councilSeat === "seat.ruler" ? null : n.councilSeat },
+                );
+                updateFaction(faction.id, { npcs: next, rulerNpcId: editing.id });
+                if (masterToken) {
+                  void postCourtNpcSetRuler({
+                    factionId: faction.id,
+                    masterToken,
+                    npcId: editing.id,
+                    confirmSetRuler: true,
+                  }).then((res) => {
+                    if (!res.ok && !/опубликована|not found|404/i.test(res.error)) {
+                      setSyncMsg(res.error);
+                    }
+                  });
+                }
+              }}
               onClose={() => setEditNpcId(null)}
               onDelete={() => removeNpc(editing.id)}
+              onSaveLive={
+                masterToken
+                  ? () => {
+                      void postCourtNpcUpsert({
+                        factionId: faction.id,
+                        masterToken,
+                        npc: editing as unknown as Record<string, unknown>,
+                      }).then((res) => {
+                        if (res.ok) setSyncMsg("NPC записан на стол");
+                        else if (
+                          !/опубликована|not found|404/i.test(res.error)
+                        ) {
+                          setSyncMsg(res.error);
+                        }
+                      });
+                    }
+                  : undefined
+              }
             />
           )}
 
@@ -939,6 +1034,34 @@ export function GmCourtPanel() {
           </ul>
         </div>
       )}
+      <ConfirmModal
+        open={confirmAction != null}
+        title={
+          confirmAction?.type === "removeBloc"
+            ? "Удалить внутренний дом?"
+            : confirmAction?.type === "removeNpc" &&
+                (faction.rulerNpcId === confirmAction.id ||
+                  !!npcs.find((n) => n.id === confirmAction.id)?.isPlayerRuler)
+              ? "Это правитель. Снять с трона и удалить?"
+              : "Удалить NPC из двора?"
+        }
+        confirmLabel="Удалить"
+        confirmClassName="btn danger"
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction) return;
+          if (confirmAction.type === "removeBloc") {
+            applyRemoveBloc(confirmAction.id);
+          } else {
+            applyRemoveNpc(confirmAction.id);
+          }
+          setConfirmAction(null);
+        }}
+      >
+        {confirmAction?.type === "removeBloc" ? (
+          <p className="hint">NPC отвяжутся от дома.</p>
+        ) : null}
+      </ConfirmModal>
     </div>
   );
 }
@@ -947,20 +1070,26 @@ function NpcEditCard({
   npc,
   turn,
   blocs,
+  races,
   systems,
   fleets,
   legions,
   onPatch,
+  onSetRuler,
+  onSaveLive,
   onClose,
   onDelete,
 }: {
   npc: FactionNpc;
   turn: number;
   blocs: InternalBloc[];
+  races: { id: string; name: string }[];
   systems: { id: string; name: string }[];
   fleets: { id: string; name: string }[];
   legions: { id: string; name: string }[];
   onPatch: (p: Partial<FactionNpc>) => void;
+  onSetRuler: () => void;
+  onSaveLive?: () => void;
   onClose: () => void;
   onDelete: () => void;
 }) {
@@ -976,9 +1105,14 @@ function NpcEditCard({
     }
     const next: NpcPosting = { kind, sinceTurn: turn };
     if (kind === "governor") next.systemId = posting.systemId ?? systems[0]?.id;
-    if (kind === "admiral") next.fleetId = posting.fleetId ?? fleets[0]?.id;
-    if (kind === "commander")
+    if (kind === "admiral") {
+      next.fleetId = posting.fleetId ?? fleets[0]?.id;
+      next.forceId = next.fleetId;
+    }
+    if (kind === "commander") {
       next.legionId = posting.legionId ?? legions[0]?.id;
+      next.forceId = next.legionId;
+    }
     onPatch({ posting: next });
   };
 
@@ -996,6 +1130,20 @@ function NpcEditCard({
           value={npc.name}
           onChange={(e) => onPatch({ name: e.target.value })}
         />
+      </label>
+      <label className="field">
+        <span>Раса</span>
+        <select
+          value={npc.raceId ?? ""}
+          onChange={(e) => onPatch({ raceId: e.target.value || null })}
+        >
+          <option value="">— выберите —</option>
+          {races.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="field">
         <span>Титул</span>
@@ -1036,6 +1184,18 @@ function NpcEditCard({
           </select>
         </label>
       </div>
+      <label className="field">
+        <span>
+          <input
+            type="checkbox"
+            checked={!!npc.isPlayerRuler}
+            onChange={(e) => {
+              if (e.target.checked) onSetRuler();
+            }}
+          />{" "}
+          Правитель (подтверждение)
+        </span>
+      </label>
       <label className="field">
         <span>Дом / орден</span>
         <select
@@ -1098,6 +1258,7 @@ function NpcEditCard({
                 posting: {
                   kind: "admiral",
                   fleetId: e.target.value,
+                  forceId: e.target.value,
                   sinceTurn: turn,
                 },
               })
@@ -1121,6 +1282,7 @@ function NpcEditCard({
                 posting: {
                   kind: "commander",
                   legionId: e.target.value,
+                  forceId: e.target.value,
                   sinceTurn: turn,
                 },
               })
@@ -1150,6 +1312,11 @@ function NpcEditCard({
           onChange={(e) => onPatch({ gmNotes: e.target.value })}
         />
       </label>
+      {onSaveLive ? (
+        <button type="button" className="btn primary block" onClick={onSaveLive}>
+          На стол
+        </button>
+      ) : null}
       <button type="button" className="btn danger block" onClick={onDelete}>
         Удалить NPC
       </button>
@@ -1211,6 +1378,11 @@ function NpcCourtRow({
         </p>
         <p className="gmsys-list-meta">
           {npc.title && <span>{npc.title}</span>}
+          {npc.raceId && (
+            <span className="gmsys-badge gmsys-badge--muted">
+              {npc.raceId.replace(/^race_/, "")}
+            </span>
+          )}
           {npc.role && (
             <span className="gmsys-badge gmsys-badge--muted">
               {npcRoleLabel(npc.role)}

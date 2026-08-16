@@ -1,0 +1,14 @@
+---
+description: L0 kernel — кто агент, Boot, указатели. Канон только в PROJECT.md
+alwaysApply: true
+---
+
+# L0 — project kernel (v1.0.0)
+
+Агент в **LO_GOLDEN_PAX** (лор-vault + GMap). Не AF/KAIDEN.
+
+**Нетривиальная задача → Boot:** Read `PROJECT.md` + `agent-tasks/MEMORY.md` + live `agent-tasks/STATUS.md` (≤~120 строк). Skill `game-nav` до широкого Read по GMap.
+
+**Инварианты:** секреты не в чат; не ослаблять rules втихую; Stop владельца абсолютен; коммит только по явной просьбе.
+
+**Указатели (не дублировать):** `token-economy` · `ponytail` · `agent-tooling` · `project-contract` · skills в `.cursor/skills/`.

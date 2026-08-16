@@ -1,0 +1,208 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Словарь эффектов ModifierStack"
+  },
+  "effects": {
+    "production_flat": {
+      "id": "production_flat",
+      "format": { "resource": "string", "amount": "number" }
+    },
+    "production_mult": {
+      "id": "production_mult",
+      "format": { "resource": "string", "mult": "number" }
+    },
+    "upkeep_flat": {
+      "id": "upkeep_flat",
+      "format": { "resource": "string", "amount": "number" }
+    },
+    "upkeep_mult": {
+      "id": "upkeep_mult",
+      "format": { "resource": "string", "mult": "number" }
+    },
+    "ap_add": {
+      "id": "ap_add",
+      "format": { "amount": "number" }
+    },
+    "ap_mult": {
+      "id": "ap_mult",
+      "format": { "mult": "number" }
+    },
+    "cost_flat": {
+      "id": "cost_flat",
+      "format": { "resource": "string", "amount": "number", "tag": "string?" }
+    },
+    "cost_mult": {
+      "id": "cost_mult",
+      "format": { "mult": "number", "tag": "string?" }
+    },
+    "move_cost_mult": {
+      "id": "move_cost_mult",
+      "format": { "mult": "number" }
+    },
+    "pop_growth_flat": {
+      "id": "pop_growth_flat",
+      "format": { "amount": "number" }
+    },
+    "pop_growth_mult": {
+      "id": "pop_growth_mult",
+      "format": { "mult": "number" }
+    },
+    "pop_cap_flat": {
+      "id": "pop_cap_flat",
+      "format": { "amount": "number" }
+    },
+    "stability_add": {
+      "id": "stability_add",
+      "format": { "amount": "number" }
+    },
+    "habitability_mult": {
+      "id": "habitability_mult",
+      "format": { "mult": "number" }
+    },
+    "stat_mult": {
+      "id": "stat_mult",
+      "format": { "stat": "string", "mult": "number" }
+    },
+    "forbid_intent": {
+      "id": "forbid_intent",
+      "format": { "intentId": "string" }
+    },
+    "allow_intent": {
+      "id": "allow_intent",
+      "format": { "intentId": "string" }
+    },
+    "tax_pressure": {
+      "id": "tax_pressure",
+      "format": { "amount": "number" }
+    },
+    "slot_require": {
+      "id": "slot_require",
+      "format": { "role": "string", "require": "object", "count": "number" },
+      "description": "Потребитель (здание/юнит/тех) требует слот ресурсов по свойствам/категории/tier"
+    },
+    "tier_bonus": {
+      "id": "tier_bonus",
+      "format": { "category": "string", "delta_tier": "number" },
+      "description": "Поднимает эффективный tier потока категории на delta_tier (закон узкого места: не выше min входов)"
+    },
+    "unlock_tech_tier": {
+      "id": "unlock_tech_tier",
+      "format": { "category": "string", "to": "number" },
+      "description": "Открывает доступ к tier категории (без этого tier-ы выше to недоступны)"
+    },
+    "unlock_property": {
+      "id": "unlock_property",
+      "format": { "property": "string" },
+      "description": "Открывает использование свойства в слотах (например, psion_store)"
+    },
+    "combat_stat_from_slot": {
+      "id": "combat_stat_from_slot",
+      "format": { "stat": "string", "from_slot": "string", "scale": "string" },
+      "description": "Боевая стат вычисляется из tier-а ресурсов, вложенных в слот"
+    },
+    "flow_convert": {
+      "id": "flow_convert",
+      "format": { "from": "object", "to": "object", "rate": "number" },
+      "description": "Трансформация потока: входные категории/tier-ы → выходной поток (ребро RPS-цикла)"
+    },
+    "capacity_add": {
+      "id": "capacity_add",
+      "format": { "category": "string", "tier": "number", "amount": "number" },
+      "description": "Поднимает capacity трубы (макс. пропускная способность потока)"
+    },
+    "upkeep_slot": {
+      "id": "upkeep_slot",
+      "format": { "require": "object", "count": "number", "per": "string" },
+      "description": "Upkeep в виде слота: требует ресурсы по свойствам каждый ход"
+    },
+    "rate_mod": {
+      "id": "rate_mod",
+      "format": { "category": "string", "tier": "number", "amount": "number" },
+      "description": "Модификатор rate потока (добываемой/производимой). Применяется космическими объектами и событиями."
+    },
+    "demand_mod": {
+      "id": "demand_mod",
+      "format": { "category": "string", "tier": "number", "amount": "number" },
+      "description": "Модификатор demand потока (потребления). Отрицательное значение = снижение спроса."
+    },
+    "loyalty_add": {
+      "id": "loyalty_add",
+      "format": { "raceId": "string?", "amount": "number" },
+      "description": "Плоский бонус лояльности (опционально по расе)"
+    },
+    "loyalty_mult": {
+      "id": "loyalty_mult",
+      "format": { "raceId": "string?", "mult": "number" },
+      "description": "Множитель лояльности (опционально по расе)"
+    },
+    "logistics_range_add": {
+      "id": "logistics_range_add",
+      "format": { "hops": "number" },
+      "description": "Доп. дальность сети снабжения в хопах от столицы"
+    },
+    "logistics_disconnected_penalty": {
+      "id": "logistics_disconnected_penalty",
+      "format": {
+        "productionMult": "number",
+        "upkeepMult": "number",
+        "combatDefMult": "number"
+      },
+      "description": "Композитный штраф за отрезанность от логистики"
+    },
+    "unit_upgrade": {
+      "id": "unit_upgrade",
+      "format": { "from": "string", "to": "string" },
+      "description": "Разрешает апгрейд юнита from → to"
+    },
+    "building_level_mult": {
+      "id": "building_level_mult",
+      "format": { "mult": "number" },
+      "description": "Множитель эффективности уровней зданий"
+    },
+    "diplomacy_opinion_add": {
+      "id": "diplomacy_opinion_add",
+      "format": { "towardFactionId": "string", "amount": "number" },
+      "description": "Плоский сдвиг opinion к державе"
+    },
+    "diplomacy_trust_decay_mult": {
+      "id": "diplomacy_trust_decay_mult",
+      "format": { "mult": "number" },
+      "description": "Множитель затухания/набора дипломатического доверия"
+    },
+    "research_cost_mult": {
+      "id": "research_cost_mult",
+      "format": { "category": "string?", "mult": "number" },
+      "description": "Множитель стоимости исследований (опционально по категории)"
+    },
+    "treaty_effect": {
+      "id": "treaty_effect",
+      "format": { "treatyId": "string", "effect": "string", "args": "object" },
+      "description": "Эффект, привязанный к договору"
+    },
+    "revolt_risk": {
+      "id": "revolt_risk",
+      "format": { "chancePerTurn": "number" },
+      "description": "Шанс восстания за ход"
+    },
+    "npc_task_speed_mult": {
+      "id": "npc_task_speed_mult",
+      "format": { "mult": "number" },
+      "description": "Множитель скорости NPC-задач двора"
+    },
+    "power_mind_strike": {
+      "id": "power_mind_strike",
+      "format": { "stat": "string?", "mult": "number", "damageMult": "number?" },
+      "requiresPowerPath": "mind",
+      "channel": "power:mind",
+      "description": "Псионический удар — боевой дебафф/урон (только Разум)"
+    },
+    "power_will_sway": {
+      "id": "power_will_sway",
+      "format": { "amount": "number", "raceId": "string?" },
+      "requiresPowerPath": "will",
+      "channel": "power:will",
+      "description": "Псионическое влияние — снижение лояльности (только Воля)"
+    }
+  }
+}

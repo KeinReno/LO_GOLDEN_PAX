@@ -1,0 +1,118 @@
+{
+  "meta": {
+    "version": 3,
+    "pilot": false,
+    "note": "8 role paths. Breakthrough = RoleScore gate + paid cognitio. No raceLock. Clusters stay empty until a real catalog pass — do not invent techs here."
+  },
+  "paths": {
+    "structural": {
+      "id": "structural",
+      "label": "Путь Структуры",
+      "roleScoreKey": "structural",
+      "breakthroughTechId": "tech.path.structural_breakthrough",
+      "iconTag": "metallurgy",
+      "description": "Корпуса, броня, верфи. Открывается RoleScore «Структурный» + Прорыв."
+    },
+    "energy": {
+      "id": "energy",
+      "label": "Путь Энергии",
+      "roleScoreKey": "energy",
+      "breakthroughTechId": "tech.path.energy_breakthrough",
+      "iconTag": "energy",
+      "description": "Топливо, реакторы, ускорители. Открывается RoleScore «Энергетический» + Прорыв."
+    },
+    "offensive": {
+      "id": "offensive",
+      "label": "Путь Удара",
+      "roleScoreKey": "offensive",
+      "breakthroughTechId": "tech.path.offensive_breakthrough",
+      "iconTag": "industry",
+      "description": "Оружие и осада. Открывается RoleScore «Ударный» + Прорыв."
+    },
+    "defensive": {
+      "id": "defensive",
+      "label": "Путь Защиты",
+      "roleScoreKey": "defensive",
+      "breakthroughTechId": "tech.path.defensive_breakthrough",
+      "iconTag": "megastructure",
+      "description": "Щиты и бастион. Открывается RoleScore «Защитный» + Прорыв."
+    },
+    "mobility": {
+      "id": "mobility",
+      "label": "Путь Мобильности",
+      "roleScoreKey": "mobility",
+      "breakthroughTechId": "tech.path.mobility_breakthrough",
+      "iconTag": "industry",
+      "description": "Двигатели и прыжок. Открывается RoleScore «Мобильность» + Прорыв."
+    },
+    "cognitive": {
+      "id": "cognitive",
+      "label": "Путь Когниции",
+      "roleScoreKey": "cognitive",
+      "breakthroughTechId": "tech.path.cognitive_breakthrough",
+      "iconTag": "psionics",
+      "description": "Наука и псионика. Открывается RoleScore «Когнитивный» + Прорыв."
+    },
+    "biological": {
+      "id": "biological",
+      "label": "Путь Биологии",
+      "roleScoreKey": "biological",
+      "breakthroughTechId": "tech.path.biological_breakthrough",
+      "iconTag": "biology",
+      "description": "Рост и эволюция. Открывается RoleScore «Биологический» + Прорыв."
+    },
+    "exotic": {
+      "id": "exotic",
+      "label": "Путь Экзотики",
+      "roleScoreKey": "exotic",
+      "breakthroughTechId": "tech.path.exotic_breakthrough",
+      "iconTag": "psionics",
+      "description": "Реликты и аномалии. Открывается RoleScore «Экзотический» + Прорыв."
+    }
+  },
+  "raceAffinity": {
+    "_comment": "mult < 1 = cheaper research for path-related techs (breakthrough + researchPath). No hard lock. No raceLock. New paths have no invented affinity.",
+    "race_karned": { "structural": 0.9 },
+    "race_belator": { "energy": 0.9 },
+    "race_synth": { "energy": 0.92 },
+    "race_swarm": { "structural": 0.95 }
+  },
+  "cluster": {
+    "structural": [
+      "tech.crystal_integration",
+      "tech.hybrid.cold_foundry",
+      "tech.metamaterials",
+      "tech.black_iron_forges",
+      "tech.path.structural_hull_doctrine"
+    ],
+    "energy": [
+      "tech.fusion",
+      "tech.hybrid.void_interface",
+      "tech.antimatter",
+      "tech.antimatter_singularity",
+      "tech.path.energy_reactor_doctrine"
+    ],
+    "offensive": [
+      "tech.offensive.vanguard_doctrine",
+      "tech.offensive.siege_engineering",
+      "tech.offensive.heavy_ordnance",
+      "tech.offensive.boarding_tactics"
+    ],
+    "defensive": [
+      "tech.defensive.bastion_doctrine",
+      "tech.defensive.planetary_shield",
+      "tech.defensive.reactive_armor",
+      "tech.defensive.deep_bunkers"
+    ],
+    "mobility": [],
+    "cognitive": [],
+    "biological": [],
+    "exotic": []
+  },
+  "clusterRule": {
+    "era1to2": "untagged sandbox",
+    "era3plusByCategory": { "B": "structural", "D": "energy" },
+    "prereq": "catalog era N must not require a live tech of era > N; remap to same-era live opener. Empty era-1 catalog seeds prereq the live era-1 opener.",
+    "offers": "catalogPending stays out of techOffers until a category/path slice is filled. Off-offer cognitio remains ×1.5. Do not invent cluster members for empty 8-role paths."
+  }
+}

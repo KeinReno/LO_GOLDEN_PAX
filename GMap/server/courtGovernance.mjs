@@ -1,7 +1,16 @@
 /**
  * Court governance — scoped NPC effects, internal blocs, council seats.
+ * Roster CRUD/posting live in courtRoster.mjs (extends this; does not replace it).
+ *
+ * Consumers: production_mult (economyTick + npcProductionMultForSystem),
+ * stat_mult (combatResolve applyCourtStatMultToGroups), pop_growth_mult
+ * (economyTick growth stack), npc_task_speed_mult (processNpcTasks via
+ * npcTaskSpeedMult). Produced, not consumed here: loyalty_add (loyalty.mjs
+ * already has a consumer), stability_add (stability.mjs), move_cost_mult
+ * (movement spec).
  */
 import { getContent } from "./contentLoader.mjs";
+import { buildModifierStack } from "./modifierStack.mjs";
 
 function cloneEffects(list) {
   if (!Array.isArray(list)) return [];
@@ -11,7 +20,7 @@ function cloneEffects(list) {
   }));
 }
 
-function npcAvailable(npc) {
+export function npcAvailable(npc) {
   return npc && npc.status !== "dead" && npc.status !== "hidden";
 }
 
@@ -297,14 +306,14 @@ function pushScoped(fac, effect, source, scope, targetId) {
 function postingTarget(npc) {
   const p = npc.posting;
   if (!p || p.kind === "court") return null;
-  if (p.kind === "governor" && p.systemId) {
-    return { scope: "system", targetId: p.systemId };
+  if (p.kind === "governor" && (p.systemId || p.targetId)) {
+    return { scope: "system", targetId: p.systemId || p.targetId };
   }
-  if (p.kind === "commander" && p.legionId) {
-    return { scope: "legion", targetId: p.legionId };
+  if (p.kind === "commander" && (p.legionId || p.forceId || p.targetId)) {
+    return { scope: "legion", targetId: p.legionId || p.forceId || p.targetId };
   }
-  if (p.kind === "admiral" && p.fleetId) {
-    return { scope: "fleet", targetId: p.fleetId };
+  if (p.kind === "admiral" && (p.fleetId || p.forceId || p.targetId)) {
+    return { scope: "fleet", targetId: p.fleetId || p.forceId || p.targetId };
   }
   return null;
 }
@@ -504,6 +513,24 @@ export function factionScopedActiveEffects(faction) {
     const scope = e?.scope || "faction";
     return scope === "faction";
   });
+}
+
+/** Direct npc_task_speed_mult (Part 5) — not via the general combat/econ consumers. */
+export function npcTaskSpeedMult(faction) {
+  const relevant = factionScopedActiveEffects(faction).filter(
+    (e) => e?.effect === "npc_task_speed_mult",
+  );
+  if (!relevant.length) return 1;
+  const ch = buildModifierStack(relevant).channels["npc_task:*"];
+  const m = Number(ch?.mult ?? 1);
+  return Number.isFinite(m) && m > 0 ? m : 1;
+}
+
+/** pop_growth_* from occupied seats / traits / postings (faction scope). */
+export function courtPopGrowthEffects(faction) {
+  return factionScopedActiveEffects(faction).filter(
+    (e) => e?.effect === "pop_growth_mult" || e?.effect === "pop_growth_flat",
+  );
 }
 
 /** Explain lines for UI: realm vs local for one NPC. */

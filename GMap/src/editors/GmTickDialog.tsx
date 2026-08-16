@@ -15,19 +15,30 @@ export function GmTickDialog({
   const world = useWorldStore((s) => s.world);
   const { masterToken, onAdvanceTurn, setSyncMsg } = useCampaignSessionCtx();
   const [pending, setPending] = useState<IntentRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [tickError, setTickError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setLoading(true);
+      return;
+    }
     setTickError(null);
+    setLoading(true);
     let cancelled = false;
     void (async () => {
       try {
         const res = await fetch("/api/intents", {
           headers: { "X-Master-Token": masterToken },
         });
-        if (!res.ok || cancelled) return;
+        if (!res.ok || cancelled) {
+          if (!cancelled) {
+            setPending([]);
+            setLoading(false);
+          }
+          return;
+        }
         const data = (await res.json()) as IntentRow[];
         if (!cancelled) {
           setPending(
@@ -35,9 +46,13 @@ export function GmTickDialog({
               (i) => i.status === "pending",
             ),
           );
+          setLoading(false);
         }
       } catch {
-        if (!cancelled) setPending([]);
+        if (!cancelled) {
+          setPending([]);
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -81,7 +96,9 @@ export function GmTickDialog({
         </p>
         <div className="gm-tick-preview">
           <p className="hq-stat-label">Применится</p>
-          {previewRows.length === 0 ? (
+          {loading ? (
+            <p className="hint">Загрузка...</p>
+          ) : previewRows.length === 0 ? (
             <p className="hint">Нет pending — тик всё равно сдвинет ход.</p>
           ) : (
             <ul>

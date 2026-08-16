@@ -5,8 +5,8 @@ export {
   canAffordCosts,
   formatChoiceCostLabel,
   stockCostsFromEffects,
+  mapStatus,
 } from "./adaptQuest";
-export { StoryTracker } from "./StoryTracker";
 export { AttentionInbox, collectAttention } from "./AttentionInbox";
 export type {
   Quest,

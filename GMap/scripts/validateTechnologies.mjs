@@ -36,6 +36,7 @@ try {
 const KNOWN_EFFECTS = new Set([
   "unlock_tech_tier",
   "unlock_property",
+  "open_path",
   "production_mult",
   "upkeep_mult",
   "production_flat",
@@ -49,6 +50,7 @@ const KNOWN_EFFECTS = new Set([
   "move_cost_mult",
   "building_level_mult",
   "logistics_disconnected_penalty",
+  "combat_role_mult",
 ]);
 
 const ICON_TAGS = new Set([
@@ -70,6 +72,23 @@ function loadJson(rel) {
 const techs = loadJson("content/core/technologies.json");
 const schema = loadJson("content/core/tech_schema.json");
 const icons = loadJson("content/core/tech_icons.json");
+let DIRECTIONS = new Set([
+  "industry",
+  "military",
+  "culture",
+  "commerce",
+  "diplomacy",
+  "governance",
+]);
+try {
+  const td = loadJson("content/core/tech_directions.json");
+  const ids = Array.isArray(td?.order)
+    ? td.order
+    : Object.keys(td?.directions || {});
+  if (ids.length) DIRECTIONS = new Set(ids.map(String));
+} catch {
+  /* keep fallback */
+}
 
 const errors = [];
 const warnings = [];
@@ -93,6 +112,11 @@ for (const def of byId.values()) {
   if (!def.name) err(`${def.id}: missing name`);
   if (!["A", "B", "C", "D", "E", "F"].includes(def.category)) {
     err(`${def.id}: bad category ${def.category}`);
+  }
+  if (def.direction != null && def.direction !== "") {
+    if (!DIRECTIONS.has(String(def.direction))) {
+      err(`${def.id}: bad direction ${def.direction}`);
+    }
   }
   if (!Number.isInteger(def.era) || def.era < 1 || def.era > 5) {
     err(`${def.id}: bad era ${def.era}`);

@@ -1,0 +1,50 @@
+{
+  "currency.metal": {
+    "id": "currency.metal",
+    "name": "Металл",
+    "short": "Ti",
+    "description": "Стройка, корабли, ремонт (legacy; ≈ B.Materia)"
+  },
+  "currency.supply": {
+    "id": "currency.supply",
+    "name": "Обеспечение",
+    "short": "Sup",
+    "description": "Upkeep армии и населения (legacy; ≈ E.Bios + D.Energia)"
+  },
+  "currency.extracta": {
+    "id": "currency.extracta",
+    "name": "Сырьё",
+    "short": "A",
+    "description": "Добыча сырья из недр (категория A)"
+  },
+  "currency.materia": {
+    "id": "currency.materia",
+    "name": "Материалы",
+    "short": "B",
+    "description": "Переработанные материалы и сплавы (категория B)"
+  },
+  "currency.industria": {
+    "id": "currency.industria",
+    "name": "Промышленность",
+    "short": "C",
+    "description": "Производственная мощность (категория C)"
+  },
+  "currency.energia": {
+    "id": "currency.energia",
+    "name": "Энергия",
+    "short": "D",
+    "description": "Энергия, топливо, орудийные компоненты (категория D)"
+  },
+  "currency.bios": {
+    "id": "currency.bios",
+    "name": "Биомасса",
+    "short": "E",
+    "description": "Еда, биомасса, население, мораль (категория E)"
+  },
+  "currency.cognitio": {
+    "id": "currency.cognitio",
+    "name": "Знание",
+    "short": "F",
+    "description": "Наука, реликты, псионика, аномалии (категория F)"
+  }
+}

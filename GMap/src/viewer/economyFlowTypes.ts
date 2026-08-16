@@ -1,3 +1,5 @@
+import { CATEGORY_CURRENCIES } from "../state/economyLabels";
+
 export type FlowBottleneck = { tier: number; deficit: number };
 
 export type FlowCell = {
@@ -16,6 +18,8 @@ export type EconomyFlowBreakdown = {
   /** Category → tier string → cell */
   flows?: Record<string, Record<string, FlowCell>>;
   categories?: string[];
+  /** Staffed job-slots by occupation (workers, scientists, military, …). */
+  occupations?: Record<string, number>;
 };
 
 export type EconomySystemSignal = {
@@ -24,22 +28,16 @@ export type EconomySystemSignal = {
   category: string;
   reason: string;
   severity: number;
+  /** Turns until category stock depleted at current net (0 = already empty). */
+  turnsUntil?: number | null;
+  /** Player-facing consequence when unresolved. */
+  consequence?: string;
 };
 
-export const ECO_CATEGORY_NAMES: Record<string, string> = {
-  A: "Сырьё",
-  B: "Материалы",
-  C: "Промышленность",
-  D: "Энергия",
-  E: "Биомасса",
-  F: "Знание",
-};
+export const ECO_CATEGORY_NAMES: Record<string, string> = Object.fromEntries(
+  CATEGORY_CURRENCIES.map((c) => [c.letter, c.name]),
+);
 
-export const ECO_CATEGORY_COLORS: Record<string, string> = {
-  A: "var(--eco-cat-a)",
-  B: "var(--eco-cat-b)",
-  C: "var(--eco-cat-c)",
-  D: "var(--eco-cat-d)",
-  E: "var(--eco-cat-e)",
-  F: "var(--eco-cat-f)",
-};
+export const ECO_CATEGORY_COLORS: Record<string, string> = Object.fromEntries(
+  CATEGORY_CURRENCIES.map((c) => [c.letter, c.cssVar]),
+);

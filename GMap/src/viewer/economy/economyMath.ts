@@ -188,8 +188,4 @@ export function hasAnyProduction(
   return false;
 }
 
-export function formatStatusIcon(status: CategoryStatus): string {
-  if (status === "deficit") return "❌";
-  if (status === "warn") return "⚠";
-  return "✅";
-}
+export { formatStatusIcon } from "../shared/StatusChip";

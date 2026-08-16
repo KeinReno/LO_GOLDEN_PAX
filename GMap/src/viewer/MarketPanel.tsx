@@ -19,9 +19,22 @@ import {
 import { economyCategoryLabel } from "../state/displayLabels";
 import { DIPLOMACY_LABELS } from "../state/defaults";
 import type { DiplomacyRelation, ViewerPayload } from "../state/types";
+import { fmtInt } from "../state/numberFormat";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import { ExpandableSection } from "../ui/ExpandableSection";
 import { StatefulButton } from "../ui/StatefulButton";
+import type { EconomyFlowBreakdown } from "./economyFlowTypes";
+import {
+  inferWarehouseCap,
+  parseRatePair,
+  previewConvert,
+} from "./economy/stockpileExpressTrade";
+import {
+  UC_ID,
+  buildStockpileStrip,
+  validateMarketTrade,
+  type TradeGate,
+} from "./marketTradeGate";
 
 type MarketSchema = NonNullable<EconomySchema["market"]>;
 export type MarketTab = "quotes" | "currencies" | "trade" | "superpowers";
@@ -33,10 +46,10 @@ export type MarketBookStats = {
 };
 
 export const MARKET_TAB_ORDER: { id: MarketTab; label: string; hotkey: string }[] = [
-  { id: "quotes", label: "Ресурсы", hotkey: "Alt+1" },
-  { id: "currencies", label: "Валюты", hotkey: "Alt+2" },
-  { id: "trade", label: "Общий рынок", hotkey: "Alt+3" },
-  { id: "superpowers", label: "Сверхдержавы", hotkey: "Alt+4" },
+  { id: "trade", label: "Стакан", hotkey: "Alt+1" },
+  { id: "quotes", label: "Котировки", hotkey: "Alt+2" },
+  { id: "currencies", label: "Валюты", hotkey: "Alt+3" },
+  { id: "superpowers", label: "Державы", hotkey: "Alt+4" },
 ];
 
 /** Preset lot sizes for one-click common-market offers. */
@@ -96,7 +109,7 @@ type SuperpowerCard = {
   listings: SuperListing[];
 };
 
-const UC = "fx.universal_credit";
+const UC = UC_ID;
 /** Player label for universal credit quotes. */
 const UC_LABEL = "УЕ";
 const CAT_FILTERS = ["ALL", "A", "B", "C", "D", "E", "F"] as const;
@@ -121,34 +134,10 @@ const CURRENCY_LABELS: Record<string, string> = {
 
 const TRADE_CURRENCIES = Object.keys(CURRENCY_LABELS);
 
-function parseRatePair(pairStr: string): { from: string; to: string } | null {
-  const parts = pairStr.split(/→|->/).map((s) => s.trim());
-  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
-  return { from: parts[0], to: parts[1] };
-}
-
-function previewConvert(
-  rates: MarketSchema["placeholder_rates"],
-  fromCurrency: string,
-  toCurrency: string,
-  amountFrom: number,
-): number | null {
-  if (!rates || amountFrom <= 0 || fromCurrency === toCurrency) return null;
-  for (const row of rates) {
-    const pair = parseRatePair(row.pair);
-    if (!pair) continue;
-    if (pair.from === fromCurrency && pair.to === toCurrency) {
-      const sell = Number(row.sell ?? row.buy);
-      if (!Number.isFinite(sell) || sell <= 0) return null;
-      return Math.floor(amountFrom * sell);
-    }
-    if (pair.from === toCurrency && pair.to === fromCurrency) {
-      const buy = Number(row.buy ?? row.sell);
-      if (!Number.isFinite(buy) || buy <= 0) return null;
-      return Math.floor(amountFrom / buy);
-    }
-  }
-  return null;
+/** Unified quote/price display (buy/sell, last, peg, chart). Not % deltas. */
+function fmtRate(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  return value.toFixed(3);
 }
 
 function labelOf(
@@ -279,6 +268,22 @@ function MiniSpark({ values }: { values: number[] }) {
   );
 }
 
+function tradeGateTitle(gate: TradeGate, fallback: string): string {
+  return gate.ok ? fallback : gate.message;
+}
+
+function TradeGateBadge({ gate }: { gate: TradeGate }) {
+  if (gate.ok) return null;
+  return (
+    <span
+      className={`ex-gate-badge ex-gate-badge--${gate.reason}`}
+      title={gate.message}
+    >
+      {gate.message}
+    </span>
+  );
+}
+
 function PriceChart({
   points,
   emptyHint,
@@ -348,13 +353,13 @@ function PriceChart({
       <div className="ex-chart-head">
         <span className="hint">Котировка, {UC_LABEL}</span>
         <strong className="ex-chart-live">
-          {active ? active.price.toFixed(4) : "—"}
+          {active ? fmtRate(active.price) : "—"}
           {hoverIdx != null && active ? (
             <small className="hint"> · ход {active.turn}</small>
           ) : null}
         </strong>
         <span className="hint ex-chart-range">
-          min {stats.min.toFixed(3)} · max {stats.max.toFixed(3)}
+          min {fmtRate(stats.min)} · max {fmtRate(stats.max)}
         </span>
       </div>
       <div className={`ex-chart ${trendUp ? "is-up" : "is-down"}`}>
@@ -363,7 +368,7 @@ function PriceChart({
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="xMidYMid meet"
           role="img"
-          aria-label={`Цена ${stats.last.toFixed(4)} ${UC_LABEL}, ходы ${normalized[0]!.turn}–${normalized[normalized.length - 1]!.turn}`}
+          aria-label={`Цена ${fmtRate(stats.last)} ${UC_LABEL}, ходы ${normalized[0]!.turn}–${normalized[normalized.length - 1]!.turn}`}
         >
           <defs>
             <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
@@ -391,7 +396,7 @@ function PriceChart({
                   textAnchor="end"
                   className="ex-chart-axis-label"
                 >
-                  {val.toFixed(val >= 10 ? 1 : 3)}
+                  {fmtRate(val)}
                 </text>
               </g>
             );
@@ -472,7 +477,7 @@ function Ticker({
           {UC_LABEL}
         </span>
         <strong className="ex-ticker-price">
-          {prices.length ? s.last.toFixed(4) : "—"}
+          {prices.length ? fmtRate(s.last) : "—"}
         </strong>
       </div>
       <div className="ex-ticker-cell">
@@ -523,6 +528,7 @@ export function MarketPanel({
   onOpenDiplomacy,
   onBookStats,
   prefillSellCurrency,
+  flowData,
 }: {
   compact?: boolean;
   interactive?: boolean;
@@ -560,8 +566,10 @@ export function MarketPanel({
   onBookStats?: (stats: MarketBookStats) => void;
   /** Prefill quick-sell currency when opening from Economy stockpile. */
   prefillSellCurrency?: string | null;
+  /** Production flow matrix — warehouse cap = pipe capacity × turns. */
+  flowData?: EconomyFlowBreakdown | null;
 }) {
-  const [internalTab, setInternalTab] = useState<Tab>("quotes");
+  const [internalTab, setInternalTab] = useState<Tab>("trade");
   const tab = controlledTab ?? internalTab;
   const setTab = useCallback(
     (next: Tab) => {
@@ -575,6 +583,11 @@ export function MarketPanel({
   const [liveRates, setLiveRates] = useState<
     MarketSchema["placeholder_rates"] | null
   >(null);
+  const [fxMeta, setFxMeta] = useState<{
+    variant?: string | null;
+    credits?: Record<string, number>;
+    turn?: number | null;
+  } | null>(null);
   const [resources, setResources] = useState<MapResourceDef[]>([]);
   const [fx, setFx] = useState<FactionCurrency[]>([]);
   const [seedSeries, setSeedSeries] = useState<Record<string, number[]>>({});
@@ -709,6 +722,7 @@ export function MarketPanel({
         .then((d) => {
           if (cancelled || !d?.rates) return;
           setLiveRates(d.rates);
+          if (d.fx) setFxMeta(d.fx);
         })
         .catch(() => {});
       const mapList = Object.values(c.map_resources ?? {}).filter(
@@ -870,6 +884,16 @@ export function MarketPanel({
   }, [partners, tradePartnerIds, worldFactions]);
 
   const rates = liveRates ?? market?.placeholder_rates ?? [];
+  const fxCrossRates = useMemo(
+    () =>
+      (rates ?? []).filter(
+        (r) =>
+          typeof r?.pair === "string" &&
+          r.pair.includes("fx.") &&
+          r.pair.includes("→"),
+      ),
+    [rates],
+  );
   const convertAp = intentApCost("intent.market_convert");
   const offerAp = intentApCost("intent.market_offer");
 
@@ -961,25 +985,73 @@ export function MarketPanel({
           parsedConvertAmount,
         )
       : null;
+  const flowWarehouseCap = useMemo(() => {
+    if (!flowData) return null;
+    let total = 0;
+    let any = false;
+    for (const c of CATEGORY_CURRENCIES) {
+      const cap = inferWarehouseCap(flowData, c.letter);
+      if (cap != null) {
+        total += cap;
+        any = true;
+      }
+    }
+    return any ? total : null;
+  }, [flowData]);
+
+  const stockpile = useMemo(
+    () => buildStockpileStrip(economy?.stocks, flowWarehouseCap ?? undefined),
+    [economy?.stocks, flowWarehouseCap],
+  );
+
+  const receiveStockCap = useCallback(
+    (currencyId?: string | null) => {
+      const letter = CATEGORY_CURRENCIES.find((c) => c.id === currencyId)?.letter;
+      return inferWarehouseCap(flowData, letter);
+    },
+    [flowData],
+  );
+
+  const gateTrade = useCallback(
+    (opts: {
+      apCost: number;
+      payCurrency?: string | null;
+      payAmount?: number;
+      receiveCurrency?: string | null;
+      receiveAmount?: number;
+    }): TradeGate =>
+      validateMarketTrade({
+        reservedAp,
+        apMax,
+        stocks: economy?.stocks,
+        warehouseCap: stockpile.cap,
+        receiveStockCap: receiveStockCap(opts.receiveCurrency),
+        ...opts,
+      }),
+    [reservedAp, apMax, economy?.stocks, stockpile.cap, receiveStockCap],
+  );
+
+  const convertGate = gateTrade({
+    apCost: convertAp,
+    payCurrency: selectedPair?.from,
+    payAmount: parsedConvertAmount,
+    receiveCurrency: selectedPair?.to,
+    receiveAmount: previewTo ?? 0,
+  });
   const canConvert =
     interactive &&
     !!onConvert &&
     !!selectedPair &&
     !convertBusy &&
     parsedConvertAmount > 0 &&
-    parsedConvertAmount <= convertStock &&
     previewTo != null &&
     previewTo > 0 &&
-    reservedAp + convertAp <= apMax;
+    convertGate.ok;
 
   const quickStock = economy?.stocks?.[quickCurrency] ?? 0;
   const quoteCurrency = quotePairOf(quickCurrency);
   const canQuickTrade =
-    interactive &&
-    !!onPlaceOffer &&
-    commonJoined &&
-    !!quickCurrency &&
-    reservedAp + offerAp <= apMax;
+    interactive && !!onPlaceOffer && commonJoined && !!quickCurrency;
 
   const myOffers = useMemo(
     () =>
@@ -1026,11 +1098,15 @@ export function MarketPanel({
     async (side: "sell" | "buy", currencyId: string, lotSize: number) => {
       if (!onPlaceOffer || !canQuickTrade) return;
       const draft = buildQuickOffer(side, currencyId, lotSize);
-      const stock = economy?.stocks?.[draft.giveCurrency] ?? 0;
-      if (draft.giveAmount > stock) {
-        setQuickHint(
-          `Недостаточно: нужно ${draft.giveAmount}, есть ${stock}`,
-        );
+      const gate = gateTrade({
+        apCost: offerAp,
+        payCurrency: draft.giveCurrency,
+        payAmount: draft.giveAmount,
+        receiveCurrency: draft.wantCurrency,
+        receiveAmount: draft.wantAmount,
+      });
+      if (!gate.ok) {
+        setQuickHint(gate.message);
         return;
       }
       setOfferSubmitting(true);
@@ -1053,6 +1129,7 @@ export function MarketPanel({
         }
         setOfferSuccess(true);
         setQuickHint("Заявка в очереди — в книге после хода");
+        await refreshBook();
       } finally {
         setOfferSubmitting(false);
       }
@@ -1061,7 +1138,9 @@ export function MarketPanel({
       onPlaceOffer,
       canQuickTrade,
       buildQuickOffer,
-      economy?.stocks,
+      gateTrade,
+      offerAp,
+      refreshBook,
     ],
   );
 
@@ -1075,20 +1154,20 @@ export function MarketPanel({
         );
         return;
       }
-      if (reservedAp + offerAp > apMax) {
-        setQuickHint(`Нужно ${offerAp} ОД`);
-        return;
-      }
       const side: "sell" | "buy" = o.side === "sell" ? "buy" : "sell";
       const giveCurrency = o.wantCurrency;
       const giveAmount = o.wantAmount;
       const wantCurrency = o.giveCurrency;
       const wantAmount = o.giveAmount;
-      const stock = economy?.stocks?.[giveCurrency] ?? 0;
-      if (giveAmount > stock) {
-        setQuickHint(
-          `Недостаточно для ответа: нужно ${giveAmount}, есть ${stock}`,
-        );
+      const gate = gateTrade({
+        apCost: offerAp,
+        payCurrency: giveCurrency,
+        payAmount: giveAmount,
+        receiveCurrency: wantCurrency,
+        receiveAmount: wantAmount,
+      });
+      if (!gate.ok) {
+        setQuickHint(gate.message);
         return;
       }
       const counterparty =
@@ -1114,6 +1193,7 @@ export function MarketPanel({
         }
         setOfferSuccess(true);
         setQuickHint(`Ответ на лот ${counterparty} — в очереди хода`);
+        await refreshBook();
       } finally {
         setTakingLotId(null);
       }
@@ -1122,12 +1202,11 @@ export function MarketPanel({
       onPlaceOffer,
       interactive,
       commonJoined,
-      reservedAp,
+      gateTrade,
       offerAp,
-      apMax,
-      economy?.stocks,
       commonMembers,
       worldFactions,
+      refreshBook,
     ],
   );
 
@@ -1223,11 +1302,14 @@ export function MarketPanel({
 
   if (!ready) {
     return (
-      <div className="hq-panel exchange-desk">
+      <div className="market-command">
         <p className="hint">Загрузка биржи…</p>
       </div>
     );
   }
+
+  const myOfferCount = myOffers.length;
+  const peerLotCount = peerLots.length;
 
   const resPrices = selectedResource ? pricesOf(selectedResource.id) : [];
   const resPoints = selectedResource ? pointsOf(selectedResource.id) : [];
@@ -1237,6 +1319,14 @@ export function MarketPanel({
   const lotCard = (o: MarketBookOffer) => {
     const takeLabel = o.side === "sell" ? "Купить" : "Продать";
     const busy = takingLotId === o.id;
+    const gate = gateTrade({
+      apCost: offerAp,
+      payCurrency: o.wantCurrency,
+      payAmount: o.wantAmount,
+      receiveCurrency: o.giveCurrency,
+      receiveAmount: o.giveAmount,
+    });
+    const blocked = !interactive || !onPlaceOffer || !commonJoined || !!takingLotId || !gate.ok;
     return (
       <li key={o.id}>
         <div
@@ -1260,17 +1350,22 @@ export function MarketPanel({
           </div>
           <div className="ex-lot-meta">
             <span className="hint">{partnerName(o.factionId)}</span>
-            <StatefulButton
-              className="btn sm primary"
-              disabled={
-                !interactive || !onPlaceOffer || !commonJoined || !!takingLotId
-              }
-              busy={busy}
-              success={false}
-              onClick={() => void takeLot(o)}
-            >
-              {takeLabel}
-            </StatefulButton>
+            <div className="ex-lot-actions">
+              <TradeGateBadge gate={gate} />
+              <StatefulButton
+                className="btn sm primary ex-lot-action"
+                disabled={blocked}
+                busy={busy}
+                success={false}
+                title={tradeGateTitle(
+                  gate,
+                  !commonJoined ? "Сначала вступите в общий рынок" : takeLabel,
+                )}
+                onClick={() => void takeLot(o)}
+              >
+                {takeLabel}
+              </StatefulButton>
+            </div>
           </div>
         </div>
       </li>
@@ -1278,16 +1373,97 @@ export function MarketPanel({
   };
 
   const body = (
-    <div className="exchange-desk">
-      <header className={asRoom === false ? "ex-head ex-head--embed" : "ex-head"}>
-        {asRoom !== false && (
-          <div>
-            <h2>Биржа</h2>
-            <p className="hint">
-              Котировки ({UC_LABEL}) · валюты · общий рынок · сверхдержавы
-            </p>
+    <div className="exchange-desk market-command">
+      <div className="market-command__banner">
+        <span className="market-command__mark">БИР</span>
+        <span className="market-command__line">
+          стакан · курсы в {UC_LABEL} · быстрые лоты · Alt+1–4
+        </span>
+        <span className="market-command__meta hint">
+          партнёров: {(tradePartnerIds ?? []).length}
+          {" · "}
+          ОД {reservedAp}/{apMax}
+        </span>
+      </div>
+
+      {economy ? (
+        <section className="ex-stock-strip" aria-label="Казна и склад">
+          <div className="ex-stock-cell ex-stock-cell--uc">
+            <span className="hint">УЕ</span>
+            <strong className="tabular-nums">{fmtInt(stockpile.uc)}</strong>
           </div>
-        )}
+          {stockpile.items.map((item) => (
+            <div key={item.id} className="ex-stock-cell" title={item.label}>
+              <span className="ex-stock-cell__icon">
+                <ResourceIcon resourceId={item.id} size={14} />
+              </span>
+              <span className="hint">{item.short}</span>
+              <strong className="tabular-nums">{fmtInt(item.amount)}</strong>
+            </div>
+          ))}
+          <div
+            className={`ex-stock-cell ex-stock-cell--cap${stockpile.full ? " is-full" : ""}`}
+            title={`Склад ${fmtInt(stockpile.used)} / ${fmtInt(stockpile.cap)}`}
+          >
+            <span className="hint">Склад</span>
+            <strong className="tabular-nums">
+              {fmtInt(stockpile.used)}/{fmtInt(stockpile.cap)}
+            </strong>
+            <span
+              className="ex-stock-meter"
+              aria-hidden
+              style={
+                {
+                  ["--ex-stock-fill" as string]: `${Math.min(100, Math.round((stockpile.used / Math.max(1, stockpile.cap)) * 100))}%`,
+                } as CSSProperties
+              }
+            />
+          </div>
+        </section>
+      ) : null}
+
+      <section className="market-command__attention" aria-label="Биржа · внимание">
+        {!commonJoined ? (
+          <button
+            type="button"
+            className="market-attention-item market-attention-item--hot"
+            onClick={() => {
+              setTab("trade");
+              void toggleCommon(true);
+            }}
+          >
+            <strong>Вступить в общий рынок</strong>
+            <span>без вступления стакан закрыт для сделок</span>
+          </button>
+        ) : null}
+        {peerLotCount > 0 ? (
+          <button
+            type="button"
+            className="market-attention-item"
+            onClick={() => setTab("trade")}
+          >
+            <strong>Лоты рынка</strong>
+            <span>{peerLotCount} чужих · открыть стакан</span>
+          </button>
+        ) : null}
+        {myOfferCount > 0 ? (
+          <button
+            type="button"
+            className="market-attention-item market-attention-item--warn"
+            onClick={() => setTab("trade")}
+          >
+            <strong>Мои заявки</strong>
+            <span>{myOfferCount} активных</span>
+          </button>
+        ) : null}
+        {commonJoined && peerLotCount === 0 && myOfferCount === 0 ? (
+          <p className="hint market-command__calm">
+            Вы на общем рынке · стакан пуст — выставьте лот или смотрите котировки.
+          </p>
+        ) : null}
+      </section>
+
+      <header className="ex-head ex-head--embed">
         <div
           className="ex-mode-tabs"
           ref={tabsRef}
@@ -1314,6 +1490,9 @@ export function MarketPanel({
               onClick={() => setTab(t.id)}
             >
               {t.label}
+              {t.id === "trade" && peerLotCount + myOfferCount > 0 ? (
+                <span className="ex-tab-badge">{peerLotCount + myOfferCount}</span>
+              ) : null}
               <kbd className="ex-tab-kbd">{t.hotkey}</kbd>
             </button>
           ))}
@@ -1330,7 +1509,8 @@ export function MarketPanel({
         id={`market-panel-${tab}`}
         role="tabpanel"
         aria-labelledby={`market-tab-${tab}`}
-      >      {narrative && (tab === "quotes" || tab === "currencies") && (
+      >
+      {narrative && (tab === "quotes" || tab === "currencies") && (
         <p className="ex-narrative hint">{narrative}</p>
       )}
 
@@ -1387,7 +1567,7 @@ export function MarketPanel({
                           <span className="hint">
                             {r.category ?? "—"}
                             {r.tier != null ? ` · T${r.tier}` : ""}
-                            {last != null ? ` · ${last.toFixed(4)}` : ""}
+                            {last != null ? ` · ${fmtRate(last)}` : ""}
                             {prices.length >= 2 ? (
                               <span
                                 className={`ex-delta-inline ${delta >= 0 ? "is-up" : "is-down"}`}
@@ -1473,6 +1653,48 @@ export function MarketPanel({
 
       {tab === "currencies" && (
         <div className="ex-bento ex-bento--fx">
+          {fxCrossRates.length > 0 ? (
+            <div className="ex-fx-ec" aria-label="Курсы Биржи EC">
+              <header className="ex-fx-ec__head">
+                <h3>Курсы Биржи (EC)</h3>
+                <span className="hint">
+                  {fxMeta?.variant === "ema_inertia"
+                    ? "EMA · инерция"
+                    : fxMeta?.variant || "live"}
+                  {fxMeta?.turn != null ? ` · ход ${fxMeta.turn}` : ""}
+                </span>
+              </header>
+              <ul className="ex-fx-ec__list">
+                {fxCrossRates.slice(0, 12).map((row) => (
+                  <li key={row.pair}>
+                    <span className="ex-fx-ec__pair">{row.pair}</span>
+                    <span className="tabular-nums">
+                      {fmtRate(Number(row.buy))} / {fmtRate(Number(row.sell))}
+                    </span>
+                    {row.note ? (
+                      <span className="hint ex-fx-ec__note">{row.note}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {Object.keys(fxMeta?.credits ?? {}).length > 0 ? (
+                <p className="hint ex-fx-ec__credits">
+                  EC peg:{" "}
+                  {Object.entries(fxMeta!.credits!)
+                    .slice(0, 6)
+                    .map(
+                      ([peg, v]) =>
+                        `${peg.replace(/^map\./, "")} ${fmtRate(Number(v))}`,
+                    )
+                    .join(" · ")}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="hint ex-fx-ec-empty">
+              Курсы fx.* появятся после первого economy tick (Exchange Credit).
+            </p>
+          )}
           <aside className="ex-rail">
             <h3>Валюты · {fx.length}</h3>
             {fx.length === 0 ? (
@@ -1502,7 +1724,7 @@ export function MarketPanel({
                         <span className="ex-rail-meta">
                           <strong>{c.name}</strong>
                           <span className="hint">
-                            {last != null ? `${Number(last).toFixed(2)} ${UC_LABEL}` : "—"}
+                            {last != null ? `${fmtRate(Number(last))} ${UC_LABEL}` : "—"}
                             {c.pegLabel ? ` · ${c.pegLabel}` : ""}
                             {prices.length >= 2 ? (
                               <span
@@ -1616,7 +1838,7 @@ export function MarketPanel({
                             <span
                               className={`ex-fx-price ${d >= 0 ? "is-up" : "is-down"}`}
                             >
-                              {last != null ? Number(last).toFixed(2) : "—"}
+                              {last != null ? fmtRate(Number(last)) : "—"}
                               <small>
                                 {prices.length >= 2
                                   ? ` ${d >= 0 ? "▲" : "▼"}${((d / (prev || 1)) * 100).toFixed(1)}%`
@@ -1642,12 +1864,15 @@ export function MarketPanel({
       {tab === "trade" && (
         <div className="ex-trade">
           <div className="ex-common-bar">
-            <p className="hint">
-              Общий рынок · участников: {commonMembers.length}
-              {commonJoined ? " · вы внутри" : " · вы вне"}
-              {" · "}
-              адресные сделки — в Дипломатии
-            </p>
+            <div>
+              <strong className="ex-common-bar__title">Стакан общего рынка</strong>
+              <p className="hint">
+                участников: {commonMembers.length}
+                {commonJoined ? " · вы внутри" : " · вы вне"}
+                {" · "}
+                адресные сделки — в Дипломатии
+              </p>
+            </div>
             <div className="ex-common-bar-actions">
               <button
                 type="button"
@@ -1800,28 +2025,31 @@ export function MarketPanel({
                         quickCurrency,
                         size,
                       );
-                      const stock =
-                        economy.stocks?.[draft.giveCurrency] ?? 0;
-                      const afford = draft.giveAmount <= stock;
+                      const gate = gateTrade({
+                        apCost: offerAp,
+                        payCurrency: draft.giveCurrency,
+                        payAmount: draft.giveAmount,
+                        receiveCurrency: draft.wantCurrency,
+                        receiveAmount: draft.wantAmount,
+                      });
                       const disabled =
                         !canQuickTrade ||
-                        !afford ||
+                        !gate.ok ||
                         offerSubmitting ||
                         !!takingLotId;
                       return (
                         <StatefulButton
                           key={size}
-                          className="btn sm primary"
+                          className="btn sm primary ex-lot-action"
                           disabled={disabled}
                           busy={offerSubmitting}
                           success={offerSuccess && !takingLotId}
                           successLabel="В очереди"
                           onSuccessEnd={() => setOfferSuccess(false)}
-                          title={
-                            afford
-                              ? `${offerSide === "sell" ? "Продать" : "Купить"} ${size}`
-                              : `Нужно ${draft.giveAmount}, есть ${stock}`
-                          }
+                          title={tradeGateTitle(
+                            gate,
+                            `${offerSide === "sell" ? "Продать" : "Купить"} ${size}`,
+                          )}
                           onClick={() =>
                             void placeQuickOffer(
                               offerSide,
@@ -1835,28 +2063,63 @@ export function MarketPanel({
                       );
                     })}
                     {offerSide === "sell" && quickStock > 0 ? (
-                      <StatefulButton
-                        className="btn sm ghost"
-                        disabled={
-                          !canQuickTrade ||
-                          offerSubmitting ||
-                          !!takingLotId
-                        }
-                        busy={offerSubmitting}
-                        success={false}
-                        title={`Продать всё (${quickStock})`}
-                        onClick={() =>
-                          void placeQuickOffer(
-                            "sell",
-                            quickCurrency,
-                            quickStock,
-                          )
-                        }
-                      >
-                        max
-                      </StatefulButton>
+                      (() => {
+                        const maxDraft = buildQuickOffer(
+                          "sell",
+                          quickCurrency,
+                          quickStock,
+                        );
+                        const maxGate = gateTrade({
+                          apCost: offerAp,
+                          payCurrency: maxDraft.giveCurrency,
+                          payAmount: maxDraft.giveAmount,
+                          receiveCurrency: maxDraft.wantCurrency,
+                          receiveAmount: maxDraft.wantAmount,
+                        });
+                        return (
+                          <StatefulButton
+                            className="btn sm ghost ex-lot-action"
+                            disabled={
+                              !canQuickTrade ||
+                              !maxGate.ok ||
+                              offerSubmitting ||
+                              !!takingLotId
+                            }
+                            busy={offerSubmitting}
+                            success={false}
+                            title={tradeGateTitle(
+                              maxGate,
+                              `Продать всё (${quickStock})`,
+                            )}
+                            onClick={() =>
+                              void placeQuickOffer(
+                                "sell",
+                                quickCurrency,
+                                quickStock,
+                              )
+                            }
+                          >
+                            max
+                          </StatefulButton>
+                        );
+                      })()
                     ) : null}
                   </div>
+                  {(() => {
+                    const sample = buildQuickOffer(
+                      offerSide,
+                      quickCurrency,
+                      QUICK_LOT_SIZES[0],
+                    );
+                    const sampleGate = gateTrade({
+                      apCost: offerAp,
+                      payCurrency: sample.giveCurrency,
+                      payAmount: sample.giveAmount,
+                      receiveCurrency: sample.wantCurrency,
+                      receiveAmount: sample.wantAmount,
+                    });
+                    return <TradeGateBadge gate={sampleGate} />;
+                  })()}
                 </>
               )}
             </section>
@@ -1882,9 +2145,9 @@ export function MarketPanel({
                     <button
                       type="button"
                       className="btn ghost sm"
-                      onClick={() => {
-                        onCancelOffer(o.id);
-                        void refreshBook();
+                      onClick={async () => {
+                        await onCancelOffer(o.id);
+                        await refreshBook();
                       }}
                     >
                       Отменить
@@ -1948,10 +2211,14 @@ export function MarketPanel({
                   {convertMsg}
                 </p>
               )}
+              {!convertGate.ok && parsedConvertAmount > 0 ? (
+                <TradeGateBadge gate={convertGate} />
+              ) : null}
               <button
                 type="button"
-                className="btn block"
+                className="btn block ex-lot-action"
                 disabled={!canConvert}
+                title={tradeGateTitle(convertGate, `Обменять (${convertAp} ОД)`)}
                 onClick={() => {
                   if (!canConvert || !selectedPair || !onConvert) return;
                   setConvertBusy(true);
@@ -2023,6 +2290,18 @@ export function MarketPanel({
                   <ul className="market-super-listings">
                     {sp.listings.map((L) => {
                       const needsSystem = L.kind === "service_scout";
+                      const superGate = gateTrade({
+                        apCost: 0,
+                        payCurrency: L.want?.currencyId,
+                        payAmount: L.want?.amount,
+                        receiveCurrency: L.give?.currencyId,
+                        receiveAmount: L.give?.amount,
+                      });
+                      const superBlocked =
+                        !interactive ||
+                        !L.unlocked ||
+                        (needsSystem && !scoutSystemId) ||
+                        !superGate.ok;
                       return (
                         <li
                           key={L.id}
@@ -2087,22 +2366,23 @@ export function MarketPanel({
                             </label>
                           )}
                           <StatefulButton
-                            className="btn sm primary"
-                            disabled={
-                              !interactive ||
-                              !L.unlocked ||
-                              (needsSystem && !scoutSystemId)
-                            }
+                            className="btn sm primary ex-lot-action"
+                            disabled={superBlocked}
                             busy={superBusy === L.id}
                             success={superSuccess === L.id}
                             successLabel="Куплено"
                             onSuccessEnd={() => setSuperSuccess(null)}
+                            title={tradeGateTitle(
+                              superGate,
+                              L.unlocked ? "Купить" : (L.lockedReason ?? "Закрыто"),
+                            )}
                             onClick={() =>
                               void buySuperListing(L.id, needsSystem)
                             }
                           >
                             {L.unlocked ? "Купить" : "Закрыто"}
                           </StatefulButton>
+                          {L.unlocked ? <TradeGateBadge gate={superGate} /> : null}
                         </li>
                       );
                     })}
@@ -2118,9 +2398,9 @@ export function MarketPanel({
   );
 
   if (asRoom === false) {
-    return <section className="hq-card market-panel">{body}</section>;
+    return <section className="market-panel market-panel--embedded">{body}</section>;
   }
   return (
-    <div className="hq-panel market-panel market-panel--room">{body}</div>
+    <div className="market-panel market-panel--room">{body}</div>
   );
 }

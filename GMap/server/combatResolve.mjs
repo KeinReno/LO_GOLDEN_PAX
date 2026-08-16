@@ -3,8 +3,13 @@
  * Veterancy, stationary defense units, assault phases.
  */
 import { getContent } from "./contentLoader.mjs";
+import { collectPowerMindStrikeMult } from "./powerPaths.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
 import { logisticsCombatDefMult } from "./logistics.mjs";
+import { buildModifierStack, applyFlatThenMult } from "./modifierStack.mjs";
+import { applyCourtStatMultToGroups } from "./courtStatMult.mjs";
+import { readLedger, ensureFactionEco } from "./ledger.mjs";
+import { spaceObjectCombatModifier } from "./spaceObjects.mjs";
 import { randomInt } from "node:crypto";
 
 const STANCE_DEFAULT = {
@@ -79,29 +84,46 @@ function resolveRoleSlot(group, role, content) {
 }
 
 /**
- * Property-layer damage multiplier (v1). No-op when attacker has no slot fills.
+ * Property-layer strike tags + multiplier (v1).
+ * No-op when attacker has no slot fills.
+ * Tags: amp | hull_break | shield_pierce | shield_absorb | hull_pierce | hull_resist
  */
-export function propertyCombatMult(attackerGroup, defenderGroup, content) {
-  const cfg = content.combat_property_matchups;
-  if (!cfg || !groupHasSlotFills(attackerGroup)) return 1;
+export function propertyCombatBreakdown(attackerGroup, defenderGroup, content) {
+  const tags = [];
+  const cfg = content?.combat_property_matchups;
+  if (!cfg || !groupHasSlotFills(attackerGroup)) {
+    return { mult: 1, tags };
+  }
 
   let mult = 1;
   const weapon = resolveRoleSlot(attackerGroup, "weapon", content);
-  const shield = resolveRoleSlot(defenderGroup, "shield", content);
-  const hull = resolveRoleSlot(defenderGroup, "hull", content);
+  const shield = defenderGroup
+    ? resolveRoleSlot(defenderGroup, "shield", content)
+    : null;
+  const hull = defenderGroup
+    ? resolveRoleSlot(defenderGroup, "hull", content)
+    : null;
 
   if (weapon) {
     const wp = weapon.properties;
-    if (wp.includes("weapon_amp")) mult *= 1.2;
-    if (wp.includes("matter_destroy")) mult *= 1.5;
+    if (wp.includes("weapon_amp")) {
+      mult *= 1.2;
+      tags.push("amp");
+    }
+    if (wp.includes("matter_destroy")) {
+      mult *= 1.5;
+      tags.push("hull_break");
+    }
   }
 
   if (weapon && shield) {
     const wProps = weapon.properties;
     if (wProps.includes("psion_suppress") || wProps.includes("matter_destroy")) {
       mult *= 1.4;
+      tags.push("shield_pierce");
     } else if (shield.properties.includes("shield")) {
       mult *= 0.6;
+      tags.push("shield_absorb");
     }
   }
 
@@ -109,11 +131,22 @@ export function propertyCombatMult(attackerGroup, defenderGroup, content) {
     const wt = weapon.effectiveTier;
     const ht = hull.effectiveTier;
     if (wt != null && ht != null) {
-      mult *= wt > ht ? 1.5 : 0.7;
+      if (wt > ht) {
+        mult *= 1.5;
+        tags.push("hull_pierce");
+      } else {
+        mult *= 0.7;
+        tags.push("hull_resist");
+      }
     }
   }
 
-  return mult;
+  return { mult, tags };
+}
+
+/** Property-layer damage multiplier (v1). No-op when attacker has no slot fills. */
+export function propertyCombatMult(attackerGroup, defenderGroup, content) {
+  return propertyCombatBreakdown(attackerGroup, defenderGroup, content).mult;
 }
 
 function meanPropertyMultVsSample(attackers, defenderSample, content) {
@@ -414,6 +447,8 @@ export function gatherGroups(world, side, theater, content, engagement = null) {
     if (!fleet) continue;
     const raceId = resolveRaceId(fleet, fleet.systemId);
     for (const g of fleet.composition || []) {
+      const rawCount = Number(g.count);
+      if (Number.isFinite(rawCount) && rawCount <= 0) continue;
       const def = shipDef(content, g.defId || g.type);
       if (!def) continue;
       const tm = def.theaterMult?.[theater] ?? (theater === "space" ? 1 : 0);
@@ -424,7 +459,7 @@ export function gatherGroups(world, side, theater, content, engagement = null) {
         parentKind: "fleet",
         defId: def.id,
         roles: def.roles || ["line"],
-        count: g.count || 1,
+        count: Number.isFinite(rawCount) && rawCount > 0 ? rawCount : 1,
         hp: g.hp ?? def.stats?.hp ?? 40,
         maxHp: def.stats?.hp ?? 40,
         damage: (def.stats?.damage ?? 10) * tm,
@@ -459,6 +494,8 @@ export function gatherGroups(world, side, theater, content, engagement = null) {
             },
           ];
     for (const g of comps) {
+      const rawCount = Number(g.count);
+      if (Number.isFinite(rawCount) && rawCount <= 0) continue;
       const def = unitDef(content, g.defId || g.type);
       if (!def) continue;
       const tm = def.theaterMult?.[theater] ?? (theater === "space" ? 0 : 1);
@@ -469,7 +506,7 @@ export function gatherGroups(world, side, theater, content, engagement = null) {
         parentKind: "legion",
         defId: def.id,
         roles: def.roles || ["infantry"],
-        count: g.count || 1,
+        count: Number.isFinite(rawCount) && rawCount > 0 ? rawCount : 1,
         hp: g.hp ?? def.stats?.hp ?? 100,
         maxHp: def.stats?.hp ?? 100,
         damage: (def.stats?.damage ?? 12) * tm,
@@ -512,10 +549,19 @@ export function gatherGroups(world, side, theater, content, engagement = null) {
   return groups;
 }
 
+export { applyCourtStatMultToGroups };
+
+function groupsForFight(world, side, theater, content, engagement) {
+  const groups = gatherGroups(world, side, theater, content, engagement);
+  const fac = (world.factions ?? []).find((f) => f.id === side.factionId);
+  return applyCourtStatMultToGroups(groups, fac);
+}
+
 function rolePower(groups) {
   const out = {};
   for (const g of groups) {
-    const role = g.roles[0] || "line";
+    if ((g.count || 0) <= 0) continue;
+    const role = (g.roles && g.roles[0]) || "line";
     const unitPower =
       (g.damage || 0) *
       (0.5 + (g.accuracy || 0) / 200) *
@@ -527,7 +573,23 @@ function rolePower(groups) {
   return out;
 }
 
-function totalPower(roleMap, matchups, enemyRoles) {
+/**
+ * Anti-role bonus: when the opponent has any power in `role`, multiply
+ * this side's power by channel `combat_role:${role}`.
+ */
+export function applyCombatRoleBonus(power, combatRoleChannels, enemyRoles) {
+  if (!combatRoleChannels) return power;
+  let out = power;
+  for (const [role, enemyPow] of Object.entries(enemyRoles || {})) {
+    if ((Number(enemyPow) || 0) <= 0) continue;
+    const ch = combatRoleChannels[`combat_role:${role}`];
+    if (!ch) continue;
+    out = applyFlatThenMult(out, ch);
+  }
+  return out;
+}
+
+export function totalPower(roleMap, matchups, enemyRoles, combatRoleChannels) {
   let sum = 0;
   const enemyEntries = Object.entries(enemyRoles);
   const enemyTotal = enemyEntries.reduce((s, [, v]) => s + v, 0) || 1;
@@ -543,7 +605,39 @@ function totalPower(roleMap, matchups, enemyRoles) {
     }
     sum += pow * mult;
   }
-  return sum;
+  return applyCombatRoleBonus(sum, combatRoleChannels, enemyRoles);
+}
+
+function factionCombatRoleChannels(world, factionId, content) {
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const effects = [];
+  const unlockedUpgrades = new Set(eco?.unlockedUpgrades || []);
+  for (const id of eco?.unlockedTechs || []) {
+    const def = content.technologies?.[id];
+    if (!def) continue;
+    for (const e of def.effects || []) {
+      if (e.effect === "combat_role_mult") effects.push(e);
+    }
+    for (const u of def.upgrades || []) {
+      if (!unlockedUpgrades.has(u.id)) continue;
+      for (const e of u.effects || []) {
+        if (e.effect === "combat_role_mult") effects.push(e);
+      }
+    }
+  }
+  if (!effects.length) return undefined;
+  return buildModifierStack(effects).channels;
+}
+
+function applySpaceObjectPower(powerA, powerB, system, content, sideA, sideB) {
+  if (!system) return { powerA, powerB };
+  return {
+    powerA:
+      powerA * spaceObjectCombatModifier(system, content, sideA.factionId),
+    powerB:
+      powerB * spaceObjectCombatModifier(system, content, sideB.factionId),
+  };
 }
 
 function targetingOrder(targeting) {
@@ -580,10 +674,11 @@ export function applyCasualties(groups, damagePoints, preferredTargeting) {
     const maxHp = Math.max(1, g.maxHp || g.hp || 1);
     const currentHp = g.hp || maxHp;
     const hpPool = Math.max(0, currentHp + Math.max(0, (g.count || 0) - 1) * maxHp);
-    
-    const effectiveDmg = dmg / Math.max(0.5, absorb / 10);
+    // Same clamped divisor for HP conversion and budget drain (weak armor must not inflate effectiveDmg).
+    const absorbDiv = Math.max(0.5, absorb / 10);
+    const effectiveDmg = dmg / absorbDiv;
     const inflicted = Math.min(hpPool, effectiveDmg);
-    dmg -= inflicted * (absorb / 10);
+    dmg -= inflicted * absorbDiv;
 
     const beforeCount = g.count;
     let remainCount = beforeCount;
@@ -674,17 +769,33 @@ export function persistStationaryCasualties(world, engagement, losses) {
   return disabled;
 }
 
+/**
+ * Drop fully-destroyed stacks (`count: 0`). A leftover zero-count group is
+ * not harmless: totalPower weights the attacker by the enemy's role mix, and
+ * an all-zero-but-present enemy side collapses attacker power to 0 instead
+ * of falling back to neutral 1×. Mutates `groups` in place when it is an array.
+ */
+export function pruneDestroyedGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  let w = 0;
+  for (let i = 0; i < groups.length; i++) {
+    if ((groups[i].count || 0) > 0) groups[w++] = groups[i];
+  }
+  groups.length = w;
+  return groups;
+}
+
 export function cleanupEmptyComposition(world) {
   if (world.fleets) {
     for (const f of world.fleets) {
-      f.composition = (f.composition || []).filter((g) => (g.count || 0) > 0);
+      f.composition = pruneDestroyedGroups(f.composition || []);
     }
     world.fleets = world.fleets.filter((f) => f.composition.length > 0);
   }
   if (world.legions) {
     for (const l of world.legions) {
       if (Array.isArray(l.composition)) {
-        l.composition = l.composition.filter((g) => (g.count || 0) > 0);
+        l.composition = pruneDestroyedGroups(l.composition);
         l.strength = l.composition.reduce((s, g) => s + (g.count || 0), 0);
       }
     }
@@ -744,8 +855,8 @@ export function resolveEngagementFight(world, engagement) {
     return { ok: false, error: "need two sides" };
   }
 
-  const groupsA = gatherGroups(world, sideA, theater, content, engagement);
-  const groupsB = gatherGroups(world, sideB, theater, content, engagement);
+  const groupsA = groupsForFight(world, sideA, theater, content, engagement);
+  const groupsB = groupsForFight(world, sideB, theater, content, engagement);
   if (groupsA.length === 0 && groupsB.length === 0) {
     return { ok: false, error: "no forces" };
   }
@@ -753,18 +864,33 @@ export function resolveEngagementFight(world, engagement) {
   const stA = stanceMult(content, sideA.stance || "hold");
   const stB = stanceMult(content, sideB.stance || "hold");
 
+  const chA = factionCombatRoleChannels(world, sideA.factionId, content);
+  const chB = factionCombatRoleChannels(world, sideB.factionId, content);
+  const fightSys = (world.systems ?? []).find(
+    (s) => s.id === engagement.systemId,
+  );
+
   const rolesA = rolePower(groupsA);
   const rolesB = rolePower(groupsB);
-  let powerA = totalPower(rolesA, matchups, rolesB) * (stA.powerMult ?? 1);
-  let powerB = totalPower(rolesB, matchups, rolesA) * (stB.powerMult ?? 1);
+  let powerA = totalPower(rolesA, matchups, rolesB, chA) * (stA.powerMult ?? 1);
+  let powerB = totalPower(rolesB, matchups, rolesA, chB) * (stB.powerMult ?? 1);
 
   powerA *= meanPropertyMultVsSample(groupsA, groupsB[0], content);
   powerB *= meanPropertyMultVsSample(groupsB, groupsA[0], content);
 
+  powerA *= collectPowerMindStrikeMult(world, sideA.factionId, content);
+  powerB *= collectPowerMindStrikeMult(world, sideB.factionId, content);
+
+  ({ powerA, powerB } = applySpaceObjectPower(
+    powerA,
+    powerB,
+    fightSys,
+    content,
+    sideA,
+    sideB,
+  ));
+
   // Logistics combatDefMult is applied once in gatherDefenseUnits (stationary stats).
-  const fightSys = (world.systems ?? []).find(
-    (s) => s.id === engagement.systemId,
-  );
 
   // Loyalty defense penalty / garrison defection (ground & assault)
   const loyaltyNotes = [];
@@ -838,6 +964,8 @@ export function resolveEngagementFight(world, engagement) {
     groupsB[0]?.targeting || "line_first",
   );
   persistStationaryCasualties(world, engagement, [...lossesA, ...lossesB]);
+  pruneDestroyedGroups(groupsA);
+  pruneDestroyedGroups(groupsB);
   cleanupEmptyComposition(world);
   awardVeterancyXp(groupsA, content);
   awardVeterancyXp(groupsB, content);
@@ -883,11 +1011,22 @@ export function resolveAssaultPhase(world, engagement) {
   const layers = engagement.defenseLayers;
 
   const theater = phase === "bombard" ? "space" : "assault";
-  let groupsA = gatherGroups(world, sideA, theater, content, engagement);
-  let groupsB = gatherGroups(world, sideB, theater === "space" ? "assault" : theater, content, engagement);
+  let groupsA = groupsForFight(world, sideA, theater, content, engagement);
+  let groupsB = groupsForFight(
+    world,
+    sideB,
+    theater === "space" ? "assault" : theater,
+    content,
+    engagement,
+  );
 
   const stA = stanceMult(content, sideA.stance || "assault");
   const stB = stanceMult(content, sideB.stance || "hold");
+  const chA = factionCombatRoleChannels(world, sideA.factionId, content);
+  const chB = factionCombatRoleChannels(world, sideB.factionId, content);
+  const fightSys = (world.systems ?? []).find(
+    (s) => s.id === engagement.systemId,
+  );
 
   let powerA = 0;
   let powerB = 0;
@@ -899,18 +1038,26 @@ export function resolveAssaultPhase(world, engagement) {
 
   if (phase === "bombard") {
     const bombA = filterGroupsByRoles(groupsA, ["bombard", "capital"]);
-    const bombPower =
+    let bombPower =
       bombA.reduce(
         (s, g) => s + (g.damage || 0) * (g.count || 0) * (0.5 + (g.accuracy || 0) / 200),
         0,
       ) * (stA.powerMult ?? 1);
+    let returnFire =
+      (layers.orbital.guns + layers.orbital.shields) * 8 * (stB.powerMult ?? 1);
+    ({ powerA: bombPower, powerB: returnFire } = applySpaceObjectPower(
+      bombPower,
+      returnFire,
+      fightSys,
+      content,
+      sideA,
+      sideB,
+    ));
     powerA = bombPower;
     const hits = degradeDefenseLayers(layers, bombPower, "bombard");
     phaseNote = `orbital −${hits.orbitalHit}, surface −${hits.surfaceHit}`;
 
     // Orbital guns return fire on bombarding ships only
-    const returnFire =
-      (layers.orbital.guns + layers.orbital.shields) * 8 * (stB.powerMult ?? 1);
     powerB = returnFire;
     lossesA = applyCasualties(bombA, returnFire * 0.4, "capital_first");
     lossesB = [];
@@ -935,11 +1082,19 @@ export function resolveAssaultPhase(world, engagement) {
     const rolesA = rolePower(assaultA);
     const rolesB = rolePower(defB);
     powerA =
-      totalPower(rolesA, matchups, rolesB) *
+      totalPower(rolesA, matchups, rolesB, chA) *
       (stA.powerMult ?? 1) *
       shieldPenalty;
     powerB =
-      totalPower(rolesB, matchups, rolesA) * (stB.powerMult ?? 1) * fortBonus;
+      totalPower(rolesB, matchups, rolesA, chB) * (stB.powerMult ?? 1) * fortBonus;
+    ({ powerA, powerB } = applySpaceObjectPower(
+      powerA,
+      powerB,
+      fightSys,
+      content,
+      sideA,
+      sideB,
+    ));
 
     lossesB = applyCasualties(
       defB,
@@ -961,9 +1116,17 @@ export function resolveAssaultPhase(world, engagement) {
     const fortBonus = 1 + (layers.garrison?.fortBonus || 0) / 80;
     const rolesA = rolePower(groundA);
     const rolesB = rolePower(groundB);
-    powerA = totalPower(rolesA, matchups, rolesB) * (stA.powerMult ?? 1);
+    powerA = totalPower(rolesA, matchups, rolesB, chA) * (stA.powerMult ?? 1);
     powerB =
-      totalPower(rolesB, matchups, rolesA) * (stB.powerMult ?? 1) * fortBonus;
+      totalPower(rolesB, matchups, rolesA, chB) * (stB.powerMult ?? 1) * fortBonus;
+    ({ powerA, powerB } = applySpaceObjectPower(
+      powerA,
+      powerB,
+      fightSys,
+      content,
+      sideA,
+      sideB,
+    ));
 
     lossesB = applyCasualties(
       groundB,

@@ -1,0 +1,43 @@
+{
+  "after_battle": {
+    "id": "after_battle",
+    "name": "После боя",
+    "add": ["debris"],
+    "activity": "battle",
+    "timerTurns": 3,
+    "timerAction": { "kind": "clear_activity" }
+  },
+  "evac_camp": {
+    "id": "evac_camp",
+    "name": "Эвакуация → лагерь",
+    "add": ["refugees"],
+    "remove": [],
+    "timerTurns": 5,
+    "timerAction": { "kind": "remove_poi", "poi": "refugees" }
+  },
+  "psi_lock": {
+    "id": "psi_lock",
+    "name": "Пси-карантин",
+    "add": ["quarantine"],
+    "timerTurns": 4,
+    "timerAction": { "kind": "remove_poi", "poi": "quarantine" }
+  },
+  "front_depot": {
+    "id": "front_depot",
+    "name": "Фронтовое депо",
+    "add": ["depot", "outpost"]
+  },
+  "propaganda_push": {
+    "id": "propaganda_push",
+    "name": "Пропаганда",
+    "add": ["propaganda"],
+    "timerTurns": 6,
+    "timerAction": { "kind": "remove_poi", "poi": "propaganda" }
+  },
+  "scar_ruin": {
+    "id": "scar_ruin",
+    "name": "Шрам / руины",
+    "add": ["debris", "ruin"],
+    "activity": "none"
+  }
+}

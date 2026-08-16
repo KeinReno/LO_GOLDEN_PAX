@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "version": 1,
+    "note": "B6 — civic development paths (Trade + Culture). Visible from turn 1; scores accumulate, never spent."
+  },
+  "scoring": {
+    "trade": {
+      "marketVolumeWeight": 1,
+      "treatyWeight": 50,
+      "treatyTypes": ["trade", "alliance", "research_pact"]
+    },
+    "culture": {
+      "cultureShareWeight": 50,
+      "loyaltyWeight": 1,
+      "faithShareWeight": 30
+    }
+  },
+  "thresholds": {
+    "trade": {
+      "building.free_port": 200,
+      "law.open_markets": 800
+    },
+    "culture": {
+      "building.cultural_wonder": 150,
+      "law.state_religion": 600
+    }
+  },
+  "unlockProperties": {
+    "building.free_port": "free_port",
+    "building.cultural_wonder": "cultural_wonder"
+  },
+  "paths": {
+    "trade": {
+      "id": "trade",
+      "pathId": "civic.trade",
+      "name": "Путь Торговли",
+      "icon": "🪙",
+      "scoreKey": "trade",
+      "feedsFrom": ["market_volume", "active_treaties"],
+      "unlocks": [
+        {
+          "kind": "building",
+          "id": "building.free_port",
+          "name": "Вольный порт",
+          "property": "free_port"
+        },
+        {
+          "kind": "law",
+          "id": "law.open_markets",
+          "name": "Открытые рынки"
+        }
+      ]
+    },
+    "culture": {
+      "id": "culture",
+      "pathId": "civic.culture",
+      "name": "Путь Культуры",
+      "icon": "🎭",
+      "scoreKey": "culture",
+      "feedsFrom": ["dominant_culture_share", "faith_conversion", "avg_loyalty"],
+      "unlocks": [
+        {
+          "kind": "building",
+          "id": "building.cultural_wonder",
+          "name": "Культурное чудо",
+          "property": "cultural_wonder"
+        },
+        {
+          "kind": "law",
+          "id": "law.state_religion",
+          "name": "Государственная религия"
+        }
+      ]
+    }
+  }
+}

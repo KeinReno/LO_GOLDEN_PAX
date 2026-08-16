@@ -2,7 +2,7 @@
  * Faction-filtered turn briefing from lastJournal (P2.5).
  * Reuses journal data — no second log.
  */
-import { getTableMeta } from "./tableStore.mjs";
+import { getLastJournal } from "./tableStore.mjs";
 
 const GM_ONLY = new Set([
   "timer_remove_poi",
@@ -85,6 +85,6 @@ function summarizeNetFromBreakdown(breakdown) {
 }
 
 export function getFactionBriefing(factionId, world = null) {
-  const journal = getTableMeta().lastJournal ?? null;
+  const journal = getLastJournal();
   return filterBriefingForFaction(journal, factionId, world);
 }

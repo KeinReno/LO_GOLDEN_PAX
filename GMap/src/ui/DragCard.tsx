@@ -91,6 +91,22 @@ export function DragCard({
     return () => document.body.classList.remove("is-gmap-dragging");
   }, [dragging]);
 
+  // Board state (draggingCardId/hover) is only cleared from the gesture's
+  // `last` callback — if this card's own subtree unmounts mid-drag (e.g. a
+  // room switch on a shared, app-wide CardBoard), that callback never fires.
+  // Guard against a permanently stuck board on unmount.
+  const boardRef = useRef(board);
+  boardRef.current = board;
+  useEffect(() => {
+    return () => {
+      const b = boardRef.current;
+      if (b && b.draggingCardId === cardId) {
+        b.setDraggingCardId(null);
+        b.clearHover();
+      }
+    };
+  }, [cardId]);
+
   const bind = useDrag(
     ({ first, last, movement: [mx, my], xy: [px, py], memo, event }) => {
       if (pinned) return memo;
@@ -141,7 +157,7 @@ export function DragCard({
         if (hit) {
           // Prefer zone.onDrop as the single action. onDropZone is only a
           // fallback when the zone has no handler — never fire both.
-          if (hit.onDrop) hit.onDrop(cardId);
+          if (hit.onDrop) hit.onDrop(cardId, { x: px, y: py });
           else onDropZone?.(hit.zoneId);
         }
         if (returnHome) {

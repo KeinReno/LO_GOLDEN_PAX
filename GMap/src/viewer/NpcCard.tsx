@@ -83,6 +83,7 @@ export type NpcCardProps = {
       systemId?: string;
       legionId?: string;
       fleetId?: string;
+      forceId?: string;
     },
   ) => void | Promise<boolean | void>;
   onRecallPosting?: (npcId: string) => void | Promise<boolean | void>;
@@ -159,6 +160,10 @@ export function NpcCard({
   );
   const turn = payload.world.meta.turn;
   const progress = npc.currentTask?.progress ?? 0;
+  const raceName = npc.raceId
+    ? payload.world.races.find((r) => r.id === npc.raceId)?.name ||
+      npc.raceId.replace(/^race_/, "")
+    : null;
 
   const traits = useMemo(() => {
     return (npc.traitIds ?? [])
@@ -182,15 +187,17 @@ export function NpcCard({
       );
       return s?.name || npc.posting.systemId;
     }
-    if (postingKind === "commander" && npc.posting?.legionId) {
-      const l = payload.world.legions.find(
-        (x) => x.id === npc.posting?.legionId,
-      );
-      return l?.name || npc.posting.legionId;
+    if (postingKind === "commander") {
+      const id = npc.posting?.legionId || npc.posting?.forceId;
+      if (!id) return null;
+      const l = payload.world.legions.find((x) => x.id === id);
+      return l?.name || id;
     }
-    if (postingKind === "admiral" && npc.posting?.fleetId) {
-      const f = payload.world.fleets.find((x) => x.id === npc.posting?.fleetId);
-      return f?.name || npc.posting.fleetId;
+    if (postingKind === "admiral") {
+      const id = npc.posting?.fleetId || npc.posting?.forceId;
+      if (!id) return null;
+      const f = payload.world.fleets.find((x) => x.id === id);
+      return f?.name || id;
     }
     return null;
   }, [npc.posting, postingKind, payload.world]);
@@ -254,10 +261,17 @@ export function NpcCard({
       systemId?: string;
       legionId?: string;
       fleetId?: string;
+      forceId?: string;
     } = { kind: postKind };
     if (postKind === "governor") opts.systemId = postTarget;
-    if (postKind === "commander") opts.legionId = postTarget;
-    if (postKind === "admiral") opts.fleetId = postTarget;
+    if (postKind === "commander") {
+      opts.legionId = postTarget;
+      opts.forceId = postTarget;
+    }
+    if (postKind === "admiral") {
+      opts.fleetId = postTarget;
+      opts.forceId = postTarget;
+    }
     const ok = await onAssignPosting(npc.id, opts);
     if (ok === false) return;
     setPostOpen(false);
@@ -276,6 +290,7 @@ export function NpcCard({
       cardId={npc.id}
       title={npc.name}
       subtitle={[
+        raceName,
         seatPortfolio ? `Советник · ${seatPortfolio}` : npc.title,
         POSTING_LABEL[postingKind] || postingKind,
         STATUS_LABEL[status] || status,

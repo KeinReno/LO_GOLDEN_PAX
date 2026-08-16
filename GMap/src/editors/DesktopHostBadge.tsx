@@ -57,7 +57,9 @@ export function DesktopHostBadge() {
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: status?.running ? "#3d9a5f" : "#c45c4a",
+          background: status?.running
+            ? "var(--signal-build)"
+            : "var(--signal-attack)",
         }}
       />
       <span>
@@ -70,7 +72,7 @@ export function DesktopHostBadge() {
           className="hint"
           title={status.lastError}
           style={{
-            color: "#e08a7a",
+            color: "var(--signal-warning)",
             maxWidth: 220,
             overflow: "hidden",
             textOverflow: "ellipsis",

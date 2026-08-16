@@ -5,7 +5,7 @@ export type DropZoneProps = {
   zoneId: string;
   /** Filter by cardId; empty / omit = accept all. Use `"*"` as wildcard. */
   accepts?: string[];
-  onDrop?: (cardId: string) => void;
+  onDrop?: (cardId: string, pos: { x: number; y: number }) => void;
   /** Force highlight (in addition to drag-hover). */
   highlight?: boolean;
   /** Soft “armed” glow while a valid card is being dragged elsewhere. */
@@ -20,6 +20,8 @@ export type DropZoneProps = {
    * - contents: wrapper is display:contents (children participate in parent flex)
    */
   contentLayout?: "center" | "stack" | "contents";
+  /** True while a valid drag is over this zone (hit-test or pointer). */
+  onHoverChange?: (active: boolean) => void;
 };
 
 /**
@@ -36,12 +38,15 @@ export function DropZone({
   className = "",
   label,
   contentLayout = "center",
+  onHoverChange,
 }: DropZoneProps) {
   const board = useCardBoard();
   const ref = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState(false);
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;
+  const onHoverRef = useRef(onHoverChange);
+  onHoverRef.current = onHoverChange;
 
   useEffect(() => {
     const el = ref.current;
@@ -50,10 +55,14 @@ export function DropZone({
       zoneId,
       accepts,
       el,
-      onDrop: (cardId) => onDropRef.current?.(cardId),
+      onDrop: (cardId, pos) => onDropRef.current?.(cardId, pos),
       setHover,
     });
   }, [board, zoneId, accepts]);
+
+  useEffect(() => {
+    onHoverRef.current?.(hover);
+  }, [hover]);
 
   const acceptsDrag = useMemo(() => {
     const id = board.draggingCardId;

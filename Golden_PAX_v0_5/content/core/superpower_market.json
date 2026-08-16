@@ -1,0 +1,69 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Витрины сверхдержав: офферы/услуги по порогу отношений."
+  },
+  "relationRank": {
+    "war": 0,
+    "neutral": 1,
+    "truce": 2,
+    "trade": 3,
+    "alliance": 4,
+    "vassal": 5
+  },
+  "superpowers": {
+    "faction_khanate": {
+      "id": "faction_khanate",
+      "title": "Ханство Золотой Луны",
+      "blurb": "Гегемон сектора. Торгует металлом и разведданными; требует Знание и лояльность.",
+      "color": "#d4a017",
+      "listings": [
+        {
+          "id": "khan.buy.metal",
+          "kind": "resource_pack",
+          "label": "Поставка металла",
+          "summary": "Ханство отдаёт металл за Знание",
+          "minRelation": "neutral",
+          "give": { "currencyId": "currency.metal", "amount": 80 },
+          "want": { "currencyId": "currency.cognitio", "amount": 12 }
+        },
+        {
+          "id": "khan.buy.extracta",
+          "kind": "resource_pack",
+          "label": "Караван сырья",
+          "summary": "Сырьё (A) в обмен на Материалы (B)",
+          "minRelation": "trade",
+          "give": { "currencyId": "currency.extracta", "amount": 120 },
+          "want": { "currencyId": "currency.materia", "amount": 40 }
+        },
+        {
+          "id": "khan.sell.cognitio",
+          "kind": "resource_pack",
+          "label": "Дань Знанием",
+          "summary": "Вы отдаёте Знание — Ханство платит металлом",
+          "minRelation": "neutral",
+          "give": { "currencyId": "currency.metal", "amount": 30 },
+          "want": { "currencyId": "currency.cognitio", "amount": 20 }
+        },
+        {
+          "id": "khan.service.scout",
+          "kind": "service_scout",
+          "label": "Разведка сектора",
+          "summary": "Открыть туман вокруг выбранной системы (постоянный reveal)",
+          "minRelation": "trade",
+          "want": { "currencyId": "currency.cognitio", "amount": 28 },
+          "scoutHops": 1
+        },
+        {
+          "id": "khan.service.deep_scout",
+          "kind": "service_scout",
+          "label": "Глубокая разведка",
+          "summary": "Расширенный reveal (2 хопа) — для союзников Ханства",
+          "minRelation": "alliance",
+          "want": { "currencyId": "currency.cognitio", "amount": 48 },
+          "scoutHops": 2
+        }
+      ]
+    }
+  }
+}

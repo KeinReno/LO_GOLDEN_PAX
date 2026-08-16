@@ -1,0 +1,19 @@
+{
+  "frontline": {
+    "id": "poi.frontline",
+    "name": "Линия фронта",
+    "label": "Линия фронта / рубеж",
+    "effects": [
+      { "effect": "upkeep_mult", "args": { "resource": "currency.supply", "mult": 1.1 } },
+      { "effect": "stability_add", "args": { "amount": -1 } }
+    ]
+  },
+  "forge": {
+    "id": "poi.forge",
+    "name": "Кузница",
+    "label": "Кузница / мегаструктура",
+    "effects": [
+      { "effect": "production_mult", "args": { "resource": "currency.metal", "mult": 1.15 } }
+    ]
+  }
+}

@@ -22,10 +22,15 @@ data/ledger.json
 data/table-meta.json
 data/fog-masks.json
 data/engagements.json
+data/player-sessions.json
 data/rp/**
 !data/rp/.gitkeep
 data/turns/**
 !data/turns/.gitkeep
+data/*.sqlite
+data/*.sqlite-*
+data/tick-journal.json
+*.tsbuildinfo
 deploy/certs/*.pem
 deploy/certs/*.key
 !deploy/certs/.gitkeep

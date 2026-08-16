@@ -1,15 +1,27 @@
 import {
   cardEnergyCost,
+  keywordHint,
   keywordLabel,
   keywordsForCard,
   matchupHints,
   roleLabel,
+  auraLabel,
+  auraHint,
+  propertyTagLabel,
+  propertyTagHint,
+  propertyTagTone,
 } from "../../state/cardBattleHints";
 
 type Props = {
   role: string;
   energyCost?: number;
   bonusKeywords?: string[];
+  /** Neighbor auras currently applied to this card. */
+  auraTags?: string[];
+  /** Property strike tags (amp / pierce / absorb) for the focused hit. */
+  propertyTags?: string[];
+  /** Combined property multiplier shown next to the first tag. */
+  propertyMult?: number;
   /** Show strong/weak matchup line. */
   showMatchup?: boolean;
   compact?: boolean;
@@ -26,6 +38,9 @@ export function CombatCardMeta({
   role,
   energyCost,
   bonusKeywords,
+  auraTags,
+  propertyTags,
+  propertyMult,
   showMatchup,
   compact,
   hpPercent,
@@ -67,10 +82,39 @@ export function CombatCardMeta({
           {kws.map((kw) => (
             <span
               key={kw}
-              className={`combat-card-meta__kw${kw === "escort" ? " is-escort" : ""}`}
-              title={keywordLabel(kw)}
+              className={`combat-card-meta__kw is-${kw}`}
+              title={keywordHint(kw)}
             >
               {keywordLabel(kw)}
+            </span>
+          ))}
+        </div>
+      )}
+      {auraTags && auraTags.length > 0 && (
+        <div className="combat-card-meta__kws">
+          {auraTags.map((tag) => (
+            <span
+              key={`aura-${tag}`}
+              className={`combat-card-meta__kw is-aura is-${tag}`}
+              title={auraHint(tag)}
+            >
+              {auraLabel(tag)}
+            </span>
+          ))}
+        </div>
+      )}
+      {propertyTags && propertyTags.length > 0 && (
+        <div className="combat-card-meta__kws">
+          {propertyTags.map((tag, i) => (
+            <span
+              key={`prop-${tag}`}
+              className={`combat-card-meta__kw is-prop is-${propertyTagTone(tag)}`}
+              title={propertyTagHint(tag)}
+            >
+              {propertyTagLabel(tag)}
+              {i === 0 && propertyMult != null && propertyMult !== 1
+                ? ` ×${propertyMult.toFixed(2)}`
+                : ""}
             </span>
           ))}
         </div>

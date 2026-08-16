@@ -8,6 +8,7 @@ import { DiceRoller } from "../ui/DiceRoller";
 import { StatefulButton } from "../ui/StatefulButton";
 import { useMagnetic, useSpotlight } from "../ui/aceternityFx";
 import { ChroniclePanel } from "./ChroniclePanel";
+import { ConfirmModal } from "./shared/ConfirmModal";
 
 type RpPrompt = {
   kind: "choice" | "dice";
@@ -378,6 +379,14 @@ export function RpStage({
     "all",
   );
   const [intentsOpen, setIntentsOpen] = useState(false);
+  const [intentConfirm, setIntentConfirm] = useState<{
+    type?: Voice;
+    text?: string;
+    clearReply?: boolean;
+    whisper?: boolean;
+    tone?: string;
+    intent?: { defId: string; note?: string };
+  } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const seenIds = useRef<Set<string>>(new Set());
   const firstLoad = useRef(true);
@@ -526,14 +535,17 @@ export function RpStage({
   const pack =
     GESTURE_PACKS.find((p) => p.id === gesturePack) || GESTURE_PACKS[0];
 
-  const post = async (opts?: {
-    type?: Voice;
-    text?: string;
-    clearReply?: boolean;
-    whisper?: boolean;
-    tone?: string;
-    intent?: { defId: string; note?: string };
-  }) => {
+  const post = async (
+    opts?: {
+      type?: Voice;
+      text?: string;
+      clearReply?: boolean;
+      whisper?: boolean;
+      tone?: string;
+      intent?: { defId: string; note?: string };
+    },
+    postOptions?: { skipIntentConfirm?: boolean },
+  ) => {
     if (!channel || channel.readOnly || busy) return;
     const type = opts?.type ?? voice;
     let text = (opts?.text ?? body).trim();
@@ -541,11 +553,9 @@ export function RpStage({
     if (replyTo && !opts?.text) {
       text = buildReplyBody(replyTo, text);
     }
-    if (opts?.intent) {
-      const ok = window.confirm(
-        "Это отправит приказ в очередь хода и может потратить ОД. Продолжить?",
-      );
-      if (!ok) return;
+    if (opts?.intent && !postOptions?.skipIntentConfirm) {
+      setIntentConfirm(opts);
+      return;
     }
     setBusy(true);
     setSentOk(false);
@@ -1557,6 +1567,22 @@ export function RpStage({
           onClick={() => setScenesOpen(false)}
         />
       )}
+      <ConfirmModal
+        open={!!intentConfirm}
+        title="Потратить ОД на приказ?"
+        confirmLabel="Отправить"
+        busy={busy}
+        onClose={() => setIntentConfirm(null)}
+        onConfirm={() => {
+          const pending = intentConfirm;
+          setIntentConfirm(null);
+          if (pending) void post(pending, { skipIntentConfirm: true });
+        }}
+      >
+        <p className="hint">
+          Приказ попадёт в очередь хода и может зарезервировать ОД.
+        </p>
+      </ConfirmModal>
     </div>
   );
 }

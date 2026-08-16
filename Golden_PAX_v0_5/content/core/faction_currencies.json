@@ -1,0 +1,106 @@
+{
+  "fx.damyl_doubloon": {
+    "id": "fx.damyl_doubloon",
+    "name": "Дамильский Дублон",
+    "short": "ДД",
+    "peg": null,
+    "pegLabel": "неизвестно",
+    "strength": "reserve_apex",
+    "blurb": "Резерв Дамильских врат. Самая жёсткая валюта известного сектора — котируется редко, почти не дробит.",
+    "issuerFactionIds": [],
+    "lastUc": 53.8944
+  },
+  "fx.terrial_credit": {
+    "id": "fx.terrial_credit",
+    "name": "Терриальский Кредит",
+    "short": "ТК",
+    "peg": null,
+    "pegLabel": "неизвестно",
+    "strength": "reserve_apex",
+    "blurb": "Банковский эталон Терриала. По силе рядом с Дамильским дублоном; ликвиднее на внешних столах.",
+    "issuerFactionIds": [
+      "faction_nomad_pax_terrialis",
+      "64928514-afb3-4cdb-b79c-23dd39cdcbd0"
+    ],
+    "lastUc": 47.4019
+  },
+  "fx.turon_credit": {
+    "id": "fx.turon_credit",
+    "name": "Туронский Кредит",
+    "short": "ТуК",
+    "peg": "map.glasssteel",
+    "pegLabel": "стеклосталь",
+    "strength": "hard_peg",
+    "blurb": "Жёсткая привязка к стеклостали Туронских верфей. Следит за рынком корпуса.",
+    "issuerFactionIds": [
+      "faction_turon",
+      "faction_nomad_f_08a06270a3"
+    ],
+    "lastUc": 14.9537
+  },
+  "fx.elan_doubloon": {
+    "id": "fx.elan_doubloon",
+    "name": "Эланский Дублон",
+    "short": "ЭД",
+    "peg": null,
+    "pegLabel": "неизвестно",
+    "strength": "regional_hard",
+    "blurb": "Региональный твёрдый дублон Элана. Меньше резервных, но стабилен вне кризисов.",
+    "issuerFactionIds": [
+      "faction_nomad_f_f3466a10f0"
+    ],
+    "lastUc": 22.7084
+  },
+  "fx.belator_solarit": {
+    "id": "fx.belator_solarit",
+    "name": "Белаторский Соларит",
+    "short": "БС",
+    "peg": "map.solari",
+    "pegLabel": "соларит",
+    "strength": "commodity_peg",
+    "blurb": "Привязка к солариту Белатора. Растёт вместе с энерго-топливным спросом.",
+    "issuerFactionIds": [
+      "faction_belator",
+      "faction_khanate",
+      "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d"
+    ],
+    "lastUc": 10.2424
+  },
+  "fx.karned_trill": {
+    "id": "fx.karned_trill",
+    "name": "Карнедский Трилл",
+    "short": "КТ",
+    "peg": "map.blumatid",
+    "pegLabel": "блюматид",
+    "strength": "commodity_peg",
+    "blurb": "Трилл Карнеда сидит на блюматиде. Скачет вместе с коридорным спросом у Дамильских врат.",
+    "issuerFactionIds": [
+      "faction_karned"
+    ],
+    "lastUc": 8.6963
+  },
+  "fx.aphel_ilir": {
+    "id": "fx.aphel_ilir",
+    "name": "Афельский Илир",
+    "short": "АИ",
+    "peg": "map.blumatid",
+    "pegLabel": "блюматид",
+    "strength": "commodity_peg",
+    "blurb": "Илир Афеля тоже на блюматиде, чуть слабее трилла — больше эмиссии у стола.",
+    "issuerFactionIds": [
+      "faction_amalfea"
+    ],
+    "lastUc": 8.0896
+  },
+  "fx.universal_credit": {
+    "id": "fx.universal_credit",
+    "name": "Универсальный Кредит",
+    "short": "UC",
+    "peg": null,
+    "pegLabel": "неизвестно",
+    "strength": "numeraire",
+    "blurb": "Расчётная единица общего рынка. Номинал 1.0 — все котировки в UC.",
+    "issuerFactionIds": [],
+    "lastUc": 0.9938
+  }
+}

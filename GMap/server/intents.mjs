@@ -7,6 +7,11 @@ import {
   readJson,
   writeJson,
 } from "./tableStore.mjs";
+import { isNormalizedStoreActive } from "./db/storeAdapter.mjs";
+import {
+  readPlayerIntents,
+  writePlayerIntents,
+} from "./db/campaignDb.mjs";
 import { getContent } from "./contentLoader.mjs";
 import {
   collectSystemPoiEffects,
@@ -22,7 +27,9 @@ import {
 } from "./factionIntel.mjs";
 import { isCommonMarketMember } from "./marketMembership.mjs";
 import { intentApCosts } from "./apBudget.mjs";
+import { readLiveBoard } from "./tableStore.mjs";
 import { checkMoveRange } from "./forceMovement.mjs";
+import { assertMoveAffordable, collectMoveCostEffects, techMoveCostEffects } from "./forceMp.mjs";
 
 const VISION_GATED_INTENTS = new Set([
   "intent.move_fleet",
@@ -61,6 +68,11 @@ function legacyTypeToDefId(type) {
 
 /** Merge legacy orders file into intents shape once. */
 export function readIntents() {
+  if (isNormalizedStoreActive()) {
+    const fromDb = readPlayerIntents();
+    if (Array.isArray(fromDb)) return fromDb;
+  }
+
   const intents = readJson(INTENTS_PATH, null);
   if (Array.isArray(intents)) return intents;
 
@@ -88,7 +100,11 @@ export function readIntents() {
 }
 
 export function writeIntents(list) {
-  writeJson(INTENTS_PATH, list);
+  if (isNormalizedStoreActive()) {
+    writePlayerIntents(list);
+  } else {
+    writeJson(INTENTS_PATH, list);
+  }
   // Keep legacy mirror for old UI
   const orders = list.map((i) => ({
     id: i.id,
@@ -115,28 +131,34 @@ export function getPendingForFaction(factionId, turn) {
   );
 }
 
-function intentsSpendingAp(factionId, turn) {
-  return readIntents().filter(
-    (i) =>
-      i.factionId === factionId &&
-      (turn == null || i.turn === turn) &&
-      (i.status === "pending" ||
-        i.status === "applied" ||
-        i.status === "resolved"),
+function activeOrderSlots(world, factionId) {
+  return (world?.orders ?? []).filter(
+    (o) =>
+      o.factionId === factionId &&
+      (o.status === "active" || o.status === "pending") &&
+      o.category !== "instant",
   );
 }
 
-export function reservedAp(factionId, turn) {
-  // Empire OD: pending + applied/resolved spends this turn.
-  return intentsSpendingAp(factionId, turn).reduce(
-    (sum, i) => sum + (i.apCost ?? 0),
+function intentsSpendingAp(_factionId, _turn) {
+  // B4: AP parallelism — only active ETA orders hold slots (not per-turn intents).
+  return [];
+}
+
+export function reservedAp(factionId, turn, world) {
+  const w = world ?? readLiveBoard();
+  if (!w) return 0;
+  return activeOrderSlots(w, factionId).reduce(
+    (sum, o) => sum + Math.max(0, Number(o.apCost ?? 0)),
     0,
   );
 }
 
-export function reservedForceAp(factionId, turn) {
-  return intentsSpendingAp(factionId, turn).reduce(
-    (sum, i) => sum + (i.forceApCost ?? 0),
+export function reservedForceAp(factionId, turn, world) {
+  const w = world ?? readLiveBoard();
+  if (!w) return 0;
+  return activeOrderSlots(w, factionId).reduce(
+    (sum, o) => sum + Math.max(0, Number(o.forceApCost ?? 0)),
     0,
   );
 }
@@ -214,8 +236,23 @@ export function validateIntentGates(world, factionId, defId, payload) {
         fromId,
         payload.toSystemId,
         moveMode,
+        unit,
       );
       if (!range.ok) return range;
+      const fac = (world.factions ?? []).find((f) => f.id === factionId);
+      const effects = collectMoveCostEffects(
+        fac?.activeEffects,
+        techMoveCostEffects(eco, content),
+        unit,
+      );
+      const afford = assertMoveAffordable(
+        unit,
+        range.hops,
+        content,
+        effects,
+        moveMode === "legion" ? "legion" : "fleet",
+      );
+      if (!afford.ok) return { ok: false, error: afford.error };
     }
   }
 
@@ -285,20 +322,24 @@ export function submitIntent({
   apMax,
   forceApMax = 0,
   world,
+  master = false,
 }) {
   const content = getContent();
   const def = content.intents?.[defId];
   if (!def) return { ok: false, error: `Неизвестный intent: ${defId}` };
+  if (def.gmOnly && !master) {
+    return { ok: false, error: "Только мастер может отправить этот intent" };
+  }
 
   const { apCost, forceApCost } = intentApCosts(def);
-  const used = reservedAp(factionId, turn);
+  const used = reservedAp(factionId, turn, world);
   if (apCost > 0 && used + apCost > apMax) {
     return {
       ok: false,
       error: `Недостаточно ОД (занято ${used}/${apMax}, нужно ещё ${apCost})`,
     };
   }
-  const usedForce = reservedForceAp(factionId, turn);
+  const usedForce = reservedForceAp(factionId, turn, world);
   if (forceApCost > 0 && usedForce + forceApCost > forceApMax) {
     return {
       ok: false,

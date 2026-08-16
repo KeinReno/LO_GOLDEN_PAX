@@ -9,7 +9,9 @@ export function diplomacyEdgeIsWar(edge) {
 export function factionsAtWar(world, aId, bId) {
   if (!aId || !bId || aId === bId) return false;
   const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
-  const edge = (world.diplomacy ?? []).find((e) => e.aId === x && e.bId === y);
+  const edge = (world.diplomacy ?? []).find(
+    (e) => e.aId === x && e.bId === y && (!e.track || e.track === "political"),
+  );
   if (diplomacyEdgeIsWar(edge)) return true;
   return (world.diplomacy ?? []).some((e) => {
     if (!diplomacyEdgeIsWar(e)) return false;

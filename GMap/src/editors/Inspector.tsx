@@ -328,7 +328,9 @@ function FleetPanel({
       <button
         type="button"
         className="btn danger block"
-        onClick={() => deleteFleet(fleet.id)}
+        onClick={() => {
+          if (confirm(`Удалить флот «${fleet.name}»?`)) deleteFleet(fleet.id);
+        }}
       >
         Удалить флот
       </button>
@@ -398,7 +400,11 @@ function LegionPanel({
       <button
         type="button"
         className="btn danger block"
-        onClick={() => deleteLegion(legion.id)}
+        onClick={() => {
+          if (confirm(`Удалить легион «${legion.name}»?`)) {
+            deleteLegion(legion.id);
+          }
+        }}
       >
         Удалить легион
       </button>
@@ -492,7 +498,12 @@ function LinkPanel({
       <button
         type="button"
         className="btn danger block"
-        onClick={() => deleteLink(link.id)}
+        onClick={() => {
+          const a =
+            world.systems.find((s) => s.id === link.fromId)?.name ?? "?";
+          const b = world.systems.find((s) => s.id === link.toId)?.name ?? "?";
+          if (confirm(`Удалить связь «${a} ↔ ${b}»?`)) deleteLink(link.id);
+        }}
       >
         Удалить связь
       </button>

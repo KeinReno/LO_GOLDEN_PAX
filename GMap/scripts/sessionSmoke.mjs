@@ -40,7 +40,7 @@ function fail(name, detail) {
   console.log(`  FAIL  ${name}${detail ? ` — ${detail}` : ""}`);
 }
 
-function httpJson(method, urlPath, body, headers = {}) {
+function httpJson(method, urlPath, body, headers = {}, opts = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(urlPath, HOST);
     const payload =
@@ -60,7 +60,8 @@ function httpJson(method, urlPath, body, headers = {}) {
               }
             : {}),
         },
-        timeout: 15000,
+        // Live campaign tick routinely exceeds 15s (~20–30s); keep probes short.
+        timeout: opts.timeoutMs ?? 15000,
       },
       (res) => {
         const chunks = [];
@@ -133,13 +134,21 @@ async function main() {
       "technologies",
       "combat_property_matchups",
       "economy_schema",
+      "role_milestones",
     ].filter((k) => !c?.[k]);
-    if (content.status === 200 && missing.length === 0) {
+    if (
+      content.status === 200 &&
+      missing.length === 0 &&
+      c.role_milestones?.structural?.threshold != null &&
+      c.role_milestones?.energy?.threshold != null
+    ) {
       pass("GET /api/content", "core economy keys present");
     } else {
       fail(
         "GET /api/content",
-        missing.length ? `missing: ${missing.join(", ")}` : `status=${content.status}`,
+        missing.length
+          ? `missing: ${missing.join(", ")}`
+          : `status=${content.status} or role_milestones incomplete`,
       );
     }
   } catch (e) {
@@ -189,12 +198,89 @@ async function main() {
         "  SKIP  POST /api/turn/tick — tickFrozen (unfreeze failed or still frozen)",
       );
     } else {
+      const ledgerPath = path.resolve(__dirname, "../data/ledger.json");
+      let solariBefore = null;
+      let energyBefore = null;
       try {
-        const tick = await httpJson("POST", "/api/turn/tick", {}, {
-          "X-Master-Token": MASTER,
-        });
+        const led = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+        solariBefore = Number(
+          led?.factions?.faction_belator?.stocks?.["map.solari"] ?? 0,
+        );
+        energyBefore = Number(
+          led?.factions?.faction_belator?.roleScores?.energy ?? 0,
+        );
+      } catch {
+        solariBefore = null;
+        energyBefore = null;
+      }
+      try {
+        const tick = await httpJson(
+          "POST",
+          "/api/turn/tick",
+          {},
+          { "X-Master-Token": MASTER },
+          { timeoutMs: 90000 },
+        );
         if (tick.status === 200 && tick.data?.ok !== false) {
           pass("POST /api/turn/tick");
+          // B1 T1.8: named strategic stock grows for Belator solari extractors.
+          try {
+            const ledAfter = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+            const solariAfter = Number(
+              ledAfter?.factions?.faction_belator?.stocks?.["map.solari"] ?? 0,
+            );
+            if (solariBefore == null) {
+              console.log("  SKIP  map.solari named stock — no ledger before tick");
+            } else if (solariAfter > solariBefore) {
+              pass(
+                "map.solari named stock grows",
+                `${solariBefore} → ${solariAfter}`,
+              );
+            } else if (solariAfter === solariBefore) {
+              // Soft: no deposits / zero extraction this tick is allowed to hold.
+              pass(
+                "map.solari named stock stable",
+                `${solariBefore} (no extraction this tick)`,
+              );
+            } else {
+              fail(
+                "map.solari named stock grows",
+                `${solariBefore} → ${solariAfter}`,
+              );
+            }
+            // B2 T2.8: RoleScore energy never decreases; grows when solari extracted.
+            const energyAfter = Number(
+              ledAfter?.factions?.faction_belator?.roleScores?.energy ?? 0,
+            );
+            if (energyBefore == null) {
+              console.log("  SKIP  roleScores.energy — no ledger before tick");
+            } else if (energyAfter < energyBefore) {
+              fail(
+                "roleScores.energy non-decreasing",
+                `${energyBefore} → ${energyAfter}`,
+              );
+            } else if (solariAfter > solariBefore && energyAfter <= energyBefore) {
+              fail(
+                "roleScores.energy grows with solari",
+                `solari ${solariBefore}→${solariAfter}, energy ${energyBefore}→${energyAfter}`,
+              );
+            } else if (energyAfter > energyBefore) {
+              pass(
+                "roleScores.energy grows",
+                `${energyBefore} → ${energyAfter}`,
+              );
+            } else {
+              pass(
+                "roleScores.energy stable",
+                `${energyBefore} (no energy extraction this tick)`,
+              );
+            }
+          } catch (e) {
+            fail(
+              "map.solari named stock grows",
+              e instanceof Error ? e.message : String(e),
+            );
+          }
         } else {
           fail(
             "POST /api/turn/tick",
@@ -260,21 +346,39 @@ async function main() {
         eco?.techTiers != null && typeof eco.techTiers === "object";
       const hasProps = Array.isArray(eco?.unlockedProperties);
       const hasTechs = Array.isArray(eco?.unlockedTechs);
+      const hasRoleScores =
+        eco?.roleScores != null && typeof eco.roleScores === "object";
+      const ROLE_IDS = [
+        "structural",
+        "energy",
+        "offensive",
+        "defensive",
+        "mobility",
+        "cognitive",
+        "biological",
+        "exotic",
+      ];
+      const hasEightRoles =
+        hasRoleScores &&
+        ROLE_IDS.every((id) => typeof eco.roleScores[id] === "number");
       if (
         login.status === 200 &&
         hasTiers &&
         hasProps &&
-        hasTechs
+        hasTechs &&
+        hasEightRoles
       ) {
         pass(
           "POST /api/login economy",
-          `${factionId}: techTiers + unlockedProperties + unlockedTechs`,
+          `${factionId}: techTiers + unlockedProperties + unlockedTechs + 8 roleScores`,
         );
       } else {
         const parts = [];
         if (!hasTiers) parts.push("techTiers");
         if (!hasProps) parts.push("unlockedProperties");
         if (!hasTechs) parts.push("unlockedTechs");
+        if (!hasRoleScores) parts.push("roleScores");
+        else if (!hasEightRoles) parts.push("roleScores[8]");
         fail(
           "POST /api/login economy",
           parts.length

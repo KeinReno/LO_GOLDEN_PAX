@@ -1,6 +1,6 @@
 # GMap — редактор космических карт
 
-Прототип редактора звёздных карт для РП-стратегии.  
+Версия **0.6.0**. Прототип редактора звёздных карт для РП-стратегии.  
 Стек: **Vite + React + TypeScript + PixiJS + Zustand** + лёгкий API на вашем ПК.
 
 ## Быстрый старт
@@ -147,6 +147,10 @@ npm run tauri:build
 В TopBar появляется бейдж «Хост :4173» только внутри desktop-приложения. Иконки-заглушки в `src-tauri/icons/` — замените: `npx tauri icon path/to/icon.png`.
 
 Веб-режим по-прежнему: `npm run dev` → http://localhost:5173/
+
+## Agent workflow
+
+Корневые указатели (токены/Boot/STATUS): [`../PROJECT.md`](../PROJECT.md), [`../agent-tasks/`](../agent-tasks/), skill [`game-nav`](../.cursor/skills/game-nav/SKILL.md). Перед широким Read по этому дереву — `game-nav`.
 
 ## Дальше (опционально)
 

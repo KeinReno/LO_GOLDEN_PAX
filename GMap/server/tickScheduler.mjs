@@ -1,6 +1,10 @@
 /**
  * Daily tick scheduler (P2.3) — cron 00:01 MSK + boot catch-up.
  * P8.2: records miss alerts for master health UI.
+ *
+ * CRITICAL: after a fire, the next wait must skip the current clock minute.
+ * Matching "this minute" again returned ~1000ms and auto-ticked every second
+ * for the entire 00:01 window (dozens of turns in one real minute).
  */
 import { getTableMeta } from "./tableStore.mjs";
 import { pushTickAlert } from "./opsHealth.mjs";
@@ -26,7 +30,8 @@ function msUntilNextCron(cronExpr, timeZone) {
     second: "2-digit",
     hourCycle: "h23",
   });
-  for (let i = 0; i < 48 * 60; i++) {
+  // Start at +1 minute so we never re-arm on the same clock minute that just fired.
+  for (let i = 1; i < 48 * 60; i++) {
     const cand = new Date(now.getTime() + i * 60_000);
     const p = Object.fromEntries(
       fmt
@@ -34,21 +39,16 @@ function msUntilNextCron(cronExpr, timeZone) {
         .filter((x) => x.type !== "literal")
         .map((x) => [x.type, x.value]),
     );
-    if (
-      Number(p.hour) === hour &&
-      Number(p.minute) === minute &&
-      Number(p.second) === 0
-    ) {
-      return Math.max(1000, cand.getTime() - now.getTime());
-    }
     if (Number(p.hour) === hour && Number(p.minute) === minute) {
-      return Math.max(1000, cand.getTime() - now.getTime());
+      // Land at :00 seconds of that minute
+      const wait = cand.getTime() - now.getTime();
+      return Math.max(60_000, wait);
     }
   }
-  return 60_000;
+  return 60 * 60_000;
 }
 
-function sameMoscowDay(isoA, isoB) {
+export function sameMoscowDay(isoA, isoB) {
   if (!isoA || !isoB) return false;
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Moscow",
@@ -130,5 +130,6 @@ export function getSchedulerStatus() {
 
 export function stopTickScheduler() {
   if (timer) clearTimeout(timer);
+  timer = null;
   started = false;
 }

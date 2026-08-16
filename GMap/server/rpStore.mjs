@@ -6,11 +6,18 @@
  *   hq   — faction HQ (default home for that player), visibility gm_player:{id}
  *   ooc  — optional table-wide OOC
  *   scene / (unset) — narrative episodes (GM opens)
+ *
+ * Local DATA_DIR avoids TDZ on circular import through tableStore.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { DATA_DIR, ensureDataDir, readJson, writeJson } from "./tableStore.mjs";
+import { fileURLToPath } from "node:url";
+import { ensureDataDir, readJson, writeJson } from "./tableStore.mjs";
 
+const DATA_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../data",
+);
 export const RP_ROOT = path.join(DATA_DIR, "rp");
 const DEFAULT_CAMPAIGN = "golden_pax";
 const CHANNELS_CHAPTER_ID = "ch_channels";

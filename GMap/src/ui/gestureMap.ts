@@ -3,9 +3,9 @@
  * Map canvas (Pixi) and React overlays must share these meanings.
  *
  * tap / click     → select + light preview at source
- * long-press      → irreversible / secondary (demolish, attack confirm)
- * drag            → spatial order (move / assign)
- * RMB / two-finger→ context card at pointer (FloatingPopover)
+ * long-press      → unit order ring (FleetOrderRing) or context fallback
+ * drag            → spatial order (move / assign / attack via onUnitDrop)
+ * RMB             → unit order ring when applicable, else context card
  * pinch / wheel   → camera zoom
  * double-tap      → drill-down (galaxy → system → planet)
  */
@@ -15,7 +15,7 @@ export const GESTURE = {
   longPressMoveTolerancePx: 10,
   holdRingMs: 450,
   dragThresholdPx: 6,
-  doubleTapMs: 280,
+  doubleTapMs: 400,
 } as const;
 
 export type GestureVerb =

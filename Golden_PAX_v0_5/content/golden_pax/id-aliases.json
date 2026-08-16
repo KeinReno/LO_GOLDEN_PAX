@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "ships": {
+    "громоносец": "ship.belator_dread",
+    "роевая масса": "ship.swarm_brood",
+    "звёздный адвент": "ship.advent_cruiser",
+    "адвент": "ship.advent_cruiser",
+    "бомбарда": "ship.bombard"
+  },
+  "units": {
+    "гвардия": "unit.belator_guard",
+    "скиттеры": "unit.swarm_skitter",
+    "пси-кадр": "unit.psi_cadre"
+  }
+}

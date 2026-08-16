@@ -6,6 +6,8 @@ type Props = {
   children: ReactNode;
   className?: string;
   side?: "top" | "bottom";
+  /** Hover delay before tip (ms). Default 280 in AnimatedTooltip. */
+  delayMs?: number;
 };
 
 /** Economy alias for AnimatedTooltip (imperial chrome). */

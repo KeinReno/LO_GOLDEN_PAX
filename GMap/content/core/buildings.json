@@ -51,6 +51,7 @@
     "ap": 1,
     "category": "E",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -103,7 +104,9 @@
     "name": "Шахта",
     "ap": 1,
     "category": "A",
+    "extractsCategory": "A",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -150,6 +153,7 @@
     "ap": 1,
     "category": "C",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -203,6 +207,7 @@
     "ap": 1,
     "category": "F",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -256,6 +261,7 @@
     "ap": 1,
     "category": "C",
     "tier": 2,
+    "laborSlots": 2,
     "faction": "generic",
     "cost": {
       "currency.metal": 11,
@@ -303,6 +309,7 @@
     "ap": 1,
     "category": "C",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "maxPerPlanet": 1,
     "cost": {
@@ -357,6 +364,7 @@
     "ap": 1,
     "category": "B",
     "tier": 4,
+    "laborSlots": 4,
     "faction": "generic",
     "cost": {
       "currency.metal": 19,
@@ -406,6 +414,7 @@
     "ap": 1,
     "category": "C",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "maxPerPlanet": 1,
     "cost": {
@@ -461,6 +470,7 @@
     "ap": 1,
     "category": "C",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -559,6 +569,7 @@
     "ap": 1,
     "category": "D",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -608,6 +619,7 @@
     "ap": 1,
     "category": "F",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -660,7 +672,9 @@
     "name": "Глубинный ствол",
     "ap": 1,
     "category": "A",
+    "extractsCategory": "A",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -720,7 +734,9 @@
     "name": "Карьер-стрип",
     "ap": 1,
     "category": "A",
+    "extractsCategory": "A",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 18,
@@ -774,7 +790,9 @@
     "name": "Газовая скважина",
     "ap": 1,
     "category": "A",
+    "extractsCategory": "D",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -825,7 +843,12 @@
     "name": "Астероидный гарвец",
     "ap": 1,
     "category": "A",
+    "extractsCategory": [
+      "A",
+      "B"
+    ],
     "tier": 7,
+    "laborSlots": 7,
     "faction": "generic",
     "cost": {
       "currency.metal": 37,
@@ -879,7 +902,9 @@
     "name": "Аномальный коллектор",
     "ap": 2,
     "category": "A",
+    "extractsCategory": "A",
     "tier": 10,
+    "laborSlots": 10,
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
@@ -941,7 +966,9 @@
     "name": "Шлам-установка",
     "ap": 1,
     "category": "A",
+    "extractsCategory": "A",
     "tier": 2,
+    "laborSlots": 2,
     "faction": "generic",
     "cost": {
       "currency.metal": 11,
@@ -987,7 +1014,9 @@
     "name": "Дрон-реле",
     "ap": 1,
     "category": "A",
+    "extractsCategory": [],
     "tier": 4,
+    "laborSlots": 4,
     "faction": "generic",
     "cost": {
       "currency.metal": 19,
@@ -1036,6 +1065,7 @@
     "ap": 1,
     "category": "B",
     "tier": 3,
+    "laborSlots": 3,
     "faction": "generic",
     "cost": {
       "currency.metal": 15,
@@ -1089,6 +1119,7 @@
     "ap": 1,
     "category": "B",
     "tier": 4,
+    "laborSlots": 4,
     "faction": "generic",
     "cost": {
       "currency.metal": 19,
@@ -1136,6 +1167,7 @@
     "ap": 1,
     "category": "B",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -1189,6 +1221,7 @@
     "ap": 1,
     "category": "B",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -1249,6 +1282,7 @@
     "ap": 1,
     "category": "B",
     "tier": 9,
+    "laborSlots": 9,
     "faction": "generic",
     "cost": {
       "currency.metal": 54,
@@ -1303,6 +1337,7 @@
     "ap": 1,
     "category": "B",
     "tier": 2,
+    "laborSlots": 2,
     "faction": "generic",
     "cost": {
       "currency.metal": 11,
@@ -1356,6 +1391,7 @@
     "ap": 1,
     "category": "B",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "maxPerPlanet": 1,
     "cost": {
@@ -1411,6 +1447,7 @@
     "ap": 1,
     "category": "C",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -1465,6 +1502,7 @@
     "ap": 1,
     "category": "C",
     "tier": 8,
+    "laborSlots": 8,
     "faction": "generic",
     "cost": {
       "currency.metal": 45,
@@ -1519,6 +1557,7 @@
     "ap": 1,
     "category": "C",
     "tier": 4,
+    "laborSlots": 4,
     "faction": "generic",
     "cost": {
       "currency.metal": 19,
@@ -1573,6 +1612,7 @@
     "ap": 1,
     "category": "C",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -1621,6 +1661,7 @@
     "ap": 1,
     "category": "D",
     "tier": 2,
+    "laborSlots": 2,
     "faction": "generic",
     "cost": {
       "currency.metal": 11,
@@ -1676,6 +1717,7 @@
     "ap": 1,
     "category": "D",
     "tier": 4,
+    "laborSlots": 4,
     "faction": "generic",
     "cost": {
       "currency.metal": 19,
@@ -1719,6 +1761,7 @@
     "ap": 1,
     "category": "D",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -1775,6 +1818,7 @@
     "ap": 2,
     "category": "D",
     "tier": 8,
+    "laborSlots": 8,
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
@@ -1832,6 +1876,7 @@
     "ap": 3,
     "category": "D",
     "tier": 7,
+    "laborSlots": 7,
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
@@ -1871,6 +1916,7 @@
     "ap": 1,
     "category": "D",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -1926,6 +1972,7 @@
     "ap": 1,
     "category": "D",
     "tier": 7,
+    "laborSlots": 7,
     "faction": "generic",
     "cost": {
       "currency.metal": 37,
@@ -1984,6 +2031,7 @@
     "ap": 1,
     "category": "E",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -2037,6 +2085,7 @@
     "ap": 1,
     "category": "E",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -2098,6 +2147,7 @@
     "ap": 1,
     "category": "E",
     "tier": 4,
+    "laborSlots": 4,
     "faction": "generic",
     "cost": {
       "currency.metal": 19,
@@ -2151,6 +2201,7 @@
     "ap": 1,
     "category": "E",
     "tier": 8,
+    "laborSlots": 8,
     "faction": "generic",
     "cost": {
       "currency.metal": 45,
@@ -2205,6 +2256,7 @@
     "ap": 1,
     "category": "E",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -2264,6 +2316,7 @@
     "ap": 2,
     "category": "E",
     "tier": 8,
+    "laborSlots": 8,
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
@@ -2325,6 +2378,7 @@
     "ap": 1,
     "category": "F",
     "tier": 5,
+    "laborSlots": 5,
     "faction": "generic",
     "cost": {
       "currency.metal": 24,
@@ -2389,6 +2443,7 @@
     "ap": 1,
     "category": "F",
     "tier": 8,
+    "laborSlots": 8,
     "faction": "generic",
     "cost": {
       "currency.metal": 45,
@@ -2453,6 +2508,7 @@
     "ap": 1,
     "category": "F",
     "tier": 7,
+    "laborSlots": 7,
     "faction": "generic",
     "cost": {
       "currency.metal": 37,
@@ -2507,6 +2563,7 @@
     "ap": 3,
     "category": "F",
     "tier": 9,
+    "laborSlots": 9,
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
@@ -2578,6 +2635,7 @@
     "ap": 1,
     "category": "F",
     "tier": 6,
+    "laborSlots": 6,
     "faction": "generic",
     "cost": {
       "currency.metal": 30,
@@ -2633,6 +2691,7 @@
     "ap": 3,
     "category": "F",
     "tier": 8,
+    "laborSlots": 8,
     "faction": "generic",
     "maxPerSystem": 1,
     "cost": {
@@ -2694,10 +2753,21 @@
     "id": "mega.gate.damyl",
     "base": "mega.gate",
     "kind": "relay",
+    "laborSlots": 1,
     "zone": "deep",
     "name": "Дамильские врата",
     "faction": "damyl",
     "maxPerSystem": 1,
+    "cost_mult": 1.3,
+    "upkeep_effects": [
+      {
+        "effect": "upkeep_flat",
+        "args": {
+          "resource": "currency.energia",
+          "amount": 2
+        }
+      }
+    ],
     "extra_slots": [
       {
         "role": "white_corridor",
@@ -2728,10 +2798,21 @@
     "id": "mega.archive.belator",
     "base": "cognitio.archive",
     "kind": "lab",
+    "laborSlots": 1,
     "zone": "deep",
     "name": "Архив Дая-Чины",
     "faction": "belator",
     "maxPerSystem": 1,
+    "cost_mult": 1.3,
+    "upkeep_effects": [
+      {
+        "effect": "upkeep_flat",
+        "args": {
+          "resource": "currency.cognitio",
+          "amount": 2
+        }
+      }
+    ],
     "extra_slots": [
       {
         "role": "norborian_logic",
@@ -2773,6 +2854,7 @@
     "ap": 2,
     "category": "F",
     "tier": 9,
+    "laborSlots": 9,
     "faction": "belator",
     "maxPerSystem": 1,
     "cost": {
@@ -2837,6 +2919,7 @@
     "ap": 2,
     "category": "C",
     "tier": 7,
+    "laborSlots": 7,
     "faction": "belator",
     "maxPerSystem": 1,
     "cost": {
@@ -2895,5 +2978,1600 @@
     },
     "signature": "B→C: второй контур щита + полевой сплав из отходов",
     "tradeoff": "требует ночных гоблинов + рэсунов"
+  },
+  "building.fortress_station": {
+    "id": "building.fortress_station",
+    "kind": "fortress",
+    "zone": "orbital",
+    "name": "Крепость-станция",
+    "ap": 2,
+    "category": "B",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "structural",
+    "cost": {
+      "currency.metal": 40,
+      "currency.supply": 12,
+      "currency.materia": 8
+    },
+    "effects": [
+      {
+        "effect": "pop_cap_add",
+        "args": {
+          "amount": 8
+        }
+      },
+      {
+        "effect": "ap_add",
+        "args": {
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "properties": [
+            "strong"
+          ],
+          "tier": ">=3"
+        },
+        "count": 6
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "D",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "B2 RoleScore structural unlock stub",
+    "tradeoff": "тяжёлый upkeep энергии"
+  },
+  "building.solar_forge": {
+    "id": "building.solar_forge",
+    "kind": "forge",
+    "zone": "orbital",
+    "name": "Солнечная кузница",
+    "ap": 2,
+    "category": "D",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "energy",
+    "cost": {
+      "currency.metal": 36,
+      "currency.supply": 10,
+      "currency.energia": 10
+    },
+    "effects": [
+      {
+        "effect": "flow_convert",
+        "args": {
+          "from": {
+            "category": "A",
+            "tier": ">=3"
+          },
+          "to": {
+            "category": "D",
+            "tier": ">=4"
+          }
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "reactor",
+        "require": {
+          "properties": [
+            "energy"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "B2 RoleScore energy unlock stub",
+    "tradeoff": "жрёт Materia на поддержание"
+  },
+  "building.free_port": {
+    "id": "building.free_port",
+    "kind": "trade",
+    "zone": "orbital",
+    "name": "Вольный порт",
+    "ap": 2,
+    "category": "C",
+    "tier": 4,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerSystem": 1,
+    "cost": {
+      "currency.metal": 40,
+      "currency.supply": 18,
+      "currency.industria": 8
+    },
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.supply",
+          "mult": 1.08
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "trade_hub",
+        "require": {
+          "properties": [
+            "free_port"
+          ],
+          "category": "C",
+          "tier": ">=3"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "D",
+          "tier": ">=2"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "B6 civic.trade unlock — внешняя торговля",
+    "tradeoff": "требует Путь Торговли"
+  },
+  "building.cultural_wonder": {
+    "id": "building.cultural_wonder",
+    "kind": "monument",
+    "zone": "surface",
+    "name": "Культурное чудо",
+    "ap": 3,
+    "category": "F",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "cost": {
+      "currency.metal": 55,
+      "currency.supply": 25,
+      "currency.cognitio": 12
+    },
+    "effects": [
+      {
+        "effect": "loyalty_add",
+        "args": {
+          "amount": 4
+        }
+      },
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "monument",
+        "require": {
+          "properties": [
+            "cultural_wonder"
+          ],
+          "category": "F",
+          "tier": ">=4"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=2"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "B6 civic.culture unlock — культурный якорь",
+    "tradeoff": "требует Путь Культуры"
+  },
+  "building.siege_platform": {
+    "id": "building.siege_platform",
+    "kind": "platform",
+    "zone": "orbital",
+    "name": "Осадная платформа",
+    "ap": 2,
+    "category": "C",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "offensive",
+    "cost": {
+      "currency.metal": 38,
+      "currency.supply": 12,
+      "currency.industria": 8
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "attack",
+          "mult": 1.04
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "weapon",
+        "require": {
+          "properties": [
+            "weapon"
+          ],
+          "tier": ">=3",
+          "theater": "space"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "RoleScore offensive unlock stub",
+    "tradeoff": "заглушка RoleScore, не финальный баланс"
+  },
+  "building.planetary_shield": {
+    "id": "building.planetary_shield",
+    "kind": "shield",
+    "zone": "orbital",
+    "name": "Планетарный щит",
+    "ap": 2,
+    "category": "D",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "defensive",
+    "cost": {
+      "currency.metal": 40,
+      "currency.supply": 10,
+      "currency.energia": 10
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "shields",
+          "mult": 1.04
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "shield",
+        "require": {
+          "properties": [
+            "shield"
+          ],
+          "tier": ">=3",
+          "theater": "space"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "RoleScore defensive unlock stub",
+    "tradeoff": "заглушка RoleScore, не финальный баланс"
+  },
+  "building.jump_relay": {
+    "id": "building.jump_relay",
+    "kind": "relay",
+    "zone": "orbital",
+    "name": "Прыжковый ретранслятор",
+    "ap": 2,
+    "category": "C",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "mobility",
+    "cost": {
+      "currency.metal": 36,
+      "currency.supply": 14,
+      "currency.industria": 8
+    },
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "speed",
+          "mult": 1.04
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "engine",
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "RoleScore mobility unlock stub",
+    "tradeoff": "заглушка RoleScore, не финальный баланс"
+  },
+  "building.order_institute": {
+    "id": "building.order_institute",
+    "kind": "institute",
+    "zone": "orbital",
+    "name": "Орден-институт",
+    "ap": 2,
+    "category": "F",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "cognitive",
+    "cost": {
+      "currency.metal": 32,
+      "currency.supply": 10,
+      "currency.cognitio": 8
+    },
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.96
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "research",
+        "require": {
+          "properties": [
+            "info_store"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "RoleScore cognitive unlock stub",
+    "tradeoff": "заглушка RoleScore, не финальный баланс"
+  },
+  "building.evolution_vat": {
+    "id": "building.evolution_vat",
+    "kind": "vat",
+    "zone": "orbital",
+    "name": "Чан эволюции",
+    "ap": 2,
+    "category": "E",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "biological",
+    "cost": {
+      "currency.metal": 28,
+      "currency.supply": 16,
+      "currency.bios": 10
+    },
+    "effects": [
+      {
+        "effect": "pop_cap_add",
+        "args": {
+          "amount": 6
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "bio",
+        "require": {
+          "properties": [
+            "fuel"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "RoleScore biological unlock stub",
+    "tradeoff": "заглушка RoleScore, не финальный баланс"
+  },
+  "building.relic_vault": {
+    "id": "building.relic_vault",
+    "kind": "vault",
+    "zone": "orbital",
+    "name": "Реликтовое хранилище",
+    "ap": 2,
+    "category": "F",
+    "tier": 5,
+    "laborSlots": 5,
+    "faction": "generic",
+    "requireRoleMilestone": "exotic",
+    "cost": {
+      "currency.metal": 42,
+      "currency.supply": 12,
+      "currency.cognitio": 10
+    },
+    "effects": [
+      {
+        "effect": "ap_add",
+        "args": {
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "relic",
+        "require": {
+          "properties": [
+            "anomaly"
+          ],
+          "tier": ">=3"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "B",
+          "tier": ">=3"
+        },
+        "count": 2,
+        "per": "turn"
+      }
+    ],
+    "signature": "RoleScore exotic unlock stub",
+    "tradeoff": "заглушка RoleScore, не финальный баланс"
+  },
+  "building.armory": {
+    "id": "building.armory",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Оружейная",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "small_arms"
+    ],
+    "cost": {
+      "currency.metal": 14,
+      "currency.supply": 6,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.rifle",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "1 винтовка/ход; легион, не флот",
+    "tradeoff": "не даёт корабельных стволов"
+  },
+  "building.kit_works": {
+    "id": "building.kit_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Интендантский двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "field_kit"
+    ],
+    "cost": {
+      "currency.metal": 12,
+      "currency.supply": 7,
+      "currency.industria": 1
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.field_kit",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Полевой набор легиона",
+    "tradeoff": "не броня корабля"
+  },
+  "building.armor_tailor": {
+    "id": "building.armor_tailor",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Портняжная брони",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "armor_kit"
+    ],
+    "cost": {
+      "currency.metal": 13,
+      "currency.supply": 5,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.armor_vest",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Панцирь легиона",
+    "tradeoff": "не обшивка корпуса"
+  },
+  "building.kinetic_forge": {
+    "id": "building.kinetic_forge",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Кинетический цех",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "kinetic"
+    ],
+    "cost": {
+      "currency.metal": 16,
+      "currency.supply": 6,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.kinetic_cannon",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Корабельная болванка 1/ход",
+    "tradeoff": "не стрелковое легиона"
+  },
+  "building.beam_shop": {
+    "id": "building.beam_shop",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Лучевой цех",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "laser"
+    ],
+    "cost": {
+      "currency.metal": 16,
+      "currency.supply": 5,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.light_laser",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Корабельный лазер 1/ход",
+    "tradeoff": "жрёт энергию слота"
+  },
+  "building.missile_works": {
+    "id": "building.missile_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Ракетный двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "missile"
+    ],
+    "cost": {
+      "currency.metal": 15,
+      "currency.supply": 7,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.missile_rack",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Кассета ракет 1/ход",
+    "tradeoff": "слабо против точки"
+  },
+  "building.plasma_bay": {
+    "id": "building.plasma_bay",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Плазменная бухта",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "plasma"
+    ],
+    "cost": {
+      "currency.metal": 22,
+      "currency.supply": 9,
+      "currency.industria": 4
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.plasma_projector",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Плазма T2, 1/ход",
+    "tradeoff": "дорогое содержание"
+  },
+  "building.torpedo_dock": {
+    "id": "building.torpedo_dock",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Торпедный док",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "torpedo"
+    ],
+    "cost": {
+      "currency.metal": 24,
+      "currency.supply": 10,
+      "currency.industria": 4
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.torpedo",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Торпеда капитала 1/ход",
+    "tradeoff": "бессмысленно на экране"
+  },
+  "building.engine_bay": {
+    "id": "building.engine_bay",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Моторный цех",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "chem_drive"
+    ],
+    "cost": {
+      "currency.metal": 15,
+      "currency.supply": 8,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.chem_drive",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Химпривод флота",
+    "tradeoff": "не гусеница легиона"
+  },
+  "building.fusion_yard": {
+    "id": "building.fusion_yard",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Термоядерный двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "accelerate"
+    ],
+    "cost": {
+      "currency.metal": 26,
+      "currency.supply": 10,
+      "currency.industria": 5
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.fusion_drive",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Термояд в сопле 1/ход",
+    "tradeoff": "требует ускоритель"
+  },
+  "building.shield_works": {
+    "id": "building.shield_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Щитовой завод",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "shield"
+    ],
+    "cost": {
+      "currency.metal": 22,
+      "currency.supply": 8,
+      "currency.industria": 4
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.screen_emitter",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Экранный излучатель флота",
+    "tradeoff": "не купол планеты"
+  },
+  "building.ground_foundry": {
+    "id": "building.ground_foundry",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Лафетный двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "siege_gun"
+    ],
+    "cost": {
+      "currency.metal": 20,
+      "currency.supply": 8,
+      "currency.industria": 3
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.siege_piece",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Осадный ствол легиона",
+    "tradeoff": "не корабельная батарея"
+  },
+  "building.dome_works": {
+    "id": "building.dome_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Купольный цех",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "shield"
+    ],
+    "cost": {
+      "currency.metal": 22,
+      "currency.supply": 8,
+      "currency.industria": 4
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.dome_emitter",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Излучатель планетарного купола",
+    "tradeoff": "не экран флота"
+  },
+  "building.vehicle_works": {
+    "id": "building.vehicle_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Машинный двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "armor_cadre"
+    ],
+    "cost": {
+      "currency.metal": 21,
+      "currency.supply": 9,
+      "currency.industria": 3
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.vehicle_cannon",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Орудие бронекадра",
+    "tradeoff": "не флот"
+  },
+  "building.exchange_hall": {
+    "id": "building.exchange_hall",
+    "kind": "trade",
+    "zone": "surface",
+    "name": "Зал биржи",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "market_hall"
+    ],
+    "cost": {
+      "currency.metal": 18,
+      "currency.supply": 8,
+      "currency.industria": 3
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.metal",
+          "amount": 2
+        }
+      },
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 2,
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Клиринг: +2 металл, ёмкость C2",
+    "tradeoff": "не караван"
+  },
+  "building.bonded_warehouse": {
+    "id": "building.bonded_warehouse",
+    "kind": "trade",
+    "zone": "surface",
+    "name": "Бондовый склад",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 2,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "bonded_warehouse"
+    ],
+    "cost": {
+      "currency.metal": 16,
+      "currency.supply": 6,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "C",
+          "tier": 2,
+          "amount": 2
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 5
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Ёмкость склада под печатью",
+    "tradeoff": "не добыча"
+  },
+  "building.bazaar": {
+    "id": "building.bazaar",
+    "kind": "trade",
+    "zone": "surface",
+    "name": "Базар",
+    "ap": 1,
+    "category": "C",
+    "tier": 1,
+    "laborSlots": 2,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "bazaar"
+    ],
+    "cost": {
+      "currency.metal": 10,
+      "currency.supply": 5
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.supply",
+          "amount": 2
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Ряд кормит стол",
+    "tradeoff": "шум, не клиринг"
+  },
+  "building.weigh_house": {
+    "id": "building.weigh_house",
+    "kind": "trade",
+    "zone": "surface",
+    "name": "Весовая",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 2,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "weigh_house"
+    ],
+    "cost": {
+      "currency.metal": 14,
+      "currency.supply": 5,
+      "currency.industria": 1
+    },
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.04
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Проба веса — цех не врёт",
+    "tradeoff": "не верфь"
+  },
+  "building.academy": {
+    "id": "building.academy",
+    "kind": "institute",
+    "zone": "surface",
+    "name": "Академия",
+    "ap": 1,
+    "category": "F",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "academy"
+    ],
+    "cost": {
+      "currency.metal": 16,
+      "currency.supply": 6,
+      "currency.cognitio": 4
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.cognitio",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "+1 когнитио/ход",
+    "tradeoff": "не казарма"
+  },
+  "building.civic_theater": {
+    "id": "building.civic_theater",
+    "kind": "monument",
+    "zone": "surface",
+    "name": "Городской театр",
+    "ap": 1,
+    "category": "F",
+    "tier": 2,
+    "laborSlots": 2,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "civic_theater"
+    ],
+    "cost": {
+      "currency.metal": 14,
+      "currency.supply": 8,
+      "currency.cognitio": 2
+    },
+    "effects": [
+      {
+        "effect": "loyalty_add",
+        "args": {
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Сцена города: лояльность",
+    "tradeoff": "не чудо культуры"
+  },
+  "building.archive_hall": {
+    "id": "building.archive_hall",
+    "kind": "institute",
+    "zone": "surface",
+    "name": "Зал памяти",
+    "ap": 1,
+    "category": "F",
+    "tier": 2,
+    "laborSlots": 2,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "archive_hall"
+    ],
+    "cost": {
+      "currency.metal": 12,
+      "currency.supply": 5,
+      "currency.cognitio": 3
+    },
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.cognitio",
+          "mult": 1.03
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 3
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Архив имён — наука дешевле временем",
+    "tradeoff": "не лаборатория F-тиров"
   }
 }

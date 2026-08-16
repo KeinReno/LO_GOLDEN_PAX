@@ -4,6 +4,11 @@
  */
 import path from "node:path";
 import { DATA_DIR, readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
+import { isNormalizedStoreActive } from "./db/storeAdapter.mjs";
+import {
+  readEngagementRows,
+  writeEngagementRows,
+} from "./db/campaignDb.mjs";
 import {
   resolveEngagementFight,
   resolveAssaultPhase,
@@ -17,6 +22,8 @@ import {
   passCardRound,
   finalizeCardBattle,
   applyCardBattleTrophies,
+  claimCardBattleSalvage,
+  skipCardBattleSalvage,
   shouldOfferCardBattle,
   drawFromDeck,
   readyRound,
@@ -29,6 +36,7 @@ import {
 import { getContent } from "./contentLoader.mjs";
 import { spawnRefugees } from "./narrative.mjs";
 import { factionsAtWar as atWar } from "./diplomacyCombat.mjs";
+import { canEngageSides } from "./forceKindGuard.mjs";
 
 export const ENGAGEMENTS_PATH = path.join(DATA_DIR, "engagements.json");
 
@@ -46,7 +54,9 @@ export { cancelEngagementsMissingForces } from "./engagementReconcile.mjs";
 
 export function readEngagements() {
   ensureDataDir();
-  const raw = readJson(ENGAGEMENTS_PATH, null);
+  const raw = isNormalizedStoreActive()
+    ? readEngagementRows()
+    : readJson(ENGAGEMENTS_PATH, null);
   const list = Array.isArray(raw) ? raw : [];
   // Lazy import to avoid circular deps at module load
   return list.map((e) => {
@@ -79,6 +89,10 @@ export function readEngagements() {
 }
 
 export function writeEngagements(list) {
+  if (isNormalizedStoreActive()) {
+    writeEngagementRows(list);
+    return;
+  }
   writeJson(ENGAGEMENTS_PATH, list);
 }
 
@@ -781,6 +795,30 @@ export function collectContactsAndAttacks(world, turn, attackIntents, journal) {
       continue;
     }
 
+    const sideAIds = {
+      fleetIds: attackerFleets,
+      legionIds: theater === "assault" ? attackerLegions : [],
+    };
+    const sideBIds = {
+      fleetIds: defendersFleetsScoped,
+      legionIds: defendersLegionsScoped,
+    };
+    const planetaryAssault = !!(
+      intent.payload?.planetId || intent.payload?.assault
+    );
+    const kindGate = canEngageSides(sideAIds, sideBIds, {
+      allowPlanetaryAssault: planetaryAssault && theater === "assault",
+    });
+    if (!kindGate.ok) {
+      journal.push({
+        type: "cross_kind_engage_not_allowed",
+        systemId: toId,
+        factionId: intent.factionId,
+        error: kindGate.error,
+      });
+      continue;
+    }
+
     const eng = createEngagement({
       theater: theater === "assault" ? "assault" : "space",
       systemId: toId,
@@ -1323,4 +1361,31 @@ export function retreatEngagementCard(engagementId, factionId, world) {
   finishCardEngagement(world, eng, journal);
   writeEngagements(list);
   return { ok: true, engagement: eng, journal, retreated: true };
+}
+
+/** Resolved card battle: winner picks one salvage module into an empty slot. */
+export function claimEngagementTrophy(engagementId, factionId, world, pick = {}) {
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const result = claimCardBattleSalvage(world, eng, factionId, pick);
+  if (!result.ok) return result;
+  writeEngagements(list);
+  return { ok: true, engagement: eng, trophies: result.trophies };
+}
+
+export function skipEngagementTrophy(engagementId, factionId, world) {
+  const list = readEngagements();
+  const eng = list.find((e) => e.id === engagementId);
+  if (!eng) return { ok: false, error: "engagement missing" };
+  if (!eng.sides.some((s) => s.factionId === factionId)) {
+    return { ok: false, error: "not a side" };
+  }
+  const result = skipCardBattleSalvage(world, eng, factionId);
+  if (!result.ok) return result;
+  writeEngagements(list);
+  return { ok: true, engagement: eng, trophies: result.trophies };
 }

@@ -17,6 +17,17 @@
           "type": "string",
           "enum": ["A", "B", "C", "D", "E", "F"]
         },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "industry",
+            "military",
+            "culture",
+            "commerce",
+            "diplomacy",
+            "governance"
+          ]
+        },
         "era": { "type": "integer", "minimum": 1, "maximum": 5 },
         "cost": {
           "type": "object",
@@ -72,7 +83,23 @@
           "items": { "type": "string" }
         },
         "requiresLineage": { "type": "string" },
-        "balanceBudget": { "type": "number" }
+        "balanceBudget": { "type": "number" },
+        "gradeable": { "type": "boolean" },
+        "gradeTable": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "magnitude": {
+              "type": "array",
+              "items": { "type": "number" }
+            },
+            "upgradeCost": { "type": "array" }
+          }
+        },
+        "socket": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     }
   },
@@ -87,6 +114,7 @@
           "enum": [
             "unlock_tech_tier",
             "unlock_property",
+            "open_path",
             "production_mult",
             "upkeep_mult",
             "production_flat",
@@ -99,7 +127,8 @@
             "pop_growth_mult",
             "move_cost_mult",
             "building_level_mult",
-            "logistics_disconnected_penalty"
+            "logistics_disconnected_penalty",
+            "combat_role_mult"
           ]
         },
         "args": { "type": "object" }

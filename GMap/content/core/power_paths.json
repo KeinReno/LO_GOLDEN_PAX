@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Пути Силы — лорные флаги, не RoleScore. severedByEmbodiment — задел на доктрины воплощения (логика не реализована)."
+  },
+  "paths": {
+    "mind": {
+      "id": "mind",
+      "label": "Разум",
+      "description": "Боевой флейвор — воздействие на окружение и врага.",
+      "severedByEmbodiment": true
+    },
+    "will": {
+      "id": "will",
+      "label": "Воля",
+      "description": "Дипломатический флейвор — психика, лояльность, переговоры.",
+      "severedByEmbodiment": true
+    },
+    "chaos": {
+      "id": "chaos",
+      "label": "Хаотетика",
+      "description": "Редкий гибрид Разума и Воли; контент отдельно.",
+      "severedByEmbodiment": false
+    },
+    "shadow": {
+      "id": "shadow",
+      "label": "Теневодство",
+      "description": "Событийный путь — касание Хивера, пакт; не по крови.",
+      "severedByEmbodiment": false
+    }
+  }
+}

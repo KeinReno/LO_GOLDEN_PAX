@@ -6,7 +6,20 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeWorld } from "./normalizeWorld.mjs";
-import { getStoreBackend } from "./db/storeAdapter.mjs";
+import { migrateLedgerForWorld } from "./ledger.mjs";
+import {
+  getStoreBackend,
+  isNormalizedStoreActive,
+  resetStoreBackend,
+} from "./db/storeAdapter.mjs";
+import {
+  bumpTableMetaRevision,
+  getCampaignDbPath,
+  getLastJournalRow,
+  readTableMetaRow,
+  writeTableMetaRow,
+  writeTickJournal as writeTickJournalDb,
+} from "./db/campaignDb.mjs";
 import { cancelEngagementsMissingForces } from "./engagementReconcile.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +30,7 @@ export const INTENTS_PATH = path.join(DATA_DIR, "intents.json");
 export const DRAFT_PATH = path.join(DATA_DIR, "campaign-draft.json");
 export const LEDGER_PATH = path.join(DATA_DIR, "ledger.json");
 export const TABLE_META_PATH = path.join(DATA_DIR, "table-meta.json");
+export const TICK_JOURNAL_PATH = path.join(DATA_DIR, "tick-journal.json");
 export const TURNS_DIR = path.join(DATA_DIR, "turns");
 export const LORE_PATH = path.resolve(
   __dirname,
@@ -37,22 +51,79 @@ export function writeJson(file, data) {
   getStoreBackend().writeJson(file, data);
 }
 
+/** Append-only row via store adapter (file JSONL or sqlite jsonl_log). */
+export function appendJsonl(file, row) {
+  ensureDataDir();
+  getStoreBackend().appendJsonl(file, row);
+}
+
+let journalMigrated = false;
+
+/** Pull embedded lastJournal out of table-meta.json (one-time, file mode). */
+function migrateEmbeddedJournalFromMeta() {
+  if (journalMigrated) return;
+  journalMigrated = true;
+  if (isNormalizedStoreActive()) return;
+  try {
+    const raw = readJson(TABLE_META_PATH, null);
+    if (!raw?.lastJournal) return;
+    writeJson(TICK_JOURNAL_PATH, raw.lastJournal);
+    const { lastJournal: _drop, ...small } = raw;
+    writeJson(TABLE_META_PATH, small);
+  } catch {
+    /* ignore — parse errors surface on next read */
+  }
+}
+
 export function getTableMeta() {
+  migrateEmbeddedJournalFromMeta();
+  if (isNormalizedStoreActive()) {
+    return readTableMetaRow();
+  }
   const meta = readJson(TABLE_META_PATH, null);
-  if (meta && typeof meta.tableRevision === "number") return meta;
+  if (meta && typeof meta.tableRevision === "number") {
+    const { lastJournal: _drop, ...small } = meta;
+    return small;
+  }
   return { tableRevision: 0, lastTickAt: null, tickFrozen: false };
 }
 
 export function setTableMeta(patch) {
-  const next = { ...getTableMeta(), ...patch };
+  const { lastJournal, ...rest } = patch || {};
+  if (lastJournal) writeTickJournal(lastJournal);
+  const next = { ...getTableMeta(), ...rest };
+  if (isNormalizedStoreActive()) {
+    return writeTableMetaRow(next);
+  }
   writeJson(TABLE_META_PATH, next);
   return next;
 }
 
 export function bumpTableRevision() {
+  if (isNormalizedStoreActive()) {
+    return bumpTableMetaRevision();
+  }
   const meta = getTableMeta();
   const tableRevision = (meta.tableRevision ?? 0) + 1;
   return setTableMeta({ tableRevision, updatedAt: new Date().toISOString() });
+}
+
+/** Persist tick briefing separately from lightweight table-meta. */
+export function writeTickJournal(briefing) {
+  if (isNormalizedStoreActive()) {
+    writeTickJournalDb(briefing);
+    return briefing;
+  }
+  writeJson(TICK_JOURNAL_PATH, briefing);
+  return briefing;
+}
+
+export function getLastJournal() {
+  if (isNormalizedStoreActive()) {
+    return getLastJournalRow();
+  }
+  migrateEmbeddedJournalFromMeta();
+  return readJson(TICK_JOURNAL_PATH, null);
 }
 
 /** Copy live files into data/turns/{turn}_{stamp}/ */
@@ -71,6 +142,7 @@ export function backupTurnSnapshot(turn, reason = "manual") {
   copyIf(INTENTS_PATH, "intents.json");
   copyIf(LEDGER_PATH, "ledger.json");
   copyIf(TABLE_META_PATH, "table-meta.json");
+  copyIf(TICK_JOURNAL_PATH, "tick-journal.json");
   copyIf(path.join(DATA_DIR, "fog-masks.json"), "fog-masks.json");
   copyIf(path.join(DATA_DIR, "engagements.json"), "engagements.json");
   copyIf(path.join(DATA_DIR, "market-rates.json"), "market-rates.json");
@@ -81,11 +153,70 @@ export function backupTurnSnapshot(turn, reason = "manual") {
   copyIf(path.join(DATA_DIR, "market-history.json"), "market-history.json");
   copyIf(path.join(DATA_DIR, "race_states.json"), "race_states.json");
   copyIf(path.join(DATA_DIR, "faction-intel.json"), "faction-intel.json");
+  copyIf(path.join(DATA_DIR, "fx-exchange.json"), "fx-exchange.json");
+  if (isNormalizedStoreActive()) {
+    const sqlitePath = getCampaignDbPath();
+    if (fs.existsSync(sqlitePath)) {
+      copyIf(sqlitePath, "table.sqlite");
+    }
+  }
   writeJson(path.join(dir, "backup-meta.json"), {
     turn: turn ?? null,
     reason,
     at: new Date().toISOString(),
   });
+  return dir;
+}
+
+/** Restore live data files from a directory produced by backupTurnSnapshot. */
+export function restoreTurnSnapshot(dir) {
+  if (!dir || !fs.existsSync(dir)) {
+    throw new Error(`restoreTurnSnapshot: missing backup dir ${dir}`);
+  }
+  const restoreIf = (name, dest) => {
+    const src = path.join(dir, name);
+    if (!fs.existsSync(src)) return;
+    const tmp = `${dest}.tmp-restore-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    fs.copyFileSync(src, tmp);
+    try {
+      fs.renameSync(tmp, dest);
+    } catch {
+      if (fs.existsSync(dest)) fs.unlinkSync(dest);
+      fs.renameSync(tmp, dest);
+    }
+  };
+  restoreIf("published.json", PUBLISHED_PATH);
+  restoreIf("player-orders.json", ORDERS_PATH);
+  restoreIf("intents.json", INTENTS_PATH);
+  restoreIf("ledger.json", LEDGER_PATH);
+  restoreIf("table-meta.json", TABLE_META_PATH);
+  restoreIf("tick-journal.json", TICK_JOURNAL_PATH);
+  restoreIf("fog-masks.json", path.join(DATA_DIR, "fog-masks.json"));
+  restoreIf("engagements.json", path.join(DATA_DIR, "engagements.json"));
+  restoreIf("market-rates.json", path.join(DATA_DIR, "market-rates.json"));
+  restoreIf("market-orders.json", path.join(DATA_DIR, "market-orders.json"));
+  restoreIf("faction-contacts.json", path.join(DATA_DIR, "faction-contacts.json"));
+  restoreIf("diplo-offers.json", path.join(DATA_DIR, "diplo-offers.json"));
+  restoreIf("market-membership.json", path.join(DATA_DIR, "market-membership.json"));
+  restoreIf("market-history.json", path.join(DATA_DIR, "market-history.json"));
+  restoreIf("race_states.json", path.join(DATA_DIR, "race_states.json"));
+  restoreIf("faction-intel.json", path.join(DATA_DIR, "faction-intel.json"));
+  restoreIf("fx-exchange.json", path.join(DATA_DIR, "fx-exchange.json"));
+  if (isNormalizedStoreActive()) {
+    const sqlitePath = getCampaignDbPath();
+    const src = path.join(dir, "table.sqlite");
+    if (fs.existsSync(src)) {
+      const tmp = `${sqlitePath}.tmp-restore-${process.pid}-${Date.now()}`;
+      fs.copyFileSync(src, tmp);
+      try {
+        fs.renameSync(tmp, sqlitePath);
+      } catch {
+        if (fs.existsSync(sqlitePath)) fs.unlinkSync(sqlitePath);
+        fs.renameSync(tmp, sqlitePath);
+      }
+      resetStoreBackend();
+    }
+  }
   return dir;
 }
 
@@ -97,7 +228,13 @@ export function readPublishedRaw() {
 export function readLiveBoard() {
   const raw = readPublishedRaw();
   if (!raw) return null;
-  return normalizeWorld(raw);
+  const world = normalizeWorld(raw);
+  try {
+    migrateLedgerForWorld(world);
+  } catch {
+    // data dir may be absent in some CLI contexts
+  }
+  return world;
 }
 
 /**

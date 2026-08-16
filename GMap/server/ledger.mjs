@@ -3,8 +3,14 @@
  * Authoritative currencies: 6 category stocks (A–F) + legacy metal/supply bridge.
  */
 import { LEDGER_PATH, readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
+import { isNormalizedStoreActive } from "./db/storeAdapter.mjs";
+import {
+  insertLedgerEntry,
+  readLedgerEntries,
+} from "./db/campaignDb.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
+import { ensureRoleScores, publicRoleScores } from "./roleScores.mjs";
 
 /** Starting stocks for a new faction (aligned to economy_balance.start). */
 export const DEFAULT_STOCKS = {
@@ -45,11 +51,15 @@ export function defaultFactionEco(factionId) {
     bottlenecks: {},
     unlockedTechs: [],
     unlockedUpgrades: [],
+    techGrades: {},
+    techSockets: {},
     /** Acquired via trade/history: { techId, source, transferable?, acquiredTurn? }[] */
     acquiredTechs: [],
     techTiers: { ...DEFAULT_TECH_TIERS },
     unlockedProperties: [],
     researchQueue: [],
+    /** 3-candidate research offers keyed by economy category A–F. */
+    currentOffers: {},
     /** Hybrid lineages unlocked empire-wide (race_hybrid.*). */
     unlockedLineages: [],
     /** Planned builds: { systemId, planetId, buildingId }[] */
@@ -75,16 +85,27 @@ export function defaultFactionEco(factionId) {
 export function readLedger() {
   ensureDataDir();
   const raw = readJson(LEDGER_PATH, null);
+  const factions =
+    raw && typeof raw === "object" && raw.factions && typeof raw.factions === "object"
+      ? raw.factions
+      : {};
+  if (isNormalizedStoreActive()) {
+    return { factions, entries: readLedgerEntries() };
+  }
   if (!raw || typeof raw !== "object") {
     return { factions: {}, entries: [] };
   }
   return {
-    factions: raw.factions && typeof raw.factions === "object" ? raw.factions : {},
+    factions,
     entries: Array.isArray(raw.entries) ? raw.entries : [],
   };
 }
 
 export function writeLedger(ledger) {
+  if (isNormalizedStoreActive()) {
+    writeJson(LEDGER_PATH, { factions: ledger.factions || {} });
+    return;
+  }
   writeJson(LEDGER_PATH, ledger);
 }
 
@@ -97,6 +118,26 @@ function ensureCategoryStocks(stocks) {
   return stocks;
 }
 
+/** Ensure strategic map resource keys exist as 0 (never undefined) — B1 T1.7. */
+function ensureStrategicStocks(stocks, content) {
+  try {
+    const c = content || getContent();
+    const ids = new Set(c.economy_schema?.resource_ranks?.strategic || []);
+    for (const def of Object.values(c.map_resources || {})) {
+      if (!def?.id) continue;
+      if (def.rank === "strategic" || def.strategic === true) ids.add(def.id);
+    }
+    for (const id of ids) {
+      if (stocks[id] == null || Number.isNaN(Number(stocks[id]))) {
+        stocks[id] = 0;
+      }
+    }
+  } catch {
+    /* content may be unavailable during early boot */
+  }
+  return stocks;
+}
+
 export function ensureFactionEco(ledger, factionId) {
   if (!ledger.factions[factionId]) {
     ledger.factions[factionId] = defaultFactionEco(factionId);
@@ -104,6 +145,7 @@ export function ensureFactionEco(ledger, factionId) {
   const f = ledger.factions[factionId];
   if (!f.stocks) f.stocks = { ...DEFAULT_STOCKS };
   else ensureCategoryStocks(f.stocks);
+  ensureStrategicStocks(f.stocks);
   if (!f.taxes) {
     f.taxes = {
       "tax.materia": "none",
@@ -139,6 +181,8 @@ export function ensureFactionEco(ledger, factionId) {
     }
     f.unlockedUpgrades = migrated;
   }
+  if (!f.techGrades || typeof f.techGrades !== "object") f.techGrades = {};
+  if (!f.techSockets || typeof f.techSockets !== "object") f.techSockets = {};
   if (!Array.isArray(f.acquiredTechs)) f.acquiredTechs = [];
   if (!f.techTiers || typeof f.techTiers !== "object") {
     f.techTiers = { ...DEFAULT_TECH_TIERS };
@@ -149,6 +193,7 @@ export function ensureFactionEco(ledger, factionId) {
   }
   if (!Array.isArray(f.unlockedProperties)) f.unlockedProperties = [];
   if (!Array.isArray(f.researchQueue)) f.researchQueue = [];
+  if (!f.currentOffers || typeof f.currentOffers !== "object") f.currentOffers = {};
   if (!Array.isArray(f.unlockedLineages)) f.unlockedLineages = [];
   if (!Array.isArray(f.buildQueue)) f.buildQueue = [];
   if (!f.flowPriorities || typeof f.flowPriorities !== "object") {
@@ -162,6 +207,15 @@ export function ensureFactionEco(ledger, factionId) {
   }
   if (f.economicPolicy === undefined) f.economicPolicy = null;
   if (!Array.isArray(f.laws)) f.laws = [];
+  ensureRoleScores(f);
+  if (!Array.isArray(f.openPaths)) f.openPaths = [];
+  if (!Array.isArray(f.powerPaths)) f.powerPaths = [];
+  if (!f.civicScores || typeof f.civicScores !== "object") {
+    f.civicScores = { trade: 0, culture: 0 };
+  } else {
+    if (f.civicScores.trade == null) f.civicScores.trade = 0;
+    if (f.civicScores.culture == null) f.civicScores.culture = 0;
+  }
   if (!f.alchemy || typeof f.alchemy !== "object") {
     f.alchemy = {
       attemptsUsedThisTurn: 0,
@@ -188,6 +242,14 @@ export function ensureAllFactions(ledger, world) {
   return ledger;
 }
 
+/** B6: migrate ledger eco fields when world is loaded (called from tableStore). */
+export function migrateLedgerForWorld(world) {
+  const ledger = readLedger();
+  ensureAllFactions(ledger, world);
+  writeLedger(ledger);
+  return ledger;
+}
+
 export function appendLedgerEntry(ledger, entry) {
   const row = {
     id: `led_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -195,9 +257,8 @@ export function appendLedgerEntry(ledger, entry) {
     ...entry,
   };
   ledger.entries.push(row);
-  // keep last 2000
-  if (ledger.entries.length > 2000) {
-    ledger.entries = ledger.entries.slice(-2000);
+  if (isNormalizedStoreActive()) {
+    insertLedgerEntry(row);
   }
   return row;
 }
@@ -657,6 +718,10 @@ export function publicEconomyPayload(eco) {
     unlockedProperties: eco.unlockedProperties,
     unlockedTechs: eco.unlockedTechs,
     unlockedUpgrades: eco.unlockedUpgrades,
+    techGrades:
+      eco.techGrades && typeof eco.techGrades === "object" ? { ...eco.techGrades } : {},
+    techSockets:
+      eco.techSockets && typeof eco.techSockets === "object" ? { ...eco.techSockets } : {},
     unlockedLineages: Array.isArray(eco.unlockedLineages)
       ? [...eco.unlockedLineages]
       : [],
@@ -664,6 +729,20 @@ export function publicEconomyPayload(eco) {
       ? eco.acquiredTechs.map((a) => ({ ...a }))
       : [],
     researchQueue: Array.isArray(eco.researchQueue) ? [...eco.researchQueue] : [],
+    currentOffers:
+      eco.currentOffers && typeof eco.currentOffers === "object"
+        ? Object.fromEntries(
+            Object.entries(eco.currentOffers).map(([axis, offer]) => [
+              axis,
+              {
+                candidates: Array.isArray(offer?.candidates)
+                  ? offer.candidates.map(String)
+                  : [],
+                rerolled: Boolean(offer?.rerolled),
+              },
+            ]),
+          )
+        : {},
     buildQueue: Array.isArray(eco.buildQueue)
       ? eco.buildQueue.map((q) => ({
           systemId: String(q.systemId || ""),
@@ -704,5 +783,15 @@ export function publicEconomyPayload(eco) {
   };
   if (eco.bottlenecks != null) out.bottlenecks = eco.bottlenecks;
   if (eco.explain != null) out.explain = eco.explain;
+  out.roleScores = publicRoleScores(eco);
+  out.openPaths = Array.isArray(eco.openPaths) ? [...eco.openPaths] : [];
+  out.powerPaths = Array.isArray(eco.powerPaths) ? [...eco.powerPaths] : [];
+  out.civicScores =
+    eco.civicScores && typeof eco.civicScores === "object"
+      ? {
+          trade: Number(eco.civicScores.trade) || 0,
+          culture: Number(eco.civicScores.culture) || 0,
+        }
+      : { trade: 0, culture: 0 };
   return out;
 }

@@ -1,5 +1,5 @@
 /**
- * Instant planetary actions: build / demolish / colonize / set colony type.
+ * Instant planetary actions: build / demolish / colonize / set colony type / upgrade_grade.
  */
 import { getContent } from "./contentLoader.mjs";
 import {
@@ -24,6 +24,17 @@ import {
   listAvailableVariants,
   resolveVariant,
 } from "./variantResolver.mjs";
+import { transferColonizePopulation } from "./colonizePop.mjs";
+import {
+  derivedGradeFields,
+  gradeUpgradePlan,
+  zoneSlotCap,
+} from "./planetGrade.mjs";
+import {
+  applyStaffTransfer,
+  consumesLabor,
+  laborSlotsForDef,
+} from "./laborAllocation.mjs";
 
 export const BUILD_QUEUE_MAX = 5;
 const SYSTEM_HISTORY_MAX = 40;
@@ -216,6 +227,60 @@ function countBuildingInSystem(system, buildingId) {
   return n;
 }
 
+/**
+ * Placement gates that used to live inline in applyPlanetAction's build
+ * branch (biome, faction/race, tech, grade-derived slot cap, per-planet /
+ * per-system limits). Ownership / colonize / AP / cost stay in the action.
+ *
+ * Grade is the source of truth for slot caps when set (P4a).
+ */
+export function canPlaceBuilding(system, planet, def, factionId, eco, content) {
+  const pack = content || getContent();
+  if (
+    !canFactionBuildDef(def, factionId, {
+      raceIds: raceIdsFromComposition(planet.raceComposition),
+    })
+  ) {
+    return { ok: false, error: "Это здание недоступно вашей фракции" };
+  }
+  const techGate = canBuildWithTech(eco, def);
+  if (!techGate.ok) return techGate;
+  if (!planetAllowsBuildingBiome(planet, def.biome_restrictions)) {
+    const need = (def.biome_restrictions || []).join(", ");
+    return {
+      ok: false,
+      error: `«${def.name}» требует биом: ${need}`,
+    };
+  }
+  const listKey = def.zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
+  const zone = def.zone || "surface";
+  const list = planet[listKey] ?? [];
+  const max = zoneSlotCap(planet, listKey, pack);
+  if (list.length >= max) {
+    return { ok: false, error: `Нет свободных слотов (${zone})` };
+  }
+  const buildingId = def.id;
+  if (def.maxPerPlanet) {
+    const all = [
+      ...(planet.surfaceBuildings ?? []),
+      ...(planet.orbitalBuildings ?? []),
+    ];
+    const same = all.filter(
+      (b) => (b.buildingId === buildingId || b.baseBuildingId === buildingId) && !b.disabled,
+    ).length;
+    if (same >= def.maxPerPlanet) {
+      return { ok: false, error: `Лимит «${def.name}» на планете` };
+    }
+  }
+  if (def.maxPerSystem) {
+    const sameSys = countBuildingInSystem(system, buildingId);
+    if (sameSys >= def.maxPerSystem) {
+      return { ok: false, error: `Лимит «${def.name}» на систему` };
+    }
+  }
+  return { ok: true, listKey, zone };
+}
+
 function collectBuildingUnlockEffects(def) {
   return [...(def?.effects || []), ...(def?.extra_effects || [])].filter(
     (e) => e.effect === "unlock_tech_tier" || e.effect === "unlock_property",
@@ -319,18 +384,27 @@ export function applyPlanetAction({
   buildingId,
   instanceId,
   colonyType,
+  sourcePlanetId,
   note,
   apMax,
+  zone: gradeZone,
   // New economy model: fill_slot params
   slotRole,
   slotResourceId,
   name,
+  assignedLabor,
+  fromInstanceId,
+  transferAmount,
   /** When false, caller (processTurn) persists the board. Default true. */
   persist = true,
   /** Skip AP gate — pending tick intent already reserved AP. */
   skipApCheck = false,
   /** Skip writing a second applied intent row (tick already owns the intent). */
   skipIntentRecord = false,
+  /** Spend cost but defer placing building (B4 ETA order — placement on resolve). */
+  deferPlacement = false,
+  /** Building already paid for (B4 resolve). */
+  skipCost = false,
 }) {
   const content = getContent();
   const turn = world.meta?.turn ?? 0;
@@ -393,61 +467,24 @@ export function applyPlanetAction({
         };
       }
     }
-    if (
-      !canFactionBuildDef(def, factionId, {
-        raceIds: raceIdsFromComposition(planet.raceComposition),
-      })
-    ) {
-      return { ok: false, error: "Это здание недоступно вашей фракции" };
-    }
     const ledgerPre = readLedger();
     const ecoPre = ensureFactionEco(ledgerPre, factionId);
-    const techGate = canBuildWithTech(ecoPre, def);
-    if (!techGate.ok) return techGate;
-    if (!planetAllowsBuildingBiome(planet, def.biome_restrictions)) {
-      const need = (def.biome_restrictions || []).join(", ");
-      return {
-        ok: false,
-        error: `«${def.name}» требует биом: ${need}`,
-      };
-    }
+    const place = canPlaceBuilding(system, planet, def, factionId, ecoPre, content);
+    if (!place.ok) return place;
     // orbital → orbital list; surface/subsurface/deep → surface list (zone preserved on instance)
-    const listKey = def.zone === "orbital" ? "orbitalBuildings" : "surfaceBuildings";
-    const zone = def.zone || "surface";
+    const listKey = place.listKey;
+    const zone = place.zone;
     const list = [...(planet[listKey] ?? [])];
-    const max =
-      listKey === "orbitalBuildings"
-        ? (planet.orbitalSlots ?? 4)
-        : (planet.surfaceSlots ?? 8);
-    if (list.length >= max) {
-      return { ok: false, error: `Нет свободных слотов (${zone})` };
-    }
-    if (def.maxPerPlanet) {
-      const all = [
-        ...(planet.surfaceBuildings ?? []),
-        ...(planet.orbitalBuildings ?? []),
-      ];
-      const same = all.filter(
-        (b) => (b.buildingId === buildingId || b.baseBuildingId === buildingId) && !b.disabled,
-      ).length;
-      if (same >= def.maxPerPlanet) {
-        return { ok: false, error: `Лимит «${def.name}» на планете` };
-      }
-    }
-    if (def.maxPerSystem) {
-      const sameSys = countBuildingInSystem(system, buildingId);
-      if (sameSys >= def.maxPerSystem) {
-        return { ok: false, error: `Лимит «${def.name}» на систему` };
-      }
-    }
     const apCost = content.intents?.["intent.build"]?.ap ?? 0;
     const apGate = gateAp(apCost);
     if (!apGate.ok) return apGate;
     const cost = scaledCost(def.cost, buildCostMult(factionId, planet));
     const ledger = readLedger();
     const eco = ensureFactionEco(ledger, factionId);
-    const afford = canAfford(eco, cost);
-    if (!afford.ok) return afford;
+    if (!skipCost) {
+      const afford = canAfford(eco, cost);
+      if (!afford.ok) return afford;
+    }
 
     const building = {
       id: `bld_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -458,9 +495,6 @@ export function applyPlanetAction({
       zone,
       slotFills: {},
     };
-    list.push(building);
-    planet[listKey] = list;
-    if (!planet.ownerFactionId) planet.ownerFactionId = factionId;
 
     const intent = recordIntent({
       factionId,
@@ -470,10 +504,31 @@ export function applyPlanetAction({
       turn,
       apCost,
     });
-    spendCost(ledger, factionId, cost, turn, intent.id, "build");
-    const unlockFx = collectBuildingUnlockEffects(def);
-    if (unlockFx.length) applyUnlockEffects(eco, unlockFx);
-    writeLedger(ledger);
+
+    if (!skipCost) {
+      spendCost(ledger, factionId, cost, turn, intent.id, "build");
+      const unlockFx = collectBuildingUnlockEffects(def);
+      if (unlockFx.length) applyUnlockEffects(eco, unlockFx);
+      writeLedger(ledger);
+    }
+
+    if (deferPlacement) {
+      return {
+        ok: true,
+        intent,
+        world,
+        planet,
+        cost,
+        building,
+        listKey,
+        deferred: true,
+      };
+    }
+
+    list.push(building);
+    planet[listKey] = list;
+    if (!planet.ownerFactionId) planet.ownerFactionId = factionId;
+
     pushSystemHistory(system, {
       turn,
       type: "build",
@@ -560,22 +615,33 @@ export function applyPlanetAction({
     const afford = canAfford(eco, cost);
     if (!afford.ok) return afford;
 
+    const faction = (world.factions ?? []).find((f) => f.id === factionId);
+    const popMove = transferColonizePopulation({
+      world,
+      destSystem: system,
+      destPlanet: planet,
+      factionId,
+      settlerCount: cdef.colonizePopulation ?? 2,
+      sourcePlanetId,
+      founderRaceId: faction?.primaryRaceId,
+    });
+    if (!popMove.ok) return popMove;
+
     planet.colonyType = targetType;
-    planet.population = Math.max(
-      planet.population || 0,
-      cdef.colonizePopulation ?? 2,
-    );
+    planet.population = popMove.destPopulation;
+    planet.raceComposition = popMove.destComposition;
     planet.ownerFactionId = factionId;
     planet.habitable = planet.habitable ?? true;
     planet.colonizable = true;
     planet.surveyed = true;
     if (!planet.surfaceBuildings) planet.surfaceBuildings = [];
     if (!planet.orbitalBuildings) planet.orbitalBuildings = [];
+    Object.assign(planet, derivedGradeFields(planet, content));
 
     const intent = recordIntent({
       factionId,
       defId: "intent.colonize",
-      payload: { systemId, planetId, colonyType: targetType },
+      payload: { systemId, planetId, colonyType: targetType, sourcePlanetId },
       note,
       turn,
       apCost,
@@ -755,6 +821,134 @@ export function applyPlanetAction({
     return { ok: true, intent, world, planet, building: target };
   }
 
+  if (action === "staff") {
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    if (!instanceId) return { ok: false, error: "Нужен instanceId" };
+    let target = null;
+    let listKey = null;
+    for (const key of ["surfaceBuildings", "orbitalBuildings"]) {
+      const list = planet[key] ?? [];
+      const idx = list.findIndex((b) => b.id === instanceId);
+      if (idx >= 0) {
+        target = list[idx];
+        listKey = key;
+        break;
+      }
+    }
+    if (!target) return { ok: false, error: "Постройка не найдена" };
+    const def = buildingDefFromInstance(content, target);
+    if (!consumesLabor(def)) {
+      return { ok: false, error: "Это здание не занимает рабочих" };
+    }
+    const auto =
+      assignedLabor == null ||
+      assignedLabor === "" ||
+      assignedLabor === "auto";
+    if (auto) {
+      delete target.assignedLabor;
+    } else {
+      const slots = laborSlotsForDef(def);
+      const n = Math.floor(Number(assignedLabor));
+      if (!Number.isFinite(n) || n < 0) {
+        return { ok: false, error: "Некорректное число работников" };
+      }
+      target.assignedLabor = Math.min(slots, n);
+    }
+    const list = planet[listKey];
+    const idx = list.findIndex((b) => b.id === instanceId);
+    list[idx] = target;
+    planet[listKey] = list;
+    const intent = recordIntent({
+      factionId,
+      defId: "intent.staff",
+      payload: {
+        systemId,
+        planetId,
+        instanceId,
+        assignedLabor: auto ? null : target.assignedLabor,
+      },
+      note,
+      turn,
+      apCost: 0,
+    });
+    persistBoard("planet_staff");
+    return { ok: true, intent, world, planet, building: target };
+  }
+
+  if (action === "staff_transfer") {
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    const moved = applyStaffTransfer(
+      planet,
+      content,
+      fromInstanceId,
+      instanceId,
+      transferAmount,
+    );
+    if (!moved.ok) return moved;
+    const intent = recordIntent({
+      factionId,
+      defId: "intent.staff",
+      payload: {
+        systemId,
+        planetId,
+        fromInstanceId: fromInstanceId || "idle",
+        instanceId: instanceId || "idle",
+        transferAmount: moved.moved,
+      },
+      note,
+      turn,
+      apCost: 0,
+    });
+    persistBoard("planet_staff_transfer");
+    return { ok: true, intent, world, planet, moved: moved.moved };
+  }
+
+  if (action === "upgrade_grade") {
+    const forbid = checkBuildForbidden(factionId);
+    if (!forbid.ok) return forbid;
+    if (!canManagePlanet(system, planet, factionId)) {
+      return { ok: false, error: "Планета не под вашим контролем" };
+    }
+    const zone = gradeZone === "orbital" ? "orbital" : "surface";
+    Object.assign(planet, derivedGradeFields(planet, content));
+    const plan = gradeUpgradePlan(planet, zone, content);
+    if (!plan.ok) return plan;
+    const apCost = content.intents?.["intent.upgrade_grade"]?.ap ?? 1;
+    const apGate = gateAp(apCost);
+    if (!apGate.ok) return apGate;
+    const ledger = readLedger();
+    const eco = ensureFactionEco(ledger, factionId);
+    const afford = canAfford(eco, plan.cost);
+    if (!afford.ok) return afford;
+
+    planet[plan.key] = plan.next;
+    planet.surfaceSlots = plan.surfaceSlots;
+    planet.orbitalSlots = plan.orbitalSlots;
+
+    const intent = recordIntent({
+      factionId,
+      defId: "intent.upgrade_grade",
+      payload: { systemId, planetId, zone },
+      note,
+      turn,
+      apCost,
+    });
+    spendCost(ledger, factionId, plan.cost, turn, intent.id, "upgrade_grade");
+    writeLedger(ledger);
+    pushSystemHistory(system, {
+      turn,
+      type: "build",
+      planetId,
+      description: `Грейд ${zone === "orbital" ? "орбиты" : "поверхности"} ${planet.name}: ${plan.next}`,
+    });
+    persistBoard("planet_upgrade_grade");
+    return { ok: true, intent, world, planet, cost: plan.cost };
+  }
+
   return { ok: false, error: `Неизвестное действие: ${action}` };
 }
 
@@ -793,6 +987,7 @@ export function planetCapFromBuildings(planet, content) {
   return cap;
 }
 
+/** Unused by economyTick. Do not wire into tick — would double-count and skip the extract gate. */
 export function collectPlanetYields(system, content) {
   const yields = { "currency.metal": 0, "currency.supply": 0 };
   for (const planet of system.planets ?? []) {

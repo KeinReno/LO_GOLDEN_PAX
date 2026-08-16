@@ -12,6 +12,23 @@ export type EconomySchema = {
   categories?: Record<string, { id: string; name: string; role: string; currencyId: string; color?: string }>;
   tiers?: Record<string, { id: number; label: string; description: string }>;
   properties?: Record<string, { id: string; label: string; description: string }>;
+  resource_ranks?: {
+    defaultRank?: string;
+    strategic?: string[];
+    description?: string;
+  };
+  role_score_pilot?: {
+    description?: string;
+    roles?: Record<string, string[]>;
+    thresholds?: Record<string, number>;
+    keys?: string[];
+    tier_weight?: string;
+  };
+  fx_exchange?: {
+    variant?: string;
+    alpha?: number;
+    description?: string;
+  };
   flow_key_format?: string;
   rps_edges?: Array<{ edge: string; from: string; to: string; input1: string; input2: string; output: string; description: string }>;
   rps_combat?: { slots?: string[]; matchups?: Array<{ attacker: string; defender: string; rule: string }> };
@@ -34,8 +51,15 @@ export type MapResourceDef = {
   name: string;
   category?: EconomyCategory;
   tier?: number;
+  rank?: "bulk" | "strategic" | string;
+  /** B1: boolean flag; also accepted alongside rank === "strategic". */
+  strategic?: boolean;
   properties?: string[];
+  /** B2 RoleScore roles (closed 8: structural…exotic). */
+  roles?: string[];
   biome_tags?: string[];
+  kind?: string;
+  theater?: "space" | "ground" | string;
   spread?: { self_spreading?: boolean };
   toxic?: boolean;
   yield?: Record<string, number>;
@@ -78,6 +102,14 @@ export type TechnologyDef = {
   requireProperties?: string[];
   /** Era-5+ breakthrough tech (distinct radial styling). */
   isBreakthrough?: boolean;
+  /** Stub catalog row — excluded from research offers. */
+  catalogPending?: boolean;
+  /** Player-facing research direction (TECH_TREE_2 P2). Optional — mapping fills gaps. */
+  direction?: string;
+  /** Required open development path (A6). */
+  researchPath?: string;
+  /** Path opened by researching this tech. */
+  opensPath?: string;
   /** Parent species ids for hybrid synthesis techs. */
   hybridOf?: string[];
   /** Required race_hybrid.* lineage (or population gate). */
@@ -86,6 +118,28 @@ export type TechnologyDef = {
   /** Granted only via alchemy laboratory (not normal research queue). */
   alchemyOnly?: boolean;
   alchemyOf?: string[];
+  /** Grade 1→5 ladder. Absent = flat one-shot unlock. */
+  gradeable?: boolean;
+  gradeTable?: {
+    magnitude?: number[];
+    upgradeCost?: Array<Record<string, number> | null>;
+  };
+  /** Resource id → structural socket option (empire-wide fill/swap). */
+  socket?: Record<
+    string,
+    {
+      fillCost?: Record<string, number>;
+      swapUpkeepCurrency?: {
+        match?: { kind?: string; category?: string };
+        fromCategory?: string;
+        toCategory?: string;
+        from?: string;
+        to?: string;
+        buildingKind?: string;
+        buildingCategory?: string;
+      };
+    }
+  >;
 };
 
 export type TechRecipeDef = {
@@ -111,6 +165,7 @@ export type PublicContent = {
       faction?: string;
       roles?: string[];
       stats?: Record<string, number>;
+      cost?: Record<string, number>;
       slots?: Array<{ role: string; count?: number; require?: unknown }>;
     }
   >;
@@ -123,6 +178,8 @@ export type PublicContent = {
       faction?: string;
       roles?: string[];
       stats?: Record<string, number>;
+      cost?: Record<string, number>;
+      raisableWithoutBuilding?: boolean;
       slots?: Array<{ role: string; count?: number; require?: unknown }>;
     }
   >;
@@ -185,6 +242,74 @@ export type PublicContent = {
   economy_schema?: EconomySchema;
   economy_balance?: Record<string, unknown>;
   technologies?: Record<string, TechnologyDef>;
+  tech_paths?: {
+    meta?: { version?: number; pilot?: boolean; note?: string };
+    paths?: Record<
+      string,
+      {
+        id: string;
+        label: string;
+        roleScoreKey?: string;
+        breakthroughTechId?: string;
+        iconTag?: string;
+        description?: string;
+      }
+    >;
+  };
+  tech_directions?: {
+    meta?: { version?: number; note?: string };
+    order?: string[];
+    directions?: Record<
+      string,
+      {
+        id?: string;
+        label?: string;
+        labelEn?: string;
+        colorVar?: string;
+        categories?: string[];
+        paths?: string[];
+        civicPaths?: string[];
+        iconTags?: string[];
+        tags?: string[];
+        factionTraitLocks?: string[];
+      }
+    >;
+  };
+  civic_paths?: {
+    meta?: { version?: number; note?: string };
+    paths?: Record<
+      string,
+      {
+        id: string;
+        pathId?: string;
+        name: string;
+        icon?: string;
+        scoreKey?: string;
+        feedsFrom?: string[];
+        unlocks?: Array<{
+          kind: string;
+          id: string;
+          name?: string;
+          property?: string;
+        }>;
+      }
+    >;
+    thresholds?: Record<string, Record<string, number>>;
+    scoring?: Record<string, Record<string, unknown>>;
+  };
+  /** RoleScore milestones (8 roles). Thresholds first-pass — see docs/ROLE_SCORE_THRESHOLDS.md. */
+  role_milestones?: Record<
+    string,
+    {
+      id?: string;
+      label?: string;
+      threshold?: number;
+      unlocks?: Array<{ kind?: string; id?: string; name?: string }>;
+      version?: number;
+      pilot?: boolean;
+      note?: string;
+    }
+  >;
   tech_combos?: Record<string, TechnologyDef>;
   tech_recipes?: Record<string, TechRecipeDef>;
   tech_icons?: Record<string, { glyph: string; label: string }>;
@@ -218,9 +343,20 @@ export type PublicContent = {
       maxFront?: number;
       maxRounds?: number;
       stanceOrderCooldownRounds?: number;
+      formationAuras?: {
+        escortIncomingMult?: number;
+        supportOutgoingMult?: number;
+        escortNeighborBlock?: number;
+      };
+    };
+    movement?: {
+      rangeHops?: number;
+      fleetRangeHops?: number | null;
+      legionRangeHops?: number | null;
     };
   };
   combat_matchups?: Record<string, Record<string, number>>;
+  combat_property_matchups?: Record<string, unknown>;
   intents?: Record<string, { ap?: number; forceAp?: number }>;
   buildings?: Record<
     string,
@@ -281,6 +417,7 @@ export type PublicContent = {
       }
     >;
   };
+  stations?: Record<string, unknown>;
   faction_traits?: {
     meta?: {
       version?: number;

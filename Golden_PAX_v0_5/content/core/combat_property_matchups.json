@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Property-based RPS для слот-модели. Расширяет role-based combat_matchups.json. Применяется, когда у юнита/корабля есть слоты weapon/shield/hull с ресурсами, имеющими свойства."
+  },
+  "slot_matchups": {
+    "weapon_vs_hull": {
+      "rule": "attacker_weapon.tier > defender_hull.tier → пробитие (×1.5 урона)",
+      "else": "урон ×0.7"
+    },
+    "weapon_vs_shield": {
+      "rule": "if weapon has property psion_suppress OR matter_destroy → пробивает щит (×1.4)",
+      "else": "щит поглощает (×0.6 урона)"
+    },
+    "shield_vs_weapon": {
+      "rule": "if shield has property psion_emit AND weapon lacks psion_suppress → поглощение (×0.4 урона)",
+      "else": "нормальный урон"
+    },
+    "crew_vs_shield": {
+      "rule": "десант/абордаж игнорирует щиты (Cognitio-защита); crew.tier > shield.tier → захват",
+      "else": "отбит"
+    },
+    "hull_vs_crew": {
+      "rule": "броня (hull with strong) отбивает десант; hull.tier >= crew.tier → десант отбит",
+      "else": "десант проходит"
+    }
+  },
+  "property_amplifiers": {
+    "weapon_amp": { "applies_to": "weapon", "effect": "×1.2 урона за каждый tier ресурса с weapon_amp" },
+    "matter_destroy": { "applies_to": "weapon", "effect": "×1.5 урона; игнорирует броню" },
+    "shield": { "applies_to": "shield", "effect": "+shield.tier×10 HP щита" },
+    "psion_emit": { "applies_to": "shield|tactic", "effect": "поглощение psion-урона; +мораль" },
+    "psion_suppress": { "applies_to": "weapon", "effect": "пробивает psion-щиты" },
+    "accelerate": { "applies_to": "engine", "effect": "+speed; +уклонение" },
+    "corridor_open": { "applies_to": "tactic", "effect": "флот может отступить через белый коридор" }
+  },
+  "bottleneck_rule": {
+    "description": "Эффективный tier слота = min(tier всех вложенных ресурсов). Стакать один ресурс бесполезно — слабое звено режет всё.",
+    "formula": "slot.effective_tier = min(resource.tier for resource in slot)"
+  }
+}

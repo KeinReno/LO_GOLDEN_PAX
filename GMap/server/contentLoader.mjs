@@ -20,6 +20,7 @@ const FILE_KEYS = [
   "ships",
   "units",
   "map_resources",
+  "modules",
   "races",
   "taxes",
   "loyalty_tiers",
@@ -33,6 +34,11 @@ const FILE_KEYS = [
   "colonies",
   "stations",
   "technologies",
+  "tech_paths",
+  "tech_directions",
+  "power_paths",
+  "civic_paths",
+  "role_milestones",
   "tech_combos",
   "tech_recipes",
   "tech_icons",
@@ -63,8 +69,9 @@ function readJsonSafe(file, fallback = {}) {
     if (!fs.existsSync(file)) return fallback;
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (e) {
-    console.warn(`[content] failed ${file}:`, e.message);
-    return fallback;
+    const msg = `[CONTENT_PARSE_FAIL] ${file}: ${e.message}`;
+    console.error(msg);
+    throw new Error(msg, { cause: e });
   }
 }
 
@@ -117,6 +124,7 @@ function loadContentPacks(packIds = ["core"]) {
   let ships = {};
   let units = {};
   let map_resources = {};
+  let modules = {};
   let races = {};
   let taxes = {};
   let loyalty_tiers = {};
@@ -130,6 +138,10 @@ function loadContentPacks(packIds = ["core"]) {
   let colonies = {};
   let stations = {};
   let technologies = {};
+  let tech_paths = { meta: {}, paths: {} };
+  let tech_directions = { meta: {}, order: [], directions: {} };
+  let civic_paths = { meta: {}, paths: {} };
+  let role_milestones = { meta: {} };
   let tech_combos = {};
   let tech_recipes = {};
   let tech_icons = {};
@@ -174,6 +186,8 @@ function loadContentPacks(packIds = ["core"]) {
     ships = mergeDicts(ships, pack.ships);
     units = mergeDicts(units, pack.units);
     map_resources = mergeDicts(map_resources, pack.map_resources);
+    modules = mergeDicts(modules, pack.modules);
+    map_resources = mergeDicts(map_resources, modules);
     races = mergeDicts(races, pack.races);
     taxes = mergeDicts(taxes, pack.taxes);
     if (pack.loyalty_tiers && typeof pack.loyalty_tiers === "object") {
@@ -194,6 +208,67 @@ function loadContentPacks(packIds = ["core"]) {
     colonies = mergeDicts(colonies, pack.colonies);
     stations = mergeDicts(stations, pack.stations);
     technologies = mergeDicts(technologies, pack.technologies);
+    if (pack.tech_paths && typeof pack.tech_paths === "object") {
+      tech_paths = {
+        ...tech_paths,
+        ...pack.tech_paths,
+        meta: { ...(tech_paths.meta || {}), ...(pack.tech_paths.meta || {}) },
+        paths: {
+          ...(tech_paths.paths || {}),
+          ...(pack.tech_paths.paths || {}),
+        },
+      };
+    }
+    if (pack.tech_directions && typeof pack.tech_directions === "object") {
+      tech_directions = {
+        ...tech_directions,
+        ...pack.tech_directions,
+        meta: {
+          ...(tech_directions.meta || {}),
+          ...(pack.tech_directions.meta || {}),
+        },
+        order: Array.isArray(pack.tech_directions.order)
+          ? pack.tech_directions.order
+          : tech_directions.order,
+        directions: {
+          ...(tech_directions.directions || {}),
+          ...(pack.tech_directions.directions || {}),
+        },
+      };
+    }
+    if (pack.civic_paths && typeof pack.civic_paths === "object") {
+      civic_paths = {
+        ...civic_paths,
+        ...pack.civic_paths,
+        meta: { ...(civic_paths.meta || {}), ...(pack.civic_paths.meta || {}) },
+        paths: {
+          ...(civic_paths.paths || {}),
+          ...(pack.civic_paths.paths || {}),
+        },
+        thresholds: {
+          ...(civic_paths.thresholds || {}),
+          ...(pack.civic_paths.thresholds || {}),
+        },
+        scoring: {
+          ...(civic_paths.scoring || {}),
+          ...(pack.civic_paths.scoring || {}),
+        },
+        unlockProperties: {
+          ...(civic_paths.unlockProperties || {}),
+          ...(pack.civic_paths.unlockProperties || {}),
+        },
+      };
+    }
+    if (pack.role_milestones && typeof pack.role_milestones === "object") {
+      role_milestones = {
+        ...role_milestones,
+        ...pack.role_milestones,
+        meta: {
+          ...(role_milestones.meta || {}),
+          ...(pack.role_milestones.meta || {}),
+        },
+      };
+    }
     tech_combos = mergeDicts(tech_combos, pack.tech_combos);
     tech_recipes = mergeDicts(tech_recipes, pack.tech_recipes);
     tech_icons = mergeDicts(tech_icons, pack.tech_icons);
@@ -384,6 +459,10 @@ function loadContentPacks(packIds = ["core"]) {
     colonies,
     stations,
     technologies,
+    tech_paths,
+    tech_directions,
+    civic_paths,
+    role_milestones,
     tech_combos,
     tech_recipes,
     tech_icons,
@@ -455,6 +534,10 @@ export function getPublicContent() {
     colonies: c.colonies,
     stations: c.stations,
     technologies: c.technologies,
+    tech_paths: c.tech_paths,
+    tech_directions: c.tech_directions,
+    civic_paths: c.civic_paths,
+    role_milestones: c.role_milestones,
     tech_combos: c.tech_combos,
     tech_recipes: c.tech_recipes,
     tech_icons: c.tech_icons,

@@ -46,6 +46,7 @@ const KNOWN_EFFECTS = new Set([
   "move_cost_mult",
   "building_level_mult",
   "logistics_disconnected_penalty",
+  "combat_role_mult",
 ]);
 
 const errors = [];

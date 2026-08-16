@@ -1,0 +1,1660 @@
+{
+  "map.iron": {
+    "id": "map.iron",
+    "name": "железо",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "A",
+    "tier": 1,
+    "properties": [
+      "strong"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "rocky",
+      "desert"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.titan": {
+    "id": "map.titan",
+    "rank": "strategic",
+    "name": "титан",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "A",
+    "tier": 3,
+    "properties": [
+      "strong",
+      "lightweight"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "rocky",
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.crystals": {
+    "id": "map.crystals",
+    "name": "кристаллы",
+    "yield": {
+      "currency.metal": 1
+    },
+    "category": "B",
+    "tier": 3,
+    "properties": [],
+    "biome_tags": [
+      "rocky",
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.gas": {
+    "id": "map.gas",
+    "name": "газ",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "B",
+    "tier": 2,
+    "properties": [],
+    "biome_tags": [
+      "gas_giant"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.water": {
+    "id": "map.water",
+    "name": "вода",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "E",
+    "tier": 1,
+    "properties": [],
+    "biome_tags": [
+      "ocean",
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.rare_earth": {
+    "id": "map.rare_earth",
+    "name": "редкоземы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "A",
+    "tier": 3,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.antimatter": {
+    "id": "map.antimatter",
+    "rank": "strategic",
+    "name": "антиматерия",
+    "yield": {
+      "currency.metal": 5
+    },
+    "category": "D",
+    "tier": 8,
+    "properties": [
+      "energy",
+      "anomaly"
+    ],
+    "roles": [
+      "energy"
+    ],
+    "biome_tags": [
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.relics": {
+    "id": "map.relics",
+    "name": "реликты",
+    "yield": {},
+    "category": "F",
+    "tier": 9,
+    "properties": [
+      "info_store",
+      "anomaly"
+    ],
+    "biome_tags": [
+      "artifact",
+      "ruin"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.silver": {
+    "id": "map.silver",
+    "name": "серебро",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "B",
+    "tier": 5,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.gold": {
+    "id": "map.gold",
+    "name": "золото",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "B",
+    "tier": 5,
+    "properties": [],
+    "biome_tags": [
+      "mountainous",
+      "river"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.glasssteel": {
+    "id": "map.glasssteel",
+    "rank": "strategic",
+    "name": "стеклосталь",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "A",
+    "tier": 4,
+    "properties": [
+      "strong",
+      "optics"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "strategic": true
+  },
+  "map.alloys": {
+    "id": "map.alloys",
+    "name": "сплавы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "B",
+    "tier": 3,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.cinnabar": {
+    "id": "map.cinnabar",
+    "name": "хиноварь",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "B",
+    "tier": 4,
+    "properties": [
+      "strong",
+      "malleable",
+      "lithogenesis"
+    ],
+    "biome_tags": [
+      "mountainous",
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "strategic": true,
+    "rank": "strategic"
+  },
+  "map.biofuel": {
+    "id": "map.biofuel",
+    "name": "биотопливо",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "D",
+    "tier": 3,
+    "properties": [
+      "fuel"
+    ],
+    "biome_tags": [
+      "ocean",
+      "swamp"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.blumatid": {
+    "id": "map.blumatid",
+    "rank": "strategic",
+    "name": "блюматид",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "B",
+    "tier": 4,
+    "properties": [
+      "strong",
+      "malleable",
+      "shield",
+      "accelerate"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "volcanic",
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "strategic": true
+  },
+  "map.solari": {
+    "id": "map.solari",
+    "rank": "strategic",
+    "name": "соларит",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "D",
+    "tier": 5,
+    "properties": [
+      "fuel",
+      "energy",
+      "weapon_amp",
+      "shield"
+    ],
+    "roles": [
+      "energy"
+    ],
+    "biome_tags": [
+      "star_near",
+      "desert"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "strategic": true
+  },
+  "map.krin": {
+    "id": "map.krin",
+    "name": "крин",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "C",
+    "tier": 4,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.buildplex": {
+    "id": "map.buildplex",
+    "name": "стройплексы",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "C",
+    "tier": 3,
+    "properties": [],
+    "biome_tags": [],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.biomass": {
+    "id": "map.biomass",
+    "name": "органическая биомасса",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "E",
+    "tier": 2,
+    "properties": [],
+    "biome_tags": [
+      "ocean",
+      "swamp",
+      "forest"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.food": {
+    "id": "map.food",
+    "name": "пища",
+    "yield": {
+      "currency.supply": 3
+    },
+    "category": "E",
+    "tier": 3,
+    "properties": [],
+    "biome_tags": [
+      "ocean",
+      "forest",
+      "plains"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.minerals": {
+    "id": "map.minerals",
+    "name": "минералы",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "B",
+    "tier": 1,
+    "properties": [],
+    "biome_tags": [
+      "rocky",
+      "desert"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.energy": {
+    "id": "map.energy",
+    "name": "энергия",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "D",
+    "tier": 4,
+    "properties": [
+      "energy"
+    ],
+    "biome_tags": [],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.trade_value": {
+    "id": "map.trade_value",
+    "name": "торговое значение",
+    "yield": {},
+    "category": null,
+    "tier": null,
+    "properties": [],
+    "biome_tags": [],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "note": "derived flow, not mined"
+  },
+  "map.lazualin": {
+    "id": "map.lazualin",
+    "name": "лазуалин",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "A",
+    "tier": 5,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.hyperium": {
+    "id": "map.hyperium",
+    "rank": "strategic",
+    "name": "гипериум",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "A",
+    "tier": 6,
+    "properties": [
+      "fuel",
+      "energy"
+    ],
+    "roles": [
+      "energy"
+    ],
+    "biome_tags": [
+      "deep",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.eradian": {
+    "id": "map.eradian",
+    "name": "эрадион",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "A",
+    "tier": 6,
+    "properties": [],
+    "biome_tags": [
+      "deep"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.talitin": {
+    "id": "map.talitin",
+    "name": "талитин",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "A",
+    "tier": 5,
+    "properties": [],
+    "biome_tags": [
+      "ice",
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.exotic_gases": {
+    "id": "map.exotic_gases",
+    "name": "экзотические газы",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "D",
+    "tier": 4,
+    "properties": [
+      "fuel"
+    ],
+    "biome_tags": [
+      "gas_giant"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.focusing_crystals": {
+    "id": "map.focusing_crystals",
+    "rank": "strategic",
+    "name": "фокусирующие кристаллы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "B",
+    "tier": 4,
+    "properties": [],
+    "biome_tags": [
+      "mountainous",
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.volatile_motes": {
+    "id": "map.volatile_motes",
+    "name": "летучие частицы",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "B",
+    "tier": 4,
+    "properties": [],
+    "biome_tags": [
+      "volcanic",
+      "gas_giant"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.elyrium": {
+    "id": "map.elyrium",
+    "rank": "strategic",
+    "name": "элирий",
+    "yield": {
+      "currency.metal": 5
+    },
+    "category": "A",
+    "tier": 6,
+    "properties": [
+      "energy"
+    ],
+    "roles": [
+      "energy"
+    ],
+    "biome_tags": [
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.titanium": {
+    "id": "map.titanium",
+    "name": "титаний",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "A",
+    "tier": 6,
+    "properties": [
+      "strong",
+      "heat_resistant"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.adamantian": {
+    "id": "map.adamantian",
+    "rank": "strategic",
+    "name": "адамантий",
+    "yield": {
+      "currency.metal": 5
+    },
+    "category": "A",
+    "tier": 7,
+    "properties": [
+      "strong"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "deep",
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.skaashiz": {
+    "id": "map.skaashiz",
+    "name": "скаашиз",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "A",
+    "tier": 7,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.klax": {
+    "id": "map.klax",
+    "name": "клакс",
+    "yield": {},
+    "category": "B",
+    "tier": 10,
+    "properties": [
+      "anomaly"
+    ],
+    "biome_tags": [
+      "anomaly",
+      "artifact"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.hydromel": {
+    "id": "map.hydromel",
+    "name": "гидромель",
+    "yield": {},
+    "category": "E",
+    "tier": 8,
+    "properties": [],
+    "biome_tags": [
+      "ocean",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.orchid": {
+    "id": "map.orchid",
+    "name": "орхидия",
+    "yield": {},
+    "category": "B",
+    "tier": 7,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.dark_horn": {
+    "id": "map.dark_horn",
+    "name": "тёмный рог",
+    "yield": {},
+    "category": "B",
+    "tier": 7,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "deep",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.red_sang": {
+    "id": "map.red_sang",
+    "name": "красный санг",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "F",
+    "tier": 8,
+    "properties": [
+      "psion_emit",
+      "anomaly"
+    ],
+    "biome_tags": [
+      "volcanic",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.song_silk": {
+    "id": "map.song_silk",
+    "name": "песенный шёлк",
+    "yield": {},
+    "category": "B",
+    "tier": 7,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.dragon_root": {
+    "id": "map.dragon_root",
+    "name": "корень дракона",
+    "yield": {},
+    "category": "E",
+    "tier": 7,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.crystal_cap": {
+    "id": "map.crystal_cap",
+    "name": "кристальная шляпка",
+    "yield": {},
+    "category": "E",
+    "tier": 7,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.leviathan_ichor": {
+    "id": "map.leviathan_ichor",
+    "name": "ихор левиафана",
+    "yield": {},
+    "category": "A",
+    "tier": 9,
+    "properties": [],
+    "biome_tags": [
+      "ocean",
+      "leviathan"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.golden_coral": {
+    "id": "map.golden_coral",
+    "name": "золотой коралл",
+    "yield": {},
+    "category": "A",
+    "tier": 9,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "ocean",
+      "deep"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.solar_water": {
+    "id": "map.solar_water",
+    "name": "солариевая вода",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "E",
+    "tier": 8,
+    "properties": [],
+    "biome_tags": [
+      "ocean",
+      "star_near"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.issridil": {
+    "id": "map.issridil",
+    "name": "иссридил",
+    "yield": {},
+    "category": "B",
+    "tier": 8,
+    "properties": [],
+    "biome_tags": [
+      "anomaly",
+      "artifact"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.dream_mist": {
+    "id": "map.dream_mist",
+    "name": "грёзный туман",
+    "yield": {},
+    "category": "F",
+    "tier": 8,
+    "properties": [
+      "psion_emit"
+    ],
+    "biome_tags": [
+      "nebula",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.archite": {
+    "id": "map.archite",
+    "name": "архит",
+    "yield": {},
+    "category": "B",
+    "tier": 8,
+    "properties": [],
+    "biome_tags": [
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.vicious_bark": {
+    "id": "map.vicious_bark",
+    "name": "злобная кора",
+    "yield": {},
+    "category": "E",
+    "tier": 7,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.lunar_veins": {
+    "id": "map.lunar_veins",
+    "name": "лунные жилы",
+    "yield": {},
+    "category": "F",
+    "tier": 6,
+    "properties": [],
+    "biome_tags": [
+      "ice",
+      "moon"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.minor_artifacts": {
+    "id": "map.minor_artifacts",
+    "name": "малые артефакты",
+    "yield": {},
+    "category": "F",
+    "tier": 5,
+    "properties": [
+      "info_store"
+    ],
+    "biome_tags": [
+      "artifact",
+      "ruin"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.astral_threads": {
+    "id": "map.astral_threads",
+    "name": "астральные нити",
+    "yield": {},
+    "category": "F",
+    "tier": 6,
+    "properties": [
+      "psion_emit"
+    ],
+    "biome_tags": [
+      "anomaly",
+      "nebula"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.grinid": {
+    "id": "map.grinid",
+    "rank": "strategic",
+    "name": "гринид",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "F",
+    "tier": 7,
+    "properties": [
+      "psion_store",
+      "psion_emit",
+      "info_store"
+    ],
+    "biome_tags": [
+      "anomaly",
+      "artifact"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.radid": {
+    "id": "map.radid",
+    "rank": "strategic",
+    "name": "рэдид",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "D",
+    "tier": 6,
+    "properties": [
+      "toxic",
+      "self_spreading",
+      "fuel",
+      "energy",
+      "weapon_amp",
+      "shield"
+    ],
+    "biome_tags": [
+      "volcanic",
+      "toxic"
+    ],
+    "spread": {
+      "self_spreading": true
+    },
+    "toxic": true
+  },
+  "map.blakula": {
+    "id": "map.blakula",
+    "name": "блакула",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "F",
+    "tier": 8,
+    "properties": [
+      "matter_destroy",
+      "weapon",
+      "anomaly"
+    ],
+    "biome_tags": [
+      "black_hole",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "strategic": true,
+    "rank": "strategic"
+  },
+  "map.vaitid": {
+    "id": "map.vaitid",
+    "name": "вайтид",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "F",
+    "tier": 8,
+    "properties": [
+      "psion_suppress",
+      "psion_emit",
+      "corridor_open",
+      "weapon"
+    ],
+    "biome_tags": [
+      "anomaly",
+      "white_corridor"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false,
+    "strategic": true,
+    "rank": "strategic"
+  },
+  "map.violid": {
+    "id": "map.violid",
+    "name": "виолид",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "D",
+    "tier": 7,
+    "properties": [
+      "toxic",
+      "self_spreading",
+      "fuel",
+      "weapon"
+    ],
+    "biome_tags": [
+      "toxic",
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": true
+    },
+    "toxic": true,
+    "strategic": true,
+    "rank": "strategic"
+  },
+  "map.zro": {
+    "id": "map.zro",
+    "rank": "strategic",
+    "name": "зро",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "D",
+    "tier": 7,
+    "properties": [
+      "psion_emit",
+      "energy"
+    ],
+    "biome_tags": [
+      "anomaly",
+      "deep"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.dark_matter": {
+    "id": "map.dark_matter",
+    "rank": "strategic",
+    "name": "тёмная материя",
+    "yield": {
+      "currency.metal": 5
+    },
+    "category": "A",
+    "tier": 10,
+    "properties": [
+      "anomaly"
+    ],
+    "biome_tags": [
+      "black_hole",
+      "deep"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.living_metal": {
+    "id": "map.living_metal",
+    "rank": "strategic",
+    "name": "живой металл",
+    "yield": {
+      "currency.metal": 5
+    },
+    "category": "C",
+    "tier": 7,
+    "properties": [
+      "strong"
+    ],
+    "roles": [
+      "structural"
+    ],
+    "biome_tags": [
+      "anomaly",
+      "artifact"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.nanites": {
+    "id": "map.nanites",
+    "name": "наниты",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "C",
+    "tier": 7,
+    "properties": [],
+    "biome_tags": [
+      "anomaly",
+      "artifact"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.refractory": {
+    "id": "map.refractory",
+    "name": "тугоплавкие минералы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "A",
+    "tier": 2,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.rare_crystals": {
+    "id": "map.rare_crystals",
+    "name": "редкие кристаллы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "B",
+    "tier": 6,
+    "properties": [],
+    "biome_tags": [
+      "mountainous",
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.hydrogen": {
+    "id": "map.hydrogen",
+    "name": "водород",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "D",
+    "tier": 1,
+    "properties": [
+      "fuel"
+    ],
+    "biome_tags": [
+      "gas_giant",
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.ice": {
+    "id": "map.ice",
+    "name": "лёд",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "D",
+    "tier": 1,
+    "properties": [],
+    "biome_tags": [
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.ammonia": {
+    "id": "map.ammonia",
+    "name": "аммиак",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "E",
+    "tier": 1,
+    "properties": [],
+    "biome_tags": [
+      "ice",
+      "gas_giant"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.isotopes": {
+    "id": "map.isotopes",
+    "name": "изотопы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "D",
+    "tier": 5,
+    "properties": [
+      "energy"
+    ],
+    "biome_tags": [
+      "radioactive"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.nickel": {
+    "id": "map.nickel",
+    "name": "никель",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "A",
+    "tier": 1,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "rocky"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.cobalt": {
+    "id": "map.cobalt",
+    "name": "кобальт",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "A",
+    "tier": 1,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "rocky"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.methane": {
+    "id": "map.methane",
+    "name": "метан",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "D",
+    "tier": 2,
+    "properties": [
+      "fuel"
+    ],
+    "biome_tags": [
+      "gas_giant",
+      "swamp"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.helium3": {
+    "id": "map.helium3",
+    "name": "гелий-3",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "D",
+    "tier": 5,
+    "properties": [
+      "fuel",
+      "energy"
+    ],
+    "biome_tags": [
+      "gas_giant",
+      "moon"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.toxic_gases": {
+    "id": "map.toxic_gases",
+    "name": "токсичные газы",
+    "yield": {},
+    "category": "D",
+    "tier": 2,
+    "properties": [
+      "toxic"
+    ],
+    "biome_tags": [
+      "toxic",
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": true
+  },
+  "map.catalysts": {
+    "id": "map.catalysts",
+    "name": "катализаторы",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "B",
+    "tier": 2,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.plasma_crystals": {
+    "id": "map.plasma_crystals",
+    "name": "плазмо-кристаллы",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "B",
+    "tier": 6,
+    "properties": [],
+    "biome_tags": [
+      "volcanic",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.volcanic_minerals": {
+    "id": "map.volcanic_minerals",
+    "name": "вулканические минералы",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "A",
+    "tier": 2,
+    "properties": [
+      "strong"
+    ],
+    "biome_tags": [
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.medicinals": {
+    "id": "map.medicinals",
+    "name": "лекарственные соединения",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "E",
+    "tier": 4,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "ocean"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.anomaly_crystals": {
+    "id": "map.anomaly_crystals",
+    "name": "аномальные кристаллы",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "B",
+    "tier": 6,
+    "properties": [
+      "anomaly"
+    ],
+    "biome_tags": [
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.biocatalysts": {
+    "id": "map.biocatalysts",
+    "name": "биокатализаторы",
+    "yield": {
+      "currency.supply": 2
+    },
+    "category": "E",
+    "tier": 5,
+    "properties": [],
+    "biome_tags": [
+      "forest",
+      "ocean"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.extremophile_enzymes": {
+    "id": "map.extremophile_enzymes",
+    "name": "экстремофильные ферменты",
+    "yield": {},
+    "category": "E",
+    "tier": 6,
+    "properties": [],
+    "biome_tags": [
+      "volcanic",
+      "ice",
+      "toxic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.frozen_fuels": {
+    "id": "map.frozen_fuels",
+    "name": "замёрзшие топлива",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "D",
+    "tier": 3,
+    "properties": [
+      "fuel"
+    ],
+    "biome_tags": [
+      "ice"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.energy_minerals": {
+    "id": "map.energy_minerals",
+    "name": "энергетические минералы",
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "A",
+    "tier": 5,
+    "properties": [
+      "energy"
+    ],
+    "biome_tags": [
+      "mountainous",
+      "volcanic"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.magnetite": {
+    "id": "map.magnetite",
+    "name": "магнетиты",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "A",
+    "tier": 2,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.platinum": {
+    "id": "map.platinum",
+    "name": "платина",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "B",
+    "tier": 5,
+    "properties": [],
+    "biome_tags": [
+      "mountainous"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.cyber_minerals": {
+    "id": "map.cyber_minerals",
+    "name": "кибер-минералы",
+    "yield": {
+      "currency.metal": 4
+    },
+    "category": "C",
+    "tier": 6,
+    "properties": [],
+    "biome_tags": [
+      "anomaly",
+      "artifact"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.frozen_gases": {
+    "id": "map.frozen_gases",
+    "name": "замёрзшие газы",
+    "yield": {
+      "currency.supply": 1
+    },
+    "category": "D",
+    "tier": 2,
+    "properties": [
+      "fuel"
+    ],
+    "biome_tags": [
+      "ice",
+      "gas_giant"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  },
+  "map.plasmoids": {
+    "id": "map.plasmoids",
+    "name": "плазмоиды",
+    "yield": {
+      "currency.metal": 2
+    },
+    "category": "D",
+    "tier": 6,
+    "properties": [
+      "weapon_amp"
+    ],
+    "biome_tags": [
+      "star_near",
+      "anomaly"
+    ],
+    "spread": {
+      "self_spreading": false
+    },
+    "toxic": false
+  }
+}

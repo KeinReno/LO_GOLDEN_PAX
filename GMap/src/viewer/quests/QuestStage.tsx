@@ -12,6 +12,10 @@ import { canAffordCosts } from "./adaptQuest";
 import type { Quest, QuestChoice } from "./types";
 import { QUEST_KIND_META, QUEST_STATUS_LABEL } from "./types";
 import { useQuestsState } from "./useQuestsState";
+import {
+  openCourtForNpc,
+  QuestAssignedChip,
+} from "./QuestDossierView";
 
 export type QuestStageProps = {
   quest: Quest | null;
@@ -22,6 +26,7 @@ export type QuestStageProps = {
   onRollDice: () => void | Promise<void>;
   onOpenChat: () => void;
   onFocusSystem?: (systemId: string) => void;
+  onOpenCourt?: () => void;
   dicePreview?: {
     value: number;
     rolling: boolean;
@@ -117,6 +122,7 @@ function Briefing({
   onToggleFlip,
   onOpenChat,
   onFocusSystem,
+  onOpenCourt,
   onMiddleFlip,
 }: {
   quest: Quest;
@@ -127,6 +133,7 @@ function Briefing({
   onOpenChat: () => void;
   onFocusSystem?: (systemId: string) => void;
   onMiddleFlip: (e: MouseEvent) => void;
+  onOpenCourt?: () => void;
 }) {
   const meta = QUEST_KIND_META[quest.kind];
   const stageIdx = quest.stage ?? 0;
@@ -202,6 +209,20 @@ function Briefing({
             {quest.giverFactionName ? (
               <span className="quest-card-chip">{quest.giverFactionName}</span>
             ) : null}
+            {quest.giverNpcName ? (
+              <span className="quest-card-chip">{quest.giverNpcName}</span>
+            ) : null}
+            {quest.assignedNpcName ? (
+              <QuestAssignedChip
+                name={quest.assignedNpcName}
+                etaTurn={quest.assignedNpcEtaTurn}
+                onOpenCourt={
+                  onOpenCourt
+                    ? () => openCourtForNpc(quest.assignedNpcId, onOpenCourt)
+                    : undefined
+                }
+              />
+            ) : null}
             {quest.expiresTurn != null ? (
               <span className="quest-card-chip quest-card-chip--warn">
                 до хода {quest.expiresTurn}
@@ -273,6 +294,7 @@ export function QuestStage({
   onRollDice,
   onOpenChat,
   onFocusSystem,
+  onOpenCourt,
   dicePreview,
   onDiceSettled,
 }: QuestStageProps) {
@@ -317,6 +339,7 @@ export function QuestStage({
         onToggleFlip={toggleFlip}
         onOpenChat={onOpenChat}
         onFocusSystem={onFocusSystem}
+        onOpenCourt={onOpenCourt}
         onMiddleFlip={handleFlip}
       />
 

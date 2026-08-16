@@ -474,6 +474,10 @@ function ProfileTab({ faction }: { faction: Faction }) {
       </label>
       <fieldset className="polity-colors">
         <legend>Цвета на карте</legend>
+        <p className="hint">
+          Слоты используются во всех языках карты (Классика, Империя, Голо) — не
+          только в текущем виде.
+        </p>
         <label className="field">
           <span>Границы</span>
           <input

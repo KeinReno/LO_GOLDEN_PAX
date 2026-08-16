@@ -1,0 +1,4060 @@
+{
+  "tech.combo_geo_materials": {
+    "id": "tech.combo_geo_materials",
+    "name": "Гео-материалы",
+    "category": "B",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Гео-материалы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_geology",
+      "tech.b_materials_science"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_geo_materials.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_ore_alloys": {
+    "id": "tech.combo_ore_alloys",
+    "name": "Рудные сплавы",
+    "category": "B",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Рудные сплавы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_ore_extraction",
+      "tech.b_basic_alloys"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_ore_alloys.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_drill_composites": {
+    "id": "tech.combo_drill_composites",
+    "name": "Буровые композиты",
+    "category": "B",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Буровые композиты. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_deep_drilling",
+      "tech.b_composite_materials"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_drill_composites.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_mining_metallurgy": {
+    "id": "tech.combo_mining_metallurgy",
+    "name": "Шахтная металлургия",
+    "category": "B",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Шахтная металлургия. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_mining_networks",
+      "tech.b_metallurgy"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_mining_metallurgy.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_crystal_prospect": {
+    "id": "tech.combo_crystal_prospect",
+    "name": "Кристалл-разведка",
+    "category": "A",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Кристалл-разведка. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_crystal_mining",
+      "tech.b_crystal_growing"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.extracta",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_crystal_prospect.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_slag_recycle": {
+    "id": "tech.combo_slag_recycle",
+    "name": "Шлак-цикл",
+    "category": "B",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Шлак-цикл. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_slag_reclamation",
+      "tech.b_material_recycling"
+    ],
+    "effects": [
+      {
+        "effect": "upkeep_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_slag_recycle.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_quantum_mining": {
+    "id": "tech.combo_quantum_mining",
+    "name": "Квантовая добыча",
+    "category": "A",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Квантовая добыча. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_quantum_extraction",
+      "tech.b_quantum_materials"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.extracta",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_quantum_mining.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_nano_extract": {
+    "id": "tech.combo_nano_extract",
+    "name": "Нано-экстракция",
+    "category": "A",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Нано-экстракция. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_nanite_mining",
+      "tech.b_nanomaterials"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.extracta",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_nano_extract.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_alloy_lines": {
+    "id": "tech.combo_alloy_lines",
+    "name": "Сплавные линии",
+    "category": "C",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Сплавные линии. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_basic_alloys",
+      "tech.c_assembly_lines"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_alloy_lines.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_plasma_yard": {
+    "id": "tech.combo_plasma_yard",
+    "name": "Плазменная кузница",
+    "category": "C",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Плазменная кузница. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_metallurgy",
+      "tech.c_planetary_forges"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_plasma_yard.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_armor_yards": {
+    "id": "tech.combo_armor_yards",
+    "name": "Броневые верфи",
+    "category": "C",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Броневые верфи. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_ablative_hull_plates",
+      "tech.c_fleet_batch_builds"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "repair_rate",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_armor_yards.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_matter_printers": {
+    "id": "tech.combo_matter_printers",
+    "name": "Печать материи",
+    "category": "C",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Печать материи. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_programmable_matter",
+      "tech.c_printer_foundries"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.industria",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_composite_prefab": {
+    "id": "tech.combo_composite_prefab",
+    "name": "Композит-префаб",
+    "category": "C",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Композит-префаб. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_advanced_composites",
+      "tech.c_prefab_bay_standards"
+    ],
+    "effects": [
+      {
+        "effect": "cost_mult",
+        "args": {
+          "mult": 0.95,
+          "tag": "build"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_composite_prefab.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_shield_modules": {
+    "id": "tech.combo_shield_modules",
+    "name": "Щитовые модули",
+    "category": "B",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Щитовые модули. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_transparent_armor",
+      "tech.c_module_hotswap"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.b_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_shield_modules.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_powered_lines": {
+    "id": "tech.combo_powered_lines",
+    "name": "Энерголинии цехов",
+    "category": "D",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Энерголинии цехов. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_assembly_lines",
+      "tech.d_power_grid_mgmt"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_powered_lines.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_yard_reactors": {
+    "id": "tech.combo_yard_reactors",
+    "name": "Реакторы верфей",
+    "category": "D",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Реакторы верфей. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_orbital_manufacturing",
+      "tech.d_fusion_reactors"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_yard_reactors.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_mobile_power": {
+    "id": "tech.combo_mobile_power",
+    "name": "Мобильное питание",
+    "category": "C",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Мобильное питание. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_mobile_shipyards",
+      "tech.d_fleet_tanker_doctrine"
+    ],
+    "effects": [
+      {
+        "effect": "move_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_mobile_power.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_siege_beams": {
+    "id": "tech.combo_siege_beams",
+    "name": "Осадные лучи",
+    "category": "D",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Осадные лучи. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_siege_works_kits",
+      "tech.d_beam_artillery_power"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "weapon_power",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_siege_beams.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_drydock_caps": {
+    "id": "tech.combo_drydock_caps",
+    "name": "Конденсаторы доков",
+    "category": "D",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Конденсаторы доков. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_drydock_expansion",
+      "tech.d_capacitor_banks"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "D",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_drydock_caps.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_night_grid": {
+    "id": "tech.combo_night_grid",
+    "name": "Ночная сеть",
+    "category": "C",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Ночная сеть. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_night_shift_ai",
+      "tech.d_distributed_microgrids"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_night_grid.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_bio_fusion": {
+    "id": "tech.combo_bio_fusion",
+    "name": "Био-термояд",
+    "category": "E",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Био-термояд. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_fusion_reactors",
+      "tech.e_bioengineering"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_bio_fusion.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_greenhouse_power": {
+    "id": "tech.combo_greenhouse_power",
+    "name": "Энерго-теплицы",
+    "category": "E",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Энерго-теплицы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_solar_arrays",
+      "tech.e_hydroponics"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_greenhouse_power.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_med_batteries": {
+    "id": "tech.combo_med_batteries",
+    "name": "Медбатареи",
+    "category": "E",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Медбатареи. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_battery_tech",
+      "tech.e_medical_advances"
+    ],
+    "effects": [
+      {
+        "effect": "upkeep_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_med_batteries.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_cryo_power": {
+    "id": "tech.combo_cryo_power",
+    "name": "Криопитание",
+    "category": "E",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Криопитание. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_energy_storage",
+      "tech.e_cryosleep_wards"
+    ],
+    "effects": [
+      {
+        "effect": "pop_growth_mult",
+        "args": {
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_cryo_power.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_terra_heat": {
+    "id": "tech.combo_terra_heat",
+    "name": "Геотерма-терраформ",
+    "category": "E",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Геотерма-терраформ. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_geothermal_taps",
+      "tech.e_terraforming"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_terra_heat.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_life_support_bus": {
+    "id": "tech.combo_life_support_bus",
+    "name": "Шина жизнеобеспечения",
+    "category": "D",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Шина жизнеобеспечения. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_fleet_power_bus",
+      "tech.e_closed_ecology_ships"
+    ],
+    "effects": [
+      {
+        "effect": "upkeep_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_psionic_genetics": {
+    "id": "tech.combo_psionic_genetics",
+    "name": "Псио-генетика",
+    "category": "F",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Псио-генетика. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_genetic_engineering",
+      "tech.f_psionic_theory"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.f_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_psionic_genetics.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_bio_compute": {
+    "id": "tech.combo_bio_compute",
+    "name": "Био-вычисления",
+    "category": "F",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Био-вычисления. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_bio_computing",
+      "tech.f_neural_networks"
+    ],
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_bio_compute.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_gene_archives": {
+    "id": "tech.combo_gene_archives",
+    "name": "Геноархивы",
+    "category": "F",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Геноархивы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_gene_bank_vaults",
+      "tech.f_archive_compression"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "F",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_gene_archives.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_mind_rehab": {
+    "id": "tech.combo_mind_rehab",
+    "name": "Реабилитация разума",
+    "category": "E",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Реабилитация разума. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_neural_rehab",
+      "tech.f_cognitive_enhancement"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "repair_rate",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_mind_rehab.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_species_oracle": {
+    "id": "tech.combo_species_oracle",
+    "name": "Оракул видов",
+    "category": "F",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Оракул видов. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_species_design_labs",
+      "tech.f_oracle_clusters"
+    ],
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_memory_labs": {
+    "id": "tech.combo_memory_labs",
+    "name": "Лаборатории памяти",
+    "category": "F",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Лаборатории памяти. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_memory_inheritance",
+      "tech.f_mnemonic_implants"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.cognitio",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_survey_science": {
+    "id": "tech.combo_survey_science",
+    "name": "Наука разведки недр",
+    "category": "A",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Наука разведки недр. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_mineral_surveying",
+      "tech.f_astronomy"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.a_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_survey_science.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_anomaly_prospect": {
+    "id": "tech.combo_anomaly_prospect",
+    "name": "Аномальная разведка",
+    "category": "A",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Аномальная разведка. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_anomaly_tapping",
+      "tech.f_anomaly_detection"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.extracta",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_anomaly_prospect.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_ore_oracle_link": {
+    "id": "tech.combo_ore_oracle_link",
+    "name": "Связь рудного оракула",
+    "category": "A",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Связь рудного оракула. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_ore_oracle",
+      "tech.f_hypothesis_engines"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.a_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_relic_seams": {
+    "id": "tech.combo_relic_seams",
+    "name": "Реликтовые жилы",
+    "category": "F",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Реликтовые жилы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_isotope_prospecting",
+      "tech.f_relic_decoding"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.cognitio",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_relic_seams.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_extract_logistics": {
+    "id": "tech.combo_extract_logistics",
+    "name": "Логистика экстракции",
+    "category": "A",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Логистика экстракции. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.a_mining_networks",
+      "tech.a_ore_train_networks"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "A",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_extract_logistics.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_hull_doctrine": {
+    "id": "tech.combo_hull_doctrine",
+    "name": "Доктрина корпуса",
+    "category": "B",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Доктрина корпуса. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.b_ablative_hull_plates",
+      "tech.b_layered_reactive_armor"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "armor",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_hull_doctrine.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_yard_doctrine": {
+    "id": "tech.combo_yard_doctrine",
+    "name": "Доктрина верфей",
+    "category": "C",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Доктрина верфей. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.c_fleet_batch_builds",
+      "tech.c_rapid_repair_bays"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "repair_rate",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_yard_doctrine.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_grid_doctrine": {
+    "id": "tech.combo_grid_doctrine",
+    "name": "Доктрина сетей",
+    "category": "D",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Доктрина сетей. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.d_grid_islanding",
+      "tech.d_power_grid_mgmt"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "D",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_grid_doctrine.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_pop_doctrine": {
+    "id": "tech.combo_pop_doctrine",
+    "name": "Доктрина населения",
+    "category": "E",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Доктрина населения. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.e_creche_networks",
+      "tech.e_population_growth"
+    ],
+    "effects": [
+      {
+        "effect": "pop_growth_mult",
+        "args": {
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_pop_doctrine.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_lab_doctrine": {
+    "id": "tech.combo_lab_doctrine",
+    "name": "Доктрина лабораторий",
+    "category": "F",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Доктрина лабораторий. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.f_basic_research",
+      "tech.f_experiment_schedulers"
+    ],
+    "effects": [
+      {
+        "effect": "ap_add",
+        "args": {
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_lab_doctrine.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_geo_materials": {
+    "id": "tech.combo_live_geo_materials",
+    "name": "Гео-материалы",
+    "category": "B",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Гео-материалы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.geology",
+      "tech.materials_science"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_geo_materials.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_deep_pyro": {
+    "id": "tech.combo_live_deep_pyro",
+    "name": "Глубинная пирометаллургия",
+    "category": "B",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Глубинная пирометаллургия. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.deep_prospecting",
+      "tech.pyrometallurgy"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_deep_pyro.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_asteroid_crystal": {
+    "id": "tech.combo_live_asteroid_crystal",
+    "name": "Астероидный кристалл",
+    "category": "A",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Астероидный кристалл. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.asteroid_mining",
+      "tech.crystal_integration"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.extracta",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_asteroid_crystal.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_anomaly_meta": {
+    "id": "tech.combo_live_anomaly_meta",
+    "name": "Аномальные метаматериалы",
+    "category": "B",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Аномальные метаматериалы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.anomaly_tapping",
+      "tech.metamaterials"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_anomaly_meta.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_geo_pyro": {
+    "id": "tech.combo_live_geo_pyro",
+    "name": "Гео-плавка",
+    "category": "B",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Гео-плавка. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.geology",
+      "tech.pyrometallurgy"
+    ],
+    "effects": [
+      {
+        "effect": "upkeep_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_geo_pyro.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_mat_industry": {
+    "id": "tech.combo_live_mat_industry",
+    "name": "Материалы цеха",
+    "category": "C",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Материалы цеха. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.industrial_org",
+      "tech.materials_science"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_mat_industry.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_pyro_modular": {
+    "id": "tech.combo_live_pyro_modular",
+    "name": "Модульная плавка",
+    "category": "C",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Модульная плавка. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.modular_construction",
+      "tech.pyrometallurgy"
+    ],
+    "effects": [
+      {
+        "effect": "cost_mult",
+        "args": {
+          "mult": 0.95,
+          "tag": "build"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_pyro_modular.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_crystal_cyber": {
+    "id": "tech.combo_live_crystal_cyber",
+    "name": "Кристалл-кибернетика",
+    "category": "C",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Кристалл-кибернетика. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.crystal_integration",
+      "tech.cybernetics"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "repair_rate",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_crystal_cyber.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_meta_nano": {
+    "id": "tech.combo_live_meta_nano",
+    "name": "Мета-нано",
+    "category": "C",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Мета-нано. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.metamaterials",
+      "tech.nanotech"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_meta_nano.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_black_iron_mega": {
+    "id": "tech.combo_live_black_iron_mega",
+    "name": "Чёрное железо мегаструктур",
+    "category": "C",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Чёрное железо мегаструктур. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.black_iron_forges",
+      "tech.planetary_megastructures"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.industria",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_live_cold_synth": {
+    "id": "tech.combo_live_cold_synth",
+    "name": "Холодный синтуплифт",
+    "category": "C",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Холодный синтуплифт. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.hybrid.cold_foundry",
+      "tech.synth.uplift"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_cold_synth.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_industry_grid": {
+    "id": "tech.combo_live_industry_grid",
+    "name": "Цех-сеть",
+    "category": "D",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Цех-сеть. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.energy_grid",
+      "tech.industrial_org"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_industry_grid.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_modular_plasma": {
+    "id": "tech.combo_live_modular_plasma",
+    "name": "Плазмо-модули",
+    "category": "D",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Плазмо-модули. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.modular_construction",
+      "tech.plasma_engineering"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "weapon_power",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_modular_plasma.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_cyber_fusion": {
+    "id": "tech.combo_live_cyber_fusion",
+    "name": "Кибер-термояд",
+    "category": "D",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Кибер-термояд. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.cybernetics",
+      "tech.fusion"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_cyber_fusion.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_nano_antimatter": {
+    "id": "tech.combo_live_nano_antimatter",
+    "name": "Нано-антиматерия",
+    "category": "D",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Нано-антиматерия. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.antimatter",
+      "tech.nanotech"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.energia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_nano_antimatter.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_war_plasma": {
+    "id": "tech.combo_live_war_plasma",
+    "name": "Военная плазма",
+    "category": "D",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Военная плазма. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.plasma_engineering",
+      "tech.war_economy.doctrine"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "weapon_power",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_war_plasma.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_mega_singularity": {
+    "id": "tech.combo_live_mega_singularity",
+    "name": "Мега-сингулярность",
+    "category": "D",
+    "era": 5,
+    "cost": {
+      "currency.cognitio": 200
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Мега-сингулярность. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.antimatter_singularity",
+      "tech.planetary_megastructures"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "D",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "isBreakthrough": true
+  },
+  "tech.combo_live_grid_hydro": {
+    "id": "tech.combo_live_grid_hydro",
+    "name": "Энерго-теплицы",
+    "category": "E",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Энерго-теплицы. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.energy_grid",
+      "tech.hydroponics"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_grid_hydro.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_plasma_med": {
+    "id": "tech.combo_live_plasma_med",
+    "name": "Плазмомедицина",
+    "category": "E",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Плазмомедицина. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.medicine",
+      "tech.plasma_engineering"
+    ],
+    "effects": [
+      {
+        "effect": "upkeep_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_plasma_med.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_fusion_bio": {
+    "id": "tech.combo_live_fusion_bio",
+    "name": "Био-термояд",
+    "category": "E",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Био-термояд. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.biocatalysis",
+      "tech.fusion"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.bios",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_fusion_bio.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_antimatter_xeno": {
+    "id": "tech.combo_live_antimatter_xeno",
+    "name": "Ксено-антиматерия",
+    "category": "E",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Ксено-антиматерия. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.antimatter",
+      "tech.xenobiology"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.e_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_antimatter_xeno.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_void_swarm": {
+    "id": "tech.combo_live_void_swarm",
+    "name": "Пустотный рой",
+    "category": "E",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Пустотный рой. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.hybrid.void_interface",
+      "tech.swarm.adaptation"
+    ],
+    "effects": [
+      {
+        "effect": "pop_growth_mult",
+        "args": {
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_void_swarm.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_hydro_charter": {
+    "id": "tech.combo_live_hydro_charter",
+    "name": "Хартия теплиц",
+    "category": "F",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Хартия теплиц. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.hydroponics",
+      "tech.scientific_charter"
+    ],
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_hydro_charter.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_med_archaeology": {
+    "id": "tech.combo_live_med_archaeology",
+    "name": "Медархеология",
+    "category": "F",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Медархеология. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.archaeology",
+      "tech.medicine"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.cognitio",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_med_archaeology.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_bio_psi": {
+    "id": "tech.combo_live_bio_psi",
+    "name": "Биопсионика",
+    "category": "F",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Биопсионика. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.biocatalysis",
+      "tech.psionics"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.f_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_bio_psi.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_xeno_corridors": {
+    "id": "tech.combo_live_xeno_corridors",
+    "name": "Ксено-коридоры",
+    "category": "F",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Ксено-коридоры. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.white_corridors",
+      "tech.xenobiology"
+    ],
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_xeno_corridors.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_med_psi": {
+    "id": "tech.combo_live_med_psi",
+    "name": "Псио-генетика",
+    "category": "F",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Псио-генетика. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.medicine",
+      "tech.psionics"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.f_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_med_psi.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_swarm_chorus": {
+    "id": "tech.combo_live_swarm_chorus",
+    "name": "Роевой хор",
+    "category": "F",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Роевой хор. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.psi_doctrine.chorus",
+      "tech.swarm.adaptation"
+    ],
+    "effects": [
+      {
+        "effect": "stat_mult",
+        "args": {
+          "stat": "repair_rate",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_swarm_chorus.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_charter_geo": {
+    "id": "tech.combo_live_charter_geo",
+    "name": "Хартия недр",
+    "category": "A",
+    "era": 1,
+    "cost": {
+      "currency.cognitio": 10
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Хартия недр. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.geology",
+      "tech.scientific_charter"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.a_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_charter_geo.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 5
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_arch_deep": {
+    "id": "tech.combo_live_arch_deep",
+    "name": "Архео-скважины",
+    "category": "A",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Архео-скважины. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.archaeology",
+      "tech.deep_prospecting"
+    ],
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "currency.extracta",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_arch_deep.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_psi_asteroid": {
+    "id": "tech.combo_live_psi_asteroid",
+    "name": "Пси-астероиды",
+    "category": "A",
+    "era": 3,
+    "cost": {
+      "currency.cognitio": 36
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Пси-астероиды. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.asteroid_mining",
+      "tech.psionics"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.extracta",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_psi_asteroid.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 18
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_corridors_anomaly": {
+    "id": "tech.combo_live_corridors_anomaly",
+    "name": "Коридоры аномалий",
+    "category": "A",
+    "era": 4,
+    "cost": {
+      "currency.cognitio": 120
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Коридоры аномалий. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.anomaly_tapping",
+      "tech.white_corridors"
+    ],
+    "effects": [
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "alchemy.a_synergy"
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_corridors_anomaly.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 60
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_ai_geo": {
+    "id": "tech.combo_live_ai_geo",
+    "name": "ИИ-разведка недр",
+    "category": "A",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: ИИ-разведка недр. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.geology",
+      "tech.technocracy.ai_research"
+    ],
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_ai_geo.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_extract_chain": {
+    "id": "tech.combo_live_extract_chain",
+    "name": "Цепь экстракции",
+    "category": "A",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "extraction",
+    "flavor": "Алхимический синтез: Цепь экстракции. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.deep_prospecting",
+      "tech.geology"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "A",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_extract_chain.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_alloy_chain": {
+    "id": "tech.combo_live_alloy_chain",
+    "name": "Цепь сплавов",
+    "category": "B",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "metallurgy",
+    "flavor": "Алхимический синтез: Цепь сплавов. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.materials_science",
+      "tech.pyrometallurgy"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.materia",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_alloy_chain.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_yard_chain": {
+    "id": "tech.combo_live_yard_chain",
+    "name": "Цепь верфей",
+    "category": "C",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "industry",
+    "flavor": "Алхимический синтез: Цепь верфей. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.industrial_org",
+      "tech.modular_construction"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "currency.industria",
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_yard_chain.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_grid_chain": {
+    "id": "tech.combo_live_grid_chain",
+    "name": "Цепь сетей",
+    "category": "D",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "energy",
+    "flavor": "Алхимический синтез: Цепь сетей. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.energy_grid",
+      "tech.plasma_engineering"
+    ],
+    "effects": [
+      {
+        "effect": "capacity_add",
+        "args": {
+          "category": "D",
+          "amount": 1
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_grid_chain.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.energia",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_life_chain": {
+    "id": "tech.combo_live_life_chain",
+    "name": "Цепь жизни",
+    "category": "E",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "biology",
+    "flavor": "Алхимический синтез: Цепь жизни. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.hydroponics",
+      "tech.medicine"
+    ],
+    "effects": [
+      {
+        "effect": "pop_growth_mult",
+        "args": {
+          "mult": 1.05
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_life_chain.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.combo_live_lab_chain": {
+    "id": "tech.combo_live_lab_chain",
+    "name": "Цепь лабораторий",
+    "category": "F",
+    "era": 2,
+    "cost": {
+      "currency.cognitio": 22
+    },
+    "iconTag": "psionics",
+    "flavor": "Алхимический синтез: Цепь лабораторий. Открывается только через лабораторию.",
+    "tags": [
+      "alchemy",
+      "combo",
+      "general"
+    ],
+    "prerequisites": [],
+    "alchemyOnly": true,
+    "alchemyOf": [
+      "tech.archaeology",
+      "tech.scientific_charter"
+    ],
+    "effects": [
+      {
+        "effect": "research_cost_mult",
+        "args": {
+          "mult": 0.95
+        }
+      }
+    ],
+    "balanceBudget": 0,
+    "upgrades": [
+      {
+        "id": "tech.combo_live_lab_chain.efficiency",
+        "name": "Углубление синтеза",
+        "cost": {
+          "currency.cognitio": 11
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.05
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      }
+    ]
+  }
+}

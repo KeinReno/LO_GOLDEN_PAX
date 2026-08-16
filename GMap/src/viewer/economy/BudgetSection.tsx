@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDrag } from "@use-gesture/react";
 import { explainCategoryLabel } from "../../state/displayLabels";
 import {
@@ -26,12 +26,15 @@ type Filter = "all" | "income" | "expense";
 
 type Props = {
   payload: ViewerPayload;
+  /** Optional: jump timeline to a ledger reason (donut → journal). */
+  focusReason?: string | null;
 };
 
-export function BudgetSection({ payload }: Props) {
+export function BudgetSection({ payload, focusReason = null }: Props) {
   const eco = payload.economy;
   const [filter, setFilter] = useState<Filter>("all");
   const [turnIndex, setTurnIndex] = useState(0);
+  const [reasonFilter, setReasonFilter] = useState<string | null>(null);
   const treasuryCurrencyId = useMemo(
     () => resolveFactionTreasuryCurrency(payload),
     [payload],
@@ -49,10 +52,20 @@ export function BudgetSection({ payload }: Props) {
         : null,
     [eco, payload.world?.meta?.turn, treasuryCurrencyId],
   );
-  const groups = useMemo(
-    () => groupRecentByTurn(eco?.recent ?? [], filter),
-    [eco?.recent, filter],
-  );
+  const groups = useMemo(() => {
+    let rows = eco?.recent ?? [];
+    if (reasonFilter) {
+      rows = rows.filter((r) => r.reason === reasonFilter);
+    }
+    return groupRecentByTurn(rows, filter);
+  }, [eco?.recent, filter, reasonFilter]);
+
+  useEffect(() => {
+    if (focusReason) {
+      setReasonFilter(focusReason);
+      setTurnIndex(0);
+    }
+  }, [focusReason]);
   const slices = useMemo(
     () =>
       eco
@@ -128,6 +141,19 @@ export function BudgetSection({ payload }: Props) {
             {label}
           </button>
         ))}
+        {reasonFilter ? (
+          <button
+            type="button"
+            className="eco-budget-filter is-active"
+            onClick={() => {
+              setReasonFilter(null);
+              setTurnIndex(0);
+            }}
+            title="Сбросить фильтр статьи"
+          >
+            Статья: {reasonLabel(reasonFilter)} ✕
+          </button>
+        ) : null}
       </div>
 
       <div className="eco-budget-grid">
@@ -173,7 +199,11 @@ export function BudgetSection({ payload }: Props) {
           </header>
 
           {!activeGroup ? (
-            <p className="hint">Нет записей в журнале.</p>
+            <EmptyState
+              title="Журнал пуст"
+              body="Проводки появятся после экономического тика."
+              patterned={false}
+            />
           ) : (
             <>
               <p className="eco-timeline__summary hint">
@@ -209,9 +239,16 @@ export function BudgetSection({ payload }: Props) {
         <ExpenseDonut
           slices={slices}
           recent={(eco.recent ?? []).filter(
-            (r) => r.currencyId === "currency.metal",
+            (r) =>
+              r.currencyId === treasuryCurrencyId ||
+              r.currencyId === "currency.metal",
           )}
           title={`Расход · ${treasuryHint}`}
+          onSelectReason={(reason) => {
+            setReasonFilter(reason);
+            setFilter("expense");
+            setTurnIndex(0);
+          }}
         />
       </div>
 

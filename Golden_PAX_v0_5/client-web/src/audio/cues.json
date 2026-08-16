@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "note": "Staff-radio interrupts, not UI clicks. Music beds are out of scope. Token is brass on glass — not wood.",
+  "elevenlabs": {
+    "endpoint": "https://api.elevenlabs.io/v1/sound-generation",
+    "model_id": "eleven_text_to_sound_v2",
+    "output_format": "mp3_44100_128",
+    "prompt_influence": 0.78,
+    "variants": 4
+  },
+  "cues": [
+    {
+      "id": "radio_squelch",
+      "role": "shared attack / channel open",
+      "duration_seconds": 0.5,
+      "prompt": "Very short analog military radio squelch opening, dry close-mic, 400 milliseconds, band-limited hiss then abrupt gate close, no voice, no melody, no music, no sci-fi laser, no UI beep, handheld transceiver, briefing table radio."
+    },
+    {
+      "id": "turn_advance",
+      "role": "turn changed, often offscreen",
+      "duration_seconds": 0.7,
+      "prompt": "Analog radio squelch open then a single low dry tone like a distant hull resonance, 700 milliseconds, no melody, no bells, no choir, no piano, no five-note motif, no music, close-mic, staff radio interrupt for a new turn."
+    },
+    {
+      "id": "contact_alert",
+      "role": "combat or capture on an owned system not in view",
+      "duration_seconds": 0.6,
+      "prompt": "Two short analog radio squelch bursts, second slightly higher, 180 milliseconds apart, dry, no explosion, no gunfire, no orchestra, no melody, no sci-fi alarm siren, close-mic briefing radio, contact warning."
+    },
+    {
+      "id": "seal_stamp",
+      "role": "irreversible HoldButton commit",
+      "duration_seconds": 0.55,
+      "prompt": "Heavy brass wax-seal stamp striking thick paper on a stone desk, close microphone, dry, single impact, brief wax crackle, no wood knock, no reverb hall, no melody, imperial dispatch seal."
+    },
+    {
+      "id": "token_drop",
+      "role": "card / force dropped onto a system",
+      "duration_seconds": 0.5,
+      "prompt": "Small brass map marker placed onto a glass holographic briefing table, single dry tap, close-mic, metal on glass, short bright tick then mute, no wood, no oak, no chess piece, no whoosh, no melody, no sci-fi sparkle."
+    }
+  ]
+}

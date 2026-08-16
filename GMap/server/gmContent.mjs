@@ -65,6 +65,77 @@ export const ATELIER_CATALOGS = {
     mode: "flat",
     label: "Здания",
   },
+  ships: {
+    file: "core/ships.json",
+    mode: "flat",
+    label: "Корабли",
+  },
+  units: {
+    file: "core/units.json",
+    mode: "flat",
+    label: "Легионы и юниты",
+  },
+  races: {
+    file: "core/races.json",
+    mode: "flat",
+    label: "Расы",
+  },
+  space_objects: {
+    file: "core/space_objects.json",
+    mode: "nested",
+    bags: ["objects"],
+    label: "Космические объекты",
+  },
+  stations: {
+    file: "core/stations.json",
+    mode: "flat",
+    label: "Орбитальные станции",
+  },
+  faction_traits: {
+    file: "core/faction_traits.json",
+    mode: "flat",
+    label: "Трейты фракций",
+  },
+  faiths: {
+    file: "core/faiths.json",
+    mode: "flat",
+    label: "Верования",
+  },
+  cultures: {
+    file: "core/cultures.json",
+    mode: "flat",
+    label: "Культуры",
+  },
+  tech_paths: {
+    file: "core/tech_paths.json",
+    mode: "document",
+    label: "Пути технологий",
+  },
+  tech_directions: {
+    file: "core/tech_directions.json",
+    mode: "document",
+    label: "Направления науки",
+  },
+  civic_paths: {
+    file: "core/civic_paths.json",
+    mode: "document",
+    label: "Гражданские пути",
+  },
+  power_paths: {
+    file: "core/power_paths.json",
+    mode: "document",
+    label: "Пути могущества",
+  },
+  map_resources: {
+    file: "core/map_resources.json",
+    mode: "flat",
+    label: "Ресурсы карты",
+  },
+  modules: {
+    file: "core/modules.json",
+    mode: "flat",
+    label: "Модули флота/легиона",
+  },
   rules: {
     file: "core/rules.json",
     mode: "document",
@@ -73,9 +144,23 @@ export const ATELIER_CATALOGS = {
 };
 
 function catalogDef(catalogId) {
-  const def = ATELIER_CATALOGS[catalogId];
-  if (!def) return null;
-  return { id: catalogId, ...def };
+  const cleanId = String(catalogId || "").trim().toLowerCase();
+  const def = ATELIER_CATALOGS[cleanId];
+  if (def) return { id: cleanId, ...def };
+
+  const candidates = [
+    `core/${cleanId}.json`,
+    `${cleanId}.json`,
+    `core/${cleanId.replace(/-/g, "_")}.json`,
+    `${cleanId.replace(/-/g, "_")}.json`,
+  ];
+  for (const rel of candidates) {
+    const fp = path.join(CONTENT_ROOT, rel);
+    if (fs.existsSync(fp)) {
+      return { id: cleanId, file: rel, mode: "flat", label: cleanId };
+    }
+  }
+  return null;
 }
 
 function filePath(def) {
@@ -287,31 +372,30 @@ export function readCatalogEntry(catalogId, key, bag) {
 
 export function saveCatalogEntry(catalogId, key, bag, data, create = false) {
   const def = catalogDef(catalogId);
-  if (!def) return { ok: false, error: "Неизвестный каталог" };
-  if (def.mode === "document") {
-    return { ok: false, error: "Используйте saveCatalogDocument" };
+  if (!def) return { ok: false, error: `Неизвестный каталог: ${catalogId}` };
+  if (!key && data && typeof data === "object") {
+    key = data.id || data.key || "";
   }
   if (!key || typeof key !== "string") {
-    return { ok: false, error: "Нужен key" };
+    return { ok: false, error: "Нужен key (id записи)" };
   }
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return { ok: false, error: "data — объект JSON" };
   }
 
   const root = readCatalogFile(def);
-  const existing = getEntry(root, def, key, bag);
-  if (existing != null && create) {
-    return { ok: false, error: `Запись уже есть: ${key}` };
-  }
-  if (existing == null && !create) {
-    return { ok: false, error: `Запись не найдена: ${key}` };
+  if (def.mode === "nested" && !bag && def.bags?.length) {
+    for (const b of def.bags) {
+      if (root?.[b]?.[key] != null) {
+        bag = b;
+        break;
+      }
+    }
+    if (!bag) bag = def.bags[0];
   }
 
   const payload = { ...data };
   if (payload.id == null) payload.id = key;
-  if (String(payload.id) !== key) {
-    return { ok: false, error: `id (${payload.id}) должен совпадать с key (${key})` };
-  }
 
   setEntry(root, def, key, bag, payload);
   writeCatalogFile(def, root);
@@ -321,15 +405,24 @@ export function saveCatalogEntry(catalogId, key, bag, data, create = false) {
 
 export function removeCatalogEntry(catalogId, key, bag) {
   const def = catalogDef(catalogId);
-  if (!def) return { ok: false, error: "Неизвестный каталог" };
-  if (def.mode === "document") {
-    return { ok: false, error: "Документ нельзя удалить по key" };
-  }
+  if (!def) return { ok: false, error: `Неизвестный каталог: ${catalogId}` };
   if (!key) return { ok: false, error: "Нужен key" };
 
   const root = readCatalogFile(def);
+  if (def.mode === "nested" && !bag && def.bags?.length) {
+    for (const b of def.bags) {
+      if (root?.[b]?.[key] != null) {
+        bag = b;
+        break;
+      }
+    }
+    if (!bag) bag = def.bags[0];
+  }
+
   const existing = getEntry(root, def, key, bag);
-  if (existing == null) return { ok: false, error: `Запись не найдена: ${key}` };
+  if (existing == null) {
+    return { ok: true, key, bag: resolveBag(def, bag) };
+  }
 
   try {
     deleteEntry(root, def, key, bag);
@@ -345,19 +438,13 @@ export function removeCatalogEntry(catalogId, key, bag) {
 export function readCatalogDocument(catalogId) {
   const def = catalogDef(catalogId);
   if (!def) return { ok: false, error: "Неизвестный каталог" };
-  if (def.mode !== "document") {
-    return { ok: false, error: "Каталог — не документ" };
-  }
   const data = readCatalogFile(def);
-  return { ok: true, data };
+  return { ok: true, data, document: data };
 }
 
 export function saveCatalogDocument(catalogId, data) {
   const def = catalogDef(catalogId);
   if (!def) return { ok: false, error: "Неизвестный каталог" };
-  if (def.mode !== "document") {
-    return { ok: false, error: "Каталог — не документ" };
-  }
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return { ok: false, error: "data — объект JSON" };
   }

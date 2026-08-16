@@ -1,6 +1,6 @@
 /** Human-readable UI labels for ids / slugs (viewer + codex). */
 import { getCachedContent } from "./contentCatalog";
-import { categoryDisplayName } from "./economyLabels";
+import { categoryDisplayName, resourceDisplayName } from "./economyLabels";
 import { getCulture, getFaith } from "./societyRegistry";
 import {
   PLANET_BUILDING_KIND_LABELS,
@@ -114,8 +114,11 @@ export function formatSlotRequire(req: {
   category?: string;
   tier?: string;
   properties?: string[];
+  theater?: string;
 }): string {
   const parts: string[] = [];
+  if (req.theater === "space") parts.push("флот");
+  if (req.theater === "ground") parts.push("легион");
   if (req.category) parts.push(economyCategoryLabel(req.category));
   if (req.tier) {
     const raw = req.tier.replace(/^>=/, "");
@@ -241,10 +244,5 @@ export function resolveResourceOrCurrencyLabel(
   if (!id) return "—";
   const local = localNames?.[id];
   if (local) return local;
-  if (id.startsWith("currency.")) {
-    return categoryDisplayName(id);
-  }
-  const fromCatalog = getCachedContent()?.map_resources?.[id]?.name;
-  if (fromCatalog) return fromCatalog;
-  return id.replace(/^map\./, "");
+  return resourceDisplayName(id);
 }

@@ -1,4 +1,5 @@
-import type { EconomySchema } from "./contentCatalog";
+import type { EconomySchema, MapResourceDef } from "./contentCatalog";
+import { getCachedContent } from "./contentCatalog";
 import { fmtInt } from "./numberFormat";
 
 /** Legacy build currencies — spent on construction, colonization, fleets. */
@@ -67,6 +68,47 @@ export const CATEGORY_CURRENCIES = [
 ] as const;
 
 export type CategoryCurrency = (typeof CATEGORY_CURRENCIES)[number];
+
+/** Category + legacy build currencies (static). Strategic map.* added via stockpileCardIds(). */
+export const STOCKPILE_CARD_IDS: string[] = [
+  BUILD_METAL.id,
+  BUILD_SUPPLY.id,
+  ...CATEGORY_CURRENCIES.map((c) => c.id),
+];
+
+/** Strategic resource ids from economy_schema.resource_ranks (+ rank on defs). Content-driven. */
+export function listStrategicResourceIds(
+  schema?: EconomySchema | null,
+  mapResources?: Record<string, MapResourceDef> | null,
+): string[] {
+  const c = getCachedContent();
+  const schemaIds = schema?.resource_ranks?.strategic
+    ?? c?.economy_schema?.resource_ranks?.strategic
+    ?? [];
+  const ids = new Set<string>(schemaIds.filter(Boolean));
+  const resources = mapResources ?? c?.map_resources ?? {};
+  for (const def of Object.values(resources)) {
+    if (def?.rank === "strategic" && def.id) ids.add(def.id);
+  }
+  return [...ids];
+}
+
+/** Display name for map.* / currency id — never hardcode faction resources. */
+export function resourceDisplayName(resourceId: string): string {
+  if (!resourceId) return "—";
+  const cat = BY_ID[resourceId];
+  if (cat) return cat.name;
+  if (resourceId === BUILD_METAL.id) return BUILD_METAL.label;
+  if (resourceId === BUILD_SUPPLY.id) return BUILD_SUPPLY.label;
+  const def = getCachedContent()?.map_resources?.[resourceId];
+  if (def?.name) return def.name;
+  return resourceId.replace(/^map\./, "").replace(/^currency\./, "");
+}
+
+/** Full accept list for stockpile drag/drop (categories + strategic). */
+export function stockpileCardIds(): string[] {
+  return [...new Set([...STOCKPILE_CARD_IDS, ...listStrategicResourceIds()])];
+}
 
 const BY_ID: Record<string, CategoryCurrency> = Object.fromEntries(
   CATEGORY_CURRENCIES.map((c) => [c.id, c]),

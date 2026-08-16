@@ -14,6 +14,8 @@ export type IndexedResource = {
   properties: string[];
   toxic: boolean;
   biome_tags: string[];
+  kind?: string | null;
+  theater?: string | null;
 };
 
 export type ResourceIndex = {
@@ -38,6 +40,8 @@ export function buildResourceIndex(
       properties: def.properties || [],
       toxic: !!def.toxic,
       biome_tags: def.biome_tags || [],
+      kind: def.kind || null,
+      theater: def.theater || null,
     };
     all.push(entry);
     (byCategory[def.category] = byCategory[def.category] || []).push(entry);
@@ -47,11 +51,19 @@ export function buildResourceIndex(
   return { all, byCategory, byTier };
 }
 
+function isCraftedModule(resource: IndexedResource): boolean {
+  return resource.kind === "module" || String(resource.id || "").startsWith("module.");
+}
+
 export function resourceMatchesRequire(
   resource: IndexedResource,
-  require: { category?: string; tier?: string; properties?: string[] } | undefined,
+  require:
+    | { category?: string; tier?: string; properties?: string[]; theater?: string }
+    | undefined,
 ): boolean {
   if (!require) return true;
+  if (isCraftedModule(resource) && !require.theater) return false;
+  if (require.theater && (resource.theater || "") !== require.theater) return false;
   if (require.category && resource.category !== require.category) return false;
   if (require.properties && require.properties.length > 0) {
     for (const p of require.properties) {
@@ -76,7 +88,9 @@ export function resourceMatchesRequire(
 }
 
 export function candidatesForRequire(
-  require: { category?: string; tier?: string; properties?: string[] } | undefined,
+  require:
+    | { category?: string; tier?: string; properties?: string[]; theater?: string }
+    | undefined,
   index: ResourceIndex,
 ): IndexedResource[] {
   if (!require) return index.all.slice();

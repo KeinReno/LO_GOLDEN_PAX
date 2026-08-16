@@ -12,7 +12,8 @@ import { useMagnetic, useRipple, useSpotlight } from "../ui/aceternityFx";
 import { AnimatedTooltip } from "../ui/AnimatedTooltip";
 import { ExpandableSection } from "../ui/ExpandableSection";
 import { ResourceIcon } from "../ui/ResourceIcon";
-import { HoldButton } from "../ui/HoldButton";
+import { HoldButton } from "./shared/HoldButton";
+import { AmountSheet } from "./shared/AmountSheet";
 import { StatefulButton } from "../ui/StatefulButton";
 import {
   DiploTimeline,
@@ -99,6 +100,7 @@ export function DealDesk({
   onCancel,
   onGift,
   onStance,
+  onEconomicTrack,
   password,
   reservedAp = 0,
   apMax = 0,
@@ -127,6 +129,12 @@ export function DealDesk({
   onStance?: (
     toFactionId: string,
     stance: "war" | "embargo" | "break",
+  ) => void | boolean | Promise<void | boolean>;
+  /** Economic track (quote / union) — independent of political treaties. */
+  onEconomicTrack?: (
+    kind: "quote" | "union",
+    toFactionId: string,
+    extras?: { unitsQuotePerBase?: number },
   ) => void | boolean | Promise<void | boolean>;
   password?: string;
   reservedAp?: number;
@@ -157,14 +165,16 @@ export function DealDesk({
   const [give, setGive] = useState<DiploDealItem[]>([]);
   const [want, setWant] = useState<DiploDealItem[]>([]);
   const [note, setNote] = useState("");
-  const [giftAmount, setGiftAmount] = useState("");
+  const [giftAmount, setGiftAmount] = useState(10);
   const [giftCurrency, setGiftCurrency] = useState<string>(
     GIFT_CURRENCIES[0]?.id ?? "currency.extracta",
   );
+  const [giftSheetOpen, setGiftSheetOpen] = useState(false);
   const [dossierTab, setDossierTab] = useState<"treaties" | "history">(
     "treaties",
   );
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [quoteRate, setQuoteRate] = useState(1);
 
   const faceoffSpot = useSpotlight();
   const tableSpot = useSpotlight();
@@ -676,20 +686,70 @@ export function DealDesk({
               </div>
 
               {dossierTab === "treaties" ? (
-                activeTreaties.length === 0 ? (
-                  <p className="hint">Нет активных договоров.</p>
-                ) : (
-                  <ul className="diplo-treaty-list">
-                    {activeTreaties.map((t) => (
-                      <li key={t.id}>
-                        {DIPLOMACY_LABELS[t.type] ?? t.type}
-                        {t.expiresTurn != null
-                          ? ` · до хода ${t.expiresTurn}`
-                          : " · бессрочно"}
-                      </li>
-                    ))}
-                  </ul>
-                )
+                <>
+                  {activeTreaties.length === 0 ? (
+                    <p className="hint">Нет активных договоров.</p>
+                  ) : (
+                    <ul className="diplo-treaty-list">
+                      {activeTreaties.map((t) => (
+                        <li key={t.id}>
+                          {DIPLOMACY_LABELS[t.type] ?? t.type}
+                          {t.track === "economic" ? " · экономика" : ""}
+                          {t.unitsQuotePerBase
+                            ? ` · курс ${t.unitsQuotePerBase}`
+                            : ""}
+                          {t.expiresTurn != null
+                            ? ` · до хода ${t.expiresTurn}`
+                            : " · бессрочно"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {onEconomicTrack && otherId ? (
+                    <div className="gc-trade-treaties" style={{ marginTop: 8 }}>
+                      <p className="hint gc-trade-treaties__hint">
+                        Экономический трек — отдельно от политических
+                        договоров.
+                      </p>
+                      <label className="hint" htmlFor="econ-quote-rate">
+                        Курс котировки
+                      </label>
+                      <input
+                        id="econ-quote-rate"
+                        type="number"
+                        min={0.01}
+                        step={0.1}
+                        value={quoteRate}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setQuoteRate(Number(e.target.value) || 1)
+                        }
+                      />
+                      <div className="gc-trade-chips" role="group">
+                        <button
+                          type="button"
+                          className="gc-trade-chip"
+                          disabled={busy}
+                          onClick={() =>
+                            void onEconomicTrack("quote", otherId, {
+                              unitsQuotePerBase: quoteRate,
+                            })
+                          }
+                        >
+                          Валютный договор
+                        </button>
+                        <button
+                          type="button"
+                          className="gc-trade-chip"
+                          disabled={busy}
+                          onClick={() => void onEconomicTrack("union", otherId)}
+                        >
+                          Валютный союз
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <DiploTimeline events={focusHistory} />
               )}
@@ -746,42 +806,56 @@ export function DealDesk({
                 >
                   <div className="deal-gift">
                     <p className="hint">Без встречных условий · на тике</p>
-                    <div className="gc-gift-row">
-                      <select
-                        value={giftCurrency}
-                        onChange={(e) => setGiftCurrency(e.target.value)}
-                      >
-                        {GIFT_CURRENCIES.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={1}
-                        value={giftAmount}
-                        onChange={(e) => setGiftAmount(e.target.value)}
-                        placeholder="сумма"
-                      />
+                    <div className="gc-trade-chips" role="group" aria-label="Ресурс дара">
+                      {GIFT_CURRENCIES.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`gc-trade-chip ${giftCurrency === c.id ? "on" : ""}`}
+                          onClick={() => {
+                            setGiftCurrency(c.id);
+                            setGiftAmount(
+                              Math.min(
+                                10,
+                                economy.stocks?.[c.id] ?? 10,
+                              ) || 1,
+                            );
+                            setGiftSheetOpen(true);
+                          }}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
                     </div>
-                    <button
-                      type="button"
-                      className="btn sm block"
-                      disabled={
-                        busy ||
-                        !giftAmount ||
-                        Math.floor(Number(giftAmount)) <= 0
-                      }
-                      onClick={() => {
-                        const amt = Math.floor(Number(giftAmount));
-                        if (amt <= 0) return;
-                        onGift(other.id, giftCurrency, amt);
-                        setGiftAmount("");
-                      }}
-                    >
-                      Отправить дар
-                    </button>
+                    {giftSheetOpen ? (
+                      <AmountSheet
+                        label={
+                          GIFT_CURRENCIES.find((c) => c.id === giftCurrency)
+                            ?.label ?? giftCurrency
+                        }
+                        stock={economy.stocks?.[giftCurrency]}
+                        value={giftAmount}
+                        onChange={setGiftAmount}
+                        onConfirm={() => {
+                          const amt = Math.floor(giftAmount);
+                          if (amt > 0 && other) {
+                            onGift(other.id, giftCurrency, amt);
+                            setGiftAmount(10);
+                          }
+                          setGiftSheetOpen(false);
+                        }}
+                        onCancel={() => setGiftSheetOpen(false)}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn sm block"
+                        disabled={busy || !other}
+                        onClick={() => setGiftSheetOpen(true)}
+                      >
+                        Указать сумму дара
+                      </button>
+                    )}
                   </div>
                 </ExpandableSection>
               )}

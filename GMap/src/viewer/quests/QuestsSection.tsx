@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ScrollText, Users } from "lucide-react";
 import type { ViewerPayload } from "../../state/types";
@@ -157,16 +157,19 @@ export function QuestsSection({
     openChat();
   };
 
-  const appendSystemLog = (questId: string, text: string) => {
-    const entry: QuestLogEntry = {
-      id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      turn,
-      author: "system",
-      text,
-      timestamp: new Date().toISOString(),
-    };
-    appendLog(questId, entry);
-  };
+  const appendSystemLog = useCallback(
+    (questId: string, text: string) => {
+      const entry: QuestLogEntry = {
+        id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        turn,
+        author: "system",
+        text,
+        timestamp: new Date().toISOString(),
+      };
+      appendLog(questId, entry);
+    },
+    [turn, appendLog],
+  );
 
   const rollPerTurn = async () => {
     if (perTurnBusy) return;
@@ -205,55 +208,56 @@ export function QuestsSection({
     }
   };
 
-  const choose = async (choiceId: string) => {
-    if (!selected || !actions?.onResolveChoice) return;
-    setBusy(true);
-    setActionMsg(null);
-    const choice = selected.choices?.find((c) => c.id === choiceId);
-    try {
-      if (
-        choice?.costs &&
-        !canAffordCosts(choice.costs, payload.economy?.stocks)
-      ) {
-        setActionMsg(
-          choice.costLabel
-            ? `Не хватает ресурсов: ${choice.costLabel}`
-            : "Недостаточно ресурсов для этого выбора",
-        );
-        return;
-      }
-      if (choice?.needsDice && actions.onResolveDice) {
-        const res = await actions.onResolveDice(selected.id, 0, choiceId);
-        if (!res.ok || res.rolls?.[0] == null) {
-          setActionMsg(res.error || "Бросок не удался");
+  const stocks = payload.economy?.stocks;
+  const choose = useCallback(
+    async (choiceId: string) => {
+      if (!selected || !actions?.onResolveChoice) return;
+      setBusy(true);
+      setActionMsg(null);
+      const choice = selected.choices?.find((c) => c.id === choiceId);
+      try {
+        if (choice?.costs && !canAffordCosts(choice.costs, stocks)) {
+          setActionMsg(
+            choice.costLabel
+              ? `Не хватает ресурсов: ${choice.costLabel}`
+              : "Недостаточно ресурсов для этого выбора",
+          );
           return;
         }
-        setStageDice({
-          value: res.rolls[0],
-          rolling: true,
-          message: res.message,
-        });
-        appendSystemLog(selected.id, res.message || `Бросок: ${res.rolls[0]}`);
-        return;
+        if (choice?.needsDice && actions.onResolveDice) {
+          const res = await actions.onResolveDice(selected.id, 0, choiceId);
+          if (!res.ok || res.rolls?.[0] == null) {
+            setActionMsg(res.error || "Бросок не удался");
+            return;
+          }
+          setStageDice({
+            value: res.rolls[0],
+            rolling: true,
+            message: res.message,
+          });
+          appendSystemLog(selected.id, res.message || `Бросок: ${res.rolls[0]}`);
+          return;
+        }
+        const res = await actions.onResolveChoice(selected.id, choiceId);
+        const ok = typeof res === "boolean" ? res : res.ok;
+        if (ok) {
+          appendSystemLog(
+            selected.id,
+            choice?.resultText || `Выбор: ${choice?.label ?? choiceId}`,
+          );
+        } else {
+          setActionMsg(
+            typeof res === "object" && res.error
+              ? res.error
+              : "Выбор не применён",
+          );
+        }
+      } finally {
+        setBusy(false);
       }
-      const res = await actions.onResolveChoice(selected.id, choiceId);
-      const ok = typeof res === "boolean" ? res : res.ok;
-      if (ok) {
-        appendSystemLog(
-          selected.id,
-          choice?.resultText || `Выбор: ${choice?.label ?? choiceId}`,
-        );
-      } else {
-        setActionMsg(
-          typeof res === "object" && res.error
-            ? res.error
-            : "Выбор не применён",
-        );
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
+    },
+    [selected, actions, stocks, appendSystemLog],
+  );
 
   const rollGm = async () => {
     if (!selected || !actions?.onResolveDice) return;
@@ -447,6 +451,7 @@ export function QuestsSection({
               onRollDice={() => void rollGm()}
               onOpenChat={() => openJournal(selected.id)}
               onFocusSystem={onFocusSystem}
+              onOpenCourt={onOpenCourt}
               dicePreview={stageDice}
               onDiceSettled={() =>
                 setStageDice((d) => (d ? { ...d, rolling: false } : d))
@@ -585,6 +590,7 @@ export function QuestsSection({
                   openJournal(selected.id);
                 }}
                 onFocusSystem={onFocusSystem}
+                onOpenCourt={onOpenCourt}
                 dicePreview={stageDice}
                 onDiceSettled={() =>
                   setStageDice((d) => (d ? { ...d, rolling: false } : d))

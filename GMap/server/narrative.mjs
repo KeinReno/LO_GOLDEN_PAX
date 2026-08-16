@@ -10,6 +10,7 @@ import {
   isSeatUnlocked,
   ensureFactionCouncil,
   getPortfolioDef,
+  npcTaskSpeedMult,
 } from "./courtGovernance.mjs";
 
 export { syncNpcPassiveEffectsGov as syncNpcPassiveEffects };
@@ -695,8 +696,13 @@ export function applyAssignNpcPosting(world, intent, journal) {
   const npcId = intent.payload?.npcId;
   const kind = String(intent.payload?.kind || "").trim();
   const systemId = intent.payload?.systemId || null;
-  const legionId = intent.payload?.legionId || null;
-  const fleetId = intent.payload?.fleetId || null;
+  const forceId = intent.payload?.forceId || null;
+  let legionId = intent.payload?.legionId || null;
+  let fleetId = intent.payload?.fleetId || null;
+  if (forceId && !legionId && !fleetId) {
+    if (kind === "commander") legionId = forceId;
+    else if (kind === "admiral") fleetId = forceId;
+  }
   const turn = world.meta?.turn ?? 0;
 
   if (!npcId || !["governor", "commander", "admiral"].includes(kind)) {
@@ -811,8 +817,12 @@ export function applyAssignNpcPosting(world, intent, journal) {
       });
       return false;
     }
-    clearSameTarget((p) => p.kind === "commander" && p.legionId === legionId);
-    posting = { kind, legionId, sinceTurn: turn };
+    clearSameTarget(
+      (p) =>
+        p.kind === "commander" &&
+        (p.legionId === legionId || p.forceId === legionId),
+    );
+    posting = { kind, legionId, forceId: legionId, sinceTurn: turn };
     targetLabel = legion.name || legionId;
     if (legion.systemId) {
       npc.locationSystemId = legion.systemId;
@@ -838,8 +848,12 @@ export function applyAssignNpcPosting(world, intent, journal) {
       });
       return false;
     }
-    clearSameTarget((p) => p.kind === "admiral" && p.fleetId === fleetId);
-    posting = { kind, fleetId, sinceTurn: turn };
+    clearSameTarget(
+      (p) =>
+        p.kind === "admiral" &&
+        (p.fleetId === fleetId || p.forceId === fleetId),
+    );
+    posting = { kind, fleetId, forceId: fleetId, sinceTurn: turn };
     targetLabel = fleet.name || fleetId;
     if (fleet.systemId) {
       npc.locationSystemId = fleet.systemId;
@@ -874,8 +888,9 @@ export function applyAssignNpcPosting(world, intent, journal) {
     systemId: posting.systemId || null,
     legionId: posting.legionId || null,
     fleetId: posting.fleetId || null,
+    forceId: posting.forceId || posting.legionId || posting.fleetId || null,
   });
-  syncNpcPassiveEffects(world);
+  syncNpcPassiveEffectsGov(world);
   return true;
 }
 
@@ -941,7 +956,7 @@ export function applyRecallNpcPosting(world, intent, journal) {
     npcName: npc.name,
     fromKind: kind,
   });
-  syncNpcPassiveEffects(world);
+  syncNpcPassiveEffectsGov(world);
   return true;
 }
 
@@ -1432,7 +1447,7 @@ export function processNpcTasks(world, turn, journal) {
         1,
         (task.etaTurn ?? turn + 1) - (task.startedTurn ?? turn),
       );
-      let step = 1 / duration;
+      let step = (1 / duration) * npcTaskSpeedMult(fac);
       let diceRoll = null;
       if (task.linkedQuestId) {
         const r = rollNpcTaskProgress(world, npc);

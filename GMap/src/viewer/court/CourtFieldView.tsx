@@ -15,15 +15,15 @@ function targetLabel(npc: FactionNpc, payload: ViewerPayload): string {
       payload.world.systems.find((x) => x.id === p.systemId)?.name || p.systemId
     );
   }
-  if (p.kind === "commander" && p.legionId) {
-    return (
-      payload.world.legions.find((x) => x.id === p.legionId)?.name || p.legionId
-    );
+  if (p.kind === "commander") {
+    const id = p.legionId || p.forceId;
+    if (!id) return "";
+    return payload.world.legions.find((x) => x.id === id)?.name || id;
   }
-  if (p.kind === "admiral" && p.fleetId) {
-    return (
-      payload.world.fleets.find((x) => x.id === p.fleetId)?.name || p.fleetId
-    );
+  if (p.kind === "admiral") {
+    const id = p.fleetId || p.forceId;
+    if (!id) return "";
+    return payload.world.fleets.find((x) => x.id === id)?.name || id;
   }
   return "";
 }
@@ -88,8 +88,9 @@ export function CourtFieldView({
   const byLegion = useMemo(() => {
     const m = new Map<string, FactionNpc>();
     for (const n of npcs) {
-      if (n.posting?.kind === "commander" && n.posting.legionId) {
-        m.set(n.posting.legionId, n);
+      if (n.posting?.kind === "commander") {
+        const id = n.posting.legionId || n.posting.forceId;
+        if (id) m.set(id, n);
       }
     }
     return m;
@@ -97,14 +98,17 @@ export function CourtFieldView({
   const byFleet = useMemo(() => {
     const m = new Map<string, FactionNpc>();
     for (const n of npcs) {
-      if (n.posting?.kind === "admiral" && n.posting.fleetId) {
-        m.set(n.posting.fleetId, n);
+      if (n.posting?.kind === "admiral") {
+        const id = n.posting.fleetId || n.posting.forceId;
+        if (id) m.set(id, n);
       }
     }
     return m;
   }, [npcs]);
 
   const ungoverned = ownedSystems.filter((s) => !systemHasGovernor(npcs, s.id));
+  // Exact NPC ids — replaces "*" now that CardBoard is shared app-wide.
+  const npcCardIds = useMemo(() => npcs.map((n) => n.id), [npcs]);
 
   return (
     <section className="court-field" aria-label="Поле">
@@ -139,7 +143,7 @@ export function CourtFieldView({
                 <DropZone
                   key={s.id}
                   zoneId={`field:governor:${s.id}`}
-                  accepts={["*"]}
+                  accepts={npcCardIds}
                   armWhileDragging
                   onDrop={(cardId) =>
                     onDropAssign(cardId, {
@@ -177,7 +181,7 @@ export function CourtFieldView({
                 <DropZone
                   key={l.id}
                   zoneId={`field:commander:${l.id}`}
-                  accepts={["*"]}
+                  accepts={npcCardIds}
                   armWhileDragging
                   onDrop={(cardId) =>
                     onDropAssign(cardId, {
@@ -215,7 +219,7 @@ export function CourtFieldView({
                 <DropZone
                   key={f.id}
                   zoneId={`field:admiral:${f.id}`}
-                  accepts={["*"]}
+                  accepts={npcCardIds}
                   armWhileDragging
                   onDrop={(cardId) =>
                     onDropAssign(cardId, {

@@ -43,13 +43,39 @@ export function pushDiploHistory(faction, entry) {
   }
 }
 
-export function getRelation(world, aId, bId) {
-  if (!aId || !bId || aId === bId) return "neutral";
+export const TRACK_POLITICAL = "political";
+export const TRACK_ECONOMIC = "economic";
+
+/** Missing `track` = political (the original 10 stances). */
+export function stanceTrack(stance) {
+  return stance?.track || TRACK_POLITICAL;
+}
+
+export function treatyTrack(treaty) {
+  return treaty?.track || TRACK_POLITICAL;
+}
+
+export function edgeTrack(edge) {
+  return edge?.track || TRACK_POLITICAL;
+}
+
+export function isPoliticalDiplomacyEdge(edge) {
+  return edgeTrack(edge) === TRACK_POLITICAL;
+}
+
+export function findDiplomacyEdge(world, aId, bId, track = TRACK_POLITICAL) {
+  if (!aId || !bId || aId === bId) return null;
   const [x, y] = aId < bId ? [aId, bId] : [bId, aId];
   return (
-    (world.diplomacy ?? []).find((e) => e.aId === x && e.bId === y)?.relation ??
-    "neutral"
+    (world.diplomacy ?? []).find(
+      (e) => e.aId === x && e.bId === y && edgeTrack(e) === track,
+    ) || null
   );
+}
+
+export function getRelation(world, aId, bId) {
+  if (!aId || !bId || aId === bId) return "neutral";
+  return findDiplomacyEdge(world, aId, bId, TRACK_POLITICAL)?.relation ?? "neutral";
 }
 
 function relationOf(world, aId, bId) {
@@ -267,8 +293,12 @@ export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances, o
     const fac = (world.factions ?? []).find((f) => f.id === selfId);
     if (!fac) continue;
     const d = ensureFactionDiplomacy(fac);
-    // Remove previous non-neutral treaty with other
-    d.treaties = d.treaties.filter((t) => t.withFactionId !== otherId);
+    const newTrack = opts.track || stanceTrack(stance);
+    // Same-track relations replace each other; different tracks coexist
+    // (political alliance + economic currency union).
+    d.treaties = d.treaties.filter(
+      (t) => t.withFactionId !== otherId || treatyTrack(t) !== newTrack,
+    );
     if (relation && relation !== "neutral") {
       const effects = stanceEffectsForParty(stance, relation, selfId, {
         subjectId,
@@ -281,8 +311,12 @@ export function syncTreatiesFromEdge(world, aId, bId, relation, turn, stances, o
         startedTurn: turn,
         expiresTurn,
         effects: effects.map((e) => ({ ...e })),
+        track: newTrack,
         ...(subjectId ? { subjectFactionId: subjectId } : {}),
         ...(overlordId ? { overlordFactionId: overlordId } : {}),
+        ...(opts.treatyExtras && typeof opts.treatyExtras === "object"
+          ? opts.treatyExtras
+          : {}),
       });
     }
     pushDiploHistory(fac, {
@@ -341,17 +375,22 @@ function stanceEffectsForParty(stance, relation, selfId, { subjectId, overlordId
 /**
  * Break treaty — apply casus belli opinion hit.
  */
-export function breakTreaty(world, breakerId, otherId, turn, stances) {
+export function breakTreaty(world, breakerId, otherId, turn, stances, opts = {}) {
   const catalog = stances || getContent()?.diplomacy_stances || {};
   const fac = (world.factions ?? []).find((f) => f.id === breakerId);
   const other = (world.factions ?? []).find((f) => f.id === otherId);
   if (!fac || !other) return;
 
+  const track = opts.track || TRACK_POLITICAL;
   const d = ensureFactionDiplomacy(fac);
-  const removed = d.treaties.filter((t) => t.withFactionId === otherId);
-  d.treaties = d.treaties.filter((t) => t.withFactionId !== otherId);
+  const removed = d.treaties.filter(
+    (t) => t.withFactionId === otherId && treatyTrack(t) === track,
+  );
+  d.treaties = d.treaties.filter(
+    (t) => t.withFactionId !== otherId || treatyTrack(t) !== track,
+  );
   ensureFactionDiplomacy(other).treaties = other.diplomacy.treaties.filter(
-    (t) => t.withFactionId !== breakerId,
+    (t) => t.withFactionId !== breakerId || treatyTrack(t) !== track,
   );
 
   let decay = 20;
@@ -362,21 +401,23 @@ export function breakTreaty(world, breakerId, otherId, turn, stances) {
     }
   }
 
-  // Casus belli: −20 to ALL factions (reputation hit), extra vs victim
-  for (const f of world.factions ?? []) {
-    if (f.id === breakerId) continue;
-    const fd = ensureFactionDiplomacy(f);
-    const hit = f.id === otherId ? decay + 10 : 20;
-    fd.opinions[breakerId] = clampOpinion((fd.opinions[breakerId] ?? 0) - hit);
+  // Casus belli: political track only. Economic unwind is a commercial break.
+  if (track === TRACK_POLITICAL) {
+    for (const f of world.factions ?? []) {
+      if (f.id === breakerId) continue;
+      const fd = ensureFactionDiplomacy(f);
+      const hit = f.id === otherId ? decay + 10 : 20;
+      fd.opinions[breakerId] = clampOpinion((fd.opinions[breakerId] ?? 0) - hit);
+    }
+    d.opinions[otherId] = clampOpinion((d.opinions[otherId] ?? 0) - decay);
   }
   d.lastBrokenTreatyTurn = turn;
-  d.opinions[otherId] = clampOpinion((d.opinions[otherId] ?? 0) - decay);
   pushDiploHistory(fac, {
     turn,
     type: "break",
     withFactionId: otherId,
-    label: "Договор разорван",
-    opinionDelta: -decay,
+    label: track === TRACK_ECONOMIC ? "Экономический договор разорван" : "Договор разорван",
+    opinionDelta: track === TRACK_POLITICAL ? -decay : 0,
   });
 }
 

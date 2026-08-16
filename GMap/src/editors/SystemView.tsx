@@ -58,6 +58,7 @@ import { planetContributionChips } from "../viewer/planetContributions";
 import { ActionRing, type ActionRingItem } from "../ui/ActionRing";
 import type { TechEcoSlice } from "../state/techGate";
 import { Pickaxe, Eye, Wrench, Trash2, Rocket } from "lucide-react";
+import { PlanetRevoltReadout } from "../viewer/PlanetRevoltReadout";
 
 /** Override galaxy/system/planet navigation (player map layer vs GM dossier). */
 export type SystemViewNav = {
@@ -93,6 +94,10 @@ export type PlayerPlanetManageProps = {
   primaryFaith?: string;
   unlockedLineages?: string[];
   onFoundHybrid?: (raceA: string, raceB: string) => void;
+  password?: string;
+  onForceRecruitSession?: (
+    data: import("../state/forceRaiseClient").ForceRecruitSession,
+  ) => void;
 };
 
 export type PlayerSystemManageProps = {
@@ -657,6 +662,8 @@ export function SystemView({
                 primaryFaith={planetManage.primaryFaith}
                 unlockedLineages={planetManage.unlockedLineages}
                 onFoundHybrid={planetManage.onFoundHybrid}
+                password={planetManage.password}
+                onForceRecruitSession={planetManage.onForceRecruitSession}
                 onBack={() => {
                   setPreviewPlanetId(drilledPlanet.id);
                   goSystem(system.id);
@@ -730,6 +737,11 @@ export function SystemView({
                   </span>
                 ))}
               </div>
+              <PlanetRevoltReadout
+                planet={previewPlanet}
+                currentTurn={world.meta.turn ?? 0}
+                compact
+              />
               <button
                 type="button"
                 className="btn primary block"
@@ -1134,6 +1146,11 @@ function PlanetDetail({
             ))}
           </ul>
         )}
+        <PlanetRevoltReadout
+          planet={planet}
+          currentTurn={world.meta.turn ?? 0}
+          compact
+        />
         <p className="hint">Осмотр. Управление — на своих колониях.</p>
       </div>
     );
@@ -1413,6 +1430,13 @@ function PlanetDetail({
               loyalty={planet.loyalty ?? 50}
               composition={planet.raceComposition ?? []}
               races={races}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <div className="block-title">Стабильность и восстание (3-стадийный бунт)</div>
+            <PlanetRevoltReadout
+              planet={planet}
+              currentTurn={world.meta.turn ?? 0}
             />
           </div>
         </>

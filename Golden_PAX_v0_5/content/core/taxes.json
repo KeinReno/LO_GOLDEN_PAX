@@ -1,0 +1,173 @@
+{
+  "tax.materia": {
+    "id": "tax.materia",
+    "name": "Промышленный сбор",
+    "resource": "currency.materia",
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      {
+        "id": "low",
+        "label": "8%",
+        "rate": 0.08,
+        "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }]
+      },
+      {
+        "id": "mid",
+        "label": "15%",
+        "rate": 0.15,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 3 } },
+          { "effect": "production_mult", "args": { "resource": "currency.materia", "mult": 0.95 } }
+        ]
+      },
+      {
+        "id": "high",
+        "label": "25%",
+        "rate": 0.25,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 5 } },
+          { "effect": "production_mult", "args": { "resource": "currency.materia", "mult": 0.9 } },
+          { "effect": "ap_add", "args": { "amount": -1 } }
+        ]
+      }
+    ]
+  },
+  "tax.energia": {
+    "id": "tax.energia",
+    "name": "Энергетический сбор",
+    "resource": "currency.energia",
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      {
+        "id": "low",
+        "label": "8%",
+        "rate": 0.08,
+        "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }]
+      },
+      {
+        "id": "mid",
+        "label": "15%",
+        "rate": 0.15,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 2 } },
+          { "effect": "production_mult", "args": { "resource": "currency.energia", "mult": 0.95 } }
+        ]
+      },
+      {
+        "id": "high",
+        "label": "22%",
+        "rate": 0.22,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 4 } },
+          { "effect": "production_mult", "args": { "resource": "currency.energia", "mult": 0.9 } }
+        ]
+      }
+    ]
+  },
+  "tax.bios": {
+    "id": "tax.bios",
+    "name": "Биосбор",
+    "resource": "currency.bios",
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      {
+        "id": "low",
+        "label": "5%",
+        "rate": 0.05,
+        "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }]
+      },
+      {
+        "id": "mid",
+        "label": "12%",
+        "rate": 0.12,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 2 } },
+          { "effect": "pop_growth_mult", "args": { "mult": 0.95 } }
+        ]
+      },
+      {
+        "id": "high",
+        "label": "18%",
+        "rate": 0.18,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 4 } },
+          { "effect": "pop_growth_mult", "args": { "mult": 0.9 } }
+        ]
+      }
+    ]
+  },
+  "tax.industry": {
+    "id": "tax.industry",
+    "name": "Промышленный налог (legacy)",
+    "resource": "currency.metal",
+    "aliasOf": "tax.materia",
+    "hidden": true,
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      { "id": "low", "label": "8%", "rate": 0.08, "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }] },
+      {
+        "id": "mid",
+        "label": "15%",
+        "rate": 0.15,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 3 } },
+          { "effect": "production_mult", "args": { "resource": "currency.materia", "mult": 0.95 } }
+        ]
+      },
+      {
+        "id": "high",
+        "label": "25%",
+        "rate": 0.25,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 5 } },
+          { "effect": "production_mult", "args": { "resource": "currency.materia", "mult": 0.9 } },
+          { "effect": "ap_add", "args": { "amount": -1 } }
+        ]
+      }
+    ]
+  },
+  "tax.supply": {
+    "id": "tax.supply",
+    "name": "Сбор обеспечения (legacy)",
+    "resource": "currency.supply",
+    "aliasOf": "tax.bios",
+    "hidden": true,
+    "apToChange": 1,
+    "cooldownTurns": 1,
+    "takesEffect": "next_tick",
+    "tiers": [
+      { "id": "none", "label": "0%", "rate": 0, "effects": [] },
+      { "id": "low", "label": "5%", "rate": 0.05, "effects": [{ "effect": "tax_pressure", "args": { "amount": 1 } }] },
+      {
+        "id": "mid",
+        "label": "12%",
+        "rate": 0.12,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 2 } },
+          { "effect": "pop_growth_mult", "args": { "mult": 0.95 } }
+        ]
+      },
+      {
+        "id": "high",
+        "label": "18%",
+        "rate": 0.18,
+        "effects": [
+          { "effect": "tax_pressure", "args": { "amount": 4 } },
+          { "effect": "pop_growth_mult", "args": { "mult": 0.9 } }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "golden_pax",
+  "name": "LO Golden Pax",
+  "version": 1,
+  "description": "Кампанийный оверлей: лорные ярлыки кораблей/юнитов и нарративные POI",
+  "extends": ["core"]
+}

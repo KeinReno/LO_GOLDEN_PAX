@@ -1,0 +1,92 @@
+[
+  {
+    "cue": "radio_squelch",
+    "variant": 1,
+    "file": "sfx/radio_squelch__01.wav",
+    "bytes": 24740,
+    "peak": 0.36,
+    "rmsHeadDb": -15.3,
+    "rmsTailDb": -40.8
+  },
+  {
+    "cue": "radio_squelch",
+    "variant": 2,
+    "file": "sfx/radio_squelch__02.wav",
+    "bytes": 24740,
+    "peak": 0.36,
+    "rmsHeadDb": -16.5,
+    "rmsTailDb": -42
+  },
+  {
+    "cue": "turn_advance",
+    "variant": 1,
+    "file": "sfx/turn_advance__01.wav",
+    "bytes": 51200,
+    "peak": 0.34,
+    "rmsHeadDb": -16.4,
+    "rmsTailDb": -22.1
+  },
+  {
+    "cue": "turn_advance",
+    "variant": 2,
+    "file": "sfx/turn_advance__02.wav",
+    "bytes": 51200,
+    "peak": 0.34,
+    "rmsHeadDb": -16.5,
+    "rmsTailDb": -22.2
+  },
+  {
+    "cue": "contact_alert",
+    "variant": 1,
+    "file": "sfx/contact_alert__01.wav",
+    "bytes": 45908,
+    "peak": 0.34,
+    "rmsHeadDb": -15.8,
+    "rmsTailDb": -116.5
+  },
+  {
+    "cue": "contact_alert",
+    "variant": 2,
+    "file": "sfx/contact_alert__02.wav",
+    "bytes": 45908,
+    "peak": 0.34,
+    "rmsHeadDb": -17,
+    "rmsTailDb": -115.1
+  },
+  {
+    "cue": "seal_stamp",
+    "variant": 1,
+    "file": "sfx/seal_stamp__01.wav",
+    "bytes": 37088,
+    "peak": 0.32,
+    "rmsHeadDb": -16,
+    "rmsTailDb": -29.9
+  },
+  {
+    "cue": "seal_stamp",
+    "variant": 2,
+    "file": "sfx/seal_stamp__02.wav",
+    "bytes": 37088,
+    "peak": 0.32,
+    "rmsHeadDb": -15.6,
+    "rmsTailDb": -29.7
+  },
+  {
+    "cue": "token_drop",
+    "variant": 1,
+    "file": "sfx/token_drop__01.wav",
+    "bytes": 24740,
+    "peak": 0.3,
+    "rmsHeadDb": -17.8,
+    "rmsTailDb": -49.6
+  },
+  {
+    "cue": "token_drop",
+    "variant": 2,
+    "file": "sfx/token_drop__02.wav",
+    "bytes": 24740,
+    "peak": 0.3,
+    "rmsHeadDb": -17.2,
+    "rmsTailDb": -49
+  }
+]

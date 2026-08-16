@@ -14,6 +14,14 @@ export type AtelierCatalogId =
   | "yearly_quests"
   | "story_quests"
   | "buildings"
+  | "ships"
+  | "units"
+  | "races"
+  | "space_objects"
+  | "stations"
+  | "faction_traits"
+  | "faiths"
+  | "cultures"
   | "rules";
 
 type CatalogMeta = {

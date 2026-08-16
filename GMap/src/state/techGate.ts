@@ -29,6 +29,7 @@ export function factionHasProperty(
 type BuildingDefLike = {
   category?: string;
   tier?: number;
+  requireProperties?: string[];
   slots?: Array<{ require?: { properties?: string[] } }>;
   effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
 };
@@ -38,6 +39,7 @@ export function collectRequiredProperties(
   buildingDef: BuildingDefLike,
 ): Set<string> {
   const props = new Set<string>();
+  for (const p of buildingDef?.requireProperties || []) props.add(p);
   for (const slot of buildingDef?.slots || []) {
     for (const p of slot.require?.properties || []) props.add(p);
   }
@@ -112,8 +114,8 @@ export function techHintForBuilding(
   technologies: Record<
     string,
     {
-      id: string;
-      name: string;
+      id?: string;
+      name?: string;
       effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
     }
   >,
@@ -146,9 +148,9 @@ export function techHintForBuilding(
           needTier.some((n) => n.category === cat && to >= n.to)
         ) {
           return {
-            techId: tech.id,
-            techName: tech.name,
-            reason: `Нужна технология: ${tech.name}`,
+            techId: tech.id ?? "",
+            techName: tech.name ?? "",
+            reason: `Нужна технология: ${tech.name ?? "—"}`,
           };
         }
       }
@@ -156,9 +158,9 @@ export function techHintForBuilding(
         const prop = String(e.args?.property ?? "");
         if (missingProps.includes(prop)) {
           return {
-            techId: tech.id,
-            techName: tech.name,
-            reason: `Нужна технология: ${tech.name}`,
+            techId: tech.id ?? "",
+            techName: tech.name ?? "",
+            reason: `Нужна технология: ${tech.name ?? "—"}`,
           };
         }
       }

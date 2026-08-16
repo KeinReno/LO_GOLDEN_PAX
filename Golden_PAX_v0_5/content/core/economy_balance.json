@@ -1,0 +1,464 @@
+{
+  "meta": {
+    "version": 3,
+    "description": "Целевые кривые + принципы базового набора. SoT: docs/BALANCE_BASELINE_SPEC.md. Ровный рост тира ≈ +40–50%. RPS A–F → здания → shipyard/barracks → produceCost.",
+    "pacing": "even_growth",
+    "spec": "docs/BALANCE_BASELINE_SPEC.md"
+  },
+  "principles": {
+    "spendLanguage": "metal+supply for build/force/station; A–F for flows/taxes/science",
+    "tierGrowth": "metalByTier ~+40–50% per step",
+    "freeBuildTier": 3,
+    "earlyForceGates": {
+      "barracksMaxTier": 2,
+      "spaceportMaxTier": 3,
+      "shipyardMaxTier": 3
+    },
+    "dualAp": "empire vs force pools (rules.apPerTurn / rules.forceAp)",
+    "roleCoverage": "one generic hull/unit per role×tier; raceVariants + packs for flavor",
+    "stationsFromContent": "content/core/stations.json; prices from forces.stations",
+    "techGatesBuildings": "category tech tier ceiling, not hardcoded ship/building unlock ids"
+  },
+  "ap": {
+    "empirePerTurn": 9,
+    "force": {
+      "base": 2,
+      "perFleet": 1,
+      "perLegion": 1,
+      "max": 8
+    },
+    "note": "Имперские ОД — политика/колонии/дипломатия. ОД сил — ход/блокада/разведка мира/атака (часть)."
+  },
+  "start": {
+    "stocks": {
+      "currency.metal": 100,
+      "currency.supply": 70,
+      "currency.extracta": 14,
+      "currency.materia": 12,
+      "currency.industria": 8,
+      "currency.energia": 16,
+      "currency.bios": 18,
+      "currency.cognitio": 36
+    },
+    "targetOpen": "outpost + residential/mine/farm; OR barracks→militia; OR spaceport+shipyard→scout/corvette"
+  },
+  "baseline": {
+    "ships": [
+      {
+        "id": "ship.scout",
+        "tier": 1,
+        "roles": [
+          "screen"
+        ]
+      },
+      {
+        "id": "ship.patrol",
+        "tier": 2,
+        "roles": [
+          "screen"
+        ]
+      },
+      {
+        "id": "ship.corvette",
+        "tier": 3,
+        "roles": [
+          "screen"
+        ]
+      },
+      {
+        "id": "ship.frigate",
+        "tier": 4,
+        "roles": [
+          "screen",
+          "line"
+        ]
+      },
+      {
+        "id": "ship.destroyer",
+        "tier": 5,
+        "roles": [
+          "line"
+        ]
+      },
+      {
+        "id": "ship.cruiser",
+        "tier": 6,
+        "roles": [
+          "line"
+        ]
+      },
+      {
+        "id": "ship.battleship",
+        "tier": 7,
+        "roles": [
+          "capital"
+        ]
+      },
+      {
+        "id": "ship.carrier",
+        "tier": 7,
+        "roles": [
+          "carrier"
+        ]
+      },
+      {
+        "id": "ship.psi_cruiser",
+        "tier": 7,
+        "roles": [
+          "line",
+          "psi"
+        ]
+      },
+      {
+        "id": "ship.dreadnought",
+        "tier": 8,
+        "roles": [
+          "capital",
+          "bombard"
+        ]
+      },
+      {
+        "id": "ship.black_iron",
+        "tier": 9,
+        "roles": [
+          "capital"
+        ]
+      }
+    ],
+    "units": [
+      {
+        "id": "unit.militia",
+        "tier": 1,
+        "roles": [
+          "infantry",
+          "militia"
+        ]
+      },
+      {
+        "id": "unit.generic_line",
+        "tier": 2,
+        "roles": [
+          "infantry"
+        ]
+      },
+      {
+        "id": "unit.garrison",
+        "tier": 3,
+        "roles": [
+          "garrison",
+          "infantry"
+        ]
+      },
+      {
+        "id": "unit.planetary_gun",
+        "tier": 3,
+        "roles": [
+          "garrison"
+        ],
+        "stationary": true
+      },
+      {
+        "id": "unit.bunker",
+        "tier": 3,
+        "roles": [
+          "garrison"
+        ],
+        "stationary": true
+      },
+      {
+        "id": "unit.breach_cadre",
+        "tier": 4,
+        "roles": [
+          "assault",
+          "infantry"
+        ]
+      },
+      {
+        "id": "unit.shield_dome",
+        "tier": 4,
+        "roles": [
+          "garrison"
+        ],
+        "stationary": true
+      },
+      {
+        "id": "unit.armor_cadre",
+        "tier": 5,
+        "roles": [
+          "vehicle",
+          "assault"
+        ]
+      },
+      {
+        "id": "unit.heavy_legion",
+        "tier": 6,
+        "roles": [
+          "infantry",
+          "line"
+        ]
+      }
+    ],
+    "stations": [
+      "mining",
+      "military",
+      "science",
+      "trade",
+      "relay"
+    ],
+    "coreBuildings": [
+      "building.residential",
+      "building.farm",
+      "building.mine",
+      "building.lab",
+      "building.barracks",
+      "building.spaceport",
+      "building.shipyard",
+      "building.defense",
+      "building.capitol",
+      "building.habitat"
+    ]
+  },
+  "tech": {
+    "eraBaseCognitio": {
+      "1": 12,
+      "2": 24,
+      "3": 42,
+      "4": 84,
+      "5": 200
+    },
+    "eraRange": {
+      "1": [
+        12,
+        16
+      ],
+      "2": [
+        24,
+        32
+      ],
+      "3": [
+        42,
+        58
+      ],
+      "4": [
+        84,
+        105
+      ],
+      "5": [
+        180,
+        220
+      ]
+    },
+    "upgradeRatio": {
+      "efficiency": 0.5,
+      "austerity": 0.5,
+      "feature": 0.55
+    },
+    "premiumMaxMult": 1.35,
+    "breakthroughNoUpgrades": true,
+    "unlockTierByEra": {
+      "1": [
+        2,
+        3
+      ],
+      "2": [
+        4,
+        5
+      ],
+      "3": [
+        6,
+        7
+      ],
+      "4": [
+        8,
+        9
+      ],
+      "5": [
+        9,
+        10
+      ]
+    }
+  },
+  "buildings": {
+    "metalByTier": {
+      "1": 8,
+      "2": 11,
+      "3": 15,
+      "4": 19,
+      "5": 24,
+      "6": 30,
+      "7": 37,
+      "8": 45,
+      "9": 54,
+      "10": 65
+    },
+    "supplyRatio": 0.42,
+    "categoryTaxByTier": {
+      "1": 0,
+      "2": 1,
+      "3": 2,
+      "4": 2,
+      "5": 3,
+      "6": 3,
+      "7": 4,
+      "8": 5,
+      "9": 5,
+      "10": 6
+    },
+    "yieldFlatByTier": {
+      "1": 1,
+      "2": 2,
+      "3": 2,
+      "4": 3,
+      "5": 3,
+      "6": 4,
+      "7": 5,
+      "8": 6,
+      "9": 7,
+      "10": 8
+    },
+    "volumeBonusMult": 1.5,
+    "megaApMin": 2,
+    "buildCostMultFloor": 0.75,
+    "buildCostMultDefault": 0.9
+  },
+  "stability": {
+    "note": "First-pass (STABILITY_AND_REVOLT_SPEC, 2026-08-15). NOT a GMap port — GMap never consumed stability/stability_add/revolt_risk (modifierStack categorizer + ledger labels only). Faction-wide accumulator, independent of loyalty. Each turn: clamp(value + naturalDecay + buildModifierStack(courtEffects).channels.stability.flat). Stages are exclusive ordered bands: 0 = value >= stage1Threshold, 1 = stage2Threshold <= value < stage1Threshold, 2 = value < stage2Threshold. Stage 3 is duration, not a band: secession when a Stage-2 rebel force has existed for stage3DurationTurns ticks after spawn (currentTurn >= stage2SinceTurn + stage3DurationTurns). Production debuffs are production:* multipliers (Pass 4); Stage 2 replaces Stage 1, they do not stack. Rebel count = max(1, floor(pop * rebelPopShare * (stage2Threshold - value) / stage2Threshold)); population is not spent. New faction id rebel.<planetId>.<spawnTurn>, name 'Breakaway of <planet>', isNpc true. Revisit if decay is too fast without a court or too slow with one occupied seat (+1) offsetting decay (-1).",
+    "startingValue": 50,
+    "min": 0,
+    "max": 100,
+    "naturalDecay": -1,
+    "stage1Threshold": 40,
+    "stage2Threshold": 25,
+    "stage3DurationTurns": 3,
+    "stage1ProductionMult": 0.85,
+    "stage2ProductionMult": 0.75,
+    "rebelPopShare": 0.2
+  },
+  "currencyPeg": {
+    "note": "First-pass (CURRENCY_PEG_SPEC / grill Q4–Q8). Dominance is share^k with k>1 so a 90% galactic holder gets a superlinearly better rate than a 10% holder of the same resource — not a 9× linear split. Rarity is (rarityRef/globalTotal)^rarityExp. GM dial is per-peg-resource, clamped. Transition penalty is switch-only (first peg is full strength). Revisit if scarce monopolies mint too much metal.",
+    "baseRate": 1,
+    "dominanceK": 1.5,
+    "rarityRef": 20,
+    "rarityExp": 0.35,
+    "rateMin": 0.01,
+    "rateMax": 12,
+    "gmMultiplierMin": 0.8,
+    "gmMultiplierMax": 1.5,
+    "gmMultiplierDefault": 1,
+    "transitionStart": 0.5,
+    "transitionTurns": 5
+  },
+  "planetGrade": {
+    "note": "First-pass slot ladder (grill Q3/3a/3b). Surface 8→48 over 5 grades; orbital 4→12 on a separate counter. Costs are first-pass, revisit if early-game upgrade is too cheap/expensive.",
+    "maxGrade": 5,
+    "surfaceSlots": [8, 18, 28, 38, 48],
+    "orbitalSlots": [4, 6, 8, 10, 12],
+    "upgradeCost": [
+      null,
+      { "currency.metal": 30, "currency.supply": 15 },
+      { "currency.metal": 60, "currency.supply": 30 },
+      { "currency.metal": 100, "currency.supply": 50 },
+      { "currency.metal": 160, "currency.supply": 80 }
+    ]
+  },
+  "colonies": {
+    "supplyRatio": 0.42,
+    "setTypeRatio": 0.55,
+    "colonizeMetal": {
+      "outpost": 14,
+      "colony": 22,
+      "core": 34,
+      "fortress": 28,
+      "mining": 20,
+      "research": 20
+    }
+  },
+  "forces": {
+    "shipCostMult": 1.6,
+    "unitCostMult": 1.3,
+    "supplyRatio": 0.42,
+    "apTierBreak": 4,
+    "forgeMetal": 40,
+    "disbandRefund": 16,
+    "shipUpkeepMetalPerTier": 0.12,
+    "shipUpkeepMetalBase": 0.2,
+    "shipUpkeepDPerCount": 0.25,
+    "shipUpkeepEPerCount": 0.15,
+    "legionUpkeepEPerCount": 0.35,
+    "stations": {
+      "mining": {
+        "metal": 24,
+        "supply": 10
+      },
+      "military": {
+        "metal": 36,
+        "supply": 15
+      },
+      "science": {
+        "metal": 22,
+        "supply": 9
+      },
+      "trade": {
+        "metal": 24,
+        "supply": 10
+      },
+      "relay": {
+        "metal": 20,
+        "supply": 8
+      }
+    },
+    "mobilizationRate": 0.3,
+    "crewPerTier": 5
+  },
+  "modifierCaps": {
+    "production": {
+      "min": 0.5,
+      "max": 2
+    },
+    "upkeep": {
+      "min": 0.5,
+      "max": 1.5
+    },
+    "research": {
+      "min": 0.5,
+      "max": 1.5
+    },
+    "cost": {
+      "min": 0.75,
+      "max": 1.5
+    }
+  },
+  "interconnect": {
+    "freeBuildTier": 3,
+    "buildGate": "building.tier <= max(3, factionTechTier[category] + 1)",
+    "produceGate": "shipyard/barracks required; cost from metalByTier * forces.*CostMult"
+  },
+  "alchemy": {
+    "attemptsPerTurn": 2,
+    "baseCost": 6,
+    "eraGapCost": 3,
+    "note": "attempts×baseCost ≤ era1 research (12). Market recipe ≈ 1.0× experimentCost."
+  },
+  "techMarket": {
+    "techCognitioMult": 2,
+    "techMetalMultOfTier": 2,
+    "recipeVsAlchemyMult": 1,
+    "note": "tech listing cognitio ≈ eraCost×2; metal ≈ metalByTier[eraUnlock]×2"
+  },
+  "cardBattle": {
+    "handSize": 4,
+    "maxRounds": 4,
+    "energyPerRound": 4,
+    "xpPerCardBattle": 50,
+    "trophies": {
+      "metalPerLostUnit": 1,
+      "metalFloor": 2,
+      "cognitioOnWin": 6,
+      "intelBump": 6,
+      "loyaltyHit": 5,
+      "styleCognitioPerBanner": 1,
+      "styleMaxCognitio": 3
+    },
+    "note": "Win cognitio ≤9 (<1 era1); metal ≤~55% corvette even on large fights. Card mode opt-in."
+  }
+}

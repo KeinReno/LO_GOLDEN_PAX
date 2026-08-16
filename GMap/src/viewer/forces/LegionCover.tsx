@@ -1,11 +1,12 @@
 import { motion, useReducedMotion } from "motion/react";
-import type { Legion, ShipGroup } from "../../state/types";
+import type { Legion } from "../../state/types";
 import { CometCard } from "../quests/CometCard";
 import { STANCE_ICONS, STANCE_LABELS } from "./constants";
 import {
   deckBattlePreview,
   formatUpkeepShort,
   compositionUpkeep,
+  resolveLegionComposition,
   type ForceEngagementHit,
 } from "../../state/forceReadiness";
 
@@ -21,16 +22,7 @@ export function LegionCover({
   engagements?: ForceEngagementHit[];
 }) {
   const reduce = useReducedMotion();
-  const composition =
-    Array.isArray(legion.composition) && legion.composition.length
-      ? (legion.composition as ShipGroup[])
-      : [
-          {
-            type: "unit.generic_line",
-            defId: "unit.generic_line",
-            count: Math.max(1, Math.round(legion.strength || 1)),
-          },
-        ];
+  const composition = resolveLegionComposition(legion);
   const units = composition.reduce((s, g) => s + (g.count ?? 0), 0);
   const isSynthetic =
     !Array.isArray(legion.composition) || legion.composition.length === 0;

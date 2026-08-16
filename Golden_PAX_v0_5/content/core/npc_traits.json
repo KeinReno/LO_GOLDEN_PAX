@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "version": 2,
+    "description": "Пассивные черты. scope faction = всегда на державу; both = держава + копия на цель поста (если NPC наместник/командир/адмирал)."
+  },
+  "traits": {
+    "npc_trait.regent_builder": {
+      "id": "npc_trait.regent_builder",
+      "name": "Регент-строитель",
+      "description": "Реконструкция провинций: лояльность и рост державы; на посту наместника — сильнее на месте.",
+      "scope": "both",
+      "effects": [
+        { "effect": "loyalty_add", "args": { "amount": 1 } },
+        { "effect": "pop_growth_mult", "args": { "mult": 1.05 } }
+      ],
+      "postingEffects": [
+        { "effect": "loyalty_add", "args": { "amount": 2 } },
+        { "effect": "pop_growth_mult", "args": { "mult": 1.08 } }
+      ]
+    },
+    "npc_trait.warlord": {
+      "id": "npc_trait.warlord",
+      "name": "Воевода",
+      "description": "Боевой опыт. На державу — лёгкий урон; на посту командующего — сильнее.",
+      "scope": "both",
+      "effects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.05 } }
+      ],
+      "postingEffects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.08 } },
+        { "effect": "loyalty_add", "args": { "amount": -1 } }
+      ]
+    },
+    "npc_trait.high_priest": {
+      "id": "npc_trait.high_priest",
+      "name": "Верховная жрица",
+      "description": "Канон и стабильность веры по всей державе.",
+      "scope": "faction",
+      "effects": [
+        { "effect": "stability_add", "args": { "amount": 1 } },
+        { "effect": "loyalty_add", "args": { "amount": 1 } }
+      ]
+    },
+    "npc_trait.psion_agent": {
+      "id": "npc_trait.psion_agent",
+      "name": "Псионик-агент",
+      "description": "Ускоряет поручения двора (держава).",
+      "scope": "faction",
+      "effects": [
+        { "effect": "npc_task_speed_mult", "args": { "mult": 1.15 } }
+      ]
+    },
+    "npc_trait.humanitarian": {
+      "id": "npc_trait.humanitarian",
+      "name": "Гуманитарный контур",
+      "description": "Снабжение и лояльность державы; наместничество усиливает провинцию.",
+      "scope": "both",
+      "effects": [
+        { "effect": "loyalty_add", "args": { "amount": 1 } },
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.supply", "mult": 1.05 }
+        }
+      ],
+      "postingEffects": [
+        { "effect": "loyalty_add", "args": { "amount": 2 } },
+        {
+          "effect": "production_mult",
+          "args": { "resource": "currency.supply", "mult": 1.08 }
+        }
+      ]
+    }
+  }
+}

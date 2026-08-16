@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "version": 2,
+    "pilot": true,
+    "note": "v0.6 A6 — 2 role paths + race affinity (cheaper research, not hard lock). Untagged techs stay open."
+  },
+  "paths": {
+    "structural": {
+      "id": "structural",
+      "label": "Путь Структуры",
+      "roleScoreKey": "structural",
+      "breakthroughTechId": "tech.path.structural_breakthrough",
+      "iconTag": "metallurgy",
+      "description": "Корпуса, броня, верфи. Открывается RoleScore «Структурный» + Прорыв."
+    },
+    "energy": {
+      "id": "energy",
+      "label": "Путь Энергии",
+      "roleScoreKey": "energy",
+      "breakthroughTechId": "tech.path.energy_breakthrough",
+      "iconTag": "energy",
+      "description": "Топливо, реакторы, ускорители. Открывается RoleScore «Энергетический» + Прорыв."
+    }
+  },
+  "raceAffinity": {
+    "_comment": "mult < 1 = cheaper research for path-related techs (breakthrough + researchPath). No hard lock.",
+    "race_karned": { "structural": 0.9 },
+    "race_belator": { "energy": 0.9 },
+    "race_synth": { "energy": 0.92 },
+    "race_swarm": { "structural": 0.95 }
+  },
+  "cluster": {
+    "structural": [
+      "tech.crystal_integration",
+      "tech.hybrid.cold_foundry",
+      "tech.metamaterials",
+      "tech.black_iron_forges",
+      "tech.path.structural_hull_doctrine"
+    ],
+    "energy": [
+      "tech.fusion",
+      "tech.hybrid.void_interface",
+      "tech.antimatter",
+      "tech.antimatter_singularity",
+      "tech.path.energy_reactor_doctrine"
+    ]
+  }
+}

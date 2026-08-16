@@ -1,0 +1,1451 @@
+{
+  "race_human": {
+    "id": "race_human",
+    "name": "Люди",
+    "tags": [
+      "baseline",
+      "adaptable"
+    ],
+    "traits": [
+      {
+        "id": "trait.human.adaptable",
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "mult": 0.95
+            }
+          },
+          {
+            "effect": "diplomacy_trust_decay_mult",
+            "args": {
+              "mult": 0.9
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.human.cosmopolitan",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          },
+          {
+            "effect": "production_mult",
+            "args": {
+              "mult": 0.95
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.human.restless",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 1.08
+            }
+          },
+          {
+            "effect": "stability_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      },
+      {
+        "id": "trait.human.traders",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 1.05
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0
+      }
+    ],
+    "habitability": {
+      "rocky": 1,
+      "desert": 0.85,
+      "ocean": 0.95,
+      "ice": 0.7,
+      "toxic": 0.25
+    },
+    "growth": {
+      "baseRate": 0.012,
+      "crowdPenalty": 0.4
+    },
+    "xenorelations": {
+      "race_belator": 0.05,
+      "race_synth": 0,
+      "race_karned": 0.1,
+      "race_psionic": -0.05,
+      "race_swarm": -0.25,
+      "race_voidborn": -0.15,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "race",
+    "origin": "Базовый человеческий генотип",
+    "powerPath": ["will"]
+  },
+  "race_belator": {
+    "id": "race_belator",
+    "name": "Белаторцы",
+    "tags": [
+      "imperial",
+      "disciplined"
+    ],
+    "traits": [
+      {
+        "id": "trait.belator.discipline",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "defense",
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.belator.militarist_loyalty",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 0
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.belator.honor_bound",
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "diplomacy",
+              "mult": 1.15
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "damage",
+              "mult": 1.05
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      },
+      {
+        "id": "trait.belator.attrition",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 0.9
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1,
+      "desert": 0.8,
+      "ocean": 0.9,
+      "ice": 0.6,
+      "toxic": 0.2
+    },
+    "growth": {
+      "baseRate": 0.011,
+      "crowdPenalty": 0.35
+    },
+    "xenorelations": {
+      "race_human": 0.05,
+      "race_synth": -0.1,
+      "race_karned": -0.05,
+      "race_psionic": -0.1,
+      "race_swarm": -0.3,
+      "race_voidborn": -0.2,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "subrace",
+    "origin": "Имперская субраса людей",
+    "parent": "race_human"
+  },
+  "race_nagaar": {
+    "id": "race_nagaar",
+    "name": "Нагааритяне",
+    "tags": ["imperial", "titular"],
+    "traits": [
+      {
+        "id": "trait.nagaar.titular",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": 2 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.nagaar.caravan_burden",
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "diplomacy",
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1,
+      "desert": 0.85,
+      "ocean": 0.9,
+      "ice": 0.55,
+      "toxic": 0.2
+    },
+    "growth": {
+      "baseRate": 0.011,
+      "crowdPenalty": 0.35
+    },
+    "xenorelations": {
+      "race_belator": 0.15,
+      "race_human": 0.05,
+      "race_swarm": -0.3
+    },
+    "kind": "subrace",
+    "origin": "Титульный народ Империи Белатор (караван, паритет с белаторцами)",
+    "parent": "race_human"
+  },
+  "race_synth": {
+    "id": "race_synth",
+    "name": "Синты",
+    "tags": [
+      "synthetic"
+    ],
+    "traits": [
+      {
+        "id": "trait.synth.efficient",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.metal",
+              "mult": 1.05
+            }
+          },
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 0.7
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.synth.logistics_independent",
+        "effects": [
+          {
+            "effect": "logistics_range_add",
+            "args": {
+              "hops": 1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -2
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.synth.fragile_shell",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "hp",
+              "mult": 0.9
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      },
+      {
+        "id": "trait.synth.cold_logic",
+        "effects": [
+          {
+            "effect": "diplomacy_trust_decay_mult",
+            "args": {
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "mult": 0.95
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1,
+      "desert": 1,
+      "ocean": 0.5,
+      "ice": 0.9,
+      "toxic": 0.8
+    },
+    "growth": {
+      "baseRate": 0.008,
+      "crowdPenalty": 0.2
+    },
+    "xenorelations": {
+      "race_human": 0,
+      "race_belator": -0.1,
+      "race_karned": -0.05,
+      "race_psionic": 0.05,
+      "race_swarm": -0.2,
+      "race_voidborn": 0.1,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "race",
+    "origin": "Синтетическая жизнь"
+  },
+  "race_karned": {
+    "id": "race_karned",
+    "name": "Карнеды",
+    "tags": [
+      "lithoid",
+      "industrial"
+    ],
+    "traits": [
+      {
+        "id": "trait.karned.stoneborn",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "defense",
+              "mult": 1.15
+            }
+          },
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 0.75
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.karned.miners",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.metal",
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.karned.slow_to_trust",
+        "effects": [
+          {
+            "effect": "diplomacy_trust_decay_mult",
+            "args": {
+              "mult": 1.15
+            }
+          },
+          {
+            "effect": "loyalty_mult",
+            "args": {
+              "mult": 1.05
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      },
+      {
+        "id": "trait.karned.heavy",
+        "effects": [
+          {
+            "effect": "move_cost_mult",
+            "args": {
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "damage",
+              "mult": 1.05
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1.1,
+      "desert": 0.95,
+      "ocean": 0.4,
+      "ice": 0.85,
+      "toxic": 0.7
+    },
+    "growth": {
+      "baseRate": 0.007,
+      "crowdPenalty": 0.25
+    },
+    "xenorelations": {
+      "race_human": 0.1,
+      "race_belator": -0.05,
+      "race_synth": -0.05,
+      "race_psionic": -0.1,
+      "race_swarm": -0.2,
+      "race_voidborn": 0,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "race",
+    "origin": "Литоидная промышленная раса"
+  },
+  "race_psionic": {
+    "id": "race_psionic",
+    "name": "Псионики",
+    "tags": [
+      "psionic",
+      "fragile"
+    ],
+    "traits": [
+      {
+        "id": "trait.psionic.mindlance",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "damage",
+              "mult": 1.12
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "hp",
+              "mult": 0.9
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.psionic.foresight",
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "mult": 0.9
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.psionic.empath",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 2
+            }
+          },
+          {
+            "effect": "production_mult",
+            "args": {
+              "mult": 0.95
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.psionic.overstimulated",
+        "effects": [
+          {
+            "effect": "revolt_risk",
+            "args": {
+              "chancePerTurn": 0.02
+            }
+          },
+          {
+            "effect": "stability_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ],
+        "balanceBudget": -1
+      }
+    ],
+    "habitability": {
+      "rocky": 0.9,
+      "desert": 0.7,
+      "ocean": 1,
+      "ice": 0.75,
+      "toxic": 0.15
+    },
+    "growth": {
+      "baseRate": 0.01,
+      "crowdPenalty": 0.5
+    },
+    "xenorelations": {
+      "race_human": -0.05,
+      "race_belator": -0.1,
+      "race_synth": 0.05,
+      "race_karned": -0.1,
+      "race_swarm": -0.35,
+      "race_voidborn": 0.15,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "race",
+    "origin": "Псионически одарённые",
+    "powerPath": ["mind"]
+  },
+  "race_swarm": {
+    "id": "race_swarm",
+    "name": "Рой",
+    "tags": [
+      "swarm",
+      "hive"
+    ],
+    "traits": [
+      {
+        "id": "trait.swarm.prolific",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 1.25
+            }
+          },
+          {
+            "effect": "loyalty_mult",
+            "args": {
+              "mult": 0.9
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.swarm.hive_mind",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 3
+            }
+          },
+          {
+            "effect": "diplomacy_trust_decay_mult",
+            "args": {
+              "mult": 1.3
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.swarm.expendable",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "hp",
+              "mult": 0.85
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "damage",
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.swarm.hungry",
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 1.15
+            }
+          },
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 1.05
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.95,
+      "desert": 0.9,
+      "ocean": 0.8,
+      "ice": 0.6,
+      "toxic": 0.85
+    },
+    "growth": {
+      "baseRate": 0.02,
+      "crowdPenalty": 0.15
+    },
+    "xenorelations": {
+      "race_human": -0.25,
+      "race_belator": -0.3,
+      "race_synth": -0.2,
+      "race_karned": -0.2,
+      "race_psionic": -0.35,
+      "race_voidborn": -0.15,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "race",
+    "origin": "Коллективный рой"
+  },
+  "race_voidborn": {
+    "id": "race_voidborn",
+    "name": "Войдборн",
+    "tags": [
+      "void",
+      "nomad"
+    ],
+    "traits": [
+      {
+        "id": "trait.voidborn.vacuum_native",
+        "effects": [
+          {
+            "effect": "habitability_mult",
+            "args": {
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.voidborn.jump_sense",
+        "effects": [
+          {
+            "effect": "move_cost_mult",
+            "args": {
+              "mult": 0.9
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.voidborn.isolationist",
+        "effects": [
+          {
+            "effect": "diplomacy_trust_decay_mult",
+            "args": {
+              "mult": 1.2
+            }
+          },
+          {
+            "effect": "loyalty_mult",
+            "args": {
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      },
+      {
+        "id": "trait.voidborn.thin_blood",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 0.85
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "accuracy",
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.7,
+      "desert": 0.8,
+      "ocean": 0.5,
+      "ice": 1,
+      "toxic": 0.9
+    },
+    "growth": {
+      "baseRate": 0.009,
+      "crowdPenalty": 0.3
+    },
+    "xenorelations": {
+      "race_human": -0.15,
+      "race_belator": -0.2,
+      "race_synth": 0.1,
+      "race_karned": 0,
+      "race_psionic": 0.15,
+      "race_swarm": -0.15,
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    },
+    "kind": "race",
+    "origin": "Вакуум-адаптированные кочевники"
+  },
+  "race_lord_dust": {
+    "id": "race_lord_dust",
+    "name": "Лорды Праха",
+    "kind": "race",
+    "origin": "Бывшие люди, ставшие призраками (размножение привязано к Energia / бруннатит в лоре)",
+    "parent": "race_human",
+    "composeParent": false,
+    "tags": [
+      "ghost",
+      "psionic",
+      "dust"
+    ],
+    "traits": [
+      {
+        "id": "trait.lord_dust.solarit_affinity",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.extracta",
+              "mult": 1.15
+            }
+          },
+          {
+            "effect": "production_flat",
+            "args": {
+              "resource": "currency.extracta",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.lord_dust.blumatit_hunger",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
+          },
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.bios",
+              "mult": 0.9
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      },
+      {
+        "id": "trait.lord_dust.incorporeal",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "defense",
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "hp",
+              "mult": 0.85
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.lord_dust.brunnatit_bound",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 0.7
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0
+      }
+    ],
+    "reproduction": {
+      "requires": "currency.energia"
+    },
+    "habitability": {
+      "rocky": 0.7,
+      "desert": 0.8,
+      "ocean": 0.5,
+      "ice": 0.9,
+      "toxic": 0.9,
+      "artifact": 1.2
+    },
+    "growth": {
+      "baseRate": 0.008,
+      "crowdPenalty": 0.3
+    },
+    "xenorelations": {
+      "race_human": 0.1,
+      "race_belator": 0.05,
+      "race_synth": -0.2,
+      "race_karned": -0.1,
+      "race_psionic": 0.15,
+      "race_swarm": -0.25,
+      "race_voidborn": 0.1,
+      "race_horn": 0
+    }
+  },
+  "race_horn": {
+    "id": "race_horn",
+    "name": "Хорны",
+    "kind": "race",
+    "origin": "Рогатые гуманоиды",
+    "tags": [
+      "horn",
+      "stoic"
+    ],
+    "traits": [
+      {
+        "id": "trait.horn.stoic",
+        "effects": [
+          {
+            "effect": "loyalty_mult",
+            "args": {
+              "mult": 1.05
+            }
+          },
+          {
+            "effect": "pop_growth_mult",
+            "args": {
+              "mult": 0.95
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.horn.thick_hide",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "defense",
+              "mult": 1.08
+            }
+          },
+          {
+            "effect": "move_cost_mult",
+            "args": {
+              "mult": 1.05
+            }
+          }
+        ],
+        "balanceBudget": 0
+      },
+      {
+        "id": "trait.horn.proud",
+        "effects": [
+          {
+            "effect": "diplomacy_trust_decay_mult",
+            "args": {
+              "mult": 1.1
+            }
+          },
+          {
+            "effect": "stat_mult",
+            "args": {
+              "stat": "damage",
+              "mult": 1.05
+            }
+          }
+        ],
+        "balanceBudget": 0
+      }
+    ],
+    "habitability": {
+      "rocky": 1,
+      "desert": 0.85,
+      "ocean": 0.8,
+      "ice": 0.75,
+      "toxic": 0.3
+    },
+    "growth": {
+      "baseRate": 0.01,
+      "crowdPenalty": 0.35
+    },
+    "xenorelations": {
+      "race_human": 0.05,
+      "race_belator": 0.1,
+      "race_synth": -0.05,
+      "race_karned": 0,
+      "race_psionic": -0.05,
+      "race_swarm": -0.2,
+      "race_voidborn": -0.1,
+      "race_lord_dust": -0.05
+    }
+  },
+  "race_horn_narburi": {
+    "id": "race_horn_narburi",
+    "name": "Нарбури",
+    "kind": "subrace",
+    "origin": "Хорны Белатора — научная каста",
+    "base": "race_horn",
+    "forked_from": "race_horn",
+    "tags": [
+      "horn",
+      "scholar",
+      "belator"
+    ],
+    "override_traits": [
+      {
+        "id": "trait.horn.narburi.scholars",
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": {
+              "mult": 0.92
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.horn.narburi.courtly",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": 1
+            }
+          },
+          {
+            "effect": "production_mult",
+            "args": {
+              "mult": 0.97
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "remove_traits": [
+      "trait.horn.proud"
+    ],
+    "state_overrides": {},
+    "xenorelations": {
+      "race_belator": 0.15,
+      "race_human": 0.1,
+      "race_lord_dust": -0.05
+    }
+  },
+  "race_human_barial": {
+    "id": "race_human_barial",
+    "name": "Бариальцы",
+    "kind": "subrace",
+    "origin": "Финансовая субраса людей",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "human",
+      "mercantile",
+      "barial"
+    ],
+    "override_traits": [
+      {
+        "id": "trait.barial.contracts",
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 0.9
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.metal",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.barial.ledger_bound",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 1.05
+            }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": {
+              "amount": -1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "remove_traits": [
+      "trait.human.restless",
+      "trait.human.adaptable"
+    ],
+    "state_overrides": {
+      "habitability": {
+        "desert": 0.9
+      }
+    },
+    "xenorelations": {
+      "race_lord_dust": -0.05,
+      "race_horn": 0
+    }
+  },
+  "race_hybrid.human_psionic": {
+    "id": "race_hybrid.human_psionic",
+    "name": "Эмпаты",
+    "kind": "hybrid",
+    "origin": "Синтез людей и псиоников",
+    "hybridOf": ["race_human", "race_psionic"],
+    "tags": ["hybrid", "psionic", "baseline"],
+    "traits": [
+      {
+        "id": "trait.hybrid.human_psi.link",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": 2 }
+          },
+          {
+            "effect": "stat_mult",
+            "args": { "stat": "damage", "mult": 1.08 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.human_psi.strain",
+        "effects": [
+          {
+            "effect": "revolt_risk",
+            "args": { "chancePerTurn": 0.015 }
+          },
+          {
+            "effect": "production_mult",
+            "args": { "mult": 0.96 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.92,
+      "desert": 0.72,
+      "ocean": 0.97,
+      "ice": 0.72,
+      "toxic": 0.18
+    },
+    "growth": {
+      "baseRate": 0.0108,
+      "crowdPenalty": 0.45
+    },
+    "xenorelations": {
+      "race_swarm": -0.28,
+      "race_synth": 0.02
+    },
+    "powerPath": ["will", "mind"]
+  },
+  "race_hybrid.karned_synth": {
+    "id": "race_hybrid.karned_synth",
+    "name": "Холодные литейщики",
+    "kind": "hybrid",
+    "origin": "Карнеды + синты: автоматизированные плавильни",
+    "hybridOf": ["race_karned", "race_synth"],
+    "tags": ["hybrid", "lithoid", "synthetic"],
+    "traits": [
+      {
+        "id": "trait.hybrid.karned_synth.foundry",
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": { "resource": "currency.materia", "mult": 1.12 }
+          },
+          {
+            "effect": "production_mult",
+            "args": { "resource": "currency.industria", "mult": 1.08 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.karned_synth.inertia",
+        "effects": [
+          {
+            "effect": "pop_growth_mult",
+            "args": { "mult": 0.72 }
+          },
+          {
+            "effect": "move_cost_mult",
+            "args": { "mult": 1.08 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 1.05,
+      "desert": 0.98,
+      "ocean": 0.42,
+      "ice": 0.88,
+      "toxic": 0.72
+    },
+    "growth": {
+      "baseRate": 0.0072,
+      "crowdPenalty": 0.22
+    },
+    "xenorelations": {
+      "race_psionic": -0.08
+    }
+  },
+  "race_hybrid.belator_horn": {
+    "id": "race_hybrid.belator_horn",
+    "name": "Имперские рогатые",
+    "kind": "hybrid",
+    "origin": "Белаторцы и хорны — двор и легион",
+    "hybridOf": ["race_belator", "race_horn"],
+    "tags": ["hybrid", "imperial", "horn"],
+    "traits": [
+      {
+        "id": "trait.hybrid.belator_horn.legion",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": { "stat": "defense", "mult": 1.12 }
+          },
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": 1 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.belator_horn.tribute",
+        "effects": [
+          {
+            "effect": "upkeep_flat",
+            "args": { "resource": "currency.supply", "amount": 1 }
+          },
+          {
+            "effect": "research_cost_mult",
+            "args": { "mult": 1.05 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.98,
+      "desert": 0.78,
+      "ocean": 0.86,
+      "ice": 0.64,
+      "toxic": 0.22
+    },
+    "growth": {
+      "baseRate": 0.0105,
+      "crowdPenalty": 0.32
+    },
+    "xenorelations": {
+      "race_swarm": -0.28
+    }
+  },
+  "race_hybrid.human_voidborn": {
+    "id": "race_hybrid.human_voidborn",
+    "name": "Пустотные адаптанты",
+    "kind": "hybrid",
+    "origin": "Люди и войдборн — мост между мирами",
+    "hybridOf": ["race_human", "race_voidborn"],
+    "tags": ["hybrid", "void", "baseline"],
+    "traits": [
+      {
+        "id": "trait.hybrid.human_void.lanes",
+        "effects": [
+          {
+            "effect": "move_cost_mult",
+            "args": { "mult": 0.92 }
+          },
+          {
+            "effect": "habitability_mult",
+            "args": { "mult": 1.05 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.human_void.drift",
+        "effects": [
+          {
+            "effect": "loyalty_add",
+            "args": { "amount": -1 }
+          },
+          {
+            "effect": "pop_growth_mult",
+            "args": { "mult": 0.88 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.78,
+      "desert": 0.78,
+      "ocean": 0.68,
+      "ice": 0.92,
+      "toxic": 0.78
+    },
+    "growth": {
+      "baseRate": 0.0095,
+      "crowdPenalty": 0.32
+    },
+    "xenorelations": {}
+  },
+  "race_hybrid.lord_dust_psionic": {
+    "id": "race_hybrid.lord_dust_psionic",
+    "name": "Хор Праха",
+    "kind": "hybrid",
+    "origin": "Лорды Праха и псионики — резонанс завета",
+    "hybridOf": ["race_lord_dust", "race_psionic"],
+    "tags": ["hybrid", "ghost", "psionic"],
+    "reproduction": {
+      "requires": "currency.energia"
+    },
+    "traits": [
+      {
+        "id": "trait.hybrid.dust_psi.chorus",
+        "effects": [
+          {
+            "effect": "research_cost_mult",
+            "args": { "mult": 0.9 }
+          },
+          {
+            "effect": "production_mult",
+            "args": { "resource": "currency.cognitio", "mult": 1.1 }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.hybrid.dust_psi.fragile",
+        "effects": [
+          {
+            "effect": "stat_mult",
+            "args": { "stat": "hp", "mult": 0.88 }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": { "resource": "currency.energia", "amount": 1 }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.68,
+      "desert": 0.72,
+      "ocean": 0.72,
+      "ice": 0.88,
+      "toxic": 0.78,
+      "artifact": 1.15
+    },
+    "growth": {
+      "baseRate": 0.0076,
+      "crowdPenalty": 0.38
+    },
+    "xenorelations": {
+      "race_synth": -0.15
+    },
+    "powerPath": ["mind"]
+  },
+  "race_damilian": {
+    "id": "race_damilian",
+    "name": "Дамиляне",
+    "tags": [
+      "gatewright",
+      "corridor"
+    ],
+    "traits": [
+      {
+        "id": "trait.damilian.corridor_sense",
+        "effects": [
+          {
+            "effect": "logistics_range_add",
+            "args": {
+              "hops": 1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.damilian.gate_tithe",
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.85,
+      "desert": 0.7,
+      "ocean": 0.75,
+      "ice": 0.65,
+      "toxic": 0.15
+    },
+    "growth": {
+      "baseRate": 0.009,
+      "crowdPenalty": 0.45
+    },
+    "xenorelations": {
+      "race_human": 0,
+      "race_voidborn": 0.1,
+      "race_belator": -0.05
+    },
+    "kind": "race",
+    "origin": "Строители межзвёздных коридоров Дамиля; хранители врат"
+  }
+}

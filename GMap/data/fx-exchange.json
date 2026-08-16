@@ -1,0 +1,72 @@
+{
+  "credits": {
+    "map.glasssteel": 13.516489761715816,
+    "map.solari": 19.32032393970089,
+    "map.blumatid": 19.24035648406606
+  },
+  "rates": [
+    {
+      "pair": "fx.turon_credit → fx.belator_solarit",
+      "buy": 0.6996,
+      "sell": 0.6436,
+      "note": "EC map.glasssteel↔map.solari (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.turon_credit → fx.karned_trill",
+      "buy": 0.7025,
+      "sell": 0.6463,
+      "note": "EC map.glasssteel↔map.blumatid (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.turon_credit → fx.aphel_ilir",
+      "buy": 0.7025,
+      "sell": 0.6463,
+      "note": "EC map.glasssteel↔map.blumatid (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.belator_solarit → fx.turon_credit",
+      "buy": 1.4294,
+      "sell": 1.315,
+      "note": "EC map.solari↔map.glasssteel (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.belator_solarit → fx.karned_trill",
+      "buy": 1.0042,
+      "sell": 0.9238,
+      "note": "EC map.solari↔map.blumatid (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.belator_solarit → fx.aphel_ilir",
+      "buy": 1.0042,
+      "sell": 0.9238,
+      "note": "EC map.solari↔map.blumatid (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.karned_trill → fx.turon_credit",
+      "buy": 1.4235,
+      "sell": 1.3096,
+      "note": "EC map.blumatid↔map.glasssteel (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.karned_trill → fx.belator_solarit",
+      "buy": 0.9959,
+      "sell": 0.9162,
+      "note": "EC map.blumatid↔map.solari (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.aphel_ilir → fx.turon_credit",
+      "buy": 1.4235,
+      "sell": 1.3096,
+      "note": "EC map.blumatid↔map.glasssteel (EMA α=0.25)"
+    },
+    {
+      "pair": "fx.aphel_ilir → fx.belator_solarit",
+      "buy": 0.9959,
+      "sell": 0.9162,
+      "note": "EC map.blumatid↔map.solari (EMA α=0.25)"
+    }
+  ],
+  "updatedAt": "2026-08-16T08:29:11.269Z",
+  "turn": 65,
+  "variant": "ema_inertia"
+}

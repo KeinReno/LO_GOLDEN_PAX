@@ -47,6 +47,8 @@ import {
   forgeMetalCostClient,
 } from "../../state/forceEconomy";
 import type { ViewerEngagement } from "../PlayerEngagementPanel";
+import { ForceDisbandRaised } from "./ForceDisbandRaised";
+import type { ForceRecruitSession } from "../../state/forceRaiseClient";
 
 export type ForcesMutateArgs = {
   kind: "fleet" | "legion";
@@ -86,6 +88,7 @@ export type ForcesDeckProps = {
   }) => void;
   /** Phone sheet: tighter list layout, larger tap targets. */
   compact?: boolean;
+  onForceRecruitSession?: (data: ForceRecruitSession) => void;
 };
 
 function findCatalog(
@@ -129,6 +132,8 @@ export function ForcesDeck({
   onOpenEconomy,
   onOpenProduce,
   compact = false,
+  password,
+  onForceRecruitSession,
 }: ForcesDeckProps) {
   const reduce = useReducedMotion();
   const pendingStock = useRef<Record<string, number>>({});
@@ -662,6 +667,22 @@ export function ForcesDeck({
           onOpenEngagement={onOpenEngagement}
           onOpenCardBattle={onOpenCardBattle}
         />
+
+        {password &&
+          onForceRecruitSession &&
+          ((deckKind === "fleet" && activeFleet?.homePlanetId) ||
+            (deckKind === "legion" && activeLegion?.homePlanetId)) && (
+            <ForceDisbandRaised
+              factionId={fid}
+              password={password}
+              kind={deckKind === "fleet" ? "fleet" : "legion"}
+              id={deckKind === "fleet" ? activeFleet!.id : activeLegion!.id}
+              maxCount={composition.reduce((s, g) => s + (g.count || 0), 0)}
+              busy={mutateBusy}
+              onSession={onForceRecruitSession}
+              onToast={notify}
+            />
+          )}
 
         <div className="forces-fan" role="list">
           {composition.length === 0 ? (

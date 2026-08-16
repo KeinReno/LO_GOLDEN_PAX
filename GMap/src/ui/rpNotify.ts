@@ -1,47 +1,13 @@
 /** Soft chime + optional desktop notification for new RP messages. */
 
-let audioCtx: AudioContext | null = null;
+import { playStaffCue } from "../audio/staffSfx";
+
 let lastNotifiedId: string | null = null;
 let permissionAsked = false;
 
-function getCtx(): AudioContext | null {
-  if (typeof window === "undefined") return null;
-  const AC =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext?: typeof AudioContext })
-      .webkitAudioContext;
-  if (!AC) return null;
-  if (!audioCtx) audioCtx = new AC();
-  return audioCtx;
-}
-
-/** Soft two-tone chime (not harsh). */
+/** Staff-radio channel open (replaces the old oscillator ding). */
 export function playRpChime(): void {
-  try {
-    const ctx = getCtx();
-    if (!ctx) return;
-    void ctx.resume();
-    const now = ctx.currentTime;
-    const tones = [
-      { f: 660, t: 0, d: 0.12 },
-      { f: 880, t: 0.1, d: 0.16 },
-    ];
-    for (const tone of tones) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = tone.f;
-      gain.gain.setValueAtTime(0.0001, now + tone.t);
-      gain.gain.exponentialRampToValueAtTime(0.07, now + tone.t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.t + tone.d);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + tone.t);
-      osc.stop(now + tone.t + tone.d + 0.02);
-    }
-  } catch {
-    /* ignore autoplay / audio errors */
-  }
+  playStaffCue("radio_squelch");
 }
 
 async function ensureNotifyPermission(): Promise<boolean> {

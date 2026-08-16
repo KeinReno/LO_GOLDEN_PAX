@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Staff radio cues</title>
+<style>
+  body { font: 14px/1.4 sans-serif; background: #111; color: #ddd; max-width: 42rem; margin: 2rem auto; }
+  h1 { font-size: 1.1rem; }
+  section { margin: 1.25rem 0; }
+  button { margin: 0 .35rem .35rem 0; }
+  p { color: #888; }
+</style>
+<h1>Staff radio — pick a variant</h1>
+<p>Gold + crystal + bowl weight. Heroes 01/02. Family: SONIC_BIBLE.md</p>
+<div id="root"></div>
+<script type="module">
+  const cues = [
+    ["radio_squelch", "channel open"],
+    ["turn_advance", "turn changed"],
+    ["contact_alert", "offscreen contact"],
+    ["seal_stamp", "irreversible commit"],
+    ["token_drop", "drop on system"],
+  ];
+  const root = document.getElementById("root");
+  for (const [id, role] of cues) {
+    const s = document.createElement("section");
+    s.innerHTML = `<h2>${id}</h2><p>${role}</p>`;
+    for (let v = 1; v <= 4; v++) {
+      const b = document.createElement("button");
+      b.textContent = String(v).padStart(2, "0");
+      const src = `./sfx/${id}__${String(v).padStart(2, "0")}.wav?v=4`;
+      b.onclick = () => new Audio(src).play();
+      s.appendChild(b);
+    }
+    root.appendChild(s);
+  }
+</script>

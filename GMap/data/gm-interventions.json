@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "id": "gmi_1786317975988_9r499",
+      "at": "2026-08-09T23:26:15.988Z",
+      "actor": "gm",
+      "action": "setAp",
+      "before": {
+        "empirePerTurn": 9,
+        "forceBase": 2,
+        "forceMax": 8
+      },
+      "after": {
+        "empirePerTurn": 9,
+        "forceBase": 2,
+        "forceMax": 8
+      },
+      "detail": null
+    },
+    {
+      "id": "gmi_1786395210987_swarm_rp",
+      "at": "2026-08-10T20:53:30.881Z",
+      "actor": "gm",
+      "action": "rp_session",
+      "before": {
+        "turn": 59
+      },
+      "after": {
+        "turn": 59,
+        "tableRevision": 500
+      },
+      "detail": "Northern Swarm RP 2026-08-10: intel (local overminds, command, plasma/jammers), movements E+NW, bait marks, allied TF (Gun/Greaves/Matriarch/Turanmal/Gilmir/Svirsky/Netrien), Artemis orders on map."
+    }
+  ]
+}

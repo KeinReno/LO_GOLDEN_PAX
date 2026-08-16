@@ -12,6 +12,11 @@ import {
 import { getContent } from "./contentLoader.mjs";
 import { readLedger, writeLedger, adjustStock, ensureFactionEco } from "./ledger.mjs";
 import { bumpSystemIntel } from "./intel.mjs";
+import {
+  resourceMatchesRequire,
+  findResourcesForRequire,
+  buildResourceIndex,
+} from "./slotResolver.mjs";
 
 const DEFAULT_RULES = {
   handSize: 4,
@@ -35,6 +40,11 @@ const DEFAULT_RULES = {
   freeReorderPerRound: 1,
   xpPerCardBattle: 50,
   overwhelmSplashMult: 0.35,
+  formationAuras: {
+    escortIncomingMult: 0.85,
+    supportOutgoingMult: 1.15,
+    escortNeighborBlock: 4,
+  },
   trophies: {
     metalPerLostUnit: 1,
     metalFloor: 2,
@@ -43,6 +53,7 @@ const DEFAULT_RULES = {
     loyaltyHit: 5,
     styleCognitioPerBanner: 1,
     styleMaxCognitio: 3,
+    salvageOfferMax: 3,
   },
   triggers: {
     mutualConsent: true,
@@ -268,6 +279,69 @@ export function keywordsForCard(card) {
     if (k && !out.includes(k)) out.push(k);
   }
   return out;
+}
+
+function aliveNeighbors(line, index) {
+  const out = [];
+  for (const delta of [-1, 1]) {
+    const n = line?.[index + delta];
+    if (n && (n.count || 0) > 0) out.push(n);
+  }
+  return out;
+}
+
+/**
+ * Lootbound-style adjacency: neighbors project auras onto this card.
+ * escort → incoming ×0.85; support → outgoing ×1.15.
+ */
+export function formationAuraMods(card, line, rules = {}) {
+  const cfg = rules.formationAuras || {};
+  const escortIn = cfg.escortIncomingMult ?? 0.85;
+  const supportOut = cfg.supportOutgoingMult ?? 1.15;
+  const tags = [];
+  let outgoingMult = 1;
+  let incomingMult = 1;
+  if (!card) return { outgoingMult, incomingMult, tags };
+  const idx = (line || []).findIndex((c) => c.cardId === card.cardId);
+  if (idx < 0) return { outgoingMult, incomingMult, tags };
+  for (const n of aliveNeighbors(line, idx)) {
+    const kws = keywordsForCard(n);
+    if (kws.includes("escort")) {
+      incomingMult *= escortIn;
+      if (!tags.includes("escort")) tags.push("escort");
+    }
+    if (kws.includes("support")) {
+      outgoingMult *= supportOut;
+      if (!tags.includes("support")) tags.push("support");
+    }
+  }
+  return { outgoingMult, incomingMult, tags };
+}
+
+function withFormationAuras(
+  state,
+  attacker,
+  defender,
+  atkSide,
+  defSide,
+  rules,
+  baseOutgoing,
+  baseIncoming,
+) {
+  const atkAura = formationAuraMods(
+    attacker,
+    state.frontLines?.[atkSide] || [],
+    rules,
+  );
+  const defAura = defender
+    ? formationAuraMods(defender, state.frontLines?.[defSide] || [], rules)
+    : { outgoingMult: 1, incomingMult: 1, tags: [] };
+  return {
+    outgoingMult: baseOutgoing * atkAura.outgoingMult,
+    incomingMult: baseIncoming * defAura.incomingMult,
+    atkTags: atkAura.tags,
+    defTags: defAura.tags,
+  };
 }
 
 function techModsForFaction(factionId) {
@@ -553,6 +627,22 @@ function applyBraceAtRoundStart(state) {
   }
 }
 
+/** Escort with a living neighbor grants side Block (formation pulse). */
+export function applyEscortNeighborBlock(state, rules = {}) {
+  const amt = rules.formationAuras?.escortNeighborBlock ?? 4;
+  if (!amt) return;
+  for (const sideId of Object.keys(state.frontLines || {})) {
+    const line = state.frontLines[sideId] || [];
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (!c || (c.count || 0) <= 0) continue;
+      if (!keywordsForCard(c).includes("escort")) continue;
+      if (aliveNeighbors(line, i).length === 0) continue;
+      addBlock(state, sideId, amt);
+    }
+  }
+}
+
 /** Escort dies → neighbors Vulnerable (combo). Survives into next plan. */
 function applyEscortDeathCombo(state, defSide, deadCard, killerSide) {
   if (!deadCard || deadCard.count > 0) return null;
@@ -615,13 +705,23 @@ function applyOverwhelmKillCombo(
     return { suppressOverflow: false };
   }
   const mult = rules.overwhelmSplashMult ?? 0.35;
+  const splashAura = withFormationAuras(
+    state,
+    attackerCard,
+    neighbor,
+    atkSide,
+    defSide,
+    rules,
+    statusOutgoingMult(state, attackerCard.cardId, rules),
+    statusIncomingMult(state, neighbor.cardId, rules),
+  );
   const splashRaw = Math.max(
     1,
     Math.round(
       estimateStrikeDamage(attackerCard, neighbor, content, {
         atkBuff,
-        outgoingMult: statusOutgoingMult(state, attackerCard.cardId, rules),
-        incomingMult: statusIncomingMult(state, neighbor.cardId, rules),
+        outgoingMult: splashAura.outgoingMult,
+        incomingMult: splashAura.incomingMult,
       }) * mult,
     ),
   );
@@ -1163,16 +1263,26 @@ function applyStrikeDamage(state, attackerSide, card, targetId, content) {
   const buff = state.buffs?.[attackerSide] || {};
   const defBuff = state.buffs?.[opp] || {};
   const pierce = !!getCardStatus(state, card.cardId).focus;
-  const outgoing = statusOutgoingMult(state, card.cardId, rules);
+  const outgoing0 = statusOutgoingMult(state, card.cardId, rules);
 
   if (targetId === "base" || !targetId) {
     const oppFront = state.frontLines[opp] || [];
     if (oppFront.length > 0 && !buff.flankBase && !buff.bombard) {
       return { ok: false, error: "Фронт врага блокирует удар по базе" };
     }
+    const { outgoingMult } = withFormationAuras(
+      state,
+      card,
+      null,
+      attackerSide,
+      opp,
+      rules,
+      outgoing0,
+      1,
+    );
     const raw = estimateStrikeDamage(card, null, content, {
       atkBuff: buff,
-      outgoingMult: outgoing,
+      outgoingMult,
     });
     const { remaining, blocked } = applyThroughBlock(state, opp, raw, {
       pierceBlock: pierce,
@@ -1213,10 +1323,20 @@ function applyStrikeDamage(state, attackerSide, card, targetId, content) {
     redirected = true;
   }
 
-  const incoming = statusIncomingMult(state, defender.cardId, rules);
+  const incoming0 = statusIncomingMult(state, defender.cardId, rules);
+  const { outgoingMult, incomingMult } = withFormationAuras(
+    state,
+    card,
+    defender,
+    attackerSide,
+    opp,
+    rules,
+    outgoing0,
+    incoming0,
+  );
   const pairResult = resolveCardPair(card, defender, content, buff, defBuff, {
-    outgoingMult: outgoing,
-    incomingMult: incoming,
+    outgoingMult,
+    incomingMult,
   });
 
   if (pierce) clearSpentFocus(state, card.cardId);
@@ -1706,7 +1826,7 @@ function endOfRoundClash(state, content) {
     if (!ca || ca.count <= 0) return;
     const atkBuff = state.buffs?.[atkSide] || {};
     const defBuff = state.buffs?.[defSide] || {};
-    const outgoing = statusOutgoingMult(state, ca.cardId, rules);
+    const outgoing0 = statusOutgoingMult(state, ca.cardId, rules);
     const styleAt = (state.styleMoments || []).length;
 
     if (cb && cb._aliveAtClashStart) {
@@ -1720,10 +1840,20 @@ function endOfRoundClash(state, content) {
       }
       const beforeAtk = ca.count;
       const beforeDef = defender.count;
-      const incoming = statusIncomingMult(state, defender.cardId, rules);
+      const incoming0 = statusIncomingMult(state, defender.cardId, rules);
+      const { outgoingMult, incomingMult } = withFormationAuras(
+        state,
+        ca,
+        defender,
+        atkSide,
+        defSide,
+        rules,
+        outgoing0,
+        incoming0,
+      );
       const r1 = resolveCardPair(ca, defender, content, atkBuff, defBuff, {
-        outgoingMult: outgoing,
-        incomingMult: incoming,
+        outgoingMult,
+        incomingMult,
       });
       if (redirected && defender.count > 0) {
         pushStyle(state, defSide, "escort_save", { cardId: defender.cardId });
@@ -1792,9 +1922,19 @@ function endOfRoundClash(state, content) {
     }
 
     // Open lane → base (Siege / Overwhelm scale)
+    const { outgoingMult } = withFormationAuras(
+      state,
+      ca,
+      null,
+      atkSide,
+      defSide,
+      rules,
+      outgoing0,
+      1,
+    );
     const raw = estimateStrikeDamage(ca, null, content, {
       atkBuff,
-      outgoingMult: outgoing,
+      outgoingMult,
     });
     const { remaining, blocked } = applyThroughBlock(state, defSide, raw);
     notePerfectBlock(state, defSide, blocked, remaining, raw);
@@ -1915,6 +2055,7 @@ function startNextRound(state, content) {
   refillEnergy(state, rules);
   state.phase = "plan";
   applyBraceAtRoundStart(state);
+  applyEscortNeighborBlock(state, rules);
   for (const id of ids) {
     drawCards(state, id, rules.drawPerRound || 1);
   }
@@ -2394,8 +2535,281 @@ export function finalizeCardBattle(state, world) {
   };
 }
 
+const SALVAGE_ROLES = new Set(["weapon", "hull", "shield"]);
+
+function unitOrShipDef(content, defId) {
+  if (!defId) return null;
+  return (
+    content.ships?.[defId] ||
+    content.units?.[defId] ||
+    content.ground_units?.[defId] ||
+    null
+  );
+}
+
+function sideParents(world, eng, factionId) {
+  const side = (eng.sides || []).find((s) => s.factionId === factionId);
+  if (!side) return [];
+  const out = [];
+  for (const id of side.fleetIds || []) {
+    const fleet = (world.fleets || []).find((f) => f.id === id);
+    if (fleet) out.push({ parentKind: "fleet", parentId: fleet.id, parent: fleet });
+  }
+  for (const id of side.legionIds || []) {
+    const legion = (world.legions || []).find((l) => l.id === id);
+    if (legion) out.push({ parentKind: "legion", parentId: legion.id, parent: legion });
+  }
+  return out;
+}
+
+function liveGroupsForSide(world, eng, factionId) {
+  const rows = [];
+  for (const p of sideParents(world, eng, factionId)) {
+    (p.parent.composition || []).forEach((g, index) => {
+      if ((g.count || 0) <= 0) return;
+      rows.push({
+        parentKind: p.parentKind,
+        parentId: p.parentId,
+        index,
+        group: g,
+        groupId: String(g.id || `${p.parentKind}_${p.parentId}_${g.defId || g.type}_${index}`),
+        defId: g.defId || g.type,
+      });
+    });
+  }
+  return rows;
+}
+
+function emptySalvageSlots(group, content) {
+  const def = unitOrShipDef(content, group.defId || group.type);
+  const fills = group.filledSlots || {};
+  const empty = [];
+  for (const slot of def?.slots || []) {
+    if (!SALVAGE_ROLES.has(slot.role)) continue;
+    if (fills[slot.role]) continue;
+    empty.push(slot);
+  }
+  return empty;
+}
+
+function fitTargetsForResource(rows, resource, role, content) {
+  const fits = [];
+  for (const row of rows) {
+    const def = unitOrShipDef(content, row.defId);
+    const slot = (def?.slots || []).find((s) => s.role === role);
+    if (!slot) continue;
+    if ((row.group.filledSlots || {})[role]) continue;
+    if (!resourceMatchesRequire(resource, slot.require)) continue;
+    fits.push({
+      parentKind: row.parentKind,
+      parentId: row.parentId,
+      groupId: row.groupId,
+      defId: row.defId,
+    });
+  }
+  return fits;
+}
+
+function fallbackResourceForSlot(slot, content) {
+  const idx = buildResourceIndex(content);
+  const matches = findResourcesForRequire(slot.require, idx)
+    .filter((r) => !r.toxic)
+    .sort(
+      (a, b) =>
+        (a.tier || 0) - (b.tier || 0) ||
+        String(a.resourceId).localeCompare(String(b.resourceId)),
+    );
+  return matches[0] || null;
+}
+
+/**
+ * One loot pick after victory: wreck fills that fit an empty winner slot,
+ * else lowest-tier catalog scrap. Empty slots missing → status none.
+ */
+export function buildSalvageOffer(world, eng, winnerId, loserId, content = getContent()) {
+  const rules = cardBattleRules(content);
+  const max = Math.max(1, Number(rules.trophies?.salvageOfferMax ?? 3) || 3);
+  const winnerRows = liveGroupsForSide(world, eng, winnerId);
+  const hasEmpty = winnerRows.some((r) => emptySalvageSlots(r.group, content).length > 0);
+  if (!hasEmpty) {
+    return { status: "none", options: [] };
+  }
+
+  const resources = content.map_resources || {};
+  const options = [];
+  const seen = new Set();
+  const pushOpt = (resourceId, role, source) => {
+    const key = `${role}:${resourceId}`;
+    if (seen.has(key)) return;
+    const def = resources[resourceId];
+    if (!def) return;
+    const packed = {
+      id: def.id || resourceId,
+      resourceId,
+      name: def.name,
+      category: def.category,
+      tier: Number(def.tier),
+      properties: def.properties || [],
+      kind: def.kind || null,
+      theater: def.theater || null,
+    };
+    const fits = fitTargetsForResource(winnerRows, packed, role, content);
+    if (!fits.length) return;
+    seen.add(key);
+    options.push({
+      id: `salv_${options.length}`,
+      resourceId,
+      role,
+      name: def.name,
+      source,
+      fits,
+    });
+  };
+
+  if (loserId) {
+    for (const row of liveGroupsForSide(world, eng, loserId)) {
+      for (const [role, resId] of Object.entries(row.group.filledSlots || {})) {
+        if (!SALVAGE_ROLES.has(role) || !resId) continue;
+        pushOpt(String(resId), role, "wreck");
+        if (options.length >= max) break;
+      }
+      if (options.length >= max) break;
+    }
+  }
+
+  if (options.length === 0) {
+    for (const row of winnerRows) {
+      for (const slot of emptySalvageSlots(row.group, content)) {
+        const pick = fallbackResourceForSlot(slot, content);
+        if (pick) pushOpt(pick.resourceId, slot.role, "scrap");
+        if (options.length >= max) break;
+      }
+      if (options.length >= max) break;
+    }
+  }
+
+  return {
+    status: options.length ? "pending" : "none",
+    options: options.slice(0, max),
+  };
+}
+
+function findLiveGroup(world, target) {
+  const bag =
+    target.parentKind === "legion" ? world.legions : world.fleets;
+  const parent = (bag || []).find((x) => x.id === target.parentId);
+  if (!parent) return null;
+  const comp = parent.composition || [];
+  if (target.groupId) {
+    const byId = comp.find((g) => String(g.id) === String(target.groupId));
+    if (byId && (byId.count || 0) > 0) return byId;
+  }
+  return (
+    comp.find(
+      (g) => (g.defId || g.type) === target.defId && (g.count || 0) > 0,
+    ) || null
+  );
+}
+
+function grantTrophyMetal(world, winner, metal, reason = "card_battle_scrap") {
+  if (!metal) return;
+  const ledger = readLedger();
+  const turn = world.meta?.turn ?? null;
+  adjustStock(ledger, winner, "currency.metal", metal, { turn, reason });
+  writeLedger(ledger);
+}
+
+export function claimCardBattleSalvage(world, eng, factionId, pick = {}, content = getContent()) {
+  const t = eng.result?.trophies;
+  const salvage = t?.salvage;
+  if (!t || salvage?.status !== "pending") {
+    return { ok: false, error: "нет выбора трофея" };
+  }
+  if (t.winnerFactionId !== factionId) {
+    return { ok: false, error: "трофей не ваш" };
+  }
+  const option = (salvage.options || []).find((o) => o.id === pick.optionId);
+  if (!option) return { ok: false, error: "нет такого обломка" };
+  const target =
+    pick.parentId && option.role
+      ? {
+          parentKind: pick.parentKind,
+          parentId: pick.parentId,
+          groupId: pick.groupId,
+          defId: pick.defId,
+        }
+      : option.fits?.[0];
+  if (!target) return { ok: false, error: "некуда поставить" };
+  const group = findLiveGroup(world, target);
+  if (!group) return { ok: false, error: "группа не найдена" };
+  const def = unitOrShipDef(content, group.defId || group.type);
+  const slot = (def?.slots || []).find((s) => s.role === option.role);
+  if (!slot) return { ok: false, error: "нет такого слота" };
+  if ((group.filledSlots || {})[option.role]) {
+    return { ok: false, error: "слот уже занят" };
+  }
+  const res = content.map_resources?.[option.resourceId];
+  if (!res || !resourceMatchesRequire(res, slot.require)) {
+    return { ok: false, error: "модуль не подходит" };
+  }
+  group.filledSlots = { ...(group.filledSlots || {}), [option.role]: option.resourceId };
+  salvage.status = "claimed";
+  salvage.claimed = {
+    optionId: option.id,
+    resourceId: option.resourceId,
+    role: option.role,
+    parentId: target.parentId,
+    parentKind: target.parentKind,
+    defId: group.defId || group.type,
+  };
+  t.metal = 0;
+  return { ok: true, trophies: t, salvage };
+}
+
+/** NPC winner takes the first fit so metal is not stuck pending forever. */
+export function autoClaimSalvageIfAi(world, eng, content = getContent()) {
+  const t = eng.result?.trophies;
+  const salvage = t?.salvage;
+  if (!t || salvage?.status !== "pending") return { ok: false, skipped: true };
+  if (!factionIsAiSeat(world, t.winnerFactionId)) {
+    return { ok: false, skipped: true };
+  }
+  const first = salvage.options?.[0];
+  if (!first) {
+    skipCardBattleSalvage(world, eng, t.winnerFactionId);
+    return { ok: true, skippedToMetal: true };
+  }
+  const claimed = claimCardBattleSalvage(
+    world,
+    eng,
+    t.winnerFactionId,
+    { optionId: first.id },
+    content,
+  );
+  if (claimed.ok) return claimed;
+  skipCardBattleSalvage(world, eng, t.winnerFactionId);
+  return { ok: true, skippedToMetal: true, error: claimed.error };
+}
+
+export function skipCardBattleSalvage(world, eng, factionId) {
+  const t = eng.result?.trophies;
+  const salvage = t?.salvage;
+  if (!t || salvage?.status !== "pending") {
+    return { ok: false, error: "нет выбора трофея" };
+  }
+  if (t.winnerFactionId !== factionId) {
+    return { ok: false, error: "трофей не ваш" };
+  }
+  const metal = Number(t.metalPending) || 0;
+  salvage.status = "skipped";
+  t.metal = metal;
+  grantTrophyMetal(world, factionId, metal);
+  return { ok: true, trophies: t, salvage };
+}
+
 /**
  * Scrap / intel / loyalty after card battle victory.
+ * Metal is withheld while a salvage pick is pending.
  */
 export function applyCardBattleTrophies(world, eng, fin, content = getContent()) {
   const rules = cardBattleRules(content);
@@ -2413,7 +2827,7 @@ export function applyCardBattleTrophies(world, eng, fin, content = getContent())
   );
   const metalPer = Number(t.metalPerLostUnit ?? 1);
   const metalFloor = Number(t.metalFloor ?? 2);
-  const metal = Math.max(
+  const metalPending = Math.max(
     metalFloor,
     Math.round(Math.max(0, loserLosses) * metalPer),
   );
@@ -2428,13 +2842,17 @@ export function applyCardBattleTrophies(world, eng, fin, content = getContent())
   const cognitio = cognitioBase + styleCognitio;
   const intelBump = t.intelBump ?? 6;
   const loyaltyHit = t.loyaltyHit ?? 5;
+  const salvage = buildSalvageOffer(world, eng, winner, loser, content);
+  const metal = salvage.status === "pending" ? 0 : metalPending;
 
   const ledger = readLedger();
   const turn = world.meta?.turn ?? null;
-  adjustStock(ledger, winner, "currency.metal", metal, {
-    turn,
-    reason: "card_battle_scrap",
-  });
+  if (metal > 0) {
+    adjustStock(ledger, winner, "currency.metal", metal, {
+      turn,
+      reason: "card_battle_scrap",
+    });
+  }
   adjustStock(ledger, winner, "currency.cognitio", cognitio, {
     turn,
     reason: "card_battle_intel",
@@ -2465,6 +2883,7 @@ export function applyCardBattleTrophies(world, eng, fin, content = getContent())
   const trophies = {
     winnerFactionId: winner,
     metal,
+    metalPending,
     cognitio,
     cognitioBase,
     styleCognitio,
@@ -2473,11 +2892,13 @@ export function applyCardBattleTrophies(world, eng, fin, content = getContent())
     loyaltyHit: loser ? loyaltyHit : 0,
     loserFactionId: loser || null,
     scrapUnits: loserLosses,
+    salvage,
   };
   if (!eng.result) eng.result = {};
   eng.result.trophies = trophies;
   eng.result.lossesByFaction = fin.lossesByFaction || {};
-  return { trophies };
+  autoClaimSalvageIfAi(world, eng, content);
+  return { trophies: eng.result.trophies };
 }
 
 export function estimatePowerShare(world, engagement, content = getContent()) {

@@ -10,39 +10,49 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { CardBoard } from "../ui/cardBoardContext";
 import { DragCard } from "../ui/DragCard";
 import { DropZone } from "../ui/DropZone";
 import { BackgroundBeamsLite } from "../ui/BackgroundBeamsLite";
 import { FlipWords } from "../ui/FlipWords";
 import { useSpotlight } from "../ui/aceternityFx";
 import type { BattleCard, CardBattleLogEntry, CardBattleState } from "../state/types";
-import { resolveShipOrUnitName } from "../state/displayLabels";
+import { resolveResourceOrCurrencyLabel, resolveShipOrUnitName } from "../state/displayLabels";
 import {
   cardEnergyCost,
-  estimateStrikePreview,
+  cardProvidesEscort,
+  estimateStrikeOutcome,
+  formationAuraMods,
   frontStrikeCost,
   hintTone,
   intentLabel,
+  keywordHint,
   keywordsForCard,
   roleLabel,
+  statusHint,
+  statusLabel,
+  type StrikePreview,
 } from "../state/cardBattleHints";
+import { useCardBoardOptional } from "../ui/cardBoardContext";
 import type { ViewerEngagement } from "./PlayerEngagementPanel";
 import { COMBAT_STANCE_LABELS, type CombatStanceId } from "./PlayerEngagementPanel";
+import { HoldButton } from "./shared/HoldButton";
 import { CombatCardMeta } from "./forces/CombatCardMeta";
+import { SLOT_ROLE_LABELS } from "./forces/constants";
 
 function CardFace({
   card,
   compact,
   showHints,
   statuses,
-  previewDmg,
+  preview,
+  auraTags,
 }: {
   card: BattleCard;
   compact?: boolean;
   showHints?: boolean;
   statuses?: { vulnerable?: boolean; weak?: boolean; focus?: boolean };
-  previewDmg?: number | null;
+  preview?: StrikePreview | null;
+  auraTags?: string[];
 }) {
   const cost =
     (card as BattleCard & { energyCost?: number }).energyCost ??
@@ -55,48 +65,83 @@ function CardFace({
   );
   const deploy =
     (card as BattleCard & { deployOrder?: number }).deployOrder;
+  const propTags = preview?.propertyTags?.length
+    ? preview.propertyTags
+    : undefined;
+  const liveAuras =
+    auraTags && auraTags.length > 0
+      ? auraTags
+      : preview?.auraTags?.length
+        ? preview.auraTags
+        : undefined;
   return (
-    <div className={`cbt-card-stats${compact ? " is-compact" : ""}`}>
+    <div
+      className={`cbt-card-stats${compact ? " is-compact" : ""}${preview?.lethal ? " is-lethal" : ""}`}
+    >
       <CombatCardMeta
         role={card.role}
         energyCost={cost}
         bonusKeywords={
           (card as BattleCard & { bonusKeywords?: string[] }).bonusKeywords
         }
+        auraTags={liveAuras}
+        propertyTags={propTags}
+        propertyMult={preview?.propertyMult}
         showMatchup={!!showHints && !tac}
         hpPercent={hpPct}
         compact={compact}
       />
       {tac && <span className="cbt-stat cbt-stat--tac">тактика</span>}
       {statuses?.vulnerable && (
-        <span className="cbt-stat cbt-stat--vuln">уязв.</span>
+        <span className="cbt-stat cbt-stat--vuln" title={statusHint("vulnerable")}>
+          {statusLabel("vulnerable")}
+        </span>
       )}
-      {statuses?.weak && <span className="cbt-stat cbt-stat--weak">слаб.</span>}
+      {statuses?.weak && (
+        <span className="cbt-stat cbt-stat--weak" title={statusHint("weak")}>
+          {statusLabel("weak")}
+        </span>
+      )}
       {statuses?.focus && (
-        <span className="cbt-stat cbt-stat--focus">фокус</span>
+        <span className="cbt-stat cbt-stat--focus" title={statusHint("focus")}>
+          {statusLabel("focus")}
+        </span>
       )}
       {deploy != null && !tac && (
         <span className="cbt-stat" title="Порядок из колоды Сил">
           #{deploy + 1}
         </span>
       )}
-      <span className="cbt-stat" title="Урон">
+      <span className="cbt-stat cbt-stat--dmg" title="Урон">
         ✦{card.damage}
       </span>
-      <span className="cbt-stat" title="HP">
+      <span className="cbt-stat cbt-stat--hp" title="HP">
         ♥{card.hp}/{card.maxHp}
       </span>
-      <span className="cbt-stat" title="Кол-во">
+      <span className="cbt-stat cbt-stat--count" title="Кол-во">
         ×{card.count}
       </span>
-      {!compact && card.shields > 0 && (
-        <span className="cbt-stat" title="Щиты">
+      {card.shields > 0 && (
+        <span className="cbt-stat cbt-stat--shield" title="Щиты">
           ⬡{card.shields}
         </span>
       )}
-      {previewDmg != null && previewDmg > 0 && (
-        <span className="cbt-stat cbt-stat--preview" title="Оценка урона">
-          ≈{previewDmg}
+      {preview != null && preview.damage > 0 && (
+        <span
+          className={`cbt-stat cbt-stat--preview${preview.lethal ? " is-lethal" : ""}`}
+          title={
+            preview.lethal
+              ? preview.overflowToBase > 0
+                ? `Уничтожит цель · прорыв в базу ≈${preview.overflowToBase}`
+                : "Уничтожит цель"
+              : "Оценка урона"
+          }
+        >
+          ≈{preview.damage}
+          {preview.lethal ? " ✕" : ""}
+          {preview.overflowToBase > 0
+            ? ` → база +${preview.overflowToBase}`
+            : ""}
         </span>
       )}
     </div>
@@ -119,6 +164,8 @@ function EnergyPips({ current, max }: { current: number; max: number }) {
   );
 }
 
+const NO_DROP = ["__cbt-locked__"];
+
 function BaseBar({
   label,
   hp,
@@ -129,6 +176,14 @@ function BaseBar({
   selected,
   onSelect,
   previewDmg,
+  overflowDmg,
+  overflowReceiving,
+  locked,
+  lockLabel,
+  lockHint,
+  cinemaHit,
+  onLockedActivate,
+  onHoverChange,
 }: {
   label: string;
   hp: number;
@@ -139,15 +194,41 @@ function BaseBar({
   selected?: boolean;
   onSelect?: () => void;
   previewDmg?: number | null;
+  overflowDmg?: number | null;
+  overflowReceiving?: boolean;
+  locked?: boolean;
+  lockLabel?: string;
+  lockHint?: string;
+  cinemaHit?: boolean;
+  onLockedActivate?: () => void;
+  onHoverChange?: (on: boolean) => void;
 }) {
   const pct = Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100));
-  const Tag = selectable ? "button" : "div";
+  const interactive = !!(selectable || locked);
+  const Tag = interactive ? "button" : "div";
   return (
     <Tag
-      type={selectable ? "button" : undefined}
-      className={`cbt-base cbt-base--${tone}${selected ? " is-selected" : ""}${selectable ? " is-selectable" : ""}`}
-      onClick={selectable ? onSelect : undefined}
-      aria-label={`${label}: база ${Math.round(hp)}${block ? `, блок ${block}` : ""}`}
+      type={interactive ? "button" : undefined}
+      className={[
+        "cbt-base",
+        `cbt-base--${tone}`,
+        selected ? "is-selected" : "",
+        selectable && !locked ? "is-selectable" : "",
+        locked ? "is-locked" : "",
+        lockLabel ? "is-escorted" : "",
+        overflowReceiving ? "is-overflow-receiving" : "",
+        cinemaHit ? "is-cinema-base-hit" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onClick={
+        locked ? onLockedActivate : selectable ? onSelect : undefined
+      }
+      onMouseEnter={() => onHoverChange?.(true)}
+      onMouseLeave={() => onHoverChange?.(false)}
+      title={locked ? lockHint : undefined}
+      aria-disabled={locked ? true : undefined}
+      aria-label={`${label}: база ${Math.round(hp)}${block ? `, блок ${block}` : ""}${locked && lockLabel ? `, ${lockLabel}` : ""}`}
     >
       <span className="cbt-base-label">{label}</span>
       <div className="cbt-base-track">
@@ -159,8 +240,24 @@ function BaseBar({
           🛡{block}
         </span>
       )}
-      {previewDmg != null && previewDmg > 0 && (
+      {locked && lockLabel && (
+        <span className="cbt-escort-lock" title={lockHint || lockLabel}>
+          🛡 {lockLabel}
+        </span>
+      )}
+      {overflowDmg != null && overflowDmg > 0 && (
+        <span
+          className="cbt-dmg-preview is-overflow"
+          title={`Прорыв: ≈${overflowDmg} в базу после уничтожения цели`}
+        >
+          прорыв ≈{overflowDmg}
+        </span>
+      )}
+      {!locked && previewDmg != null && previewDmg > 0 && (
         <span className="cbt-dmg-preview">≈{previewDmg}</span>
+      )}
+      {locked && (
+        <span className="cbt-base-lock-hint">{lockHint}</span>
       )}
     </Tag>
   );
@@ -367,11 +464,13 @@ export function CardBattleTable({
   const [selectedHandId, setSelectedHandId] = useState<string | null>(null);
   const [selectedFrontId, setSelectedFrontId] = useState<string | null>(null);
   const [target, setTarget] = useState<TargetSel>(null);
+  const [pointerHover, setPointerHover] = useState<TargetSel>(null);
   const [clashStep, setClashStep] = useState(-1);
   const [showResults, setShowResults] = useState(false);
   const [commitFlash, setCommitFlash] = useState(false);
   const [cinemaDone, setCinemaDone] = useState(true);
   const spot = useSpotlight();
+  const board = useCardBoardOptional();
   const postLock = useRef(false);
   const lastClashKey = useRef("");
   const clashIvRef = useRef<number | null>(null);
@@ -557,6 +656,14 @@ export function CardBattleTable({
   }, [resolved, cinemaDone, clashEvents.length]);
 
   const hoverRole = useMemo(() => {
+    const draggingId = board?.draggingCardId;
+    if (draggingId) {
+      return (
+        myHand.find((c) => c.cardId === draggingId)?.role ||
+        myFront.find((c) => c.cardId === draggingId)?.role ||
+        null
+      );
+    }
     if (selectedHandId) {
       return myHand.find((c) => c.cardId === selectedHandId)?.role;
     }
@@ -564,7 +671,13 @@ export function CardBattleTable({
       return myFront.find((c) => c.cardId === selectedFrontId)?.role;
     }
     return null;
-  }, [selectedHandId, selectedFrontId, myHand, myFront]);
+  }, [
+    board?.draggingCardId,
+    selectedHandId,
+    selectedFrontId,
+    myHand,
+    myFront,
+  ]);
 
   const stanceLabel = useMemo(() => {
     const open = state?.openingStance?.[factionId];
@@ -671,12 +784,40 @@ export function CardBattleTable({
   const oppIntent = state?.intents?.[oppId] ?? null;
 
   const attackerCard = useMemo(() => {
+    const draggingId = board?.draggingCardId;
+    if (draggingId) {
+      return (
+        myHand.find((c) => c.cardId === draggingId) ||
+        myFront.find((c) => c.cardId === draggingId) ||
+        null
+      );
+    }
     if (selectedHandId) return myHand.find((c) => c.cardId === selectedHandId);
     if (selectedFrontId) return myFront.find((c) => c.cardId === selectedFrontId);
     return null;
-  }, [selectedHandId, selectedFrontId, myHand, myFront]);
+  }, [
+    board?.draggingCardId,
+    selectedHandId,
+    selectedFrontId,
+    myHand,
+    myFront,
+  ]);
 
-  const previewFor = (defender: BattleCard | null) => {
+  const hoverTarget: TargetSel = pointerHover;
+
+  const myBuff = state?.buffs?.[factionId];
+  const canBypassFront = !!(myBuff?.flankBase || myBuff?.bombard);
+  const oppEscortAlive = oppFront.some((c) => cardProvidesEscort(c));
+  const frontBlocksBase =
+    oppFront.some((c) => (c.count || 0) > 0) && !canBypassFront;
+  const baseProtectedByEscort = oppEscortAlive && !canBypassFront;
+  const baseLockHint = baseProtectedByEscort
+    ? "Защищено эскортом — удар по базе недоступен, пока жив экран."
+    : frontBlocksBase
+      ? "Фронт врага блокирует удар по базе."
+      : undefined;
+
+  const previewFor = (defender: BattleCard | null): StrikePreview | null => {
     if (!attackerCard || !canAct) return null;
     const st = state?.statuses?.[attackerCard.cardId];
     const incoming = defender
@@ -684,13 +825,41 @@ export function CardBattleTable({
         ? 1.5
         : 1
       : 1;
-    return estimateStrikePreview(attackerCard, defender, {
+    return estimateStrikeOutcome(attackerCard, defender, {
       atkBuff: state?.buffs?.[factionId],
       outgoingMult: st?.weak ? 0.75 : 1,
       incomingMult: incoming,
       defBuff: state?.buffs?.[oppId],
+      atkLine: myFront,
+      defLine: defender ? oppFront : undefined,
     });
   };
+
+  const focusedDefender = useMemo(() => {
+    const id =
+      hoverTarget?.kind === "card"
+        ? hoverTarget.cardId
+        : target?.kind === "card"
+          ? target.cardId
+          : null;
+    if (!id) return null;
+    return oppFront.find((c) => c.cardId === id) || null;
+  }, [hoverTarget, target, oppFront]);
+
+  const focusedCardPreview = focusedDefender
+    ? previewFor(focusedDefender)
+    : null;
+  const baseDirectPreview =
+    !frontBlocksBase &&
+    (hoverTarget?.kind === "base" ||
+      target?.kind === "base" ||
+      !!attackerCard)
+      ? previewFor(null)
+      : null;
+  const baseOverflow =
+    focusedCardPreview && focusedCardPreview.overflowToBase > 0
+      ? focusedCardPreview.overflowToBase
+      : null;
 
   const deployCard = (cardId: string) => {
     if (!canAct) return;
@@ -714,9 +883,6 @@ export function CardBattleTable({
 
   const retreatBattle = () => {
     if (resolved || busy || busyProp) return;
-    if (!window.confirm("Отступить? Противник побеждает, но флот сохранится лучше.")) {
-      return;
-    }
     void post("retreat_card", {});
   };
 
@@ -759,6 +925,10 @@ export function CardBattleTable({
       return;
     }
     if (zoneId === "opp-base") {
+      if (frontBlocksBase) {
+        setMsg(baseLockHint || "Фронт врага блокирует удар по базе");
+        return;
+      }
       strikeWith(cardId, "base");
       return;
     }
@@ -769,6 +939,10 @@ export function CardBattleTable({
 
   const strikeSelected = () => {
     if (!canAct || !target) return;
+    if (target.kind === "base" && frontBlocksBase) {
+      setMsg(baseLockHint || "Фронт врага блокирует удар по базе");
+      return;
+    }
     const targetId = target.kind === "base" ? "base" : target.cardId;
     if (selectedHandId) {
       strikeWith(selectedHandId, targetId);
@@ -889,7 +1063,7 @@ export function CardBattleTable({
             <section className="cbt-results__block cbt-results__trophies">
               <h3>Трофеи</h3>
               <ul>
-                {trophies.metal != null && (
+                {trophies.metal != null && trophies.metal > 0 && (
                   <li>Обломки · металл +{trophies.metal}</li>
                 )}
                 {trophies.cognitio != null && (
@@ -906,7 +1080,51 @@ export function CardBattleTable({
                 {(trophies.loyaltyHit ?? 0) > 0 && (
                   <li>Лояльность системы врага −{trophies.loyaltyHit}</li>
                 )}
+                {trophies.salvage?.status === "claimed" &&
+                  trophies.salvage.claimed && (
+                    <li>
+                      Модуль · {SLOT_ROLE_LABELS[trophies.salvage.claimed.role] ||
+                        trophies.salvage.claimed.role}{" "}
+                      ←{" "}
+                      {resolveResourceOrCurrencyLabel(
+                        trophies.salvage.claimed.resourceId,
+                      )}
+                    </li>
+                  )}
+                {trophies.salvage?.status === "skipped" && (
+                  <li>Обломки переплавлены в металл</li>
+                )}
               </ul>
+              {trophies.salvage?.status === "pending" && (
+                <div className="cbt-salvage">
+                  <p className="hint">
+                    Возьмите один модуль в пустой слот. Или переплавьте в металл
+                    +{trophies.metalPending ?? 0}.
+                  </p>
+                  <div className="cbt-salvage__opts">
+                    {(trophies.salvage.options || []).map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className="btn cbt-salvage__opt"
+                        disabled={busy}
+                        onClick={() => void post("claim_trophy", { optionId: opt.id })}
+                      >
+                        <span className="cbt-salvage__role">
+                          {SLOT_ROLE_LABELS[opt.role] || opt.role}
+                        </span>
+                        <span className="cbt-salvage__name">
+                          {resolveResourceOrCurrencyLabel(opt.resourceId) ||
+                            opt.name}
+                        </span>
+                        <span className="hint">
+                          {opt.source === "wreck" ? "с обломков" : "лом"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {Array.isArray(trophies.styleBanners) &&
                 trophies.styleBanners.length > 0 && (
                   <div className="cbt-results__styles">
@@ -920,12 +1138,25 @@ export function CardBattleTable({
             </section>
           )}
 
+          {msg && <p className="hint eng-msg">{msg}</p>}
+
           <button
             type="button"
             className="btn primary cbt-results__cta"
-            onClick={onClose}
+            disabled={busy}
+            onClick={() => {
+              if (trophies?.salvage?.status === "pending" && iWon) {
+                void post("skip_trophy").then((ok) => {
+                  if (ok) onClose?.();
+                });
+                return;
+              }
+              onClose?.();
+            }}
           >
-            На карту
+            {trophies?.salvage?.status === "pending" && iWon
+              ? `Пропустить · металл +${trophies.metalPending ?? 0}`
+              : "На карту"}
           </button>
         </div>
       </div>
@@ -933,7 +1164,7 @@ export function CardBattleTable({
   }
 
   return (
-    <CardBoard>
+    <>
       <div
         className={[
           "cbt-table",
@@ -1008,12 +1239,27 @@ export function CardBattleTable({
           <div className="cbt-field">
             <DropZone
               zoneId="opp-base"
-              className="cbt-drop-target cbt-drop-target--base"
-              accepts={dropAccepts}
-              armWhileDragging={canAct}
-              highlight={target?.kind === "base"}
+              className={`cbt-drop-target cbt-drop-target--base${frontBlocksBase ? " is-locked" : ""}`}
+              accepts={frontBlocksBase ? NO_DROP : dropAccepts}
+              armWhileDragging={canAct && !frontBlocksBase}
+              highlight={target?.kind === "base" && !frontBlocksBase}
               onDrop={(cardId) => onCardDropped(cardId, "opp-base")}
-              label={canAct ? "Бросьте сюда → удар по базе" : undefined}
+              onHoverChange={(on) =>
+                setPointerHover((prev) =>
+                  on
+                    ? { kind: "base" }
+                    : prev?.kind === "base"
+                      ? null
+                      : prev,
+                )
+              }
+              label={
+                frontBlocksBase
+                  ? baseLockHint
+                  : canAct
+                    ? "Бросьте сюда → удар по базе"
+                    : undefined
+              }
             >
               <BaseBar
                 label={factionNames[oppId] || "Противник"}
@@ -1021,13 +1267,40 @@ export function CardBattleTable({
                 max={oppBaseMax}
                 tone="opp"
                 block={oppBlock}
-                selectable={canAct && !!(selectedHandId || selectedFrontId)}
-                selected={target?.kind === "base"}
+                selectable={
+                  canAct &&
+                  !frontBlocksBase &&
+                  !!(selectedHandId || selectedFrontId)
+                }
+                selected={target?.kind === "base" && !frontBlocksBase}
                 onSelect={() => setTarget({ kind: "base" })}
-                previewDmg={
-                  target?.kind === "base" || attackerCard
-                    ? previewFor(null)
-                    : null
+                locked={
+                  baseProtectedByEscort ||
+                  !!(attackerCard && frontBlocksBase)
+                }
+                lockLabel={
+                  baseProtectedByEscort ? "Защищено эскортом" : undefined
+                }
+                lockHint={baseLockHint}
+                onLockedActivate={() =>
+                  setMsg(baseLockHint || "База защищена")
+                }
+                onHoverChange={(on) =>
+                  setPointerHover((prev) =>
+                    on
+                      ? { kind: "base" }
+                      : prev?.kind === "base"
+                        ? null
+                        : prev,
+                  )
+                }
+                previewDmg={baseDirectPreview?.damage ?? null}
+                overflowDmg={baseOverflow}
+                overflowReceiving={!!(baseOverflow && baseOverflow > 0)}
+                cinemaHit={
+                  cinemaEv != null &&
+                  cinemaEv.side === factionId &&
+                  (cinemaEv.targetId === "base" || (cinemaEv.overflowToBase ?? 0) > 0)
                 }
               />
             </DropZone>
@@ -1074,15 +1347,24 @@ export function CardBattleTable({
                     const selected =
                       target?.kind === "card" && target.cardId === c.cardId;
                     const zoneId = `opp-card:${c.cardId}`;
-                    const cinemaHit =
+                    const oppAura = formationAuraMods(c, oppFront);
+                    const isAttacker = cinemaEv && cinemaEv.cardId === c.cardId;
+                    const isTarget =
                       cinemaEv &&
                       (cinemaEv.targetId === c.cardId ||
-                        cinemaEv.splashTargetId === c.cardId ||
-                        cinemaEv.cardId === c.cardId);
+                        cinemaEv.splashTargetId === c.cardId);
+                    const isKilled =
+                      cinemaEv?.killedTarget && cinemaEv.targetId === c.cardId;
                     const cinemaLane =
                       cinemaEv &&
                       typeof cinemaEv.laneIndex === "number" &&
                       cinemaEv.laneIndex === idx;
+                    const cardPreview = attackerCard ? previewFor(c) : null;
+                    const previewFocus =
+                      hoverTarget?.kind === "card" &&
+                      hoverTarget.cardId === c.cardId;
+                    const isEscort = cardProvidesEscort(c);
+                    const isSourceSupport = keywordsForCard(c).includes("support");
                     return (
                       <DropZone
                         key={c.cardId}
@@ -1090,19 +1372,33 @@ export function CardBattleTable({
                         className={`cbt-drop-target cbt-drop-target--card cbt-target-${tone}`}
                         accepts={dropAccepts}
                         armWhileDragging={canAct}
-                        highlight={selected}
+                        highlight={selected || previewFocus}
                         onDrop={(cardId) => onCardDropped(cardId, zoneId)}
+                        onHoverChange={(on) =>
+                          setPointerHover((prev) =>
+                            on
+                              ? { kind: "card", cardId: c.cardId }
+                              : prev?.kind === "card" &&
+                                  prev.cardId === c.cardId
+                                ? null
+                                : prev,
+                          )
+                        }
                       >
                         <motion.div
                           className={[
                             "cbt-front-card",
                             selected ? "is-selected" : "",
-                            cinemaHit ? "is-cinema-hit" : "",
+                            previewFocus ? "is-preview-focus" : "",
+                            cardPreview?.lethal ? "is-lethal-target" : "",
+                            isEscort ? "is-escort is-source-escort" : "",
+                            isSourceSupport ? "is-source-support" : "",
+                            oppAura.tags.includes("escort") ? "has-aura-escort" : "",
+                            oppAura.tags.includes("support") ? "has-aura-support" : "",
+                            isAttacker ? "is-cinema-attacker" : "",
+                            isTarget ? "is-cinema-target is-cinema-hit" : "",
                             cinemaLane ? "is-cinema-lane" : "",
-                            cinemaEv?.killedTarget &&
-                            cinemaEv.targetId === c.cardId
-                              ? "is-cinema-kill"
-                              : "",
+                            isKilled ? "is-cinema-kill" : "",
                           ]
                             .filter(Boolean)
                             .join(" ")}
@@ -1111,6 +1407,16 @@ export function CardBattleTable({
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, x: 80, rotate: 12 }}
                           transition={{ duration: 0.28 }}
+                          onMouseEnter={() =>
+                            setPointerHover({ kind: "card", cardId: c.cardId })
+                          }
+                          onMouseLeave={() =>
+                            setPointerHover((prev) =>
+                              prev?.kind === "card" && prev.cardId === c.cardId
+                                ? null
+                                : prev,
+                            )
+                          }
                           onClick={() => {
                             if (!canAct) return;
                             if (selectedHandId || selectedFrontId) {
@@ -1121,22 +1427,36 @@ export function CardBattleTable({
                           <DragCard
                             cardId={c.cardId}
                             title={resolveShipOrUnitName(c.defId)}
-                            subtitle={roleLabel(c.role)}
+                            subtitle={
+                              isEscort
+                                ? `${roleLabel(c.role)} · ${keywordHint("escort").split(":")[0]}`
+                                : roleLabel(c.role)
+                            }
                             pinned
                             accent="var(--signal-attack)"
                           >
+                            {(previewFocus || selected) && (
+                              <div className="cbt-target-reticle" aria-hidden>
+                                🎯 ЦЕЛЬ
+                              </div>
+                            )}
                             <CardFace
                               card={c}
                               statuses={state.statuses?.[c.cardId]}
-                              previewDmg={
-                                target?.kind === "card" &&
-                                target.cardId === c.cardId
-                                  ? previewFor(c)
-                                  : attackerCard
-                                    ? previewFor(c)
-                                    : null
+                              auraTags={oppAura.tags}
+                              preview={
+                                previewFocus ||
+                                selected ||
+                                attackerCard
+                                  ? cardPreview
+                                  : null
                               }
                             />
+                            {cardPreview?.overflowToBase != null && cardPreview.overflowToBase > 0 && (previewFocus || selected) && (
+                              <div className="cbt-overwhelm-streamer" title="Избыток урона пробьёт в базу">
+                                ⇡ прорыв в базу ≈{cardPreview.overflowToBase}
+                              </div>
+                            )}
                             {canAct && (
                               <p className="cbt-drop-hint">тянуть сюда</p>
                             )}
@@ -1190,28 +1510,38 @@ export function CardBattleTable({
                       canAct &&
                       myFront.length > 1 &&
                       (freeLeft > 0 || energy >= 1);
-                    const cinemaHit =
+                    const myAura = formationAuraMods(c, myFront);
+                    const isAttacker = cinemaEv && cinemaEv.cardId === c.cardId;
+                    const isTarget =
                       cinemaEv &&
-                      (cinemaEv.cardId === c.cardId ||
-                        cinemaEv.targetId === c.cardId);
+                      (cinemaEv.targetId === c.cardId ||
+                        cinemaEv.splashTargetId === c.cardId);
+                    const isKilled =
+                      cinemaEv?.killedTarget && cinemaEv.targetId === c.cardId;
                     const cinemaLane =
                       cinemaEv &&
                       typeof cinemaEv.laneIndex === "number" &&
                       cinemaEv.laneIndex === idx;
+                    const isEscort = cardProvidesEscort(c);
+                    const isSourceSupport = keywordsForCard(
+                      c as BattleCard & { bonusKeywords?: string[] },
+                    ).includes("support");
+                    const isSelectedAttacker = selectedFrontId === c.cardId;
                     return (
                     <motion.div
                       key={c.cardId}
                       className={[
                         "cbt-front-card",
                         "cbt-front-card--mine",
-                        selectedFrontId === c.cardId ? "is-selected" : "",
-                        keywordsForCard(
-                          c as BattleCard & { bonusKeywords?: string[] },
-                        ).includes("escort")
-                          ? "is-escort"
-                          : "",
-                        cinemaHit ? "is-cinema-hit" : "",
+                        isSelectedAttacker ? "is-selected is-active-attacker" : "",
+                        isEscort ? "is-escort is-source-escort" : "",
+                        isSourceSupport ? "is-source-support" : "",
+                        myAura.tags.includes("escort") ? "has-aura-escort" : "",
+                        myAura.tags.includes("support") ? "has-aura-support" : "",
+                        isAttacker ? "is-cinema-attacker" : "",
+                        isTarget ? "is-cinema-target is-cinema-hit" : "",
                         cinemaLane ? "is-cinema-lane" : "",
+                        isKilled ? "is-cinema-kill" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -1237,10 +1567,16 @@ export function CardBattleTable({
                           setSelectedHandId(null);
                         }}
                       >
+                        {isSelectedAttacker && (
+                          <div className="cbt-attacker-badge" aria-hidden>
+                            ✦ АТАКА
+                          </div>
+                        )}
                         <CardFace
                           card={c}
                           showHints
                           statuses={state.statuses?.[c.cardId]}
+                          auraTags={myAura.tags}
                         />
                         {canStrikeFront && (
                           <p className="cbt-drop-hint">
@@ -1295,6 +1631,11 @@ export function CardBattleTable({
                 max={myBaseMax}
                 tone="me"
                 block={myBlock}
+                cinemaHit={
+                  cinemaEv != null &&
+                  cinemaEv.side !== factionId &&
+                  (cinemaEv.targetId === "base" || (cinemaEv.overflowToBase ?? 0) > 0)
+                }
               />
 
               <div className="cbt-hand-row">
@@ -1317,6 +1658,7 @@ export function CardBattleTable({
                       (c as BattleCard & { energyCost?: number }).energyCost ??
                       cardEnergyCost(c.role);
                     const afford = energy >= cost;
+                    const shortage = cost - energy;
                     const title =
                       (c as BattleCard & { tacticLabel?: string }).tacticLabel ||
                       resolveShipOrUnitName(c.defId);
@@ -1340,6 +1682,14 @@ export function CardBattleTable({
                             : undefined
                         }
                       >
+                        {!afford && canAct && (
+                          <span
+                            className="cbt-energy-shortage-badge"
+                            title={`Требуется ⚡${cost}, доступно ⚡${energy} (не хватает ⚡${shortage})`}
+                          >
+                            ⚡−{shortage}
+                          </span>
+                        )}
                         <DragCard
                           cardId={c.cardId}
                           title={title}
@@ -1453,15 +1803,15 @@ export function CardBattleTable({
                   Приказ
                   {orderCooldown > 0 ? ` (${orderCooldown})` : ""}
                 </button>
-                <button
-                  type="button"
+                <HoldButton
                   className="btn ghost cbt-retreat"
                   disabled={resolved || busy || busyProp || clashPlaying}
-                  onClick={retreatBattle}
                   title="Сдаться: противник побеждает, потери меньше"
+                  holdHint="Удерживайте для отступления…"
+                  onConfirm={retreatBattle}
                 >
                   Отступить
-                </button>
+                </HoldButton>
               </div>
               <p className="hint cbt-help">
                 Фронт до {maxFront}, энергия {maxEnergy}/раунд, добор 2 (рука
@@ -1483,6 +1833,6 @@ export function CardBattleTable({
           </p>
         )}
       </div>
-    </CardBoard>
+    </>
   );
 }

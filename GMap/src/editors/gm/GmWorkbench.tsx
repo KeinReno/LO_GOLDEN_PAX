@@ -1,7 +1,7 @@
 import { FloatingPanel } from "../../ui/FloatingPanel";
 import { useEffect } from "react";
 import { useWorldStore } from "../../state/worldStore";
-import { EconomyPanel } from "../EconomyPanel";
+import { GmLedgerPanel } from "../GmLedgerPanel";
 import { CombatPanel } from "../CombatPanel";
 import { GmOpsPanel } from "../GmOpsPanel";
 import { GmSystemsPanel } from "../GmSystemsPanel";
@@ -11,6 +11,7 @@ import {
   GmSciencePanel,
 } from "./GmSciencePanel";
 import { GmCourtPanel } from "./GmCourtPanel";
+import { GmCommandCard } from "./GmCommandCard";
 import { domainById } from "./gmDomains";
 import type { GmLiveDomainId } from "../../state/types";
 
@@ -43,7 +44,7 @@ function DiploWorkbench() {
 function DomainBody({ id }: { id: GmLiveDomainId }) {
   switch (id) {
     case "economy":
-      return <EconomyPanel />;
+      return <GmLedgerPanel />;
     case "science":
       return <GmSciencePanel />;
     case "court":
@@ -67,8 +68,27 @@ export function GmWorkbench() {
   const domain = useWorldStore((s) => s.gmLiveDomain);
   const setGmLiveDomain = useWorldStore((s) => s.setGmLiveDomain);
   const def = domain && domain !== "inbox" ? domainById(domain) : null;
+  const card = (
+    <GmCommandCard onOpenDomain={(id) => setGmLiveDomain(id)} />
+  );
 
-  if (!def?.workbench) return null;
+  if (!def?.workbench) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          left: 56,
+          top: 88,
+          zIndex: 370,
+          width: 360,
+          maxHeight: "46vh",
+          overflow: "auto",
+        }}
+      >
+        {card}
+      </div>
+    );
+  }
 
   return (
     <FloatingPanel
@@ -84,6 +104,7 @@ export function GmWorkbench() {
       className="gm-workbench-panel"
       headerExtra={<kbd className="gm-workbench-hotkey">F{def.hotkey}</kbd>}
     >
+      {card}
       <DomainBody id={def.id} />
     </FloatingPanel>
   );

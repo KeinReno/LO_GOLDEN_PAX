@@ -249,21 +249,29 @@ export function fleetReadiness(fleet: Fleet, factionId: string, engagements?: En
   };
 }
 
+/** Legion deck, or a generic-line stack sized from `strength` when composition is empty. */
+export function resolveLegionComposition(legion: {
+  composition?: Legion["composition"];
+  strength?: number;
+}): ShipGroup[] {
+  if (Array.isArray(legion.composition) && legion.composition.length) {
+    return legion.composition as ShipGroup[];
+  }
+  return [
+    {
+      type: "unit.generic_line",
+      defId: "unit.generic_line",
+      count: Math.max(1, Math.round(legion.strength || 1)),
+    },
+  ];
+}
+
 export function legionReadiness(
   legion: Legion,
   factionId: string,
   engagements?: EngLike[],
 ) {
-  const composition =
-    Array.isArray(legion.composition) && legion.composition.length
-      ? (legion.composition as ShipGroup[])
-      : [
-          {
-            type: "unit.generic_line",
-            defId: "unit.generic_line",
-            count: Math.max(1, Math.round(legion.strength || 1)),
-          },
-        ];
+  const composition = resolveLegionComposition(legion);
   return {
     upkeep: compositionUpkeep(composition, "legion"),
     preview: deckBattlePreview(composition),

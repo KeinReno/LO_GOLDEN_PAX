@@ -16,6 +16,7 @@ import { SystemDossier } from "./editors/SystemDossier";
 import { PolityDossier } from "./editors/PolityDossier";
 import { QuestPanel } from "./editors/QuestPanel";
 import { MapContextMenu } from "./editors/MapContextMenu";
+import { AltQuickInspector } from "./editors/AltQuickInspector";
 import { GmLiveDock } from "./editors/GmLiveDock";
 import { GmTickDialog } from "./editors/GmTickDialog";
 import {
@@ -27,6 +28,15 @@ import {
   GmSessionNotch,
   domainByHotkey,
 } from "./editors/gm";
+import { GmSpotterModal } from "./editors/gm/GmSpotterModal";
+import { RacesStudio } from "./editors/studios/RacesStudio";
+import { TechStudio } from "./editors/studios/TechStudio";
+import { UnitCardsStudio } from "./editors/studios/UnitCardsStudio";
+import { BuildingStudio } from "./editors/studios/BuildingStudio";
+import { BattleSimulator } from "./editors/studios/BattleSimulator";
+import { PolityStudio } from "./editors/studios/PolityStudio";
+import { GameRulesStudio } from "./editors/studios/GameRulesStudio";
+import { RpStudio } from "./editors/studios/RpStudio";
 import { ViewerPage } from "./viewer/ViewerPage";
 import { DragCardDemo } from "./ui/DragCardDemo";
 import { useWorldStore } from "./state/worldStore";
@@ -70,10 +80,12 @@ function EditorHotkeys({
   onToggleLeft,
   onToggleRight,
   onOpenRightDock,
+  onOpenSpotter,
 }: {
   onToggleLeft: () => void;
   onToggleRight: () => void;
   onOpenRightDock?: () => void;
+  onOpenSpotter?: () => void;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -90,6 +102,11 @@ function EditorHotkeys({
       const mod = e.ctrlKey || e.metaKey;
       if (mod) {
         const key = e.key.toLowerCase();
+        if (key === "k" || key === "л") {
+          e.preventDefault();
+          onOpenSpotter?.();
+          return;
+        }
         if (key === "z" && !e.shiftKey) {
           e.preventDefault();
           useWorldStore.getState().undo();
@@ -172,6 +189,7 @@ function EditorPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [tickOpen, setTickOpen] = useState(false);
+  const [spotterOpen, setSpotterOpen] = useState(false);
   /** Right rail: inspector by default; F1 / notch → inbox dock. */
   const [rightPanel, setRightPanel] = useState<"inspector" | "inbox">(
     "inspector",
@@ -212,14 +230,15 @@ function EditorPage() {
       <div
         className={`app-shell app-shell--panels app-shell--${gmShellMode}`}
       >
-        <EditorHotkeys
-          onToggleLeft={() => setLeftOpen((v) => !v)}
-          onToggleRight={() => setRightOpen((v) => !v)}
-          onOpenRightDock={() => {
-            setRightPanel("inbox");
-            setRightOpen(true);
-          }}
-        />
+      <EditorHotkeys
+        onToggleLeft={() => setLeftOpen((v) => !v)}
+        onToggleRight={() => setRightOpen((v) => !v)}
+        onOpenRightDock={() => {
+          setRightPanel("inbox");
+          setRightOpen(true);
+        }}
+        onOpenSpotter={() => setSpotterOpen(true)}
+      />
         <TopBar onRequestTick={() => setTickOpen(true)} />
         {gm && (
           <GmSessionNotch
@@ -227,14 +246,56 @@ function EditorPage() {
               setRightPanel("inbox");
               setRightOpen(true);
             }}
+            onOpenSpotter={() => setSpotterOpen(true)}
           />
         )}
         <EditorChrome />
-        {atelier ? (
+        {gmShellMode === "rp" && (
+          <div className="app-shell-body gm-studio-shell">
+            <RpStudio />
+          </div>
+        )}
+        {gmShellMode === "simulator" && (
+          <div className="app-shell-body gm-studio-shell">
+            <BattleSimulator />
+          </div>
+        )}
+        {gmShellMode === "tech" && (
+          <div className="app-shell-body gm-studio-shell">
+            <TechStudio />
+          </div>
+        )}
+        {gmShellMode === "units" && (
+          <div className="app-shell-body gm-studio-shell">
+            <UnitCardsStudio />
+          </div>
+        )}
+        {gmShellMode === "buildings" && (
+          <div className="app-shell-body gm-studio-shell">
+            <BuildingStudio />
+          </div>
+        )}
+        {gmShellMode === "races" && (
+          <div className="app-shell-body gm-studio-shell">
+            <RacesStudio />
+          </div>
+        )}
+        {gmShellMode === "polities" && (
+          <div className="app-shell-body gm-studio-shell">
+            <PolityStudio />
+          </div>
+        )}
+        {gmShellMode === "rules" && (
+          <div className="app-shell-body gm-studio-shell">
+            <GameRulesStudio />
+          </div>
+        )}
+        {atelier && (
           <div className="app-shell-body gm-atelier-shell">
             <GmAtelierPanel />
           </div>
-        ) : (
+        )}
+        {gm && (
           <div className="app-shell-body">
             <EditorShellLayout
               mode="prep"
@@ -362,7 +423,14 @@ function EditorPage() {
         <PolityDossier />
         <QuestPanel />
         <MapContextMenu />
+        <AltQuickInspector />
         <GmTickDialog open={tickOpen} onClose={() => setTickOpen(false)} />
+        <GmSpotterModal
+          open={spotterOpen}
+          onClose={() => setSpotterOpen(false)}
+          onOpenDomain={openDomain}
+          onRequestTick={() => setTickOpen(true)}
+        />
       </div>
     </CampaignSessionProvider>
   );

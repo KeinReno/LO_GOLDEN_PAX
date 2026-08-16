@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { FactionNpc, InternalBloc } from "../../state/types";
 import {
@@ -32,6 +32,8 @@ export function CourtHousesView({
   const ranked = [...blocs].sort(
     (a, b) => (b.influence || 0) - (a.influence || 0),
   );
+  // Exact NPC ids — replaces "*" now that CardBoard is shared app-wide.
+  const npcCardIds = useMemo(() => npcs.map((n) => n.id), [npcs]);
 
   if (ranked.length === 0) {
     return (
@@ -77,6 +79,7 @@ export function CourtHousesView({
               }
               onSelectNpc={onSelectNpc}
               onDropLeader={onDropLeader}
+              acceptCardIds={npcCardIds}
             />
           );
         })}
@@ -98,6 +101,7 @@ function HouseCard({
   onToggle,
   onSelectNpc,
   onDropLeader,
+  acceptCardIds,
 }: {
   bloc: InternalBloc;
   index: number;
@@ -111,6 +115,7 @@ function HouseCard({
   onToggle: () => void;
   onSelectNpc: (id: string | null) => void;
   onDropLeader: (npcId: string, blocId: string) => void;
+  acceptCardIds: string[];
 }) {
   const spot = useSpotlight();
   const color = bloc.color || accent || "var(--accent)";
@@ -128,7 +133,7 @@ function HouseCard({
     >
       <DropZone
         zoneId={`house:${bloc.id}`}
-        accepts={["*"]}
+        accepts={acceptCardIds}
         armWhileDragging
         onDrop={(cardId) => onDropLeader(cardId, bloc.id)}
         className="court-house-drop fx-spotlight"

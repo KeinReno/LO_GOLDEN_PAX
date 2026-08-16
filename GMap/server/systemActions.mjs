@@ -1,5 +1,9 @@
 /**
- * System-level player actions: stations + ship/unit production (Stellaris-style).
+ * System-level player actions: stations + ship/unit production.
+ *
+ * produce_unit / produce_ship hire through forceRecruit raise rules
+ * (population + currency + 30% ceiling + building gates). Force AP is
+ * an order tax only — currency is not billed a second time.
  */
 import { randomUUID } from "crypto";
 import { getContent } from "./contentLoader.mjs";
@@ -11,12 +15,9 @@ import {
 } from "./ledger.mjs";
 import { reservedAp, reservedForceAp, readIntents, writeIntents } from "./intents.mjs";
 import { writeLiveBoard } from "./tableStore.mjs";
-import {
-  produceForceCost,
-  produceForceAp,
-  stationCost,
-} from "./forceEconomy.mjs";
+import { produceForceAp, stationCost } from "./forceEconomy.mjs";
 import { intentApCosts } from "./apBudget.mjs";
+import { applyForceRaise } from "./forceRecruit.mjs";
 
 const STATION_DEFS = {
   mining: {
@@ -128,7 +129,7 @@ function recordIntent(factionId, defId, payload, note, turn, cost, apMeta = {}) 
   return intent;
 }
 
-function systemHasShipyard(system, factionId) {
+export function systemHasShipyard(system, factionId) {
   for (const p of system.planets ?? []) {
     const owner = p.ownerFactionId || system.ownerFactionId;
     if (owner !== factionId) continue;
@@ -142,7 +143,7 @@ function systemHasShipyard(system, factionId) {
   return false;
 }
 
-function systemHasBarracks(system, factionId) {
+export function systemHasBarracks(system, factionId) {
   for (const p of system.planets ?? []) {
     const owner = p.ownerFactionId || system.ownerFactionId;
     if (owner !== factionId) continue;
@@ -153,12 +154,118 @@ function systemHasBarracks(system, factionId) {
   return false;
 }
 
-function produceCost(def, count, kind = "ship") {
-  return produceForceCost(kind, def, count);
-}
-
 function produceAp(def, count) {
   return produceForceAp(def, count);
+}
+
+/**
+ * Produce hire costs (document once; both produce_unit and produce_ship):
+ * - Population: forceRecruit raise (30% ceiling; ships also pay crewCount).
+ * - Currency: billed once by applyForceRaise (`produceForceCost`).
+ * - Force AP: order tax only (`produceForceAp`). Not a second currency charge.
+ */
+function planetOwnerId(system, planet) {
+  return planet?.ownerFactionId || system?.ownerFactionId || null;
+}
+
+export function resolveProducePlanet(system, factionId, planetId) {
+  const planets = system?.planets ?? [];
+  if (planetId) {
+    const planet = planets.find((p) => p.id === planetId);
+    if (!planet) return { ok: false, error: "Планета не найдена" };
+    return { ok: true, planet };
+  }
+  const owned = planets.filter((p) => planetOwnerId(system, p) === factionId);
+  if (!owned.length) {
+    return { ok: false, error: "Нет подконтрольной планеты для набора" };
+  }
+  owned.sort(
+    (a, b) => (Number(b.population) || 0) - (Number(a.population) || 0),
+  );
+  return { ok: true, planet: owned[0] };
+}
+
+function checkForceApTax(factionId, apNeed, forceApMax, turn) {
+  if (apNeed <= 0) return { ok: true };
+  const used = reservedForceAp(factionId, turn);
+  const cap = forceApMax ?? 0;
+  if (used + apNeed > cap) {
+    return {
+      ok: false,
+      error: `Не хватает ОД сил (нужно ${apNeed}, свободно ${Math.max(0, cap - used)})`,
+    };
+  }
+  return { ok: true };
+}
+
+function produceViaRaise({
+  world,
+  factionId,
+  system,
+  kind,
+  def,
+  count,
+  forceId,
+  planetId,
+  note,
+  turn,
+  forceApMax,
+  persist = true,
+  ledger,
+}) {
+  const ap = produceAp(def, count);
+  if (persist !== false) {
+    const apOk = checkForceApTax(factionId, ap, forceApMax, turn);
+    if (!apOk.ok) return apOk;
+  }
+
+  const picked = resolveProducePlanet(system, factionId, planetId);
+  if (!picked.ok) return picked;
+
+  const raised = applyForceRaise({
+    world,
+    factionId,
+    systemId: system.id,
+    planetId: picked.planet.id,
+    kind,
+    defId: def.id,
+    count,
+    forceId,
+    persist: persist !== false,
+    ledger,
+  });
+  if (!raised.ok) return raised;
+
+  let intent = null;
+  if (persist !== false) {
+    intent = recordIntent(
+      factionId,
+      kind === "ship" ? "intent.produce_ship" : "intent.produce_unit",
+      {
+        systemId: system.id,
+        planetId: picked.planet.id,
+        count,
+        ...(kind === "ship"
+          ? { shipId: def.id, fleetId: raised.force?.id }
+          : { unitId: def.id, legionId: raised.force?.id }),
+      },
+      note,
+      turn,
+      raised.cost,
+      { apCost: 0, forceApCost: ap },
+    );
+  }
+
+  return {
+    ok: true,
+    intent,
+    fleet: kind === "ship" ? raised.force : undefined,
+    legion: kind === "unit" ? raised.force : undefined,
+    planet: raised.planet,
+    popCost: raised.popCost,
+    cost: raised.cost,
+    forceAp: ap,
+  };
 }
 
 function resolveStationDef(kind) {
@@ -212,6 +319,8 @@ export function applySystemAction({
   note,
   apMax,
   forceApMax = 0,
+  persist = true,
+  ledger,
 }) {
   const found = findSystem(world, systemId);
   if (found.error) return { ok: false, error: found.error };
@@ -311,127 +420,43 @@ export function applySystemAction({
   }
 
   if (action === "produce_ship") {
-    if (!systemHasShipyard(system, factionId)) {
-      return {
-        ok: false,
-        error: "Нужна верфь/космопорт на планете или военная станция в системе",
-      };
-    }
-    const content = getContent();
-    const def = content.ships?.[shipId];
+    const def = getContent().ships?.[shipId];
     if (!def) return { ok: false, error: "Неизвестный корабль" };
-    const cost = produceCost(def, n, "ship");
-    const ap = produceAp(def, n);
-    const paid = pay(factionId, cost, ap, apMax, turn, {
-      force: true,
-      forceApMax,
-    });
-    if (!paid.ok) return paid;
-
-    let fleet = (world.fleets ?? []).find(
-      (f) => f.id === fleetId && f.factionId === factionId && f.systemId === systemId,
-    );
-    if (!fleet) {
-      fleet = (world.fleets ?? []).find(
-        (f) => f.factionId === factionId && f.systemId === systemId,
-      );
-    }
-    if (!fleet) {
-      fleet = {
-        id: randomUUID(),
-        name: `Эскадра · ${system.name}`,
-        factionId,
-        systemId,
-        kind: "combat",
-        composition: [],
-        stance: "idle",
-        route: [],
-      };
-      world.fleets = world.fleets ?? [];
-      world.fleets.push(fleet);
-    }
-    fleet.composition = Array.isArray(fleet.composition)
-      ? fleet.composition
-      : [];
-    const group = fleet.composition.find(
-      (g) => g.defId === def.id || g.type === def.name || g.type === def.id,
-    );
-    if (group) group.count = (group.count || 0) + n;
-    else {
-      fleet.composition.push({
-        type: def.name,
-        defId: def.id,
-        count: n,
-      });
-    }
-    writeLiveBoard(world);
-    const intent = recordIntent(
+    return produceViaRaise({
+      world,
       factionId,
-      "intent.produce_ship",
-      { systemId, shipId, count: n, fleetId: fleet.id },
+      system,
+      kind: "ship",
+      def,
+      count: n,
+      forceId: fleetId,
+      planetId,
       note,
       turn,
-      paid.cost,
-      { apCost: 0, forceApCost: paid.forceAp },
-    );
-    return { ok: true, intent, fleet };
+      forceApMax,
+      persist,
+      ledger,
+    });
   }
 
   if (action === "produce_unit") {
-    if (!systemHasBarracks(system, factionId)) {
-      return { ok: false, error: "Нужны казармы на подконтрольной планете" };
-    }
-    const content = getContent();
-    const def = content.units?.[unitId];
+    const def = getContent().units?.[unitId];
     if (!def) return { ok: false, error: "Неизвестный юнит" };
-    const cost = produceCost(def, n, "unit");
-    const ap = produceAp(def, n);
-    const paid = pay(factionId, cost, ap, apMax, turn, {
-      force: true,
-      forceApMax,
-    });
-    if (!paid.ok) return paid;
-
-    let legion = (world.legions ?? []).find(
-      (l) => l.id === legionId && l.factionId === factionId && l.systemId === systemId,
-    );
-    if (!legion) {
-      legion = (world.legions ?? []).find(
-        (l) => l.factionId === factionId && l.systemId === systemId,
-      );
-    }
-    if (!legion) {
-      legion = {
-        id: randomUUID(),
-        name: `Легион · ${system.name}`,
-        factionId,
-        systemId,
-        strength: 0,
-        status: "idle",
-        composition: [],
-        route: [],
-      };
-      world.legions = world.legions ?? [];
-      world.legions.push(legion);
-    }
-    legion.composition = legion.composition ?? [];
-    const group = legion.composition.find(
-      (g) => g.defId === def.id || g.type === def.name || g.type === def.id,
-    );
-    if (group) group.count = (group.count || 0) + n;
-    else legion.composition.push({ type: def.name, defId: def.id, count: n });
-    legion.strength = legion.composition.reduce((s, g) => s + (g.count || 0), 0);
-    writeLiveBoard(world);
-    const intent = recordIntent(
+    return produceViaRaise({
+      world,
       factionId,
-      "intent.produce_unit",
-      { systemId, unitId, count: n, legionId: legion.id },
+      system,
+      kind: "unit",
+      def,
+      count: n,
+      forceId: legionId,
+      planetId,
       note,
       turn,
-      paid.cost,
-      { apCost: 0, forceApCost: paid.forceAp },
-    );
-    return { ok: true, intent, legion };
+      forceApMax,
+      persist,
+      ledger,
+    });
   }
 
   return { ok: false, error: `Неизвестное действие: ${action}` };

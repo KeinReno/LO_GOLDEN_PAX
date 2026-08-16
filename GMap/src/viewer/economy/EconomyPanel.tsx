@@ -60,12 +60,18 @@ type Props = {
     label?: string,
   ) => void;
   onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
-  /** Jump to Market common tab with quick-sell preselect. */
+  /** Optional Market room jump; Stockpile express trade stays in Economy. */
   onSellToMarket?: (currencyId: string) => void;
-  onCaravanHint?: (currencyId: string, systemId?: string) => void;
+  onSendCaravan?: (
+    currencyId: string,
+    systemId: string,
+    amount: number,
+  ) => void | Promise<void | boolean>;
   onStockAlert?: (currencyId: string) => void;
   stockBusy?: boolean;
   policyBusy?: boolean;
+  /** Last economy/order status line (tax queue, errors). */
+  statusMsg?: string | null;
   /** Jump to Science when a tech is needed. */
   onOpenResearch?: (hint?: string) => void;
   /** External open: jump to production with category filter. */
@@ -109,10 +115,11 @@ export function EconomyPanel({
   onReserveStock,
   onConvert,
   onSellToMarket,
-  onCaravanHint,
+  onSendCaravan,
   onStockAlert,
   stockBusy,
   policyBusy,
+  statusMsg,
   onOpenResearch,
   focusProductionCategory,
   onFocusProductionConsumed,
@@ -124,6 +131,9 @@ export function EconomyPanel({
   );
   const [sidebarExpanded, setSidebarExpanded] = useState(!compactNav);
   const [productionFilter, setProductionFilter] = useState<string | null>(
+    null,
+  );
+  const [budgetFocusReason, setBudgetFocusReason] = useState<string | null>(
     null,
   );
 
@@ -249,6 +259,19 @@ export function EconomyPanel({
       {sectionNav}
 
       <div className="eco-content">
+        {embedded ? (
+          <div className="eco-workbench-banner">
+            <span className="eco-workbench-banner__mark">ЭКО</span>
+            <span className="eco-workbench-banner__line">
+              {section === "overview" && "сводка · дефициты · путь к действию"}
+              {section === "production" && "клик — превью · drag — приоритет потока"}
+              {section === "budget" && "журнал казны · нулевой ход"}
+              {section === "stockpile" && "long-press кольцо · drag продажа · биржа"}
+              {section === "policies" && "полосы налогов · доктрины · давление"}
+            </span>
+            <kbd className="eco-workbench-banner__kbd">1–5</kbd>
+          </div>
+        ) : null}
         <header className="eco-content__head">
           <h3 className="eco-content__title">
             {ECONOMY_SECTIONS.find((s) => s.id === section)?.label}
@@ -270,6 +293,10 @@ export function EconomyPanel({
             onOpenProduction={openProduction}
             onOpenPolicies={() => goSection("policies")}
             onOpenBudget={() => goSection("budget")}
+            onSelectBudgetReason={(reason) => {
+              setBudgetFocusReason(reason);
+              goSection("budget");
+            }}
             onFocusBuild={onFocusBuild}
             onFocusDeficit={onFocusDeficit}
             onOpenResearch={onOpenResearch}
@@ -284,11 +311,14 @@ export function EconomyPanel({
             linkedSystemId={linkedSystemId}
             onOpenSystem={onOpenSystem}
             onFocusOnMap={onFocusSystemOnMap}
+            onFocusBuild={onFocusBuild}
             onSetFlowPriority={onSetFlowPriority}
             priorityBusy={priorityBusy}
           />
         )}
-        {section === "budget" && <BudgetSection payload={payload} />}
+        {section === "budget" && (
+          <BudgetSection payload={payload} focusReason={budgetFocusReason} />
+        )}
         {section === "stockpile" && (
           <StockpileSection
             payload={payload}
@@ -297,11 +327,11 @@ export function EconomyPanel({
             onConvert={onConvert}
             onSellToMarket={onSellToMarket}
             onReserve={onReserveStock}
-            onCaravan={onCaravanHint}
+            onSendCaravan={onSendCaravan}
             onSetAlert={onStockAlert}
-            onDropOnSystem={(currencyId, systemId) => {
-              onCaravanHint?.(currencyId, systemId);
-              onOpenSystem?.(systemId);
+            onFocusBuild={onFocusBuild}
+            onDropOnSystem={(currencyId, systemId, amount) => {
+              onSendCaravan?.(currencyId, systemId, amount ?? 1);
             }}
           />
         )}
@@ -309,6 +339,7 @@ export function EconomyPanel({
           <PoliciesSection
             payload={payload}
             busy={policyBusy}
+            statusMsg={statusMsg}
             onSetTax={(slot, tier) => {
               onSetTax?.(slot, tier);
             }}

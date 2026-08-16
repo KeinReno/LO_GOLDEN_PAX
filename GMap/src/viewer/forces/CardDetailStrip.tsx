@@ -17,6 +17,7 @@ import {
 } from "../../state/resourceIndex";
 import type { MapResourceDef } from "../../state/contentCatalog";
 import { formatSlotRequire } from "../../state/displayLabels";
+import { factionHasProperty } from "../../state/techGate";
 import {
   SLOT_ROLE_LABELS,
   type CatalogShip,
@@ -124,7 +125,9 @@ export function CardDetailStrip({
       out = out.filter(
         (r) =>
           r.properties.length === 0 ||
-          r.properties.some((p) => unlockSet.has(p)),
+          r.properties.some((p) =>
+            factionHasProperty({ unlockedProperties }, p),
+          ),
       );
     }
     return out.sort((a, b) => a.name.localeCompare(b.name, "ru"));

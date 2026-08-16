@@ -35,6 +35,9 @@
       "currency.metal": 36,
       "currency.supply": 15
     },
+    "requireProperties": [
+      "kinetic"
+    ],
     "effects": [
       {
         "effect": "capacity_add",
@@ -60,6 +63,9 @@
       "currency.metal": 22,
       "currency.supply": 9
     },
+    "requireProperties": [
+      "archive_hall"
+    ],
     "effects": [
       {
         "effect": "yield_flat",
@@ -108,6 +114,9 @@
       "currency.metal": 20,
       "currency.supply": 8
     },
+    "requireProperties": [
+      "chem_drive"
+    ],
     "effects": [
       {
         "effect": "capacity_add",

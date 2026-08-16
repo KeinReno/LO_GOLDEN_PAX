@@ -70,6 +70,7 @@ export type ViewerEngagement = {
     trophies?: {
       winnerFactionId?: string;
       metal?: number;
+      metalPending?: number;
       cognitio?: number;
       cognitioBase?: number;
       styleCognitio?: number;
@@ -78,6 +79,28 @@ export type ViewerEngagement = {
       loyaltyHit?: number;
       loserFactionId?: string | null;
       scrapUnits?: number;
+      salvage?: {
+        status?: "none" | "pending" | "claimed" | "skipped";
+        options?: Array<{
+          id: string;
+          resourceId: string;
+          role: string;
+          name: string;
+          source?: string;
+          fits?: Array<{
+            parentKind: string;
+            parentId: string;
+            groupId: string;
+            defId: string;
+          }>;
+        }>;
+        claimed?: {
+          optionId: string;
+          resourceId: string;
+          role: string;
+          defId?: string;
+        };
+      };
     } | null;
   } | null;
 };

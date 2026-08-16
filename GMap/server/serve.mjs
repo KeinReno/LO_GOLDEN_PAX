@@ -2,7 +2,7 @@ import fs from "node:fs";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createApiMiddleware } from "./api.mjs";
+import { createApiMiddleware, startHostTickScheduler } from "./api.mjs";
 import {
   ensureDataDir,
   LORE_PATH,
@@ -33,6 +33,7 @@ if (!fs.existsSync(path.join(dist, "index.html"))) {
 
 const app = express();
 app.set("trust proxy", 1);
+startHostTickScheduler();
 app.use(createApiMiddleware());
 // Player share hosts: root → /view (never expose GM editor by accident).
 if (process.env.GMAP_PLAYER_SHARE === "1" || process.env.GMAP_SHARE_ONLY === "1") {

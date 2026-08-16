@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { fmtInt } from "../../../state/numberFormat";
 import { useSpotlight } from "../../../ui/aceternityFx";
 import type { CategorySnapshot } from "../economyMath";
-import { formatStatusIcon } from "../economyMath";
+import { StatusChip } from "../../shared/StatusChip";
 import { Sparkline } from "./Sparkline";
 import { EcoTip } from "./EcoTip";
 import { NumberTicker } from "./NumberTicker";
@@ -60,9 +60,10 @@ export function CategoryCard({ cat, sparkValues, onSelect }: Props) {
             {cat.letter}
           </span>
           <span className="eco-category-card__name">{cat.name}</span>
-          <span className="eco-category-card__status" aria-label={cat.status}>
-            {formatStatusIcon(cat.status)}
-          </span>
+          <StatusChip
+            status={cat.status}
+            className="eco-category-card__status"
+          />
         </header>
         <div className="eco-category-card__body">
           <strong className="eco-category-card__stock tabular-nums">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
-import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS } from "../state/defaults";
+import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS, ECONOMIC_RELATIONS } from "../state/defaults";
 import type { DiplomacyEvent, DiplomacyRelation, Faction, Treaty } from "../state/types";
 import { CardBoard } from "../ui/cardBoardContext";
 import { DragCard } from "../ui/DragCard";
@@ -60,11 +60,13 @@ export function DiplomacyPanel() {
   const showDiplomacy = useWorldStore((s) => s.showDiplomacy);
   const toggleShowDiplomacy = useWorldStore((s) => s.toggleShowDiplomacy);
   const setDiplomacy = useWorldStore((s) => s.setDiplomacy);
+  const setEconomicRelation = useWorldStore((s) => s.setEconomicRelation);
 
   const [focusId, setFocusId] = useState<string | null>(null);
   const [compareId, setCompareId] = useState<string | null>(null);
   const [giveTreaty, setGiveTreaty] = useState<DiplomacyRelation | null>(null);
   const [wantTreaty, setWantTreaty] = useState<DiplomacyRelation | null>(null);
+  const [econQuote, setEconQuote] = useState("1");
 
   const factions = world.factions;
   const focus = factions.find((f) => f.id === focusId) ?? null;
@@ -308,6 +310,47 @@ export function DiplomacyPanel() {
                         ))}
                       </select>
                     </label>
+
+                    <h4>Экономический трек</h4>
+                    <p className="hint">
+                      Отдельно от политического статуса. Бартер — без договора;
+                      котировка замораживает курс; союз принимает пег соседа.
+                    </p>
+                    <label className="field">
+                      <span>Курс (quote / base)</span>
+                      <input
+                        type="number"
+                        min={0.01}
+                        step={0.1}
+                        value={econQuote}
+                        onChange={(e) => setEconQuote(e.target.value)}
+                      />
+                    </label>
+                    <div className="diplo-inbox__actions">
+                      {ECONOMIC_RELATIONS.map((kind) => (
+                        <button
+                          key={kind}
+                          type="button"
+                          className="btn ghost"
+                          onClick={() =>
+                            setEconomicRelation(focus.id, compare.id, kind, {
+                              unitsQuotePerBase: Number(econQuote) || 1,
+                            })
+                          }
+                        >
+                          {DIPLOMACY_LABELS[kind]}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() =>
+                          setEconomicRelation(focus.id, compare.id, "none")
+                        }
+                      >
+                        Снять экономический
+                      </button>
+                    </div>
 
                     <h4>Стол переговоров (GM)</h4>
                     <p className="hint">

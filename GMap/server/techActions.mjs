@@ -21,6 +21,22 @@ import {
   hybridLineageId,
   canHybridizePair,
 } from "./hybridRegistry.mjs";
+import {
+  applyOpenPathEffect,
+  applyPathResearchAffinity,
+  checkPathGate,
+} from "./techPaths.mjs";
+import {
+  applyOfferBypass,
+  ensureOffers,
+  regenerateAxisOffer,
+  rerollOffer,
+  techInOffer,
+  techOfferAxis,
+} from "./techOffers.mjs";
+import { prepareGradeUpgrade, collectTechModifierEffects } from "./techGrades.mjs";
+import { prepareSocketFill } from "./techSockets.mjs";
+import { normalizeOfferAxis } from "./techDirections.mjs";
 
 export const DEFAULT_TECH_TIERS = { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1 };
 
@@ -62,6 +78,7 @@ export function factionHasProperty(eco, prop) {
  */
 function collectRequiredProperties(consumerDef) {
   const props = new Set();
+  for (const p of consumerDef?.requireProperties || []) props.add(p);
   for (const slot of consumerDef?.slots || []) {
     for (const p of slot.require?.properties || []) props.add(p);
   }
@@ -124,40 +141,7 @@ function findUpgradeAcrossTechs(content, upgradeId) {
   return null;
 }
 
-/**
- * Non-unlock modifier effects from researched techs + upgrades (for ModifierStack).
- */
-export function collectTechModifierEffects(eco, content) {
-  const effects = [];
-  const unlockedUpgrades = new Set(eco?.unlockedUpgrades || []);
-
-  for (const id of eco?.unlockedTechs || []) {
-    const def = resolveTechDef(content, id);
-    if (!def) continue;
-    for (const e of def.effects || []) {
-      if (e.effect === "unlock_tech_tier" || e.effect === "unlock_property") {
-        continue;
-      }
-      effects.push({
-        ...e,
-        source: { kind: "tech", id, label: def.name },
-      });
-    }
-    for (const u of def.upgrades || []) {
-      if (!unlockedUpgrades.has(u.id)) continue;
-      for (const e of u.effects || []) {
-        if (e.effect === "unlock_tech_tier" || e.effect === "unlock_property") {
-          continue;
-        }
-        effects.push({
-          ...e,
-          source: { kind: "tech_upgrade", id: u.id, label: u.name },
-        });
-      }
-    }
-  }
-  return effects;
-}
+export { collectTechModifierEffects };
 
 /**
  * Research cost after research_cost_mult channels (category-specific then global).
@@ -320,6 +304,7 @@ function checkTechLocks(def, factionId, eco, content, world) {
 export function applyUnlockEffects(eco, effects) {
   if (!eco.techTiers) eco.techTiers = { ...DEFAULT_TECH_TIERS };
   if (!Array.isArray(eco.unlockedProperties)) eco.unlockedProperties = [];
+  if (!Array.isArray(eco.openPaths)) eco.openPaths = [];
   for (const e of effects || []) {
     if (e.effect === "unlock_tech_tier") {
       const cat = e.args?.category;
@@ -332,6 +317,8 @@ export function applyUnlockEffects(eco, effects) {
       if (prop && !eco.unlockedProperties.includes(prop)) {
         eco.unlockedProperties.push(prop);
       }
+    } else if (e.effect === "open_path") {
+      applyOpenPathEffect(eco, e.args?.pathId);
     }
   }
 }
@@ -342,6 +329,7 @@ export function applyUnlockEffects(eco, effects) {
 export function recomputeUnlocksFromTechs(eco, content, factionId = null, world = null) {
   eco.techTiers = { ...DEFAULT_TECH_TIERS };
   eco.unlockedProperties = [];
+  eco.openPaths = [];
   const unlockedUpgrades = new Set(eco.unlockedUpgrades || []);
   
   for (const id of eco.unlockedTechs || []) {
@@ -381,10 +369,25 @@ function publicEcoSlice(eco) {
   return {
     unlockedTechs: [...(eco.unlockedTechs || [])],
     unlockedUpgrades: [...(eco.unlockedUpgrades || [])],
+    techGrades: eco.techGrades && typeof eco.techGrades === "object" ? { ...eco.techGrades } : {},
+    techSockets: eco.techSockets && typeof eco.techSockets === "object" ? { ...eco.techSockets } : {},
     techTiers: { ...eco.techTiers },
     unlockedProperties: [...(eco.unlockedProperties || [])],
     stocks: { ...eco.stocks },
     researchQueue: [...(eco.researchQueue || [])],
+    currentOffers: eco.currentOffers && typeof eco.currentOffers === "object"
+      ? { ...eco.currentOffers }
+      : {},
+  };
+}
+
+function offerOpts(factionId, eco, content, world, extra = {}) {
+  const faction = (world?.factions || []).find((f) => f.id === factionId);
+  return {
+    faction,
+    isEligible: (def) =>
+      checkTechLocks(def, factionId, eco, content, world).ok,
+    ...extra,
   };
 }
 
@@ -428,6 +431,9 @@ export function canQueueTech(factionId, techId, opts = {}) {
   const lock = checkTechLocks(def, factionId, eco, content, world);
   if (!lock.ok) return { ...lock, canQueue: false };
 
+  const pathGate = checkPathGate(def, eco, content);
+  if (!pathGate.ok) return { ...pathGate, canQueue: false };
+
   return { ok: true, canQueue: true, def };
 }
 
@@ -467,7 +473,13 @@ export function techAvailability(factionId, techId, opts = {}) {
   }
 
   const stack = researchStackForFaction(factionId, eco, content, world);
-  const cost = applyResearchCostMult(def.cost, stack, def.category);
+  let cost = applyResearchCostMult(def.cost, stack, def.category);
+  const faction = (world?.factions || []).find((f) => f.id === factionId);
+  cost = applyPathResearchAffinity(cost, def, faction, content).cost;
+  const axis = techOfferAxis(def, content);
+  if (axis) ensureOffers(eco, content, offerOpts(factionId, eco, content, world));
+  const offerBypass = Boolean(axis) && !techInOffer(eco, techId, axis);
+  cost = applyOfferBypass(cost, offerBypass);
   const afford = canAfford(eco, cost);
   if (!afford.ok) {
     return {
@@ -475,9 +487,10 @@ export function techAvailability(factionId, techId, opts = {}) {
       canQueue: true,
       reason: afford.error || "Мало ресурсов",
       cost,
+      offerBypass,
     };
   }
-  return { available: true, canQueue: true, reason: null, cost };
+  return { available: true, canQueue: true, reason: null, cost, offerBypass };
 }
 
 /**
@@ -686,8 +699,18 @@ export function researchTech(factionId, techId, meta = {}) {
   const lock = checkTechLocks(def, factionId, eco, content, world);
   if (!lock.ok) return lock;
 
+  const pathGate = checkPathGate(def, eco, content);
+  if (!pathGate.ok) return pathGate;
+
   const stack = researchStackForFaction(factionId, eco, content, world);
-  const cost = applyResearchCostMult(def.cost, stack, def.category);
+  let cost = applyResearchCostMult(def.cost, stack, def.category);
+  const faction = (world?.factions || []).find((f) => f.id === factionId);
+  cost = applyPathResearchAffinity(cost, def, faction, content).cost;
+  const axis = techOfferAxis(def);
+  const opts = offerOpts(factionId, eco, content, world);
+  if (axis) ensureOffers(eco, content, opts);
+  const offerBypass = Boolean(axis) && !techInOffer(eco, techId, axis);
+  cost = applyOfferBypass(cost, offerBypass);
   const afford = canAfford(eco, cost);
   if (!afford.ok) return afford;
 
@@ -706,6 +729,7 @@ export function researchTech(factionId, techId, meta = {}) {
   eco.unlockedTechs.push(techId);
   applyUnlockEffects(eco, def.effects);
   removeFromResearchQueue(eco, techId);
+  if (axis) regenerateAxisOffer(eco, content, axis, opts);
   writeLedger(ledger);
 
   if (world) {
@@ -716,7 +740,82 @@ export function researchTech(factionId, techId, meta = {}) {
     ok: true,
     eco: publicEcoSlice(eco),
     tech: def,
+    offerBypass,
     worldMutated: Boolean(world && (def.effects || []).some((e) => e?.effect === "unit_upgrade")),
+  };
+}
+
+/**
+ * One reroll per direction offer generation. Regenerates 3 frontier candidates.
+ * `axis` is a direction id; legacy A–F maps to Industry.
+ */
+export function rerollResearchOffer(factionId, axis, meta = {}) {
+  const content = getContent();
+  const world = meta.world ?? readLiveBoard();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const opts = offerOpts(factionId, eco, content, world, { rng: meta.rng });
+  const result = rerollOffer(eco, content, axis, opts);
+  if (!result.ok) return result;
+  writeLedger(ledger);
+  const dir = normalizeOfferAxis(axis, content) || axis;
+  return { ok: true, eco: publicEcoSlice(eco), offer: eco.currentOffers?.[dir] };
+}
+
+/**
+ * Instant grade step 1→5 for a researched gradeable tech.
+ */
+export function upgradeResearchedTechGrade(factionId, techId, meta = {}) {
+  const content = meta.content || getContent();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const prepared = prepareGradeUpgrade(eco, techId, content);
+  if (!prepared.ok) return prepared;
+  const afford = canAfford(eco, prepared.cost);
+  if (!afford.ok) return afford;
+  const turn = meta.turn ?? null;
+  for (const [cur, amt] of Object.entries(prepared.cost || {})) {
+    const n = Number(amt || 0);
+    if (!n) continue;
+    adjustStock(ledger, factionId, cur, -n, {
+      turn,
+      reason: "upgrade_tech_grade",
+      intentId: meta.intentId || techId,
+    });
+  }
+  eco.techGrades = prepared.techGrades;
+  writeLedger(ledger);
+  return { ok: true, eco: publicEcoSlice(eco), grade: prepared.nextGrade, techId };
+}
+
+/**
+ * Instant fill/swap of a researched tech's resource socket (empire-wide).
+ */
+export function fillResearchedTechSocket(factionId, techId, resourceId, meta = {}) {
+  const content = meta.content || getContent();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const prepared = prepareSocketFill(eco, techId, resourceId, content);
+  if (!prepared.ok) return prepared;
+  const afford = canAfford(eco, prepared.cost);
+  if (!afford.ok) return afford;
+  const turn = meta.turn ?? null;
+  for (const [cur, amt] of Object.entries(prepared.cost || {})) {
+    const n = Number(amt || 0);
+    if (!n) continue;
+    adjustStock(ledger, factionId, cur, -n, {
+      turn,
+      reason: "fill_tech_socket",
+      intentId: meta.intentId || techId,
+    });
+  }
+  eco.techSockets = prepared.techSockets;
+  writeLedger(ledger);
+  return {
+    ok: true,
+    eco: publicEcoSlice(eco),
+    techId,
+    resourceId: prepared.resourceId,
   };
 }
 
@@ -848,6 +947,25 @@ export function canBuildWithTech(eco, buildingDef) {
       return {
         ok: false,
         error: `Нужен tier ${buildingDef.category}≥${need - 1} (сейчас ${factionMaxTier(eco, buildingDef.category)})`,
+      };
+    }
+  }
+
+  const milestoneRole = buildingDef?.requireRoleMilestone;
+  if (typeof milestoneRole === "string" && milestoneRole.trim()) {
+    const content = getContent();
+    const roleId = milestoneRole.trim();
+    const ms = content?.role_milestones?.[roleId];
+    const need =
+      Number(ms?.threshold) ||
+      Number(content?.economy_schema?.role_score_pilot?.thresholds?.[roleId]) ||
+      0;
+    const score = Number(eco?.roleScores?.[roleId]) || 0;
+    if (need > 0 && score < need) {
+      const label = ms?.label || roleId;
+      return {
+        ok: false,
+        error: `Нужен RoleScore «${label}»: ${score}/${need}`,
       };
     }
   }

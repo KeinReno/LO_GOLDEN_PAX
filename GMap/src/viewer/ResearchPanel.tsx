@@ -10,12 +10,22 @@ import {
   effectiveCognitioCost,
   missingRequireProperties,
 } from "../state/researchCosts";
+import {
+  postFillTechSocket,
+  postUpgradeTechGrade,
+} from "../state/researchClient";
 import { canBuildWithTech } from "../state/techGate";
 import { StatefulButton } from "../ui/StatefulButton";
-import { ActionRing } from "../ui/ActionRing";
 import { AnimatedTooltip } from "../ui/AnimatedTooltip";
 import { useSpotlight } from "../ui/aceternityFx";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
+import {
+  directionColor,
+  directionLabel,
+  listDirectionIds,
+  resolveTechDirection,
+  RESEARCH_DIRECTION_BY_DIGIT,
+} from "../state/techDirections";
 import {
   ResearchQueue,
   EffectsList,
@@ -23,10 +33,10 @@ import {
   buildQueueForecasts,
   cognitioSparkFromRecent,
   ResearchTimeline,
+  TechProgressControls,
   UpgradesComparison,
   QUEUE_MAX,
-  RESEARCH_FILTER_LABELS,
-  COGNITIO_DND_MIME,
+  TECH_DND_MIME,
   type ResearchFilter,
 } from "./research";
 import {
@@ -35,8 +45,15 @@ import {
 } from "../state/hybridClient";
 import { buildResearchPath } from "./research/researchPath";
 import { AlchemyLab } from "./research/AlchemyLab";
-import { ResearchOverview } from "./research/ResearchOverview";
-import { ResearchMatrix } from "./research/ResearchMatrix";
+import { ResearchPathsPanel } from "./research/ResearchPathsPanel";
+import { ResearchOffers } from "./research/ResearchOffers";
+import { TechGraphCanvas } from "./research/graph/TechGraphCanvas";
+import { useTouchDrag } from "./shared/useTouchDrag";
+import {
+  clearTechDragIdDeferred,
+  getTechDragId,
+  setCognitioDragging,
+} from "./research/researchDragBus";
 
 const CAT_ORDER: EconomyCategory[] = ["A", "B", "C", "D", "E", "F"];
 const CAT_COLOR: Record<string, string> = {
@@ -49,14 +66,8 @@ const CAT_COLOR: Record<string, string> = {
 };
 const CAT_NAME = ECO_CATEGORY_NAMES;
 
-export const RESEARCH_BRANCH_BY_DIGIT: Record<string, EconomyCategory> = {
-  "1": "A",
-  "2": "B",
-  "3": "C",
-  "4": "D",
-  "5": "E",
-  "6": "F",
-};
+export const RESEARCH_BRANCH_BY_DIGIT: Record<string, string> =
+  RESEARCH_DIRECTION_BY_DIGIT;
 
 function cognitioCost(
   tech: TechnologyDef | TechUpgrade,
@@ -204,7 +215,7 @@ function buildingsUnlockedByTech(
 type NextBuy = { tech: TechnologyDef; cost: number };
 
 /**
- * Research room: overview wheel (progress) + cat×era matrix + detail rail.
+ * Research room: path scores + pan/zoom tech graph + detail rail.
  */
 export function ResearchPanel({
   eco,
@@ -212,12 +223,14 @@ export function ResearchPanel({
   factionId,
   onResearch,
   onResearchUpgrade,
+  onUpgradeGrade,
+  onFillSocket,
   onSetQueue,
   onAccelerate,
   onAlchemyExperiment,
+  onRerollOffer,
   busy,
   msg,
-  asRoom,
   compact = false,
   branch: branchProp,
   onBranchChange,
@@ -235,16 +248,18 @@ export function ResearchPanel({
   factionId?: string;
   onResearch: (techId: string) => void;
   onResearchUpgrade?: (techId: string, upgradeId: string) => void;
+  onUpgradeGrade?: (techId: string) => void;
+  onFillSocket?: (techId: string, resourceId: string) => void;
   onSetQueue?: (queue: string[]) => void;
   onAccelerate?: (techId: string) => void;
   onAlchemyExperiment?: (techA: string, techB: string) => void;
+  onRerollOffer?: (direction: string) => void;
   busy?: boolean;
   msg?: string | null;
-  asRoom?: boolean;
   /** Phone BottomSheet: single column, hide desktop hotkeys. */
   compact?: boolean;
-  branch?: EconomyCategory | null;
-  onBranchChange?: (c: EconomyCategory | null) => void;
+  branch?: string | null;
+  onBranchChange?: (c: string | null) => void;
   highlightTechId?: string | null;
   cognitioIncome?: number;
   categoryIncome?: number;
@@ -260,65 +275,80 @@ export function ResearchPanel({
     b: string | null;
     key: number;
   } | null>(null);
-  const [branchLocal, setBranchLocal] = useState<EconomyCategory | null>(null);
-  const [filter, setFilter] = useState<ResearchFilter>("all");
+  const [branchLocal, setBranchLocal] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [focusEra, setFocusEra] = useState<number | null>(null);
-  const [nodeRing, setNodeRing] = useState<{
-    techId: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const filter: ResearchFilter = "all";
+  const [railOpen, setRailOpen] = useState(!compact);
 
   const openLabWith = (a: string | null, b: string | null = null) => {
     if (!onAlchemyExperiment) return;
     setLabSeed({ a, b, key: Date.now() });
     setScienceMode("lab");
-    setNodeRing(null);
   };
   const focusBranch =
     branchProp !== undefined ? branchProp : branchLocal;
-  const setFocusBranch = (c: EconomyCategory | null) => {
+  const setFocusBranch = (c: string | null) => {
     setBranchLocal(c);
     onBranchChange?.(c);
-    if (c == null) setFocusEra(null);
   };
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
   const [pendingUpgradeId, setPendingUpgradeId] = useState<string | null>(null);
+  const [progressBusy, setProgressBusy] = useState(false);
+  const [progressEco, setProgressEco] = useState<{
+    stocks?: Record<string, number>;
+    techGrades?: Record<string, number>;
+    techSockets?: Record<string, string>;
+  } | null>(null);
   const branchSpot = useSpotlight();
   const detailSpot = useSpotlight();
 
-  const { byCat, byId } = useMemo(() => {
+  const bindCognitioDrag = useTouchDrag(
+    ({ first, last }) => {
+      if (busy || cognitio <= 0) return;
+      if (first) setCognitioDragging(true);
+      if (last) setCognitioDragging(false);
+    },
+    { filterTaps: true },
+  );
+
+  const { byId, byDir } = useMemo(() => {
     const dict = getCachedContent()?.technologies || {};
     const list = Object.values(dict);
     const idMap = new Map(list.map((t) => [t.id, t]));
-    const map = new Map<EconomyCategory, TechnologyDef[]>();
-    for (const c of CAT_ORDER) map.set(c, []);
+    const dirMap = new Map<string, TechnologyDef[]>();
+    for (const d of listDirectionIds()) dirMap.set(d, []);
     for (const t of list) {
-      const cat = (CAT_ORDER.includes(t.category as EconomyCategory)
-        ? t.category
-        : "A") as EconomyCategory;
-      map.get(cat)!.push(t);
+      const dir = resolveTechDirection(t) || "industry";
+      if (!dirMap.has(dir)) dirMap.set(dir, []);
+      dirMap.get(dir)!.push(t);
     }
-    for (const arr of map.values()) {
+    for (const arr of dirMap.values()) {
       arr.sort(
         (a, b) => a.era - b.era || a.name.localeCompare(b.name, "ru"),
       );
     }
-    return { byCat: map, byId: idMap };
+    return { byId: idMap, byDir: dirMap };
   }, []);
+
+  const allTechs = useMemo(() => {
+    const out: TechnologyDef[] = [];
+    for (const d of listDirectionIds()) {
+      const arr = byDir.get(d);
+      if (arr) out.push(...arr);
+    }
+    return out;
+  }, [byDir]);
 
   const unlocked = useMemo(
     () => new Set(eco?.unlockedTechs || []),
     [eco?.unlockedTechs],
   );
-  const openBranch = (c: EconomyCategory, era?: number) => {
+  const openBranch = (c: string, era?: number) => {
     setFocusBranch(c);
-    setFocusEra(era ?? null);
-    const techs = byCat.get(c) ?? [];
+    const techs = byDir.get(c) ?? [];
     const pool =
       era != null ? techs.filter((t) => (t.era || 1) === era) : techs;
     const next = pool.find(
@@ -328,13 +358,25 @@ export function ResearchPanel({
     );
     if (next) setSelectedId(next.id);
   };
+  const openDirectionFromNode = (techId: string) => {
+    const dir = resolveTechDirection(byId.get(techId));
+    if (dir) openBranch(dir);
+  };
   const unlockedUpgrades = useMemo(
     () => new Set(eco?.unlockedUpgrades || []),
     [eco?.unlockedUpgrades],
   );
   const queue = eco?.researchQueue || [];
   const queueSet = useMemo(() => new Set(queue), [queue]);
-  const cognitio = eco?.stocks?.["currency.cognitio"] ?? 0;
+  const liveEco: ViewerPayload["economy"] = eco
+    ? {
+        ...eco,
+        stocks: progressEco?.stocks ?? eco.stocks,
+        techGrades: progressEco?.techGrades ?? eco.techGrades,
+        techSockets: progressEco?.techSockets ?? eco.techSockets,
+      }
+    : eco;
+  const cognitio = liveEco?.stocks?.["currency.cognitio"] ?? 0;
   const tiers = eco?.techTiers || {};
   const unlockedProps = eco?.unlockedProperties || [];
 
@@ -375,9 +417,11 @@ export function ResearchPanel({
     if (highlightTechId && byId.has(highlightTechId)) {
       setSelectedId(highlightTechId);
       const tech = byId.get(highlightTechId);
-      if (tech && CAT_ORDER.includes(tech.category as EconomyCategory)) {
-        setFocusBranch(tech.category as EconomyCategory);
-        setFocusEra(tech.era || null);
+      if (tech) {
+        const dir = resolveTechDirection(tech);
+        if (dir) {
+          setFocusBranch(dir);
+        }
       }
     }
   }, [highlightTechId, byId]);
@@ -386,8 +430,8 @@ export function ResearchPanel({
   useEffect(() => {
     if (selectedId && byId.has(selectedId)) return;
     const pool = focusBranch
-      ? byCat.get(focusBranch) ?? []
-      : CAT_ORDER.flatMap((c) => byCat.get(c) ?? []);
+      ? byDir.get(focusBranch) ?? []
+      : listDirectionIds().flatMap((d) => byDir.get(d) ?? []);
     const next =
       pool.find(
         (t) =>
@@ -395,7 +439,7 @@ export function ResearchPanel({
           (t.prerequisites || []).every((p) => unlocked.has(p)),
       ) ?? pool[0];
     if (next) setSelectedId(next.id);
-  }, [selectedId, byId, byCat, unlocked, focusBranch]);
+  }, [selectedId, byId, byDir, unlocked, focusBranch]);
 
   const affordable = useMemo(() => {
     const list: NextBuy[] = [];
@@ -415,7 +459,6 @@ export function ResearchPanel({
     return list;
   }, [unlocked, cognitio, world, factionId, eco]);
 
-  const nextBuy = affordable[0] ?? null;
   const selected = selectedId ? byId.get(selectedId) : undefined;
 
   const selectedState = useMemo(() => {
@@ -493,6 +536,16 @@ export function ResearchPanel({
     onResearch(techId);
   };
 
+  const dropCognitioOnTech = (techId: string) => {
+    const tech = byId.get(techId);
+    if (!tech || busy) return;
+    if (queueSet.has(techId) && onAccelerate) {
+      onAccelerate(techId);
+      return;
+    }
+    onResearch(techId);
+  };
+
   const requestUpgrade = (techId: string, upgradeId: string) => {
     if (!onResearchUpgrade) return;
     setPendingUpgradeId(upgradeId);
@@ -500,9 +553,94 @@ export function ResearchPanel({
     onResearchUpgrade(techId, upgradeId);
   };
 
+  const applyProgressEconomy = (economy?: ViewerPayload["economy"]) => {
+    if (!economy) return;
+    setProgressEco({
+      stocks: economy.stocks,
+      techGrades: economy.techGrades,
+      techSockets: economy.techSockets,
+    });
+  };
+
+  const requestGrade = (techId: string) => {
+    setPendingUpgradeId(`grade:${techId}`);
+    setSuccessId(null);
+    if (onUpgradeGrade) {
+      onUpgradeGrade(techId);
+      return;
+    }
+    if (!factionId) return;
+    setProgressBusy(true);
+    void postUpgradeTechGrade({ factionId, techId }).then((result) => {
+      setProgressBusy(false);
+      if (!result.ok) {
+        setPendingUpgradeId(null);
+        return;
+      }
+      applyProgressEconomy(result.data.economy);
+      setSuccessId(`grade:${techId}`);
+    });
+  };
+
+  const requestSocket = (techId: string, resourceId: string) => {
+    setPendingUpgradeId(`socket:${techId}:${resourceId}`);
+    setSuccessId(null);
+    if (onFillSocket) {
+      onFillSocket(techId, resourceId);
+      return;
+    }
+    if (!factionId) return;
+    setProgressBusy(true);
+    void postFillTechSocket({ factionId, techId, resourceId }).then((result) => {
+      setProgressBusy(false);
+      if (!result.ok) {
+        setPendingUpgradeId(null);
+        return;
+      }
+      applyProgressEconomy(result.data.economy);
+      setSuccessId(`socket:${techId}:${resourceId}`);
+    });
+  };
+
   const changeQueue = (next: string[]) => {
     onSetQueue?.(next.slice(0, QUEUE_MAX));
   };
+
+  useEffect(() => {
+    if (scienceMode !== "tree" || !onSetQueue) return;
+    const onDrop = (e: DragEvent) => {
+      const techId =
+        getTechDragId() ||
+        e.dataTransfer?.getData(TECH_DND_MIME) ||
+        e.dataTransfer?.getData("text/plain");
+      if (!techId || busy) return;
+      const slotEl = (e.target as Element)?.closest(
+        "[data-queue-slot]",
+      ) as HTMLElement | null;
+      if (!slotEl?.dataset.queueSlot) return;
+      e.preventDefault();
+      const at = Number(slotEl.dataset.queueSlot);
+      const without = queue.filter((id) => id !== techId);
+      const next = [...without];
+      next.splice(Math.min(at, next.length), 0, techId);
+      changeQueue(next.slice(0, QUEUE_MAX));
+      clearTechDragIdDeferred();
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (!getTechDragId()) return;
+      if (
+        (e.target as Element)?.closest("[data-queue-slot],[data-queue-trash]")
+      ) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("drop", onDrop);
+    document.addEventListener("dragover", onDragOver);
+    return () => {
+      document.removeEventListener("drop", onDrop);
+      document.removeEventListener("dragover", onDragOver);
+    };
+  }, [scienceMode, onSetQueue, queue, busy]);
 
   const addToQueue = (techId: string) => {
     if (!onSetQueue) return;
@@ -521,22 +659,12 @@ export function ResearchPanel({
     return buildResearchPath(selected.id, byId, unlocked);
   }, [selected, byId, unlocked]);
 
-  const jumpToNextBuy = () => {
-    if (!nextBuy) return;
-    const cat = nextBuy.tech.category as EconomyCategory;
-    if (CAT_ORDER.includes(cat)) {
-      openBranch(cat, nextBuy.tech.era || undefined);
-    }
-    setSelectedId(nextBuy.tech.id);
-  };
-
   const buildingNames = selectedState?.buildings.map((b) => b.name) ?? [];
 
   const body = (
     <>
-      <header className={asRoom === false ? undefined : "hq-panel-head"}>
-        {asRoom !== false && <h2>Наука</h2>}
-        {asRoom === false && <h3>Исследования</h3>}
+      <header className="research-panel-head">
+        <h3>Исследования</h3>
         <div className="research-mode-tabs" role="tablist" aria-label="Режим науки">
           <button
             type="button"
@@ -566,12 +694,7 @@ export function ResearchPanel({
             >
               <strong
                 className="tabular research-cognitio-chip"
-                draggable={!busy && cognitio > 0}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData(COGNITIO_DND_MIME, "currency.cognitio");
-                  e.dataTransfer.setData("text/plain", "currency.cognitio");
-                  e.dataTransfer.effectAllowed = "copy";
-                }}
+                {...(busy || cognitio <= 0 ? {} : bindCognitioDrag())}
               >
                 {cognitio}
               </strong>
@@ -622,7 +745,16 @@ export function ResearchPanel({
       ) : null}
 
       {scienceMode === "tree" ? (
-        <>
+        <div className="research-tree-body">
+      <details
+        className="research-rail"
+        open={railOpen}
+        onToggle={(e) =>
+          setRailOpen((e.currentTarget as HTMLDetailsElement).open)
+        }
+      >
+        <summary>Очередь и прогноз</summary>
+        <div className="research-rail-body">
       {onSetQueue ? (
         <ResearchQueue
           eco={eco}
@@ -648,64 +780,15 @@ export function ResearchPanel({
         spark={spark}
       />
 
-      {nextBuy && (
-        <button
-          type="button"
-          className="research-next-buy"
-          onClick={jumpToNextBuy}
-        >
-          <span className="hint">Лучший шаг</span>
-          <strong style={{ color: CAT_COLOR[nextBuy.tech.category] }}>
-            {nextBuy.tech.name}
-          </strong>
-          <span className="hint">
-            {CAT_NAME[nextBuy.tech.category] ?? nextBuy.tech.category} ·{" "}
-            <span className="tabular">
-              {nextBuy.cost}/{cognitio}
-            </span>
-          </span>
-          <div
-            className="research-cognitio-bar"
-            role="progressbar"
-            aria-valuenow={Math.min(cognitio, nextBuy.cost)}
-            aria-valuemin={0}
-            aria-valuemax={nextBuy.cost}
-          >
-            <span
-              style={{
-                width: `${Math.min(100, (cognitio / Math.max(1, nextBuy.cost)) * 100)}%`,
-              }}
-            />
-          </div>
-        </button>
-      )}
+        </div>
+      </details>
 
-      <div className="research-filters" role="toolbar" aria-label="Фильтры">
-        {(Object.keys(RESEARCH_FILTER_LABELS) as ResearchFilter[]).map((f) => (
-          <button
-            key={f}
-            type="button"
-            className={`research-filter-btn ${filter === f ? "on" : ""}`}
-            onClick={() => setFilter(f)}
-          >
-            {RESEARCH_FILTER_LABELS[f]}
-          </button>
-        ))}
-        <label className="research-search">
-                          <span className="sr-only">Поиск</span>
-          <input
-            type="search"
-            placeholder="геол…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
-      </div>
-
+      <div className="research-tree-main">
+      <div className="research-desk-bar">
       <div
         className="research-branch-tabs anim-tabs"
         role="tablist"
-        aria-label="Ветви науки"
+        aria-label="Направления науки"
       >
         <button
           type="button"
@@ -715,15 +798,16 @@ export function ResearchPanel({
           aria-selected={focusBranch == null}
           className={`research-branch-tab research-branch-tab--all fx-spotlight ${focusBranch == null ? "on" : ""}`}
           onClick={() => setFocusBranch(null)}
-          title="Все ветви"
+          title="Все направления"
           {...branchSpot.bind}
         >
           <strong>Все</strong>
           <span className="hint">обзор</span>
         </button>
-        {CAT_ORDER.map((c, i) => {
-          const techs = byCat.get(c) ?? [];
+        {listDirectionIds().map((d, i) => {
+          const techs = byDir.get(d) ?? [];
           const done = techs.filter((t) => unlocked.has(t.id)).length;
+          const color = directionColor(d);
           const branchAffordable = techs.some(
             (t) =>
               !unlocked.has(t.id) &&
@@ -733,35 +817,44 @@ export function ResearchPanel({
           );
           return (
             <button
-              key={c}
+              key={d}
               type="button"
               role="tab"
-              id={`research-tab-${c}`}
+              id={`research-tab-${d}`}
               aria-controls="research-panel-main"
-              aria-selected={focusBranch === c}
-              className={`research-branch-tab fx-spotlight ${focusBranch === c ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
+              aria-selected={focusBranch === d}
+              className={`research-branch-tab fx-spotlight ${focusBranch === d ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
               style={
                 {
-                  borderColor: CAT_COLOR[c],
-                  "--fx-spot-color": CAT_COLOR[c],
+                  borderColor: color,
+                  "--fx-spot-color": color,
                 } as React.CSSProperties
               }
-              onClick={() => openBranch(c)}
-              title={`${CAT_NAME[c]} · Alt+${i + 1}`}
+              onClick={() => openBranch(d)}
+              title={`${directionLabel(d)} · Alt+${i + 1}`}
               {...branchSpot.bind}
             >
               {!compact ? (
                 <span className="research-tab-hotkey">Alt+{i + 1}</span>
               ) : null}
-              <span style={{ color: CAT_COLOR[c] }}>{c}</span>
-              <strong>{CAT_NAME[c]}</strong>
+              <strong style={{ color }}>{directionLabel(d)}</strong>
               <span className="hint">
-                T{tiers[c] ?? 1}
+                {done}/{techs.length || 0}
                 {done === techs.length && techs.length ? " · ✓" : ""}
               </span>
             </button>
           );
         })}
+      </div>
+        <label className="research-search">
+          <span className="sr-only">Поиск</span>
+          <input
+            type="search"
+            placeholder="геол…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
       </div>
 
       <div
@@ -776,113 +869,53 @@ export function ResearchPanel({
       >
         <div className="research-map">
           {focusBranch == null ? (
-            <ResearchOverview
-              byCat={byCat}
-              unlocked={unlocked}
-              cognitio={cognitio}
-              busy={busy}
-              eco={eco}
-              isTechBlocked={(tech) =>
-                lockBlocksResearch(tech, world, factionId, eco)
-              }
-              onOpenBranch={openBranch}
-            />
-          ) : (
-            <ResearchMatrix
-              cat={focusBranch}
-              techs={byCat.get(focusBranch) ?? []}
-              unlocked={unlocked}
-              cognitio={cognitio}
-              selectedId={selectedId}
-              busy={busy}
-              filter={filter}
-              search={search}
-              focusEra={focusEra}
-              onFocusEra={setFocusEra}
-              queueIds={queueSet}
-              eco={eco}
-              isTechBlocked={(tech) =>
-                lockBlocksResearch(tech, world, factionId, eco)
-              }
-              onSelect={setSelectedId}
-              onTechDragStart={onTechMapDrag}
-              onBack={() => setFocusBranch(null)}
-              onCognitioDrop={(techId) => {
-                const tech = byId.get(techId);
-                if (!tech || busy) return;
-                if (queueSet.has(techId) && onAccelerate) {
-                  onAccelerate(techId);
-                  return;
-                }
-                onResearch(techId);
-              }}
-            />
-          )}
-        </div>
-
-        {nodeRing ? (
-          <ActionRing
-            open
-            x={nodeRing.x}
-            y={nodeRing.y}
-            onClose={() => setNodeRing(null)}
-            items={[
-              ...(unlocked.has(nodeRing.techId) && onAlchemyExperiment
-                ? [
-                    {
-                      id: "alchemy",
-                      label: "Эксперимент",
-                      onSelect: () => openLabWith(nodeRing.techId, null),
-                    },
-                  ]
-                : []),
-              ...(!unlocked.has(nodeRing.techId)
-                ? [
-                    {
-                      id: "research",
-                      label: "Изучить",
-                      onSelect: () => {
-                        onResearch(nodeRing.techId);
-                        setNodeRing(null);
-                      },
-                    },
-                  ]
-                : []),
-              ...(onSetQueue && !unlocked.has(nodeRing.techId)
-                ? [
-                    {
-                      id: "queue",
-                      label: "В очередь",
-                      onSelect: () => {
-                        addToQueue(nodeRing.techId);
-                        setNodeRing(null);
-                      },
-                    },
-                  ]
-                : []),
-              ...(onAccelerate && queueSet.has(nodeRing.techId)
-                ? [
-                    {
-                      id: "rush",
-                      label: "Ускорить",
-                      onSelect: () => {
-                        onAccelerate(nodeRing.techId);
-                        setNodeRing(null);
-                      },
-                    },
-                  ]
-                : []),
-              {
-                id: "select",
-                label: "В карточке",
-                onSelect: () => {
-                  setSelectedId(nodeRing.techId);
-                  setNodeRing(null);
-                },
-              },
-            ]}
+            <details className="research-fold">
+              <summary>Пути развития</summary>
+              <ResearchPathsPanel
+                eco={eco}
+                cognitio={cognitio}
+                busy={busy}
+                factionId={factionId}
+                world={world}
+                onResearch={onResearch}
+              />
+            </details>
+          ) : null}
+          <ResearchOffers
+            eco={eco}
+            cognitio={cognitio}
+            busy={busy}
+            focus={focusBranch}
+            onResearch={onResearch}
+            onReroll={onRerollOffer}
+            onOpenBranch={openBranch}
           />
-        ) : null}
+          <TechGraphCanvas
+            techs={focusBranch ? (byDir.get(focusBranch) ?? []) : allTechs}
+            directionOf={
+              focusBranch
+                ? undefined
+                : (id) => resolveTechDirection(byId.get(id))
+            }
+            onOpenDirection={
+              focusBranch ? undefined : openDirectionFromNode
+            }
+            unlocked={unlocked}
+            cognitio={cognitio}
+            selectedId={selectedId}
+            busy={busy}
+            filter={filter}
+            search={search}
+            queueIds={queueSet}
+            eco={eco}
+            isTechBlocked={(tech) =>
+              lockBlocksResearch(tech, world, factionId, eco)
+            }
+            onSelect={setSelectedId}
+            onTechDragStart={onTechMapDrag}
+            onCognitioDrop={dropCognitioOnTech}
+          />
+        </div>
 
         <aside
           className={`research-detail fx-spotlight ${selected?.isBreakthrough ? "fx-glow" : ""}`}
@@ -900,8 +933,8 @@ export function ResearchPanel({
           {!selected || !selectedState ? (
             <p className="hint">
               {focusBranch == null
-                ? "Выберите сектор на обзоре или вкладку ветки."
-                : "Выберите технологию в матрице."}
+                ? "Выберите технологию на графе или направление."
+                : "Выберите технологию на графе."}
             </p>
           ) : (
             <>
@@ -1052,31 +1085,49 @@ export function ResearchPanel({
                     На карту
                   </button>
                 ) : null}
+                {selectedState.done && onAlchemyExperiment ? (
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    title="Открыть лабораторию с этой технологией"
+                    onClick={() => openLabWith(selected.id, null)}
+                  >
+                    В лабораторию
+                  </button>
+                ) : null}
               </div>
 
-              {selectedState.done && selectedState.upgrades.length > 0 ? (
-                <UpgradesComparison
-                  eco={eco}
-                  tech={selected}
-                  unlockedUpgrades={unlockedUpgrades}
-                  unlockedTechs={unlocked}
-                  cognitio={cognitio}
-                  busy={busy}
-                  pendingUpgradeId={pendingUpgradeId}
-                  successId={successId}
-                  categoryIncome={
-                    flowTotals?.[selected.category]?.rate ?? categoryIncome
-                  }
-                  categoryDemand={
-                    flowTotals?.[selected.category]?.demand ?? categoryDemand
-                  }
-                  onResearchUpgrade={
-                    onResearchUpgrade
-                      ? (techId, upgradeId) =>
-                          requestUpgrade(techId, upgradeId)
-                      : undefined
-                  }
-                />
+              {selectedState.done ? (
+                <>
+                  <UpgradesComparison
+                    tech={selected}
+                    unlockedUpgrades={unlockedUpgrades}
+                    unlockedTechs={unlocked}
+                    cognitio={cognitio}
+                    busy={busy}
+                    pendingUpgradeId={pendingUpgradeId}
+                    successId={successId}
+                    categoryIncome={
+                      flowTotals?.[selected.category]?.rate ?? categoryIncome
+                    }
+                    categoryDemand={
+                      flowTotals?.[selected.category]?.demand ?? categoryDemand
+                    }
+                    onResearchUpgrade={
+                      onResearchUpgrade ? requestUpgrade : undefined
+                    }
+                    eco={liveEco}
+                  />
+                  <TechProgressControls
+                    tech={selected}
+                    eco={liveEco}
+                    busy={busy || progressBusy}
+                    pendingKey={pendingUpgradeId}
+                    successKey={successId}
+                    onUpgradeGrade={requestGrade}
+                    onFillSocket={requestSocket}
+                  />
+                </>
               ) : null}
             </>
           )}
@@ -1092,29 +1143,18 @@ export function ResearchPanel({
           <ResearchTimeline recent={eco?.recent} />
         </aside>
       </div>
-        </>
+      </div>
+        </div>
       ) : null}
     </>
   );
 
-  if (asRoom === false) {
-    return (
-      <section
-        className={`hq-card research-panel${compact ? " research-panel--compact" : ""}`}
-      >
-        {body}
-      </section>
-    );
-  }
-
   return (
-    <div
-      className={`hq-panel research-panel research-panel--room research-panel--radial${
-        compact ? " research-panel--compact" : ""
-      }`}
+    <section
+      className={`hq-card research-panel${compact ? " research-panel--compact" : ""}`}
     >
       {body}
-    </div>
+    </section>
   );
 }
 

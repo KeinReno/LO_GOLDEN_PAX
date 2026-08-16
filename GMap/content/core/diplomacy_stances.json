@@ -137,5 +137,26 @@
     "breakable": true,
     "trustDecayOnBreak": 5,
     "mapColor": "#e8a54c"
+  },
+  "currency_exchange": {
+    "id": "currency_exchange",
+    "name": "Биржевая котировка",
+    "track": "economic",
+    "effects": [],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 8,
+    "mapColor": "#c9a227"
+  },
+  "currency_union": {
+    "id": "currency_union",
+    "name": "Валютный союз",
+    "track": "economic",
+    "effects": [],
+    "duration": "permanent",
+    "breakable": true,
+    "trustDecayOnBreak": 18,
+    "mapColor": "#e8c547",
+    "blurb": "Joiner adopts the host treasury peg. Own category income stays; union adds metal/supply via fx EC × peg rate. Independent of the political track."
   }
 }

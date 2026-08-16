@@ -21,11 +21,11 @@ export function ViewerDiploPanel({
   onCancel,
   onGift,
   onStance,
+  onEconomicTrack,
   password,
   reservedAp = 0,
   apMax = 0,
   orderMsg,
-  onTransfer,
   onPlaceOffer,
   onCancelOffer,
 }: {
@@ -50,11 +50,15 @@ export function ViewerDiploPanel({
     toFactionId: string,
     stance: "war" | "embargo" | "break",
   ) => void | boolean | Promise<void | boolean>;
+  onEconomicTrack?: (
+    kind: "quote" | "union",
+    toFactionId: string,
+    extras?: { unitsQuotePerBase?: number },
+  ) => void | boolean | Promise<void | boolean>;
   password?: string;
   reservedAp?: number;
   apMax?: number;
   orderMsg?: string | null;
-  onTransfer?: (toFactionId: string, currencyId: string, amount: number) => void;
   onPlaceOffer?: (
     side: "sell" | "buy",
     giveCurrency: string,
@@ -65,7 +69,6 @@ export function ViewerDiploPanel({
   ) => void | Promise<boolean | void>;
   onCancelOffer?: (offerId: string) => void | Promise<boolean | void>;
 }) {
-  const giftHandler = onGift ?? onTransfer;
   const displayMsg = orderMsg || msg;
 
   if (!onCreate || !onAccept || !onReject || !onCancel) {
@@ -91,8 +94,9 @@ export function ViewerDiploPanel({
         onAccept={onAccept}
         onReject={onReject}
         onCancel={onCancel}
-        onGift={giftHandler}
+        onGift={onGift}
         onStance={onStance}
+        onEconomicTrack={onEconomicTrack}
         password={password}
         reservedAp={reservedAp}
         apMax={apMax}

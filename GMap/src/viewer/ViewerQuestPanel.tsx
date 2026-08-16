@@ -40,19 +40,23 @@ export function ViewerQuestPanel({
   );
 }
 
-/** @deprecated Prefer QuestDossier — kept for ViewerPage import compat. */
+/** Full-screen player quest dossier (map marker / play float). */
 export function ViewerQuestDossier({
   quest,
   world,
+  stocks,
   onClose,
   onFocusSystem,
+  onOpenCourt,
   onResolveChoice,
   onResolveDice,
 }: {
   quest: Quest;
   world: WorldState;
+  stocks?: Record<string, number>;
   onClose: () => void;
   onFocusSystem?: (systemId: string) => void;
+  onOpenCourt?: () => void;
   onResolveChoice?: (questId: string, choiceId: string) => Promise<boolean>;
   onResolveDice?: (
     questId: string,
@@ -69,8 +73,10 @@ export function ViewerQuestDossier({
     <QuestDossier
       quest={quest}
       world={world}
+      stocks={stocks}
       onClose={onClose}
       onFocusSystem={onFocusSystem}
+      onOpenCourt={onOpenCourt}
       onResolveChoice={onResolveChoice}
       onResolveDice={onResolveDice}
     />

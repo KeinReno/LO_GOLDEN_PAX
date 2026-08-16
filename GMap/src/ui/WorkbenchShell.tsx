@@ -13,6 +13,8 @@ type Props = {
   /** Badge in the title row (e.g. incoming count). */
   badge?: ReactNode;
   wide?: boolean;
+  /** Master–detail: dock panel to the left (pair with system layer on the right). */
+  masterDetail?: boolean;
 };
 
 /**
@@ -28,11 +30,16 @@ export function WorkbenchShell({
   className = "",
   badge,
   wide,
+  masterDetail = false,
 }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // System dive owns Esc when master–detail is open (see ViewerPage).
+      if (masterDetail && document.querySelector(".viewer-system-layer")) {
+        return;
+      }
       if (document.querySelector(".action-ring, .eco-doctrine-modal")) {
         return;
       }
@@ -41,7 +48,7 @@ export function WorkbenchShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, masterDetail]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +62,10 @@ export function WorkbenchShell({
   if (!open) return null;
 
   return createPortal(
-    <div className="workbench-root" role="presentation">
+    <div
+      className={`workbench-root${masterDetail ? " workbench-root--master-detail" : ""}`}
+      role="presentation"
+    >
       <button
         type="button"
         className="workbench-backdrop"
@@ -63,7 +73,7 @@ export function WorkbenchShell({
         onClick={onClose}
       />
       <div
-        className={`workbench-panel ${wide ? "workbench-panel--wide" : ""} ${className}`.trim()}
+        className={`workbench-panel ${wide ? "workbench-panel--wide" : ""} ${masterDetail ? "workbench-panel--master" : ""} ${className}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-label={title}

@@ -101,6 +101,7 @@ export function ContactMarketStrip({
 }) {
   const [book, setBook] = useState<ContactBookOffer[]>([]);
   const [bookBusy, setBookBusy] = useState(false);
+  const [bookError, setBookError] = useState<string | null>(null);
   const [localMsg, setLocalMsg] = useState<string | null>(null);
   const [offerSide, setOfferSide] = useState<"sell" | "buy">("sell");
   const [giveCurrency, setGiveCurrency] = useState(TRADE_CURRENCIES[0] ?? "");
@@ -115,9 +116,11 @@ export function ContactMarketStrip({
   const refreshBook = useCallback(async () => {
     if (!factionId || !password) {
       setBook([]);
+      setBookError(null);
       return;
     }
     setBookBusy(true);
+    setBookError(null);
     try {
       const res = await fetch("/api/market/book", {
         method: "POST",
@@ -128,11 +131,14 @@ export function ContactMarketStrip({
           venue: "contacts",
         }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setBookError(`Не удалось загрузить лоты (${res.status})`);
+        return;
+      }
       const data = (await res.json()) as { offers?: ContactBookOffer[] };
       setBook(Array.isArray(data.offers) ? data.offers : []);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      setBookError(e instanceof Error ? e.message : "Не удалось загрузить лоты");
     } finally {
       setBookBusy(false);
     }
@@ -293,6 +299,11 @@ export function ContactMarketStrip({
           </p>
 
           <div className="gc-contact-trade__book">
+            {bookError ? (
+              <p className="hint" role="alert">
+                {bookError}
+              </p>
+            ) : null}
             <div>
               <strong className="gc-contact-trade__h">
                 Лоты · {partnerName} · {partnerLots.length}

@@ -191,7 +191,18 @@ function inferRaceComposition(
     const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0];
     return [{ raceId: top, percent: 100 }];
   }
-  return [{ raceId: "race_human", percent: 100 }];
+  return [{ raceId: defaultSeedRaceId(), percent: 100 }];
+}
+
+/** First content race tagged `baseline`, else first catalog race, else human. */
+function defaultSeedRaceId(): string {
+  const races = getCachedContent()?.races;
+  if (!races) return "race_human";
+  const entries = Object.entries(races);
+  if (entries.length === 0) return "race_human";
+  const tagged = entries.find(([, r]) => r.tags?.includes("baseline"));
+  const picked = tagged ?? entries[0]!;
+  return picked[1].id || picked[0] || "race_human";
 }
 
 function isHabitable(planet: Planet): boolean {

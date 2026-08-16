@@ -53,6 +53,12 @@ function channelKey(effect, args = {}) {
       return `npc_task:${a.kind || "*"}`;
     case "revolt_risk":
       return "revolt_risk";
+    case "power_mind_strike":
+      return "power:mind";
+    case "power_will_sway":
+      return "power:will";
+    case "combat_role_mult":
+      return `combat_role:${a.role || "*"}`;
     case "unit_upgrade":
     case "building_level_mult":
     case "treaty_effect":
@@ -70,6 +76,8 @@ const OTHER_EFFECTS = new Set([
   "treaty_effect",
   "forbid_intent",
   "allow_intent",
+  "power_mind_strike",
+  "power_will_sway",
   "unlock_property",
   "unlock_tech_tier",
   "slot_require",
@@ -99,7 +107,8 @@ function isFlat(effect) {
 export const DEFAULT_MODIFIER_CAPS = {
   production: { min: 0.5, max: 2.0 },
   upkeep: { min: 0.5, max: 1.5 },
-  research: { min: 0.5, max: 1.0 },
+  // Symmetric with upkeep/cost so research_cost_mult > 1 (penalties) is not clamped to no-op.
+  research: { min: 0.5, max: 1.5 },
   cost: { min: 0.75, max: 1.5 },
   "*": { min: 0.25, max: 3.0 },
 };

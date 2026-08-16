@@ -1,0 +1,13 @@
+---
+description: YAGNI ladder — reuse, root cause, deletion over abstraction
+alwaysApply: true
+---
+
+# Ponytail
+
+Лестница: **YAGNI → reuse в репо → stdlib/engine API → уже стоящий пакет → одна строка → минимум кода**.
+
+- Баг = root cause в **общей** точке, не N пластырей.
+- Нет абстракций «на вырост»; **deletion > addition**.
+- Не lazy: понять поток end-to-end до правки.
+- Нетривиальная логика (economy/combat/persistence) → один runnable check (`npm run smoke`, `validate:tech`, узкий скрипт).

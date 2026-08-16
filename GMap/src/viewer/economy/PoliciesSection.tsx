@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import type { ViewerPayload } from "../../state/types";
 import { TaxDragStrip } from "./components/TaxDragStrip";
 import {
@@ -11,12 +10,13 @@ import {
 import { fmtInt } from "../../state/numberFormat";
 import { EmptyState } from "./components/EmptyState";
 import { EcoTip } from "./components/EcoTip";
-
+import { ConfirmModal } from "../shared/ConfirmModal";
 type Props = {
   payload: ViewerPayload;
   onSetTax?: (taxSlot: string, tierId: string) => void;
   onSetDoctrine?: (policyId: string) => void;
   busy?: boolean;
+  statusMsg?: string | null;
 };
 
 export function PoliciesSection({
@@ -24,6 +24,7 @@ export function PoliciesSection({
   onSetTax,
   onSetDoctrine,
   busy,
+  statusMsg,
 }: Props) {
   const eco = payload.economy;
   const slots = useMemo(() => loadTaxSlots(), []);
@@ -31,21 +32,7 @@ export function PoliciesSection({
     null,
   );
 
-  useEffect(() => {
-    if (!confirmDoctrine) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        setConfirmDoctrine(null);
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [confirmDoctrine]);
-
-  if (!eco) {
-    return (
+  if (!eco) {    return (
       <EmptyState
         title="Политики недоступны"
         body="Данные налогов появятся после входа и первого тика."
@@ -61,10 +48,18 @@ export function PoliciesSection({
 
   return (
     <div className="eco-policies">
+      {statusMsg ? (
+        <p className="eco-policies__status" role="status">
+          {statusMsg}
+        </p>
+      ) : null}
       <section className="eco-policies__taxes" aria-label="Налоги">
         <header className="eco-chart-block__head">
           <h4>Налоги</h4>
-          <span className="hint">давление {fmtInt(eco.pressure ?? 0)}</span>
+          <span className="hint">
+            давление {fmtInt(eco.pressure ?? 0)} · кнопка ставки → очередь на
+            следующий ход
+          </span>
         </header>
         <div className="eco-tax-strips">
           {slots.map((slot) => (
@@ -127,62 +122,41 @@ export function PoliciesSection({
         )}
       </section>
 
-      {confirmDoctrine &&
-        doctrinePreview &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div className="eco-doctrine-modal" role="dialog" aria-modal="true">
-            <button
-              type="button"
-              className="eco-doctrine-modal__backdrop"
-              aria-label="Закрыть"
-              onClick={() => setConfirmDoctrine(null)}
-            />
-            <div className="eco-doctrine-modal__card">
-              <h3>{confirmDoctrine.label}</h3>
-              <p className="hint">{confirmDoctrine.blurb}</p>
-              <ul className="eco-doctrine-modal__lines">
-                {doctrinePreview.lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-              <p className="hint">
-                Давление (оценка):{" "}
-                <strong>
-                  {fmtInt((eco.pressure ?? 0) + doctrinePreview.pressureDelta)}
-                </strong>{" "}
-                (сейчас {fmtInt(eco.pressure ?? 0)}
-                {doctrinePreview.pressureDelta !== 0
-                  ? `, изменение ${
-                      doctrinePreview.pressureDelta > 0 ? "+" : ""
-                    }${fmtInt(doctrinePreview.pressureDelta)}`
-                  : ""}
-                )
-              </p>
-              <div className="eco-doctrine-modal__actions">
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => setConfirmDoctrine(null)}
-                >
-                  Отмена
-                </button>
-                <button
-                  type="button"
-                  className="btn primary"
-                  disabled={busy}
-                  onClick={() => {
-                    onSetDoctrine?.(confirmDoctrine.id);
-                    setConfirmDoctrine(null);
-                  }}
-                >
-                  Применить (1 ОД)
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
-    </div>
+      <ConfirmModal
+        open={!!confirmDoctrine && !!doctrinePreview}
+        title={confirmDoctrine?.label ?? ""}
+        onClose={() => setConfirmDoctrine(null)}
+        onConfirm={() => {
+          if (!confirmDoctrine) return;
+          onSetDoctrine?.(confirmDoctrine.id);
+          setConfirmDoctrine(null);
+        }}
+        confirmLabel="Применить (1 ОД)"
+        busy={busy}
+      >
+        {confirmDoctrine && doctrinePreview ? (
+          <>
+            <p className="hint">{confirmDoctrine.blurb}</p>
+            <ul className="eco-doctrine-modal__lines">
+              {doctrinePreview.lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+            <p className="hint">
+              Давление (оценка):{" "}
+              <strong>
+                {fmtInt((eco.pressure ?? 0) + doctrinePreview.pressureDelta)}
+              </strong>{" "}
+              (сейчас {fmtInt(eco.pressure ?? 0)}
+              {doctrinePreview.pressureDelta !== 0
+                ? `, изменение ${
+                    doctrinePreview.pressureDelta > 0 ? "+" : ""
+                  }${fmtInt(doctrinePreview.pressureDelta)}`
+                : ""}
+              )
+            </p>
+          </>
+        ) : null}
+      </ConfirmModal>    </div>
   );
 }

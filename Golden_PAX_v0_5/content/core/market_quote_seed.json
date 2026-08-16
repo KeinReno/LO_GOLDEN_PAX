@@ -1,0 +1,2008 @@
+{
+  "meta": {
+    "version": 1,
+    "turnStart": 4,
+    "turns": 10,
+    "turnEnd": 13,
+    "quote": "fx.universal_credit",
+    "narrative": "Ходы 4–13: разведка Дамильского коридора от Голоколя (Карнед), спрос на блюматид/стеклосталь, топливный накал Белатора, рост реликтового интереса."
+  },
+  "resources": {
+    "map.iron": {
+      "id": "map.iron",
+      "name": "железо",
+      "category": "A",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3483,
+        0.3461,
+        0.346,
+        0.3429,
+        0.3377,
+        0.3308,
+        0.3381,
+        0.342,
+        0.3464,
+        0.3395
+      ]
+    },
+    "map.titan": {
+      "id": "map.titan",
+      "name": "титан",
+      "category": "A",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.3895,
+        1.4193,
+        1.4564,
+        1.4729,
+        1.5381,
+        1.6375,
+        1.7016,
+        1.6947,
+        1.6577,
+        1.7046
+      ]
+    },
+    "map.crystals": {
+      "id": "map.crystals",
+      "name": "кристаллы",
+      "category": "B",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.4205,
+        1.4467,
+        1.4732,
+        1.4838,
+        1.5263,
+        1.5423,
+        1.5143,
+        1.5068,
+        1.5187,
+        1.5089
+      ]
+    },
+    "map.gas": {
+      "id": "map.gas",
+      "name": "газ",
+      "category": "B",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.7212,
+        0.7171,
+        0.7119,
+        0.7228,
+        0.7444,
+        0.7611,
+        0.7693,
+        0.7597,
+        0.776,
+        0.7849
+      ]
+    },
+    "map.water": {
+      "id": "map.water",
+      "name": "вода",
+      "category": "E",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3504,
+        0.3526,
+        0.3574,
+        0.3622,
+        0.3637,
+        0.3606,
+        0.3583,
+        0.3578,
+        0.3635,
+        0.3628
+      ]
+    },
+    "map.rare_earth": {
+      "id": "map.rare_earth",
+      "name": "редкоземы",
+      "category": "A",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.423,
+        1.4224,
+        1.4431,
+        1.4366,
+        1.4396,
+        1.4208,
+        1.4412,
+        1.4192,
+        1.4016,
+        1.4192
+      ]
+    },
+    "map.antimatter": {
+      "id": "map.antimatter",
+      "name": "антиматерия",
+      "category": "D",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        44.1551,
+        43.4341,
+        44.2103,
+        46.7681,
+        49.8859,
+        55.125,
+        61.6628,
+        67.9278,
+        66.7288,
+        65.9207
+      ]
+    },
+    "map.relics": {
+      "id": "map.relics",
+      "name": "реликты",
+      "category": "F",
+      "tier": 9,
+      "quote": "fx.universal_credit",
+      "series": [
+        91.77,
+        93.7227,
+        95.7548,
+        101.8325,
+        107.7458,
+        118.496,
+        125.1315,
+        129.6602,
+        136.3302,
+        141.887
+      ]
+    },
+    "map.silver": {
+      "id": "map.silver",
+      "name": "серебро",
+      "category": "B",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.6237,
+        5.53,
+        5.5058,
+        5.5622,
+        5.7948,
+        6.063,
+        6.0733,
+        6.0638,
+        6.0302,
+        6.032
+      ]
+    },
+    "map.gold": {
+      "id": "map.gold",
+      "name": "золото",
+      "category": "B",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.5275,
+        5.6105,
+        5.6521,
+        5.6914,
+        5.8373,
+        5.9252,
+        5.9365,
+        5.8591,
+        5.885,
+        5.888
+      ]
+    },
+    "map.glasssteel": {
+      "id": "map.glasssteel",
+      "name": "стеклосталь",
+      "category": "A",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.7825,
+        2.8596,
+        3.0013,
+        3.2751,
+        3.6064,
+        3.6683,
+        3.6081,
+        3.5059,
+        3.4416,
+        3.5604
+      ]
+    },
+    "map.alloys": {
+      "id": "map.alloys",
+      "name": "сплавы",
+      "category": "B",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.4298,
+        1.4587,
+        1.4741,
+        1.4794,
+        1.5297,
+        1.5402,
+        1.5364,
+        1.5171,
+        1.5229,
+        1.5302
+      ]
+    },
+    "map.cinnabar": {
+      "id": "map.cinnabar",
+      "name": "хиноварь",
+      "category": "B",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.8494,
+        2.8949,
+        2.8902,
+        2.9689,
+        2.9949,
+        3.0643,
+        3.0009,
+        2.9599,
+        3.0051,
+        3.0085
+      ]
+    },
+    "map.biofuel": {
+      "id": "map.biofuel",
+      "name": "биотопливо",
+      "category": "D",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.4367,
+        1.445,
+        1.4702,
+        1.5667,
+        1.6854,
+        1.836,
+        1.8664,
+        1.7775,
+        1.7187,
+        1.7432
+      ]
+    },
+    "map.blumatid": {
+      "id": "map.blumatid",
+      "name": "блюматид",
+      "category": "B",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.821,
+        2.9266,
+        3.0723,
+        3.3861,
+        3.7564,
+        4.1077,
+        3.976,
+        3.8785,
+        3.8906,
+        4.0448
+      ]
+    },
+    "map.solari": {
+      "id": "map.solari",
+      "name": "соларит",
+      "category": "D",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.7606,
+        5.8692,
+        5.9631,
+        6.1244,
+        6.1902,
+        6.3922,
+        6.4842,
+        6.3782,
+        6.5829,
+        6.608
+      ]
+    },
+    "map.krin": {
+      "id": "map.krin",
+      "name": "крин",
+      "category": "C",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.8319,
+        2.8278,
+        2.8729,
+        2.9102,
+        2.972,
+        3.0466,
+        3.0557,
+        2.983,
+        2.9876,
+        2.9397
+      ]
+    },
+    "map.buildplex": {
+      "id": "map.buildplex",
+      "name": "стройплексы",
+      "category": "C",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.442,
+        1.4231,
+        1.4035,
+        1.4039,
+        1.4522,
+        1.4835,
+        1.5311,
+        1.5243,
+        1.5134,
+        1.5342
+      ]
+    },
+    "map.biomass": {
+      "id": "map.biomass",
+      "name": "органическая биомасса",
+      "category": "E",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.6941,
+        0.6804,
+        0.7012,
+        0.7444,
+        0.7527,
+        0.7423,
+        0.7219,
+        0.7077,
+        0.6953,
+        0.6898
+      ]
+    },
+    "map.food": {
+      "id": "map.food",
+      "name": "пища",
+      "category": "E",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.3895,
+        1.4546,
+        1.5007,
+        1.5621,
+        1.5265,
+        1.4933,
+        1.4651,
+        1.4627,
+        1.4999,
+        1.4729
+      ]
+    },
+    "map.minerals": {
+      "id": "map.minerals",
+      "name": "минералы",
+      "category": "B",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.362,
+        0.3616,
+        0.3624,
+        0.3674,
+        0.3741,
+        0.3792,
+        0.3747,
+        0.3721,
+        0.3797,
+        0.38
+      ]
+    },
+    "map.energy": {
+      "id": "map.energy",
+      "name": "энергия",
+      "category": "D",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.9621,
+        2.9838,
+        3.0691,
+        3.1673,
+        3.4106,
+        3.8008,
+        3.969,
+        3.8662,
+        3.8363,
+        3.9395
+      ]
+    },
+    "map.trade_value": {
+      "id": "map.trade_value",
+      "name": "торговое значение",
+      "category": null,
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.3446,
+        1.4164,
+        1.5013,
+        1.5602,
+        1.5972,
+        1.5435,
+        1.516,
+        1.53,
+        1.613,
+        1.666
+      ]
+    },
+    "map.lazualin": {
+      "id": "map.lazualin",
+      "name": "лазуалин",
+      "category": "A",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.603,
+        5.519,
+        5.5462,
+        5.4664,
+        5.4659,
+        5.5571,
+        5.5473,
+        5.6091,
+        5.5813,
+        5.6234
+      ]
+    },
+    "map.hyperium": {
+      "id": "map.hyperium",
+      "name": "гипериум",
+      "category": "A",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        10.9486,
+        10.6776,
+        10.6192,
+        10.9737,
+        11.296,
+        11.5912,
+        11.6396,
+        11.1405,
+        10.9109,
+        10.7583
+      ]
+    },
+    "map.eradian": {
+      "id": "map.eradian",
+      "name": "эрадион",
+      "category": "A",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.1936,
+        11.1468,
+        11.0569,
+        11.1321,
+        11.0915,
+        11.058,
+        11.2221,
+        11.1151,
+        11.2621,
+        11.3826
+      ]
+    },
+    "map.talitin": {
+      "id": "map.talitin",
+      "name": "талитин",
+      "category": "A",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.4853,
+        5.3304,
+        5.3369,
+        5.4644,
+        5.6216,
+        5.8091,
+        5.9185,
+        5.6552,
+        5.6272,
+        5.5201
+      ]
+    },
+    "map.exotic_gases": {
+      "id": "map.exotic_gases",
+      "name": "экзотические газы",
+      "category": "D",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.9165,
+        2.9263,
+        2.9386,
+        3.1109,
+        3.396,
+        3.7357,
+        3.9704,
+        3.8115,
+        3.7093,
+        3.7561
+      ]
+    },
+    "map.focusing_crystals": {
+      "id": "map.focusing_crystals",
+      "name": "фокусирующие кристаллы",
+      "category": "B",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.6761,
+        2.7834,
+        2.962,
+        3.0932,
+        3.2145,
+        3.1131,
+        3.0064,
+        3.0085,
+        3.1052,
+        3.2243
+      ]
+    },
+    "map.volatile_motes": {
+      "id": "map.volatile_motes",
+      "name": "летучие частицы",
+      "category": "B",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.8365,
+        2.7992,
+        2.8226,
+        2.8718,
+        3.004,
+        3.1133,
+        3.1027,
+        3.1008,
+        3.1085,
+        3.1084
+      ]
+    },
+    "map.elyrium": {
+      "id": "map.elyrium",
+      "name": "элирий",
+      "category": "A",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        10.5129,
+        10.7129,
+        11.073,
+        11.476,
+        11.5633,
+        11.4067,
+        11.0642,
+        10.636,
+        10.8812,
+        11.2082
+      ]
+    },
+    "map.titanium": {
+      "id": "map.titanium",
+      "name": "титаний",
+      "category": "A",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.3896,
+        11.1887,
+        11.0041,
+        10.9641,
+        11.1238,
+        11.2057,
+        11.6223,
+        11.4293,
+        11.5417,
+        11.6995
+      ]
+    },
+    "map.adamantian": {
+      "id": "map.adamantian",
+      "name": "адамантий",
+      "category": "A",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.835,
+        22.2998,
+        22.8979,
+        24.3513,
+        25.3924,
+        26.565,
+        26.7393,
+        26.3871,
+        27.0938,
+        27.5
+      ]
+    },
+    "map.skaashiz": {
+      "id": "map.skaashiz",
+      "name": "скаашиз",
+      "category": "A",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.9034,
+        21.3709,
+        21.6178,
+        22.6148,
+        23.4804,
+        24.4583,
+        24.725,
+        23.8626,
+        23.2992,
+        23.5488
+      ]
+    },
+    "map.klax": {
+      "id": "map.klax",
+      "name": "клакс",
+      "category": "B",
+      "tier": 10,
+      "quote": "fx.universal_credit",
+      "series": [
+        154.8655,
+        157.4731,
+        169.1808,
+        178.5373,
+        182.6049,
+        179.175,
+        169.7137,
+        170.1418,
+        177.4415,
+        183.6528
+      ]
+    },
+    "map.hydromel": {
+      "id": "map.hydromel",
+      "name": "гидромель",
+      "category": "E",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        42.1051,
+        42.8665,
+        44.9538,
+        45.959,
+        45.1067,
+        44.0963,
+        43.5692,
+        44.2659,
+        44.9996,
+        43.8542
+      ]
+    },
+    "map.orchid": {
+      "id": "map.orchid",
+      "name": "орхидия",
+      "category": "B",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        22.3133,
+        22.1219,
+        22.4409,
+        22.7713,
+        23.9831,
+        24.9819,
+        24.8682,
+        25.097,
+        25.0347,
+        25.4066
+      ]
+    },
+    "map.dark_horn": {
+      "id": "map.dark_horn",
+      "name": "тёмный рог",
+      "category": "B",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.3748,
+        21.6017,
+        22.2039,
+        23.9125,
+        25.2016,
+        24.8309,
+        23.9199,
+        22.7993,
+        23.1406,
+        24.0612
+      ]
+    },
+    "map.red_sang": {
+      "id": "map.red_sang",
+      "name": "красный санг",
+      "category": "B",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.0525,
+        21.7244,
+        23.2905,
+        24.8249,
+        25.6274,
+        25.1444,
+        24.1829,
+        23.967,
+        25.0916,
+        26.1208
+      ]
+    },
+    "map.song_silk": {
+      "id": "map.song_silk",
+      "name": "песенный шёлк",
+      "category": "B",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        22.1104,
+        22.8482,
+        23.2687,
+        23.9986,
+        24.4238,
+        25.0143,
+        24.6954,
+        24.8598,
+        25.0006,
+        25.0912
+      ]
+    },
+    "map.dragon_root": {
+      "id": "map.dragon_root",
+      "name": "корень дракона",
+      "category": "E",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        22.2106,
+        21.9479,
+        22.2474,
+        22.9162,
+        22.7838,
+        22.8055,
+        22.9268,
+        22.813,
+        22.8,
+        22.1063
+      ]
+    },
+    "map.crystal_cap": {
+      "id": "map.crystal_cap",
+      "name": "кристальная шляпка",
+      "category": "E",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.7311,
+        21.6171,
+        22.1351,
+        23.6989,
+        24.1056,
+        23.9109,
+        23.4773,
+        22.6965,
+        22.575,
+        22.5893
+      ]
+    },
+    "map.leviathan_ichor": {
+      "id": "map.leviathan_ichor",
+      "name": "ихор левиафана",
+      "category": "A",
+      "tier": 9,
+      "quote": "fx.universal_credit",
+      "series": [
+        78.019,
+        80.4727,
+        84.7436,
+        87.3683,
+        86.3402,
+        83.4119,
+        83.1952,
+        84.3126,
+        88.3954,
+        91.6542
+      ]
+    },
+    "map.golden_coral": {
+      "id": "map.golden_coral",
+      "name": "золотой коралл",
+      "category": "A",
+      "tier": 9,
+      "quote": "fx.universal_credit",
+      "series": [
+        81.4478,
+        81.8234,
+        82.5848,
+        81.5952,
+        81.5043,
+        81.6154,
+        83.103,
+        82.0219,
+        80.8764,
+        80.9143
+      ]
+    },
+    "map.solar_water": {
+      "id": "map.solar_water",
+      "name": "солариевая вода",
+      "category": "E",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        42.6294,
+        43.856,
+        44.4716,
+        45.3875,
+        44.5867,
+        43.7154,
+        42.4996,
+        43.3338,
+        43.4923,
+        43.4767
+      ]
+    },
+    "map.issridil": {
+      "id": "map.issridil",
+      "name": "иссридил",
+      "category": "B",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        40.74,
+        40.5968,
+        42.8346,
+        45.492,
+        47.7767,
+        47.7871,
+        45.7741,
+        44.2481,
+        44.3577,
+        46.0401
+      ]
+    },
+    "map.dream_mist": {
+      "id": "map.dream_mist",
+      "name": "грёзный туман",
+      "category": "F",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        48.3604,
+        50.3576,
+        53.2628,
+        57.6702,
+        63.0255,
+        67.789,
+        69.5973,
+        71.9972,
+        74.7714,
+        76.9902
+      ]
+    },
+    "map.archite": {
+      "id": "map.archite",
+      "name": "архит",
+      "category": "B",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        42.2157,
+        41.4805,
+        41.8113,
+        43.1329,
+        45.1883,
+        47.1243,
+        47.3286,
+        46.4467,
+        46.3901,
+        46.2495
+      ]
+    },
+    "map.vicious_bark": {
+      "id": "map.vicious_bark",
+      "name": "злобная кора",
+      "category": "E",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        22.4268,
+        22.7079,
+        23.3426,
+        23.5624,
+        22.9653,
+        22.4419,
+        22.0815,
+        22.5332,
+        22.5004,
+        22.095
+      ]
+    },
+    "map.lunar_veins": {
+      "id": "map.lunar_veins",
+      "name": "лунные жилы",
+      "category": "F",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        13.058,
+        12.9216,
+        13.2322,
+        13.6296,
+        14.5258,
+        15.6436,
+        16.649,
+        17.4869,
+        17.9923,
+        18.5762
+      ]
+    },
+    "map.minor_artifacts": {
+      "id": "map.minor_artifacts",
+      "name": "малые артефакты",
+      "category": "F",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        6.06,
+        6.4385,
+        6.9056,
+        7.4361,
+        7.8956,
+        8.0697,
+        8.0724,
+        8.5926,
+        9.3898,
+        10.0011
+      ]
+    },
+    "map.astral_threads": {
+      "id": "map.astral_threads",
+      "name": "астральные нити",
+      "category": "F",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        12.2081,
+        12.7291,
+        13.6059,
+        14.8985,
+        16.0576,
+        16.8511,
+        16.8383,
+        17.441,
+        18.7402,
+        20.0071
+      ]
+    },
+    "map.grinid": {
+      "id": "map.grinid",
+      "name": "гринид",
+      "category": "F",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        24.6437,
+        26.3566,
+        28.4033,
+        29.8548,
+        30.1038,
+        31.0099,
+        33.1345,
+        35.8148,
+        39.2116,
+        39.8411
+      ]
+    },
+    "map.radid": {
+      "id": "map.radid",
+      "name": "рэдид",
+      "category": "D",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.7083,
+        11.5505,
+        11.6658,
+        12.0883,
+        13.0848,
+        14.2667,
+        15.345,
+        14.876,
+        14.4633,
+        14.5595
+      ]
+    },
+    "map.blakula": {
+      "id": "map.blakula",
+      "name": "блакула",
+      "category": "F",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        48.9705,
+        50.5865,
+        52.0201,
+        54.4582,
+        56.8832,
+        60.5287,
+        62.8904,
+        65.5565,
+        67.1978,
+        68.342
+      ]
+    },
+    "map.vaitid": {
+      "id": "map.vaitid",
+      "name": "вайтид",
+      "category": "F",
+      "tier": 8,
+      "quote": "fx.universal_credit",
+      "series": [
+        46.7356,
+        49.5105,
+        53.9109,
+        57.3621,
+        59.3581,
+        60.3066,
+        62.8386,
+        67.1237,
+        72.8977,
+        77.3998
+      ]
+    },
+    "map.violid": {
+      "id": "map.violid",
+      "name": "виолид",
+      "category": "D",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        23.1233,
+        24.005,
+        24.3483,
+        25.2115,
+        26.281,
+        28.4714,
+        29.7281,
+        29.2704,
+        28.6528,
+        28.5423
+      ]
+    },
+    "map.zro": {
+      "id": "map.zro",
+      "name": "зро",
+      "category": "D",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        22.5236,
+        23.0633,
+        24.0472,
+        26.043,
+        27.7435,
+        29.6029,
+        30.1575,
+        29.1482,
+        28.5193,
+        29.8826
+      ]
+    },
+    "map.dark_matter": {
+      "id": "map.dark_matter",
+      "name": "тёмная материя",
+      "category": "A",
+      "tier": 10,
+      "quote": "fx.universal_credit",
+      "series": [
+        161.6,
+        165.624,
+        173.232,
+        185.38,
+        195.688,
+        208,
+        220.8,
+        230.55,
+        240.9,
+        246.76
+      ]
+    },
+    "map.living_metal": {
+      "id": "map.living_metal",
+      "name": "живой металл",
+      "category": "C",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.9175,
+        22.2998,
+        23.2325,
+        24.7324,
+        26.0249,
+        27.3625,
+        28.5285,
+        29.0763,
+        29.6258,
+        30.1702
+      ]
+    },
+    "map.nanites": {
+      "id": "map.nanites",
+      "name": "наниты",
+      "category": "C",
+      "tier": 7,
+      "quote": "fx.universal_credit",
+      "series": [
+        21.4208,
+        21.5607,
+        22.0133,
+        23.3098,
+        24.3479,
+        24.9432,
+        24.9501,
+        23.7279,
+        23.4092,
+        23.9172
+      ]
+    },
+    "map.refractory": {
+      "id": "map.refractory",
+      "name": "тугоплавкие минералы",
+      "category": "A",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.6689,
+        0.6873,
+        0.7091,
+        0.7505,
+        0.7707,
+        0.7558,
+        0.736,
+        0.7137,
+        0.7274,
+        0.7734
+      ]
+    },
+    "map.rare_crystals": {
+      "id": "map.rare_crystals",
+      "name": "редкие кристаллы",
+      "category": "B",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.0275,
+        11.3583,
+        11.9097,
+        12.6643,
+        13.6641,
+        14.1749,
+        13.992,
+        13.8827,
+        14.1013,
+        14.4656
+      ]
+    },
+    "map.hydrogen": {
+      "id": "map.hydrogen",
+      "name": "водород",
+      "category": "D",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3703,
+        0.3657,
+        0.3625,
+        0.3707,
+        0.3767,
+        0.383,
+        0.3969,
+        0.39,
+        0.3888,
+        0.3896
+      ]
+    },
+    "map.ice": {
+      "id": "map.ice",
+      "name": "лёд",
+      "category": "D",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3543,
+        0.3663,
+        0.39,
+        0.4219,
+        0.4473,
+        0.4577,
+        0.4692,
+        0.4638,
+        0.4672,
+        0.4956
+      ]
+    },
+    "map.ammonia": {
+      "id": "map.ammonia",
+      "name": "аммиак",
+      "category": "E",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3492,
+        0.3507,
+        0.3544,
+        0.3686,
+        0.3751,
+        0.3817,
+        0.3794,
+        0.3794,
+        0.374,
+        0.3645
+      ]
+    },
+    "map.isotopes": {
+      "id": "map.isotopes",
+      "name": "изотопы",
+      "category": "D",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.8723,
+        5.7619,
+        5.8323,
+        6.0781,
+        6.4674,
+        7.0727,
+        7.5444,
+        7.3949,
+        7.2081,
+        7.2002
+      ]
+    },
+    "map.nickel": {
+      "id": "map.nickel",
+      "name": "никель",
+      "category": "A",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3628,
+        0.3587,
+        0.3558,
+        0.3512,
+        0.3518,
+        0.3572,
+        0.3639,
+        0.3634,
+        0.3615,
+        0.3656
+      ]
+    },
+    "map.cobalt": {
+      "id": "map.cobalt",
+      "name": "кобальт",
+      "category": "A",
+      "tier": 1,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.3383,
+        0.346,
+        0.3609,
+        0.3756,
+        0.3791,
+        0.3678,
+        0.3644,
+        0.3627,
+        0.373,
+        0.3919
+      ]
+    },
+    "map.methane": {
+      "id": "map.methane",
+      "name": "метан",
+      "category": "D",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.715,
+        0.7258,
+        0.7739,
+        0.8228,
+        0.875,
+        0.8986,
+        0.9101,
+        0.8857,
+        0.8962,
+        0.9378
+      ]
+    },
+    "map.helium3": {
+      "id": "map.helium3",
+      "name": "гелий-3",
+      "category": "D",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.7533,
+        5.8255,
+        5.9685,
+        6.2916,
+        6.567,
+        7.0719,
+        7.4474,
+        7.2583,
+        7.2639,
+        7.3709
+      ]
+    },
+    "map.toxic_gases": {
+      "id": "map.toxic_gases",
+      "name": "токсичные газы",
+      "category": "D",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.7077,
+        0.7423,
+        0.7848,
+        0.8254,
+        0.8672,
+        0.8754,
+        0.8982,
+        0.9081,
+        0.9156,
+        0.9645
+      ]
+    },
+    "map.catalysts": {
+      "id": "map.catalysts",
+      "name": "катализаторы",
+      "category": "B",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.7071,
+        0.6821,
+        0.6922,
+        0.7261,
+        0.7631,
+        0.7895,
+        0.7838,
+        0.7612,
+        0.766,
+        0.7592
+      ]
+    },
+    "map.plasma_crystals": {
+      "id": "map.plasma_crystals",
+      "name": "плазмо-кристаллы",
+      "category": "B",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.2948,
+        11.2537,
+        11.151,
+        11.3462,
+        12.0077,
+        12.4343,
+        12.6142,
+        12.6498,
+        12.6997,
+        12.7921
+      ]
+    },
+    "map.volcanic_minerals": {
+      "id": "map.volcanic_minerals",
+      "name": "вулканические минералы",
+      "category": "A",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.691,
+        0.7183,
+        0.7453,
+        0.7447,
+        0.7277,
+        0.7097,
+        0.7316,
+        0.7691,
+        0.7937,
+        0.7929
+      ]
+    },
+    "map.medicinals": {
+      "id": "map.medicinals",
+      "name": "лекарственные соединения",
+      "category": "E",
+      "tier": 4,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.807,
+        2.7905,
+        2.878,
+        2.9912,
+        3.0205,
+        3.0508,
+        3.0335,
+        3.074,
+        3.0779,
+        2.9761
+      ]
+    },
+    "map.anomaly_crystals": {
+      "id": "map.anomaly_crystals",
+      "name": "аномальные кристаллы",
+      "category": "B",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.0137,
+        11.6017,
+        12.5709,
+        14.2106,
+        15.8503,
+        17.1992,
+        16.4794,
+        16.2189,
+        16.6573,
+        17.3148
+      ]
+    },
+    "map.biocatalysts": {
+      "id": "map.biocatalysts",
+      "name": "биокатализаторы",
+      "category": "E",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.3277,
+        5.4432,
+        5.7836,
+        6.0502,
+        5.9805,
+        5.748,
+        5.3971,
+        5.3788,
+        5.4911,
+        5.5609
+      ]
+    },
+    "map.extremophile_enzymes": {
+      "id": "map.extremophile_enzymes",
+      "name": "экстремофильные ферменты",
+      "category": "E",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        10.7495,
+        10.6635,
+        11.1808,
+        11.8644,
+        12.0221,
+        11.4882,
+        10.9691,
+        10.734,
+        10.7601,
+        10.7469
+      ]
+    },
+    "map.frozen_fuels": {
+      "id": "map.frozen_fuels",
+      "name": "замёрзшие топлива",
+      "category": "D",
+      "tier": 3,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.5117,
+        1.5316,
+        1.5246,
+        1.5783,
+        1.6577,
+        1.8138,
+        1.9175,
+        1.9232,
+        1.9055,
+        1.9613
+      ]
+    },
+    "map.energy_minerals": {
+      "id": "map.energy_minerals",
+      "name": "энергетические минералы",
+      "category": "A",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.6593,
+        5.5593,
+        5.6097,
+        5.5767,
+        5.5178,
+        5.5684,
+        5.6748,
+        5.7419,
+        5.7946,
+        5.8437
+      ]
+    },
+    "map.magnetite": {
+      "id": "map.magnetite",
+      "name": "магнетиты",
+      "category": "A",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.6792,
+        0.6887,
+        0.7253,
+        0.7466,
+        0.7546,
+        0.7423,
+        0.7247,
+        0.7191,
+        0.7334,
+        0.7674
+      ]
+    },
+    "map.platinum": {
+      "id": "map.platinum",
+      "name": "платина",
+      "category": "B",
+      "tier": 5,
+      "quote": "fx.universal_credit",
+      "series": [
+        5.5413,
+        5.555,
+        5.6296,
+        5.7822,
+        5.8955,
+        6.0424,
+        6.0549,
+        5.9252,
+        5.9425,
+        6.0668
+      ]
+    },
+    "map.cyber_minerals": {
+      "id": "map.cyber_minerals",
+      "name": "кибер-минералы",
+      "category": "C",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        10.556,
+        10.7894,
+        11.342,
+        11.8745,
+        11.958,
+        11.7483,
+        11.4892,
+        11.5193,
+        11.684,
+        12.2374
+      ]
+    },
+    "map.frozen_gases": {
+      "id": "map.frozen_gases",
+      "name": "замёрзшие газы",
+      "category": "D",
+      "tier": 2,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.7461,
+        0.7469,
+        0.7387,
+        0.7631,
+        0.8172,
+        0.8907,
+        0.948,
+        0.9377,
+        0.9202,
+        0.9329
+      ]
+    },
+    "map.plasmoids": {
+      "id": "map.plasmoids",
+      "name": "плазмоиды",
+      "category": "D",
+      "tier": 6,
+      "quote": "fx.universal_credit",
+      "series": [
+        11.2936,
+        11.9068,
+        12.5323,
+        13.1431,
+        13.4213,
+        13.907,
+        14.4938,
+        14.8924,
+        15.4096,
+        15.8498
+      ]
+    },
+    "currency.extracta": {
+      "id": "currency.extracta",
+      "name": "Сырьё (A)",
+      "category": "A",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        0.9789,
+        1.0091,
+        1.0435,
+        1.0501,
+        1.0023,
+        0.971,
+        0.9984,
+        1.0301,
+        1.0615,
+        1.0636
+      ],
+      "kind": "category"
+    },
+    "currency.materia": {
+      "id": "currency.materia",
+      "name": "Материалы (B)",
+      "category": "B",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.7866,
+        1.7484,
+        1.7867,
+        1.8849,
+        2.0402,
+        2.0842,
+        2.0582,
+        2.0189,
+        2.0136,
+        2.0175
+      ],
+      "kind": "category"
+    },
+    "currency.industria": {
+      "id": "currency.industria",
+      "name": "Промышленность (C)",
+      "category": "C",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.4736,
+        2.459,
+        2.4593,
+        2.4504,
+        2.4776,
+        2.5665,
+        2.594,
+        2.5892,
+        2.5433,
+        2.5495
+      ],
+      "kind": "category"
+    },
+    "currency.energia": {
+      "id": "currency.energia",
+      "name": "Энергия (D)",
+      "category": "D",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        2.1726,
+        2.1803,
+        2.2322,
+        2.3654,
+        2.6045,
+        2.8081,
+        2.9204,
+        2.8159,
+        2.7389,
+        2.7725
+      ],
+      "kind": "category"
+    },
+    "currency.bios": {
+      "id": "currency.bios",
+      "name": "Биомасса (E)",
+      "category": "E",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.5433,
+        1.5726,
+        1.6914,
+        1.8233,
+        1.8251,
+        1.7538,
+        1.6531,
+        1.6709,
+        1.7139,
+        1.751
+      ],
+      "kind": "category"
+    },
+    "currency.cognitio": {
+      "id": "currency.cognitio",
+      "name": "Знание (F)",
+      "category": "F",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        3.3662,
+        3.5079,
+        3.7633,
+        4.08,
+        4.3624,
+        4.4172,
+        4.4934,
+        4.6471,
+        5.0343,
+        5.3497
+      ],
+      "kind": "category"
+    },
+    "currency.metal": {
+      "id": "currency.metal",
+      "name": "Металл",
+      "category": "A",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.2237,
+        1.2121,
+        1.2188,
+        1.2196,
+        1.2306,
+        1.2505,
+        1.295,
+        1.3087,
+        1.3214,
+        1.3267
+      ],
+      "kind": "category"
+    },
+    "currency.supply": {
+      "id": "currency.supply",
+      "name": "Обеспечение",
+      "category": "E",
+      "tier": null,
+      "quote": "fx.universal_credit",
+      "series": [
+        1.1253,
+        1.1283,
+        1.1227,
+        1.1603,
+        1.1735,
+        1.1729,
+        1.1848,
+        1.1936,
+        1.1976,
+        1.196
+      ],
+      "kind": "category"
+    }
+  },
+  "currencies": {
+    "fx.damyl_doubloon": {
+      "id": "fx.damyl_doubloon",
+      "name": "Дамильский Дублон",
+      "short": "ДД",
+      "peg": null,
+      "pegLabel": "неизвестно",
+      "strength": "reserve_apex",
+      "blurb": "Резерв Дамильских врат. Самая жёсткая валюта известного сектора — котируется редко, почти не дробит.",
+      "issuerFactionIds": [],
+      "quote": "fx.universal_credit",
+      "series": [
+        48.36,
+        48.1164,
+        48.5316,
+        49.7328,
+        50.6892,
+        51.7752,
+        52.0584,
+        52.338,
+        53.3466,
+        53.8944
+      ]
+    },
+    "fx.terrial_credit": {
+      "id": "fx.terrial_credit",
+      "name": "Терриальский Кредит",
+      "short": "ТК",
+      "peg": null,
+      "pegLabel": "неизвестно",
+      "strength": "reserve_apex",
+      "blurb": "Банковский эталон Терриала. По силе рядом с Дамильским дублоном; ликвиднее на внешних столах.",
+      "issuerFactionIds": [
+        "faction_nomad_pax_terrialis",
+        "64928514-afb3-4cdb-b79c-23dd39cdcbd0"
+      ],
+      "quote": "fx.universal_credit",
+      "series": [
+        44.7188,
+        45.1685,
+        45.0523,
+        46.0721,
+        46.0024,
+        46.7415,
+        47.3189,
+        46.8956,
+        47.297,
+        47.4019
+      ]
+    },
+    "fx.turon_credit": {
+      "id": "fx.turon_credit",
+      "name": "Туронский Кредит",
+      "short": "ТуК",
+      "peg": "map.glasssteel",
+      "pegLabel": "стеклосталь",
+      "strength": "hard_peg",
+      "blurb": "Жёсткая привязка к стеклостали Туронских верфей. Следит за рынком корпуса.",
+      "issuerFactionIds": [
+        "faction_turon",
+        "faction_nomad_f_08a06270a3"
+      ],
+      "quote": "fx.universal_credit",
+      "series": [
+        11.6865,
+        12.0103,
+        12.6055,
+        13.7554,
+        15.1469,
+        15.4069,
+        15.154,
+        14.7248,
+        14.4547,
+        14.9537
+      ]
+    },
+    "fx.elan_doubloon": {
+      "id": "fx.elan_doubloon",
+      "name": "Эланский Дублон",
+      "short": "ЭД",
+      "peg": null,
+      "pegLabel": "неизвестно",
+      "strength": "regional_hard",
+      "blurb": "Региональный твёрдый дублон Элана. Меньше резервных, но стабилен вне кризисов.",
+      "issuerFactionIds": [
+        "faction_nomad_f_f3466a10f0"
+      ],
+      "quote": "fx.universal_credit",
+      "series": [
+        22.0275,
+        22.2755,
+        22.5533,
+        22.44,
+        22.4617,
+        22.6277,
+        22.5184,
+        22.7473,
+        22.8866,
+        22.7084
+      ]
+    },
+    "fx.belator_solarit": {
+      "id": "fx.belator_solarit",
+      "name": "Белаторский Соларит",
+      "short": "БС",
+      "peg": "map.solari",
+      "pegLabel": "соларит",
+      "strength": "commodity_peg",
+      "blurb": "Привязка к солариту Белатора. Растёт вместе с энерго-топливным спросом.",
+      "issuerFactionIds": [
+        "faction_belator",
+        "faction_khanate",
+        "30af7a77-fcc0-4231-b4f6-5df0c7b1da7d"
+      ],
+      "quote": "fx.universal_credit",
+      "series": [
+        8.9289,
+        9.0973,
+        9.2428,
+        9.4928,
+        9.5948,
+        9.9079,
+        10.0505,
+        9.8862,
+        10.2035,
+        10.2424
+      ]
+    },
+    "fx.karned_trill": {
+      "id": "fx.karned_trill",
+      "name": "Карнедский Трилл",
+      "short": "КТ",
+      "peg": "map.blumatid",
+      "pegLabel": "блюматид",
+      "strength": "commodity_peg",
+      "blurb": "Трилл Карнеда сидит на блюматиде. Скачет вместе с коридорным спросом у Дамильских врат.",
+      "issuerFactionIds": [
+        "faction_karned"
+      ],
+      "quote": "fx.universal_credit",
+      "series": [
+        6.0652,
+        6.2922,
+        6.6054,
+        7.2801,
+        8.0763,
+        8.8316,
+        8.5484,
+        8.3388,
+        8.3648,
+        8.6963
+      ]
+    },
+    "fx.aphel_ilir": {
+      "id": "fx.aphel_ilir",
+      "name": "Афельский Илир",
+      "short": "АИ",
+      "peg": "map.blumatid",
+      "pegLabel": "блюматид",
+      "strength": "commodity_peg",
+      "blurb": "Илир Афеля тоже на блюматиде, чуть слабее трилла — больше эмиссии у стола.",
+      "issuerFactionIds": [
+        "faction_amalfea"
+      ],
+      "quote": "fx.universal_credit",
+      "series": [
+        5.642,
+        5.8532,
+        6.1446,
+        6.7722,
+        7.5128,
+        8.2154,
+        7.952,
+        7.757,
+        7.7812,
+        8.0896
+      ]
+    },
+    "fx.universal_credit": {
+      "id": "fx.universal_credit",
+      "name": "Универсальный Кредит",
+      "short": "UC",
+      "peg": null,
+      "pegLabel": "неизвестно",
+      "strength": "numeraire",
+      "blurb": "Расчётная единица общего рынка. Номинал 1.0 — все котировки в UC.",
+      "issuerFactionIds": [],
+      "quote": "fx.universal_credit",
+      "series": [
+        1.0063,
+        0.995,
+        1.0037,
+        1.005,
+        0.9925,
+        0.9962,
+        1,
+        0.9962,
+        0.9988,
+        0.9938
+      ]
+    }
+  }
+}

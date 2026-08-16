@@ -7,6 +7,7 @@ import type {
   ViewerPayload,
 } from "../state/types";
 import { getCachedContent } from "../state/contentCatalog";
+import { useViewerPanelFocusStore } from "../state/viewerPanelFocusStore";
 import {
   listCouncilPortfolios,
   portfolioLabelForSeat,
@@ -14,7 +15,6 @@ import {
   resolveSeatTitle,
   systemHasGovernor,
 } from "../state/courtGovernance";
-import { CardBoard } from "../ui/cardBoardContext";
 import { DropZone } from "../ui/DropZone";
 import { DragCard } from "../ui/DragCard";
 import {
@@ -56,6 +56,7 @@ export type CourtPanelProps = {
       systemId?: string;
       legionId?: string;
       fleetId?: string;
+      forceId?: string;
     },
   ) => void | Promise<boolean | void>;
   onRecallPosting?: (npcId: string) => void | Promise<boolean | void>;
@@ -159,7 +160,11 @@ function seatStyle(angleDeg: number): CSSProperties {
   return { ["--seat-angle" as string]: `${angleDeg}deg` };
 }
 
-function isRulerSeat(seat: Pick<SeatDef, "id" | "kind">) {
+function isRulerSeat(
+  seat: Pick<SeatDef, "id" | "kind"> | string | null | undefined,
+) {
+  if (seat == null) return false;
+  if (typeof seat === "string") return seat === "seat.ruler";
   return seat.kind === "ruler" || seat.id === "seat.ruler";
 }
 
@@ -428,6 +433,18 @@ export function CourtPanel({
     [fac?.npcs],
   );
 
+  const courtFocusNpcId = useViewerPanelFocusStore((s) => s.courtFocusNpcId);
+  const setCourtFocusNpcId = useViewerPanelFocusStore(
+    (s) => s.setCourtFocusNpcId,
+  );
+  useEffect(() => {
+    if (!courtFocusNpcId) return;
+    if (npcs.some((n) => n.id === courtFocusNpcId)) {
+      setSelectedNpcId(courtFocusNpcId);
+    }
+    setCourtFocusNpcId(null);
+  }, [courtFocusNpcId, npcs, setCourtFocusNpcId]);
+
   const rulerNpc = useMemo(() => {
     const id = fac?.rulerNpcId;
     if (id) {
@@ -436,7 +453,7 @@ export function CourtPanel({
     }
     return (
       npcs.find((n) => n.isPlayerRuler) ||
-      npcs.find((n) => n.councilSeat === "seat.ruler") ||
+      npcs.find((n) => isRulerSeat(n.councilSeat)) ||
       null
     );
   }, [fac?.rulerNpcId, npcs]);
@@ -446,9 +463,12 @@ export function CourtPanel({
     for (const n of npcs) {
       if (n.councilSeat) map.set(n.councilSeat, n);
     }
-    if (rulerNpc) map.set("seat.ruler", rulerNpc);
+    if (rulerNpc) {
+      const rulerSeatId = seats.find((s) => isRulerSeat(s))?.id ?? "seat.ruler";
+      map.set(rulerSeatId, rulerNpc);
+    }
     return map;
-  }, [npcs, rulerNpc]);
+  }, [npcs, rulerNpc, seats]);
 
   /** Pool: everyone except the locked player ruler (posted + unseated advisors). */
   const pool = useMemo(
@@ -456,11 +476,17 @@ export function CourtPanel({
       npcs.filter((n) => {
         if (n.isPlayerRuler || n.id === fac?.rulerNpcId) return false;
         if (n.id === rulerNpc?.id) return false;
-        if (n.councilSeat === "seat.ruler") return false;
+        if (isRulerSeat(n.councilSeat)) return false;
         return !n.councilSeat;
       }),
     [npcs, fac?.rulerNpcId, rulerNpc?.id],
   );
+
+  // Exact NPC ids this board's cards can carry — replaces "*" now that
+  // CardBoard is shared app-wide (a wildcard here would also accept cards
+  // dragged in from unrelated panels, e.g. Diplomacy/Quests/CardBattle).
+  // `npcs` already covers both seated and pooled NPCs for this faction.
+  const npcCardIds = useMemo(() => npcs.map((n) => n.id), [npcs]);
 
   const filteredPool = useMemo(() => {
     if (courtTab !== "council" || !targetSeatId) return pool;
@@ -624,7 +650,7 @@ export function CourtPanel({
       if (
         npc?.isPlayerRuler ||
         npcId === fac?.rulerNpcId ||
-        npc?.councilSeat === "seat.ruler"
+        isRulerSeat(npc?.councilSeat)
       ) {
         return false;
       }
@@ -660,14 +686,22 @@ export function CourtPanel({
     if (zoneId.startsWith("field:commander:")) {
       const legionId = zoneId.slice("field:commander:".length);
       void withBusy(async () =>
-        onAssignPosting?.(npcId, { kind: "commander", legionId }),
+        onAssignPosting?.(npcId, {
+          kind: "commander",
+          legionId,
+          forceId: legionId,
+        }),
       );
       return;
     }
     if (zoneId.startsWith("field:admiral:")) {
       const fleetId = zoneId.slice("field:admiral:".length);
       void withBusy(async () =>
-        onAssignPosting?.(npcId, { kind: "admiral", fleetId }),
+        onAssignPosting?.(npcId, {
+          kind: "admiral",
+          fleetId,
+          forceId: fleetId,
+        }),
       );
       return;
     }
@@ -731,7 +765,7 @@ export function CourtPanel({
         </div>
       </header>
 
-      <CardBoard>
+      <>
         <LayoutGroup>
           <div className="court-workspace">
             <div className="court-workspace__stage">
@@ -869,7 +903,7 @@ export function CourtPanel({
                               ) : (
                                 <DropZone
                                   zoneId={`council:${seat.id}`}
-                                  accepts={["*"]}
+                                  accepts={npcCardIds}
                                   armWhileDragging
                                   onDrop={(cardId) => {
                                     void seatNpc(cardId, seat.id);
@@ -1106,7 +1140,7 @@ export function CourtPanel({
                       }
                     />
                     {selectedNpc.councilSeat &&
-                    selectedNpc.councilSeat !== "seat.ruler" &&
+                    !isRulerSeat(selectedNpc.councilSeat) &&
                     !selectedNpc.isPlayerRuler &&
                     onUnseatCouncil ? (
                       <button
@@ -1147,7 +1181,7 @@ export function CourtPanel({
 
               <DropZone
                 zoneId="council:pool"
-                accepts={["*"]}
+                accepts={npcCardIds}
                 armWhileDragging
                 onDrop={(cardId) => void unseatNpc(cardId)}
                 className="court-pool-dropzone"
@@ -1255,7 +1289,7 @@ export function CourtPanel({
             </aside>
           </div>
         </LayoutGroup>
-      </CardBoard>
+      </>
     </div>
   );
 }

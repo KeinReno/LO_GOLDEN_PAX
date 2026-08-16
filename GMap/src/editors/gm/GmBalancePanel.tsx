@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useCampaignSessionCtx } from "../CampaignSessionContext";
 import { fetchContent } from "../../state/contentCatalog";
+import { InterventionsSection, PowerTouchSection, PegMultiplierSection } from "./GmHealthExtras";
 
 type CostRow = Record<string, number>;
 
@@ -508,6 +509,10 @@ export function GmBalancePanel() {
               </div>
             </div>
           </div>
+
+          <PegMultiplierSection />
+          <PowerTouchSection />
+          <InterventionsSection limit={12} />
         </>
       )}
     </div>

@@ -69,7 +69,8 @@ export interface Quest {
   status: QuestStatus;
   giverFactionId?: string;
   giverFactionName?: string;
-  giverSystemId?: string;
+  giverNpcId?: string;
+  giverNpcName?: string;
   systemId?: string;
   systemName?: string;
   arcId?: string;
@@ -89,6 +90,10 @@ export interface Quest {
   log?: QuestLogEntry[];
   artUrl?: string;
   expiresTurn?: number | null;
+  /** Court NPC currently tasked to this quest (`currentTask.linkedQuestId`). */
+  assignedNpcId?: string;
+  assignedNpcName?: string;
+  assignedNpcEtaTurn?: number;
 }
 
 export interface NpcTaskView {

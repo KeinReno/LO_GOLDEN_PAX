@@ -187,7 +187,9 @@ export function AttentionInbox({
                       {meta.label}
                       {quest.giverFactionName
                         ? ` · ${quest.giverFactionName}`
-                        : ""}
+                        : quest.giverNpcName
+                          ? ` · ${quest.giverNpcName}`
+                          : ""}
                     </span>
                   </span>
                   <span className="quest-inbox__row-action">{label}</span>

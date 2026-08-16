@@ -1,0 +1,32 @@
+---
+description: Max quality, min tokens — STATUS/MEMORY, forbidden loads, narrow reads, zero token waste
+alwaysApply: true
+---
+
+# Token economy & Ultra-Efficiency
+
+Goal: **Maximum quality and correctness with the absolute minimum token burn**.
+Wrong/sloppy cheap passes cost 10x more than 1 precise, narrow pass.
+
+## 1. Zero-Waste Context Protocol
+- **Strictly Targeted Reads**: Never read whole files > 200 lines. Always use `offset` and `limit` to read only the target function/block.
+- **Graph & Index First**: ALWAYS use `codebase-memory-mcp` (`search_graph`, `trace_path`, `get_architecture`) or targeted ripgrep before inspecting files.
+- **Forbidden Whole-File Loads**:
+  - `**/node_modules/**`, `**/dist/**`, `package-lock.json`, `*.tsbuildinfo`, `*.map`, `diff.txt`
+  - `GMap/data/**/*.sqlite*`, `table.sqlite-wal`, `table.sqlite-shm`, `GMap/data/turns/**`
+  - `art/**`, `**/*.{png,jpg,jpeg,webp,psd,fbx,blend,wav,mp3,ogg,mp4,svg}`
+  - `GMap/content/core/technologies.json` / huge content JSONs — grep by ID/property only!
+  - `GMap/src/styles/app.css`, `MapCanvas.tsx`, `server/api.mjs`, `server/processTurn.mjs` — only narrow slices with offset/limit!
+  - Raw session logs, `tick-journal.json`, memory dumps.
+
+## 2. Communication & Response Discipline
+- **Diff & Action Focused**: Provide exact answers, diffs, terminal verification, and decisions. No conversational filler, verbose preambles, or speculative essays.
+- **No Chat-End Junk**: Do not create temporary per-turn summaries (`tmp/summary-*.json`).
+- **Synchronized State**: Rely on `PROJECT.md` for repo truth, `agent-tasks/STATUS.md` (keep ≤120 lines) for active session state, and `agent-tasks/MEMORY.md` for permanent facts.
+
+## 3. Fast Validation & Deterministic Testing
+- Run targeted offline npm/node scripts rather than dumping whole DBs to inspect behavior:
+  - `npm run test:tech-offers` / `test:tech-progress` / `test:court-roster` / `test:economic-track`
+  - `npm run validate:tech` / `npm run validate:recipes` / `npm run lint:balance`
+  - `npm run smoke` / `npm run smoke:tick`
+

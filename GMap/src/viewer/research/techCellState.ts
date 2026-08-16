@@ -1,4 +1,4 @@
-import type { TechnologyDef, EconomyCategory } from "../../state/contentCatalog";
+import type { TechnologyDef } from "../../state/contentCatalog";
 import { effectiveCognitioCost } from "../../state/researchCosts";
 import type { ViewerPayload } from "../../state/types";
 
@@ -49,7 +49,7 @@ export type EraCellStats = {
 };
 
 export type CatProgress = {
-  cat: EconomyCategory;
+  cat: string;
   total: number;
   done: number;
   affordable: number;
@@ -57,7 +57,7 @@ export type CatProgress = {
 };
 
 export function buildCatProgress(
-  cat: EconomyCategory,
+  cat: string,
   techs: TechnologyDef[],
   unlocked: Set<string>,
   cognitio: number,

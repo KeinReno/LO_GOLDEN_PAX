@@ -43,3 +43,4 @@ export type SlotViewMode = "radial" | "list";
 
 export const BUILD_QUEUE_MAX = 5;
 export const BUILD_DND_MIME = "application/x-lo-building-id";
+export const LABOR_DND_MIME = "application/x-gmap-labor";

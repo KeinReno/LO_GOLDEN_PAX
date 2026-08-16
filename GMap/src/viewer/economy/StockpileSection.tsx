@@ -1,23 +1,35 @@
 import {
   memo,
+  useEffect,
   useMemo,
   useState,
-  useRef,
-  useCallback,
   type CSSProperties,
-  type DragEvent,
+  type ReactNode,
 } from "react";
 import {
   BUILD_METAL,
   BUILD_SUPPLY,
   CATEGORY_CURRENCIES,
+  listStrategicResourceIds,
+  resourceDisplayName,
+  stockpileCardIds,
 } from "../../state/economyLabels";
+import { getCachedContent, intentApCost } from "../../state/contentCatalog";
+import { useViewerOrderSessionStore } from "../../state/viewerOrderSessionStore";
 import type { ViewerPayload } from "../../state/types";
 import { ResourceIcon } from "../../ui/ResourceIcon";
-import { ActionRing } from "../../ui/ActionRing";
-import { useLongPress } from "../../ui/useLongPress";
-import { AlertTriangle, ChevronDown, Package, Store, Truck } from "lucide-react";
-import { STOCK_DND_MIME } from "../research/constants";
+import { DragCard } from "../../ui/DragCard";
+import { DropZone } from "../../ui/DropZone";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Coins,
+  MoreHorizontal,
+  Package,
+  ShoppingCart,
+  Truck,
+} from "lucide-react";
+import { FloatingPopover } from "../../ui/FloatingPopover";
 import { fmtInt, fmtSigned } from "../../state/numberFormat";
 import { buildSparkline, currencyShortLabel, reasonLabel } from "./chartData";
 import { Sparkline } from "./components/Sparkline";
@@ -28,6 +40,17 @@ import { EcoTip } from "./components/EcoTip";
 import { NumberTicker } from "./components/NumberTicker";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
 import { buildTierStockRows, type TierStockRow } from "./stockpileTierData";
+import {
+  EXPRESS_LOT_FRACTIONS,
+  type ExpressSide,
+  type MarketRateRow,
+  fixedBuyQuoteAmount,
+  fixedSellAmount,
+  inferWarehouseCap,
+  lotAmount,
+  resolveQuoteCurrency,
+  validateExpressTrade,
+} from "./stockpileExpressTrade";
 
 type StockCard = {
   id: string;
@@ -36,23 +59,109 @@ type StockCard = {
   reserved: number;
   available: number;
   cssVar?: string;
+  strategic?: boolean;
 };
 
 type Props = {
   payload: ViewerPayload;
   flowData?: EconomyFlowBreakdown | null;
   onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
-  /** Open Market common tab with quick-sell preselect for this currency. */
+  /** Optional: open the Market room book. Express buy/sell stays in Economy. */
   onSellToMarket?: (currencyId: string) => void;
   onReserve?: (currencyId: string, amount: number, label?: string) => void;
-  onCaravan?: (currencyId: string, systemId?: string) => void;
+  onSendCaravan?: (
+    currencyId: string,
+    systemId: string,
+    amount: number,
+  ) => void | Promise<void | boolean>;
   onSetAlert?: (currencyId: string) => void;
-  onDropOnSystem?: (currencyId: string, systemId: string) => void;
+  onDropOnSystem?: (
+    currencyId: string,
+    systemId: string,
+    amount?: number,
+  ) => void;
+  onFocusBuild?: () => void;
   busy?: boolean;
 };
 
+function defaultCaravanAmount(card: StockCard): number {
+  return Math.max(
+    1,
+    Math.min(card.available, Math.ceil(card.available * 0.25) || 1),
+  );
+}
+
 function categoryLetterForCard(cardId: string): string | null {
   return CATEGORY_CURRENCIES.find((c) => c.id === cardId)?.letter ?? null;
+}
+
+type LotId = "step" | "p25" | "p50";
+
+const LOT_OPTIONS: readonly { id: LotId; label: string; title: string }[] = [
+  { id: "step", label: "Шаг", title: "Фиксированный шаг обмена" },
+  { id: "p25", label: "25%", title: "Лот 25% запаса" },
+  { id: "p50", label: "50%", title: "Лот 50% запаса" },
+];
+
+function expressAmount(
+  lot: LotId,
+  side: ExpressSide,
+  available: number,
+  quoteAvailable: number,
+): number {
+  if (lot === "step") {
+    return side === "buy"
+      ? fixedBuyQuoteAmount(quoteAvailable)
+      : fixedSellAmount(available);
+  }
+  const frac =
+    lot === "p25" ? EXPRESS_LOT_FRACTIONS[0] : EXPRESS_LOT_FRACTIONS[1];
+  return lotAmount(side === "buy" ? quoteAvailable : available, frac);
+}
+
+function TradeActionButton({
+  label,
+  icon,
+  disabled,
+  reason,
+  preview,
+  busy,
+  onClick,
+  primary,
+}: {
+  label: string;
+  icon?: ReactNode;
+  disabled: boolean;
+  reason: string;
+  preview?: ReactNode;
+  busy?: boolean;
+  onClick: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <EcoTip
+      delayMs={420}
+      content={
+        <>
+          <strong>{label}</strong>
+          {preview}
+          {disabled && reason ? <div className="hint">{reason}</div> : null}
+        </>
+      }
+    >
+      <button
+        type="button"
+        className={`eco-stock-card__btn${primary ? " eco-stock-card__btn--primary" : ""}`}
+        disabled={busy || disabled}
+        title={disabled ? reason : label}
+        aria-label={disabled ? `${label}: ${reason}` : label}
+        onClick={onClick}
+      >
+        {icon}
+        <span>{label}</span>
+      </button>
+    </EcoTip>
+  );
 }
 
 function TierBreakdownTable({
@@ -117,9 +226,15 @@ const StockRow = memo(function StockRow({
   showStockEstimate,
   onConvert,
   onReserve,
-  onCaravan,
   onSetAlert,
   busy,
+  rates,
+  stocks,
+  reserves,
+  reservedAp,
+  apMax,
+  convertAp,
+  stockCap,
 }: {
   card: StockCard;
   spark: number[];
@@ -128,33 +243,62 @@ const StockRow = memo(function StockRow({
   showStockEstimate: boolean;
   onConvert?: (fromCurrency: string, toCurrency: string, amountFrom: number) => void;
   onReserve?: (id: string, amount: number, label?: string) => void;
-  onCaravan?: (id: string) => void;
   onSetAlert?: (id: string) => void;
   busy?: boolean;
+  rates: MarketRateRow[];
+  stocks: Record<string, number>;
+  reserves: Record<string, number>;
+  reservedAp: number;
+  apMax: number;
+  convertAp: number;
+  stockCap: number | null;
 }) {
-  const dragRef = useRef<HTMLDivElement>(null);
-  const [ring, setRing] = useState<{ x: number; y: number } | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [lot, setLot] = useState<LotId>("step");
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const tierPanelId = `eco-stock-tiers-${card.id.replace(/\./g, "-")}`;
-
-  const openRing = useCallback((x: number, y: number) => {
-    setRing({ x, y });
-  }, []);
-
-  const bindLong = useLongPress({
-    onLongPress: ({ x, y }) => {
-      if (dragging) return;
-      requestAnimationFrame(() => openRing(x, y));
-    },
-    enabled: !busy && !dragging,
-    pointerCapture: false,
-  });
+  const menuId = `eco-stock-more-${card.id.replace(/\./g, "-")}`;
 
   const defaultReserve = Math.max(
     1,
     Math.min(card.available, Math.ceil(card.stock * 0.25) || 1),
   );
+
+  const quoteCurrency = resolveQuoteCurrency(rates, card.id);
+  const quoteAvailable = Math.max(
+    0,
+    Math.floor(Number(stocks[quoteCurrency ?? ""] ?? 0)) -
+      Math.floor(Number(reserves[quoteCurrency ?? ""] ?? 0)),
+  );
+  const tradeBase = {
+    rates,
+    quoteCurrency,
+    stocks,
+    available: card.available,
+    quoteAvailable,
+    reservedAp,
+    apMax,
+    convertAp,
+    stockCap,
+    resourceId: card.id,
+  };
+
+  const checkTrade = (side: ExpressSide, amountFrom: number) =>
+    validateExpressTrade({ ...tradeBase, side, amountFrom });
+
+  const runTrade = (side: ExpressSide, amountFrom: number) => {
+    if (!onConvert) return;
+    const check = checkTrade(side, amountFrom);
+    if (!check.ok) return;
+    onConvert(check.fromCurrency, check.toCurrency, check.amountFrom);
+  };
+
+  const buyAmount = expressAmount(lot, "buy", card.available, quoteAvailable);
+  const sellAmount = expressAmount(lot, "sell", card.available, quoteAvailable);
+  const buyCheck = checkTrade("buy", buyAmount);
+  const sellCheck = checkTrade("sell", sellAmount);
+
+  const closeMenu = () => setMenu(null);
 
   const doReserve = () =>
     onReserve?.(
@@ -163,97 +307,39 @@ const StockRow = memo(function StockRow({
       card.reserved > 0 ? undefined : "резерв склада",
     );
 
-  const onHtmlDragStart = (e: DragEvent) => {
-    if (busy || card.available <= 0) {
-      e.preventDefault();
-      return;
-    }
-    setRing(null);
-    e.dataTransfer.setData(STOCK_DND_MIME, card.id);
-    e.dataTransfer.setData("text/plain", card.id);
-    e.dataTransfer.effectAllowed = "copyMove";
-    setDragging(true);
+  const doCaravan = () => {
+    document
+      .querySelector(".eco-stock-routes")
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-    const doSell = () => {
-      onConvert?.(card.id, BUILD_METAL.id, Math.min(10, card.available));
-    };
-
-    const doBuy = () => {
-      onConvert?.(BUILD_METAL.id, card.id, 5); // 5 metal to buy this
-    };
-
-    const ringItems = useMemo(
-      () => [
-        {
-          id: "buy",
-          label: "Купить",
-          icon: <Store size={14} />,
-          onSelect: doBuy,
-        },
-        {
-          id: "sell",
-          label: "Продать",
-          icon: <Store size={14} />,
-          onSelect: doSell,
-        },
-      {
-        id: "reserve",
-        label: card.reserved > 0 ? "Снять резерв" : "Резерв",
-        icon: <Package size={14} />,
-        onSelect: doReserve,
-      },
-      {
-        id: "caravan",
-        label: "Караван",
-        icon: <Truck size={14} />,
-        onSelect: () => onCaravan?.(card.id),
-      },
-      {
-        id: "alert",
-        label: isStockAlertOn(card.id)
-          ? "Не следить"
-          : "Следить за запасом",
-        icon: <AlertTriangle size={14} />,
-        onSelect: () => onSetAlert?.(card.id),
-      },
-    ],
-    [
-      card.id,
-      card.reserved,
-      defaultReserve,
-      doBuy,
-      doSell,
-      onReserve,
-      onCaravan,
-      onSetAlert,
-    ],
-  );
+  const reserveDisabled = busy || (card.reserved <= 0 && card.available <= 0);
+  const caravanDisabled = busy || card.available <= 0;
+  const alertOn = isStockAlertOn(card.id);
+  const reserveLabel = card.reserved > 0 ? "Снять резерв" : "Резерв";
+  const alertLabel = alertOn ? "Не следить" : "Следить";
 
   return (
-    <>
-      <li>
-        <div
-          className={`eco-stock-card ${dragging ? "is-dragging" : ""} ${
-            card.reserved > 0 ? "has-reserve" : ""
-          }`}
-          style={
-            card.cssVar
-              ? ({ "--stock-accent": card.cssVar } as CSSProperties)
-              : undefined
-          }
-        >
-          <div className="eco-stock-card__head">
-            <button
-              type="button"
-              className={`eco-stock-card__expand${expanded ? " is-open" : ""}`}
-              aria-expanded={expanded}
-              aria-controls={tierPanelId}
-              title={expanded ? "Свернуть тиры" : "Развернуть тиры T1–T10"}
-              onClick={() => setExpanded((v) => !v)}
-            >
-              <ChevronDown size={16} strokeWidth={2} aria-hidden />
-            </button>
+    <li>
+      <div
+        className={`eco-stock-card ${card.reserved > 0 ? "has-reserve" : ""}`}
+        style={
+          card.cssVar
+            ? ({ "--stock-accent": card.cssVar } as CSSProperties)
+            : undefined
+        }
+      >
+        <div className="eco-stock-card__head">
+          <button
+            type="button"
+            className={`eco-stock-card__expand${expanded ? " is-open" : ""}`}
+            aria-expanded={expanded}
+            aria-controls={tierPanelId}
+            title={expanded ? "Свернуть тиры" : "Развернуть тиры T1–T10"}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            <ChevronDown size={16} strokeWidth={2} aria-hidden />
+          </button>
           <EcoTip
             content={
               <>
@@ -266,19 +352,19 @@ const StockRow = memo(function StockRow({
                   </div>
                 )}
                 <div className="hint">
-                  Кнопки справа — действия. Удерживайте карточку — кольцо.
-                  Перетащите на систему ниже. Стрелка слева — тиры T1–T10.
+                  Кнопки ниже — действия. Перетащите карточку на биржу,
+                  резерв или систему ниже.
                 </div>
               </>
             }
           >
-            <div
-              ref={dragRef}
+            <DragCard
+              cardId={card.id}
+              title=""
+              pinned={!!busy || card.available <= 0}
+              tilt
+              returnHome
               className="eco-stock-card__main"
-              draggable={!busy && card.available > 0}
-              onDragStart={onHtmlDragStart}
-              onDragEnd={() => setDragging(false)}
-              {...bindLong()}
             >
               <span className="eco-stock-card__icon">
                 <ResourceIcon resourceId={card.id} size={18} />
@@ -307,68 +393,178 @@ const StockRow = memo(function StockRow({
                   {fmtInt(history[0].delta)} · {reasonLabel(history[0].reason)}
                 </span>
               )}
-            </div>
+            </DragCard>
           </EcoTip>
-          </div>
-          {expanded && (
-            <TierBreakdownTable
-              id={tierPanelId}
-              rows={tierRows}
-              showStockEstimate={showStockEstimate}
-            />
-          )}
-          <div className="eco-stock-card__actions">
-            <button
-              type="button"
-              className="eco-stock-card__btn"
-              disabled={busy || card.id === BUILD_METAL.id}
-              title="Купить за металл"
-              onClick={doBuy}
-            >
-              <Store size={14} strokeWidth={2} aria-hidden />
-              <span>Купить</span>
-            </button>
-            <button
-              type="button"
-              className="eco-stock-card__btn"
-              disabled={busy || card.available <= 0 || card.id === BUILD_METAL.id}
-              title="Продать за металл"
-              onClick={doSell}
-            >
-              <Store size={14} strokeWidth={2} aria-hidden />
-              <span>Продать</span>
-            </button>
-            <button
-              type="button"
-              className="eco-stock-card__btn"
-              disabled={busy || (card.reserved <= 0 && card.available <= 0)}
-              title={card.reserved > 0 ? "Снять резерв" : "Зарезервировать"}
-              onClick={doReserve}
-            >
-              <Package size={14} strokeWidth={2} aria-hidden />
-              <span>{card.reserved > 0 ? "Снять" : "Резерв"}</span>
-            </button>
-            <button
-              type="button"
-              className="eco-stock-card__btn"
-              disabled={busy}
-              title="Следить за запасом"
-              onClick={() => onSetAlert?.(card.id)}
-            >
-              <AlertTriangle size={14} strokeWidth={2} aria-hidden />
-              <span>Следить</span>
-            </button>
-          </div>
         </div>
-      </li>
-      <ActionRing
-        open={!!ring}
-        x={ring?.x ?? 0}
-        y={ring?.y ?? 0}
-        onClose={() => setRing(null)}
-        items={ringItems}
-      />
-    </>
+        {expanded && (
+          <TierBreakdownTable
+            id={tierPanelId}
+            rows={tierRows}
+            showStockEstimate={showStockEstimate}
+          />
+        )}
+        <div className="eco-stock-card__actions">
+          <div
+            className="eco-stock-card__lots"
+            role="radiogroup"
+            aria-label="Размер лота"
+          >
+            {LOT_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={lot === opt.id}
+                className={`eco-stock-card__lot-seg${lot === opt.id ? " is-active" : ""}`}
+                title={opt.title}
+                aria-label={opt.title}
+                disabled={busy}
+                onClick={() => setLot(opt.id)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <TradeActionButton
+            primary
+            label="Купить"
+            icon={<ShoppingCart size={14} strokeWidth={2} aria-hidden />}
+            disabled={!onConvert || !buyCheck.ok}
+            reason={
+              !onConvert
+                ? "Обмен недоступен"
+                : buyCheck.ok
+                  ? "Купить сейчас"
+                  : buyCheck.reason
+            }
+            preview={
+              buyCheck.ok ? (
+                <div>
+                  −{fmtInt(buyCheck.amountFrom)} {currencyShortLabel(buyCheck.fromCurrency)} → +
+                  {fmtInt(buyCheck.amountTo)} «{card.name}» (здесь, без биржи).
+                </div>
+              ) : undefined
+            }
+            busy={busy}
+            onClick={() => runTrade("buy", buyAmount)}
+          />
+          <TradeActionButton
+            primary
+            label="Продать"
+            icon={<Coins size={14} strokeWidth={2} aria-hidden />}
+            disabled={!onConvert || !sellCheck.ok}
+            reason={
+              !onConvert
+                ? "Обмен недоступен"
+                : sellCheck.ok
+                  ? "Продать сейчас"
+                  : sellCheck.reason
+            }
+            preview={
+              sellCheck.ok ? (
+                <div>
+                  −{fmtInt(sellCheck.amountFrom)} «{card.name}» → +
+                  {fmtInt(sellCheck.amountTo)}{" "}
+                  {currencyShortLabel(sellCheck.toCurrency)}
+                </div>
+              ) : undefined
+            }
+            busy={busy}
+            onClick={() => runTrade("sell", sellAmount)}
+          />
+          <EcoTip
+            delayMs={420}
+            className="eco-stock-card__more-wrap"
+            content={
+              <>
+                <strong>Ещё</strong>
+                <div>Резерв, караван, следить за запасом.</div>
+              </>
+            }
+          >
+            <button
+              type="button"
+              className="eco-stock-card__btn eco-stock-card__more"
+              disabled={busy}
+              title="Ещё действия"
+              aria-label="Ещё действия"
+              aria-haspopup="menu"
+              aria-expanded={menu != null}
+              aria-controls={menuId}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setMenu((open) =>
+                  open ? null : { x: rect.right, y: rect.bottom },
+                );
+              }}
+            >
+              <MoreHorizontal size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </EcoTip>
+          <FloatingPopover
+            open={menu != null}
+            onClose={closeMenu}
+            x={menu?.x ?? 0}
+            y={menu?.y ?? 0}
+            placement="bottom-end"
+            role="menu"
+            className="eco-stock-card__menu"
+          >
+            <div id={menuId} role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className="eco-stock-card__menu-item"
+                disabled={!!reserveDisabled}
+                title={
+                  card.reserved > 0
+                    ? `Вернуть ${fmtInt(card.reserved)} в свободный запас`
+                    : `Отложить ~${fmtInt(defaultReserve)} под стройку/приказы`
+                }
+                aria-label={reserveLabel}
+                onClick={() => {
+                  doReserve();
+                  closeMenu();
+                }}
+              >
+                <Package size={14} strokeWidth={2} aria-hidden />
+                <span>{reserveLabel}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="eco-stock-card__menu-item"
+                disabled={!!caravanDisabled}
+                title="Перетащите ресурс на систему в списке ниже"
+                aria-label="Караван"
+                onClick={() => {
+                  doCaravan();
+                  closeMenu();
+                }}
+              >
+                <Truck size={14} strokeWidth={2} aria-hidden />
+                <span>Караван</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="eco-stock-card__menu-item"
+                disabled={!!busy}
+                title={alertOn ? "Не следить" : "Следить за запасом"}
+                aria-label={alertLabel}
+                onClick={() => {
+                  onSetAlert?.(card.id);
+                  closeMenu();
+                }}
+              >
+                <AlertTriangle size={14} strokeWidth={2} aria-hidden />
+                <span>{alertLabel}</span>
+              </button>
+            </div>
+          </FloatingPopover>
+        </div>
+      </div>
+    </li>
   );
 });
 
@@ -376,15 +572,46 @@ export function StockpileSection({
   payload,
   flowData,
   onConvert,
-  onSellToMarket,
   onReserve,
-  onCaravan,
+  onSendCaravan,
   onSetAlert,
   onDropOnSystem,
+  onFocusBuild,
   busy,
 }: Props) {
   const eco = payload.economy;
-  const [dropHover, setDropHover] = useState<string | null>(null);
+  const convertAp = intentApCost("intent.market_convert");
+  const reservedAp = useViewerOrderSessionStore((s) => s.reservedAp);
+  const storeApMax = useViewerOrderSessionStore((s) => s.apMax);
+  const apMax =
+    typeof payload.apMax === "number" ? payload.apMax : storeApMax;
+
+  const [rates, setRates] = useState<MarketRateRow[]>(
+    () => getCachedContent()?.economy_schema?.market?.placeholder_rates ?? [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const cached =
+      getCachedContent()?.economy_schema?.market?.placeholder_rates ?? [];
+    if (cached.length) setRates(cached);
+    void fetch("/api/market/rates")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !Array.isArray(d?.rates)) return;
+        setRates(d.rates);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const acceptIds = useMemo(
+    () => stockpileCardIds(),
+    // Content catalog ids (schema + map_resources), not live stocks.
+    [],
+  );
 
   const cards = useMemo(() => {
     if (!eco) return [] as StockCard[];
@@ -415,11 +642,34 @@ export function StockpileSection({
         cssVar: c.cssVar,
       })),
     ];
+    // v0.5: named strategic stocks (dual-write from tick) — content-driven ids.
+    for (const id of listStrategicResourceIds()) {
+      if (list.some((c) => c.id === id)) continue;
+      const stock = Number(eco.stocks?.[id] ?? 0);
+      list.push({
+        id,
+        name: resourceDisplayName(id),
+        stock,
+        reserved: reserves[id]?.amount ?? 0,
+        available: 0,
+        cssVar: "var(--signal-warning, #d4a017)",
+        strategic: true,
+      });
+    }
     for (const c of list) {
       c.available = Math.max(0, c.stock - c.reserved);
     }
     return list;
   }, [eco]);
+
+  const stocks = eco?.stocks ?? {};
+  const reserveAmounts = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const [id, row] of Object.entries(eco?.stockReserves ?? {})) {
+      out[id] = Math.max(0, Math.floor(Number(row?.amount ?? 0) || 0));
+    }
+    return out;
+  }, [eco?.stockReserves]);
 
   const ownedSystems = useMemo(() => {
     const fid = payload.factionId;
@@ -447,6 +697,7 @@ export function StockpileSection({
           })),
         tierRows: buildTierStockRows(card.stock, tierFlows),
         showStockEstimate: letter != null,
+        stockCap: inferWarehouseCap(flowData, letter),
       };
     });
   }, [cards, eco, flowData]);
@@ -455,7 +706,18 @@ export function StockpileSection({
     return (
       <EmptyState
         title="Склад пуст"
-        body={`После тика здесь появятся запасы (${CATEGORY_LEGEND}) и резервы.`}
+        body={`После тика здесь появятся запасы (${CATEGORY_LEGEND}) и резервы. Постройте добычу, чтобы наполнить склад.`}
+        action={
+          onFocusBuild ? (
+            <button
+              type="button"
+              className="btn sm primary"
+              onClick={onFocusBuild}
+            >
+              К системе
+            </button>
+          ) : undefined
+        }
       />
     );
   }
@@ -464,14 +726,31 @@ export function StockpileSection({
     ([, v]) => (v?.amount ?? 0) > 0,
   );
 
+  const tradeRowProps = {
+    onConvert,
+    onReserve,
+    onSetAlert,
+    busy,
+    rates,
+    stocks,
+    reserves: reserveAmounts,
+    reservedAp,
+    apMax,
+    convertAp,
+  } as const;
+
   return (
     <div className="eco-stockpile">
       <p className="hint eco-stockpile__hint">
-        Стрелка на карточке — развернуть тиры T1–T10. Кнопки — действия.
-        Удерживайте — кольцо. Перетащите на систему ниже — открыть систему.
+        Купить / Продать — мгновенный обмен здесь (шаг и лоты 25% / 50%).
+        Кнопки блокируются, если не хватает ОД, УЕ или склад заполнен.
+        Перетащите карточку в зону ниже — тот же обмен, без перехода на биржу.
+        Стратегические (именные) ресурсы — отдельной полосой ниже категорий.
       </p>
       <ul className="eco-stock-grid" aria-label="Запасы">
-        {stockRows.map(({ card, spark, history, tierRows, showStockEstimate }) => (
+        {stockRows
+          .filter(({ card }) => !card.strategic)
+          .map(({ card, spark, history, tierRows, showStockEstimate, stockCap }) => (
           <StockRow
             key={card.id}
             card={card}
@@ -479,108 +758,117 @@ export function StockpileSection({
             history={history}
             tierRows={tierRows}
             showStockEstimate={showStockEstimate}
-            onConvert={onConvert}
-            onReserve={onReserve}
-            onCaravan={onCaravan}
-            onSetAlert={onSetAlert}
-            busy={busy}
+            stockCap={stockCap}
+            {...tradeRowProps}
           />
         ))}
       </ul>
+      {stockRows.some(({ card }) => card.strategic) ? (
+        <>
+          <header className="eco-chart-block__head eco-stockpile__strategic-head">
+            <h4>Стратегические</h4>
+            <span className="hint">именной сток · peg · вклад в RoleScore</span>
+          </header>
+          <ul className="eco-stock-grid eco-stock-grid--strategic" aria-label="Стратегические запасы">
+            {stockRows
+              .filter(({ card }) => card.strategic)
+              .map(({ card, spark, history, tierRows, showStockEstimate, stockCap }) => (
+                <StockRow
+                  key={card.id}
+                  card={card}
+                  spark={spark}
+                  history={history}
+                  tierRows={tierRows}
+                  showStockEstimate={showStockEstimate}
+                  stockCap={stockCap}
+                  {...tradeRowProps}
+                />
+              ))}
+          </ul>
+        </>
+      ) : null}
 
       <div className="eco-stock-dropzones" aria-label="Быстрые действия">
         <header className="eco-chart-block__head">
           <h4>Быстрые действия</h4>
           <span className="hint">перетащите ресурс сюда</span>
         </header>
-        <ul className="eco-stock-dropzones__list">
+        <ul className="eco-stock-dropzones__list eco-stock-routes">
           <li>
-            <div
-              className={`eco-stock-dropzone ${dropHover === 'market' ? 'is-hover' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "copy";
-                setDropHover('market');
-              }}
-              onDragLeave={() => setDropHover((h) => (h === 'market' ? null : h))}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDropHover(null);
-                const currencyId = e.dataTransfer.getData(STOCK_DND_MIME) || e.dataTransfer.getData("text/plain");
-                if (!currencyId) return;
-                if (onSellToMarket) {
-                  onSellToMarket(currencyId);
-                  return;
-                }
-                if (onConvert) {
-                  const card = cards.find(c => c.id === currencyId);
-                  if (card) {
-                    onConvert(currencyId, BUILD_METAL.id, Math.min(10, card.available));
-                  }
-                }
+            <DropZone
+              zoneId="stock-market"
+              accepts={acceptIds}
+              armWhileDragging
+              className="eco-stock-dropzone"
+              onDrop={(currencyId) => {
+                if (!onConvert) return;
+                const card = cards.find((c) => c.id === currencyId);
+                if (!card) return;
+                const quote = resolveQuoteCurrency(rates, currencyId);
+                const amountFrom = lotAmount(card.available, 0.25) || fixedSellAmount(card.available);
+                const check = validateExpressTrade({
+                  side: "sell",
+                  resourceId: currencyId,
+                  amountFrom,
+                  rates,
+                  quoteCurrency: quote,
+                  stocks,
+                  available: card.available,
+                  quoteAvailable: Math.max(
+                    0,
+                    Math.floor(Number(stocks[quote ?? ""] ?? 0)) -
+                      (reserveAmounts[quote ?? ""] ?? 0),
+                  ),
+                  reservedAp,
+                  apMax,
+                  convertAp,
+                  stockCap: inferWarehouseCap(
+                    flowData,
+                    categoryLetterForCard(currencyId),
+                  ),
+                });
+                if (!check.ok) return;
+                onConvert(check.fromCurrency, check.toCurrency, check.amountFrom);
               }}
             >
-              <Store size={14} style={{ marginRight: 6 }} /> Продать на бирже
-            </div>
+              <Coins size={14} style={{ marginRight: 6 }} /> Продать сейчас
+            </DropZone>
           </li>
           <li>
-            <div
-              className={`eco-stock-dropzone ${dropHover === 'reserve' ? 'is-hover' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "copy";
-                setDropHover('reserve');
-              }}
-              onDragLeave={() => setDropHover((h) => (h === 'reserve' ? null : h))}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDropHover(null);
-                const currencyId = e.dataTransfer.getData(STOCK_DND_MIME) || e.dataTransfer.getData("text/plain");
-                if (currencyId && onReserve) {
-                  const card = cards.find(c => c.id === currencyId);
-                  if (card) {
-                    const defaultReserve = Math.max(1, Math.min(card.available, Math.ceil(card.stock * 0.25) || 1));
-                    onReserve(currencyId, defaultReserve, "резерв склада");
-                  }
+            <DropZone
+              zoneId="stock-reserve"
+              accepts={acceptIds}
+              armWhileDragging
+              className="eco-stock-dropzone"
+              onDrop={(currencyId) => {
+                if (!onReserve) return;
+                const card = cards.find((c) => c.id === currencyId);
+                if (card) {
+                  const defaultReserve = Math.max(1, Math.min(card.available, Math.ceil(card.stock * 0.25) || 1));
+                  onReserve(currencyId, defaultReserve, "резерв склада");
                 }
               }}
             >
               <Package size={14} style={{ marginRight: 6 }} /> В резерв
-            </div>
+            </DropZone>
           </li>
           {ownedSystems.map((sys) => (
             <li key={sys.id}>
-              <div
-                className={`eco-stock-dropzone ${
-                  dropHover === sys.id ? "is-hover" : ""
-                }`}
-                onDragOver={(e) => {
-                  const types = Array.from(e.dataTransfer.types || []);
-                  if (
-                    types.includes(STOCK_DND_MIME) ||
-                    types.includes("text/plain")
-                  ) {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "copy";
-                    setDropHover(sys.id);
-                  }
-                }}
-                onDragLeave={() =>
-                  setDropHover((h) => (h === sys.id ? null : h))
-                }
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDropHover(null);
-                  const currencyId =
-                    e.dataTransfer.getData(STOCK_DND_MIME) ||
-                    e.dataTransfer.getData("text/plain");
-                  if (!currencyId?.startsWith("currency.")) return;
-                  if (onDropOnSystem) onDropOnSystem(currencyId, sys.id);
-                  else onCaravan?.(currencyId, sys.id);
+              <DropZone
+                zoneId={`stock-system:${sys.id}`}
+                accepts={acceptIds}
+                armWhileDragging
+                className="eco-stock-dropzone"
+                onDrop={(currencyId) => {
+                  const card = cards.find((c) => c.id === currencyId);
+                  if (!card) return;
+                  const amount = defaultCaravanAmount(card);
+                  if (onDropOnSystem) onDropOnSystem(currencyId, sys.id, amount);
+                  else onSendCaravan?.(currencyId, sys.id, amount);
                 }}
               >
                 <Truck size={14} style={{ marginRight: 6 }} /> {sys.name}
-              </div>
+              </DropZone>
             </li>
           ))}
         </ul>

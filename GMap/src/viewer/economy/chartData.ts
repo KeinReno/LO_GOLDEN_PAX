@@ -1,5 +1,9 @@
 import type { ViewerPayload } from "../../state/types";
-import { BUILD_METAL, CATEGORY_CURRENCIES } from "../../state/economyLabels";
+import {
+  BUILD_METAL,
+  CATEGORY_CURRENCIES,
+  resourceDisplayName,
+} from "../../state/economyLabels";
 import type { EconomyFlowBreakdown } from "../economyFlowTypes";
 import { latestTreasuryTurn } from "./economyMath";
 
@@ -46,6 +50,7 @@ const REASON_LABELS: Record<string, string> = {
   bridge_upkeep: "Расход металла",
   treasury_income: "Доход казны",
   treasury_upkeep: "Расход казны",
+  strategic_extraction: "Добыча (именная)",
   market_convert_out: "Обмен (отдача)",
   market_convert_in: "Обмен (получение)",
   transfer_out: "Перевод (исх.)",
@@ -78,28 +83,11 @@ export function reasonLabel(reason: string): string {
   return REASON_LABELS[reason] ?? reason.replace(/_/g, " ");
 }
 
-const PEG_LABELS: Record<string, string> = {
-  "map.solari": "Соларит",
-  "map.blumatid": "Блюматид",
-  "map.glasssteel": "Стеклосталь",
-  "map.gold": "Золото",
-  "map.crystals": "Кристаллы",
-  "map.biomass": "Биомасса",
-  "map.iron": "Железо",
-  "map.water": "Вода",
-  "map.dark_matter": "Тёмная материя",
-};
-
 export function currencyShortLabel(currencyId: string): string {
+  const name = resourceDisplayName(currencyId);
   const cat = CATEGORY_CURRENCIES.find((c) => c.id === currencyId);
-  if (cat) return `${cat.name} (${cat.short})`;
-  if (currencyId === BUILD_METAL.id) return BUILD_METAL.label;
-  if (currencyId === "currency.supply") return "Обеспечение";
-  if (PEG_LABELS[currencyId]) return PEG_LABELS[currencyId];
-  if (currencyId.startsWith("map.")) {
-    return currencyId.replace(/^map\./, "");
-  }
-  return currencyId.replace(/^currency\./, "");
+  if (cat) return `${name} (${cat.short})`;
+  return name;
 }
 
 /**

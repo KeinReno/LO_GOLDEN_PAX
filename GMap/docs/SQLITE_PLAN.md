@@ -1,10 +1,25 @@
-# SQLite — подготовка почвы (P8.7)
+# SQLite — normalized hot-state (C4)
 
-> Статус: **readiness landed** (ping + JSON sizes в OpsHealthPanel). Канон пока JSON (`GMAP_STORE=file`). Полная миграция — опционально.
+> Статус: **C4 landed** — `GMAP_STORE=sqlite` использует нормализованные таблицы для горячего runtime-состояния. Файловый режим (`GMAP_STORE=file`, дефолт) без изменений.
+
+## Что изменилось (C4)
+
+Ранний черновик v1 (`kv(path, json)` — blob на файл) **заменён** нормализованными таблицами в `server/db/schema.sql` + `server/db/campaignDb.mjs`:
+
+| Таблица | Вместо |
+|---------|--------|
+| `table_meta` | `table-meta.json` (только revision / tick flags / ops extras) |
+| `tick_journal` + `tick_events` | вложенный `lastJournal` в table-meta (~1.3 MB) |
+| `ledger_entries` | `ledger.json` → `entries[]` (без обрезки 2000) |
+| `intents` | `data/intents.json` (приказы игроков, не content/core) |
+| `engagements` | `data/engagements.json` |
+| `kv` | остальные blob'ы: published, fog, race_states, … |
+
+Контент `content/core/*.json` **не** в БД (принцип №16).
 
 ## Когда переключать
 
-Спека: SQLite только если JSON начинает тормозить или портиться от ручных правок.
+Спека: SQLite когда JSON тормозит или портится от ручных правок.
 
 Сигналы go:
 - `ledger.json` / `intents.json` / RP jsonl > ~5–10 MB и медленные тики
@@ -15,48 +30,36 @@
 
 ## Адаптер
 
-`server/db/storeAdapter.mjs`
+`server/db/storeAdapter.mjs` + `server/db/campaignDb.mjs`
 
 | Driver | Env | Поведение |
 |--------|-----|-----------|
-| `file` (default) | `GMAP_STORE=file` | текущий read/write JSON |
-| `sqlite` | `GMAP_STORE=sqlite` | kv + jsonl_log; зеркало на диск; нужен `better-sqlite3` |
+| `file` (default) | `GMAP_STORE=file` | JSON как раньше; журнал тика в `data/tick-journal.json` |
+| `sqlite` | `GMAP_STORE=sqlite` | нормализованные таблицы + kv для мира; нужен `better-sqlite3` |
 
-`tableStore.readJson` / `writeJson` уже идут через адаптер.
+`tableStore.readJson` / `writeJson` идут через адаптер. Горячие сущности — через `campaignDb`.
 
-## Схема v1 (черновик)
-
-```sql
-kv(path TEXT PK, json TEXT, updated_at TEXT)
-  -- published, ledger snapshot, table-meta, fog, engagements blob
-
-jsonl_log(id, path, json, at)
-  -- RP messages append; optional ledger_entries later
-
--- later normalize:
--- intents(id, faction_id, turn, status, def_id, payload_json, ...)
--- ledger_entries(id, faction_id, currency, delta, turn, reason)
--- engagements(id, status, theater, result_json)
-```
-
-## Порядок миграции (когда решимся)
-
-1. kv для `published` + `ledger` + `table-meta`
-2. intents / engagements
-3. RP messages → jsonl_log (или отдельная таблица)
-4. оставить JSON snapshot в `data/turns/` как portable backup
-
-## Установка (не сейчас)
+## Установка
 
 ```bash
 cd GMap
 npm i better-sqlite3
 # Windows: может понадобиться build tools
 set GMAP_STORE=sqlite
+# optional: set GMAP_SQLITE_PATH=data/table.sqlite
 ```
+
+При первом запуске с `GMAP_STORE=sqlite` — одноразовый импорт из `data/*.json` (флаг `store_meta.normalized_v1`).
 
 ## API проверки
 
-`GET /api/store/ping` → `{ ok, driver, path?, betterSqlite3 }`.
+`GET /api/store/ping` → `{ ok, driver, path?, normalized, tables?, betterSqlite3, normalizedActive }`.
 
-`GET /api/ops/health` (master) также включает `store` и `dataSizes` (published/ledger/intents bytes).
+`GET /api/ops/health` (master) также включает `store` и `dataSizes`.
+
+## Порядок дальнейшей миграции (не C4)
+
+1. ~~kv blob для всего~~ → **сделано частично**: kv только для не-нормализованного
+2. ~~intents / engagements / ledger entries~~ → **сделано (C4)**
+3. RP messages → jsonl_log (или отдельная таблица)
+4. published / world systems — отдельная волна; JSON snapshot в `data/turns/` остаётся portable backup

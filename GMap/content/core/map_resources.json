@@ -10,6 +10,9 @@
     "properties": [
       "strong"
     ],
+    "roles": [
+      "structural"
+    ],
     "biome_tags": [
       "rocky",
       "desert"
@@ -21,6 +24,7 @@
   },
   "map.titan": {
     "id": "map.titan",
+    "rank": "strategic",
     "name": "титан",
     "yield": {
       "currency.metal": 4
@@ -28,7 +32,12 @@
     "category": "A",
     "tier": 3,
     "properties": [
-      "strong"
+      "strong",
+      "lightweight"
+    ],
+    "roles": [
+      "structural",
+      "mobility"
     ],
     "biome_tags": [
       "rocky",
@@ -90,7 +99,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.rare_earth": {
     "id": "map.rare_earth",
@@ -111,6 +123,7 @@
   },
   "map.antimatter": {
     "id": "map.antimatter",
+    "rank": "strategic",
     "name": "антиматерия",
     "yield": {
       "currency.metal": 5
@@ -120,6 +133,10 @@
     "properties": [
       "energy",
       "anomaly"
+    ],
+    "roles": [
+      "energy",
+      "exotic"
     ],
     "biome_tags": [
       "anomaly"
@@ -146,7 +163,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "exotic"
+    ]
   },
   "map.silver": {
     "id": "map.silver",
@@ -185,6 +205,7 @@
   },
   "map.glasssteel": {
     "id": "map.glasssteel",
+    "rank": "strategic",
     "name": "стеклосталь",
     "yield": {
       "currency.metal": 4
@@ -192,7 +213,11 @@
     "category": "A",
     "tier": 4,
     "properties": [
-      "strong"
+      "strong",
+      "optics"
+    ],
+    "roles": [
+      "structural"
     ],
     "biome_tags": [
       "mountainous"
@@ -200,7 +225,8 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "strategic": true
   },
   "map.alloys": {
     "id": "map.alloys",
@@ -229,7 +255,8 @@
     "tier": 4,
     "properties": [
       "strong",
-      "malleable"
+      "malleable",
+      "lithogenesis"
     ],
     "biome_tags": [
       "mountainous",
@@ -238,7 +265,9 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "strategic": true,
+    "rank": "strategic"
   },
   "map.biofuel": {
     "id": "map.biofuel",
@@ -258,10 +287,15 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "energy",
+      "biological"
+    ]
   },
   "map.blumatid": {
     "id": "map.blumatid",
+    "rank": "strategic",
     "name": "блюматид",
     "yield": {
       "currency.metal": 4
@@ -274,6 +308,10 @@
       "shield",
       "accelerate"
     ],
+    "roles": [
+      "structural",
+      "defensive"
+    ],
     "biome_tags": [
       "volcanic",
       "mountainous"
@@ -281,10 +319,12 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "strategic": true
   },
   "map.solari": {
     "id": "map.solari",
+    "rank": "strategic",
     "name": "соларит",
     "yield": {
       "currency.metal": 2
@@ -297,6 +337,10 @@
       "weapon_amp",
       "shield"
     ],
+    "roles": [
+      "energy",
+      "offensive"
+    ],
     "biome_tags": [
       "star_near",
       "desert"
@@ -304,7 +348,8 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "strategic": true
   },
   "map.krin": {
     "id": "map.krin",
@@ -355,7 +400,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.food": {
     "id": "map.food",
@@ -374,7 +422,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.minerals": {
     "id": "map.minerals",
@@ -409,7 +460,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "energy"
+    ]
   },
   "map.trade_value": {
     "id": "map.trade_value",
@@ -444,13 +498,20 @@
   },
   "map.hyperium": {
     "id": "map.hyperium",
+    "rank": "strategic",
     "name": "гипериум",
     "yield": {
       "currency.metal": 4
     },
     "category": "A",
     "tier": 6,
-    "properties": [],
+    "properties": [
+      "fuel",
+      "energy"
+    ],
+    "roles": [
+      "energy"
+    ],
     "biome_tags": [
       "deep",
       "anomaly"
@@ -512,10 +573,14 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "mobility"
+    ]
   },
   "map.focusing_crystals": {
     "id": "map.focusing_crystals",
+    "rank": "strategic",
     "name": "фокусирующие кристаллы",
     "yield": {
       "currency.metal": 3
@@ -552,13 +617,19 @@
   },
   "map.elyrium": {
     "id": "map.elyrium",
+    "rank": "strategic",
     "name": "элирий",
     "yield": {
       "currency.metal": 5
     },
     "category": "A",
     "tier": 6,
-    "properties": [],
+    "properties": [
+      "energy"
+    ],
+    "roles": [
+      "energy"
+    ],
     "biome_tags": [
       "anomaly"
     ],
@@ -576,7 +647,11 @@
     "category": "A",
     "tier": 6,
     "properties": [
-      "strong"
+      "strong",
+      "heat_resistant"
+    ],
+    "roles": [
+      "structural"
     ],
     "biome_tags": [
       "mountainous"
@@ -588,6 +663,7 @@
   },
   "map.adamantian": {
     "id": "map.adamantian",
+    "rank": "strategic",
     "name": "адамантий",
     "yield": {
       "currency.metal": 5
@@ -596,6 +672,9 @@
     "tier": 7,
     "properties": [
       "strong"
+    ],
+    "roles": [
+      "structural"
     ],
     "biome_tags": [
       "deep",
@@ -641,7 +720,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "exotic"
+    ]
   },
   "map.hydromel": {
     "id": "map.hydromel",
@@ -657,7 +739,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.orchid": {
     "id": "map.orchid",
@@ -696,10 +781,15 @@
   "map.red_sang": {
     "id": "map.red_sang",
     "name": "красный санг",
-    "yield": {},
-    "category": "B",
-    "tier": 7,
-    "properties": [],
+    "yield": {
+      "currency.metal": 3
+    },
+    "category": "F",
+    "tier": 8,
+    "properties": [
+      "psion_emit",
+      "anomaly"
+    ],
     "biome_tags": [
       "volcanic",
       "anomaly"
@@ -707,7 +797,11 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "cognitive",
+      "exotic"
+    ]
   },
   "map.song_silk": {
     "id": "map.song_silk",
@@ -739,7 +833,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.crystal_cap": {
     "id": "map.crystal_cap",
@@ -841,7 +938,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "cognitive"
+    ]
   },
   "map.archite": {
     "id": "map.archite",
@@ -924,10 +1024,14 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "cognitive"
+    ]
   },
   "map.grinid": {
     "id": "map.grinid",
+    "rank": "strategic",
     "name": "гринид",
     "yield": {
       "currency.metal": 3
@@ -946,10 +1050,14 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "cognitive"
+    ]
   },
   "map.radid": {
     "id": "map.radid",
+    "rank": "strategic",
     "name": "рэдид",
     "yield": {
       "currency.metal": 3
@@ -971,7 +1079,11 @@
     "spread": {
       "self_spreading": true
     },
-    "toxic": true
+    "toxic": true,
+    "roles": [
+      "energy",
+      "defensive"
+    ]
   },
   "map.blakula": {
     "id": "map.blakula",
@@ -993,7 +1105,13 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "strategic": true,
+    "rank": "strategic",
+    "roles": [
+      "offensive",
+      "exotic"
+    ]
   },
   "map.vaitid": {
     "id": "map.vaitid",
@@ -1016,7 +1134,13 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "strategic": true,
+    "rank": "strategic",
+    "roles": [
+      "cognitive",
+      "offensive"
+    ]
   },
   "map.violid": {
     "id": "map.violid",
@@ -1039,10 +1163,17 @@
     "spread": {
       "self_spreading": true
     },
-    "toxic": true
+    "toxic": true,
+    "strategic": true,
+    "rank": "strategic",
+    "roles": [
+      "offensive",
+      "energy"
+    ]
   },
   "map.zro": {
     "id": "map.zro",
+    "rank": "strategic",
     "name": "зро",
     "yield": {
       "currency.metal": 4
@@ -1060,10 +1191,15 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "energy",
+      "cognitive"
+    ]
   },
   "map.dark_matter": {
     "id": "map.dark_matter",
+    "rank": "strategic",
     "name": "тёмная материя",
     "yield": {
       "currency.metal": 5
@@ -1080,10 +1216,14 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "exotic"
+    ]
   },
   "map.living_metal": {
     "id": "map.living_metal",
+    "rank": "strategic",
     "name": "живой металл",
     "yield": {
       "currency.metal": 5
@@ -1092,6 +1232,9 @@
     "tier": 7,
     "properties": [
       "strong"
+    ],
+    "roles": [
+      "structural"
     ],
     "biome_tags": [
       "anomaly",
@@ -1175,7 +1318,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "mobility"
+    ]
   },
   "map.ice": {
     "id": "map.ice",
@@ -1229,7 +1375,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "energy"
+    ]
   },
   "map.nickel": {
     "id": "map.nickel",
@@ -1287,7 +1436,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "mobility"
+    ]
   },
   "map.helium3": {
     "id": "map.helium3",
@@ -1308,7 +1460,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "energy"
+    ]
   },
   "map.toxic_gases": {
     "id": "map.toxic_gases",
@@ -1398,7 +1553,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.anomaly_crystals": {
     "id": "map.anomaly_crystals",
@@ -1417,7 +1575,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "exotic"
+    ]
   },
   "map.biocatalysts": {
     "id": "map.biocatalysts",
@@ -1435,7 +1596,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "biological"
+    ]
   },
   "map.extremophile_enzymes": {
     "id": "map.extremophile_enzymes",
@@ -1471,7 +1635,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "mobility"
+    ]
   },
   "map.energy_minerals": {
     "id": "map.energy_minerals",
@@ -1491,7 +1658,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "energy"
+    ]
   },
   "map.magnetite": {
     "id": "map.magnetite",
@@ -1563,7 +1733,10 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "mobility"
+    ]
   },
   "map.plasmoids": {
     "id": "map.plasmoids",
@@ -1583,6 +1756,9 @@
     "spread": {
       "self_spreading": false
     },
-    "toxic": false
+    "toxic": false,
+    "roles": [
+      "offensive"
+    ]
   }
 }

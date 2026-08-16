@@ -1,9 +1,11 @@
 import type { GmLiveDomainId } from "../../state/types";
 import type { IntentRow } from "../IntentsInbox";
 import type { WorldState } from "../../state/types";
+import { findContestedIntentGroups } from "./contestedIntents";
 
 export type GmAttentionKind =
   | "intents"
+  | "contested"
   | "combat"
   | "quest"
   | "timer"
@@ -44,6 +46,26 @@ export function buildGmAttention(opts: {
   const items: GmAttentionItem[] = [];
 
   const pending = opts.pendingIntents ?? [];
+
+  // C5 T5.4 — contested orders (same rank + same target/resource)
+  const contested = findContestedIntentGroups(pending);
+  for (const g of contested) {
+    const sysId = g.claimKey.startsWith("sys:") ? g.claimKey.slice(4) : null;
+    const sysName = sysId
+      ? (world.systems.find((s) => s.id === sysId)?.name ?? sysId)
+      : null;
+    items.push({
+      id: g.id,
+      kind: "contested",
+      label: `⚔ Спор · ${sysName ?? g.claimLabel}`,
+      detail: `ранг ${g.rank} · ${g.intents.length} приказов · ${g.factionIds.length} фракц.`,
+      domain: "inbox",
+      factionId: g.factionIds[0] ?? null,
+      systemId: sysId,
+      priority: 0,
+    });
+  }
+
   if (pending.length > 0) {
     const byFac = new Map<string, number>();
     for (const i of pending) {
@@ -58,7 +80,7 @@ export function buildGmAttention(opts: {
         label: `${name}: ${n} приказ${n === 1 ? "" : n < 5 ? "а" : "ов"}`,
         domain: "inbox",
         factionId,
-        priority: 0,
+        priority: contested.length > 0 ? 1 : 0,
       });
     }
   }

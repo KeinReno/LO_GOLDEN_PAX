@@ -11,7 +11,7 @@ import {
 export type DropZoneHit = {
   zoneId: string;
   accepts?: string[];
-  onDrop?: (cardId: string) => void;
+  onDrop?: (cardId: string, pos: { x: number; y: number }) => void;
 };
 
 type ZoneRecord = DropZoneHit & {

@@ -32,10 +32,22 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Cursor (keep project rules only)
+# Cursor (keep rules + skills; ignore other local cursor junk)
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 
 # Optional large CloudPub archive (CLI binary may still be committed)
 **/tools/cloudpub/clo.zip
+
+# Runtime table / compiler junk (not source)
+*.tsbuildinfo
+**/table.sqlite
+**/table.sqlite-*
+GMap/data/tick-journal.json
+.claude/settings.local.json
+
+# Local poster dumps (too large for git)
+art/

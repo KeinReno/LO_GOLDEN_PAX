@@ -93,7 +93,7 @@ const B = {
   },
   "building.mine": {
     id: "building.mine", kind: "mine", zone: "surface", name: "Шахта", ap: 1,
-    category: "A", tier: 3, faction: "generic",
+    category: "A", extractsCategory: "A", tier: 3, faction: "generic",
     cost: tierCost("A", 3),
     effects: [yieldFlat("currency.extracta", tierYield(3))],
     slots: [{ role: "structure", require: { category: "B", tier: ">=1" }, count: 4 }],
@@ -194,7 +194,7 @@ const B = {
   // ===== A — EXTRACTA (8) =====
   "extract.deep_shaft": {
     id: "extract.deep_shaft", kind: "mine", zone: "subsurface", name: "Глубинный ствол", ap: 1,
-    category: "A", tier: 6, faction: "generic",
+    category: "A", extractsCategory: "A", tier: 6, faction: "generic",
     cost: tierCost("A", 6, { "currency.industria": 3 }),
     effects: [
       yieldFlat("currency.extracta", tierYield(6)),
@@ -206,7 +206,7 @@ const B = {
   },
   "extract.strip_pit": {
     id: "extract.strip_pit", kind: "mine", zone: "surface", name: "Карьер-стрип", ap: 1,
-    category: "A", tier: 3, faction: "generic",
+    category: "A", extractsCategory: "A", tier: 3, faction: "generic",
     cost: tierCost("A", 3, {}, 1.2),
     effects: [yieldFlat("currency.extracta", tierYield(3, true))],
     slots: [{ role: "structure", require: { category: "B", tier: ">=2" }, count: 4 }],
@@ -218,7 +218,7 @@ const B = {
   },
   "extract.gas_well": {
     id: "extract.gas_well", kind: "mine", zone: "subsurface", name: "Газовая скважина", ap: 1,
-    category: "A", tier: 3, faction: "generic",
+    category: "A", extractsCategory: "D", tier: 3, faction: "generic",
     cost: tierCost("A", 3),
     effects: [yieldFlat("currency.energia", tierYield(3))],
     slots: [{ role: "structure", require: { category: "B", tier: ">=2" }, count: 4 }],
@@ -228,7 +228,7 @@ const B = {
   },
   "extract.asteroid_harvester": {
     id: "extract.asteroid_harvester", kind: "mine", zone: "orbital", name: "Астероидный гарвец", ap: 1,
-    category: "A", tier: 7, faction: "generic",
+    category: "A", extractsCategory: ["A", "B"], tier: 7, faction: "generic",
     cost: tierCost("A", 7, { "currency.industria": 4 }),
     effects: [
       yieldFlat("currency.extracta", tierYield(7)),
@@ -240,7 +240,7 @@ const B = {
   },
   "extract.anomaly_collector": {
     id: "extract.anomaly_collector", kind: "mine", zone: "deep", name: "Аномальный коллектор", ap: 2,
-    category: "A", tier: 10, faction: "generic", maxPerSystem: 1,
+    category: "A", extractsCategory: "A", tier: 10, faction: "generic", maxPerSystem: 1,
     cost: tierCost("A", 10, { "currency.cognitio": 6, "currency.energia": 4 }),
     effects: [
       yieldFlat("currency.extracta", tierYield(10)),
@@ -252,7 +252,7 @@ const B = {
   },
   "extract.slurry_plant": {
     id: "extract.slurry_plant", kind: "factory", zone: "surface", name: "Шлам-установка", ap: 1,
-    category: "A", tier: 2, faction: "generic",
+    category: "A", extractsCategory: "A", tier: 2, faction: "generic",
     cost: tierCost("A", 2),
     effects: [yieldFlat("currency.extracta", tierYield(2))],
     slots: [{ role: "structure", require: { category: "B", tier: ">=1" }, count: 3 }],
@@ -261,7 +261,7 @@ const B = {
   },
   "extract.relays": {
     id: "extract.relays", kind: "relay", zone: "orbital", name: "Дрон-реле", ap: 1,
-    category: "A", tier: 4, faction: "generic",
+    category: "A", extractsCategory: [], tier: 4, faction: "generic",
     cost: tierCost("A", 4, { "currency.industria": 2 }),
     effects: [capacityAdd("A", 2, 2)],
     slots: [{ role: "structure", require: { category: "B", tier: ">=3" }, count: 4 }],

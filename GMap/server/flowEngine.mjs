@@ -12,6 +12,8 @@
 import { getContent } from "./contentLoader.mjs";
 import { CATEGORY_CURRENCY } from "./ledger.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
+import { canExtractDeposit } from "./depositExtract.mjs";
+import { resolveUpkeepCategory } from "./techSockets.mjs";
 
 export const CATEGORIES = ["A", "B", "C", "D", "E", "F"];
 export const TIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -44,7 +46,8 @@ export function emptyFlows() {
   for (const cat of CATEGORIES) {
     flows[cat] = {};
     for (const t of TIERS) {
-      flows[cat][t] = { rate: 0, demand: 0, capacity: 0 };
+      // sources: strategic resourceId → contribution to this cell's rate (B1 T1.2)
+      flows[cat][t] = { rate: 0, demand: 0, capacity: 0, sources: {} };
     }
   }
   return flows;
@@ -70,7 +73,7 @@ export function sumRateAtLeast(flows, cat, minTier = 1) {
 }
 
 /** Consume `amount` of available rate from tiers >= minTier (low→high). */
-function consumeRateAtLeast(flows, cat, minTier, amount) {
+export function consumeRateAtLeast(flows, cat, minTier, amount) {
   let remaining = Math.max(0, Number(amount) || 0);
   if (remaining <= 0) return 0;
   for (let t = minTier; t <= 10 && remaining > 0; t++) {
@@ -84,6 +87,37 @@ function consumeRateAtLeast(flows, cat, minTier, amount) {
     remaining -= take;
   }
   return (Number(amount) || 0) - remaining;
+}
+
+/**
+ * Strategic map resource ids.
+ * Accepts any of: economy_schema.resource_ranks.strategic[],
+ * def.rank === "strategic", or def.strategic === true (B1 T1.1 reconcile).
+ */
+export function strategicResourceIdSet(content) {
+  const c = content || getContent();
+  const ids = new Set(c.economy_schema?.resource_ranks?.strategic || []);
+  for (const def of Object.values(c.map_resources || {})) {
+    if (!def?.id) continue;
+    if (def.rank === "strategic" || def.strategic === true) ids.add(def.id);
+  }
+  return ids;
+}
+
+export function isStrategicResource(def, strategicIds = null) {
+  if (!def?.id) return false;
+  if (def.rank === "strategic" || def.strategic === true) return true;
+  const set = strategicIds || strategicResourceIdSet();
+  return set.has(def.id);
+}
+
+/** Per-deposit extraction units before rateScale (matches category flow yield logic). */
+export function extractionYieldUnits(def) {
+  const entries = Object.entries(def?.yield || {}).filter(
+    ([, amt]) => Number(amt) > 0,
+  );
+  if (entries.length === 0) return 1;
+  return entries.reduce((sum, [, amt]) => sum + Number(amt), 0);
 }
 
 /** Resolve map resource by id, Russian name, or id-aliases (соларид→map.solari). */
@@ -104,25 +138,66 @@ export function lookupMapResource(content, nameOrId) {
 export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
   const c = content || getContent();
   const maxTiers = opts.maxTiers || null;
-  const scale = Number(opts.rateScale ?? 1);
+  const rateScale = Number(opts.rateScale ?? 1);
+  const strategicOut = opts.strategicExtraction || null;
+  const roleOut = opts.roleExtraction || null;
+  const strategicIds = opts.strategicIds || strategicResourceIdSet(c);
+  // Belt + mining station is a different path (`skipExtractGate`).
+  const skipExtractGate = opts.skipExtractGate === true;
+  const buildings =
+    opts.buildings ?? (opts.planet ? planetBuildingList(opts.planet) : []);
   for (const name of resourceNames || []) {
+    if (!skipExtractGate) {
+      const { allowed } = canExtractDeposit({
+        buildings,
+        depositType: name,
+        content: c,
+      });
+      if (!allowed) continue;
+    }
     const def = lookupMapResource(c, name);
     if (!def || def.category == null || def.tier == null) continue;
     const t = Number(def.tier);
     if (maxTiers && Number(maxTiers[def.category] ?? 1) < t) continue;
     if (!flows[def.category]?.[t]) continue;
+    let laborScale = 1;
+    if (typeof opts.laborScaleForDeposit === "function") {
+      const ls = Number(opts.laborScaleForDeposit(def, name));
+      laborScale = Number.isFinite(ls) ? Math.max(0, ls) : 0;
+    }
+    const scale = rateScale * laborScale;
+    const strategic = isStrategicResource(def, strategicIds);
+    const rid = def.id;
     const yieldEntries = Object.entries(def.yield || {}).filter(
       ([, amt]) => Number(amt) > 0,
     );
     if (yieldEntries.length === 0) {
-      flows[def.category][t].rate += 1 * scale;
-      continue;
-    }
-    for (const [cur, amt] of yieldEntries) {
-      const cat = currencyToCategory(cur, c) || def.category;
+      const cell = flows[def.category][t];
+      const amt = 1 * scale;
+      cell.rate += amt;
+      if (strategic) {
+        if (!cell.sources) cell.sources = {};
+        cell.sources[rid] = (cell.sources[rid] || 0) + amt;
+      }
+    } else {
+      const cat = def.category;
       const cell = flows[cat]?.[t];
       if (!cell) continue;
-      cell.rate += Number(amt) * scale;
+      let amt = 0;
+      for (const [, y] of yieldEntries) amt += Number(y) * scale;
+      cell.rate += amt;
+      if (strategic) {
+        if (!cell.sources) cell.sources = {};
+        cell.sources[rid] = (cell.sources[rid] || 0) + amt;
+      }
+    }
+    const extracted = extractionYieldUnits(def) * scale;
+    if (strategicOut && strategic) {
+      strategicOut[rid] = (strategicOut[rid] || 0) + extracted;
+    }
+    // RoleScore counts bulk + strategic (B2 T2.4). Named stocks stay strategic-only.
+    if (roleOut) {
+      roleOut[rid] = (roleOut[rid] || 0) + extracted;
     }
   }
 }
@@ -236,8 +311,30 @@ function inferSecondary(fromCat, toCat, tier) {
   return null;
 }
 
+function runBuildingConvert(flows, args, convertOpts, opts) {
+  const pending = opts.pendingSecondary;
+  const convertPrimary = opts.convertPrimary;
+  if (pending && typeof convertPrimary === "function") {
+    const fromC = args.from?.category;
+    if (fromC) opts.primaryCategoriesUsed?.add(fromC);
+    const result = convertPrimary(flows, args, convertOpts);
+    if (result?.produced > 0 && result.secondary?.category) {
+      pending.push({
+        toCat: result.toCat,
+        toTier: result.toTier,
+        secondary: result.secondary,
+        amount: result.produced,
+      });
+    }
+    return;
+  }
+  applyFlowConvert(flows, args, convertOpts);
+}
+
 /**
  * Add a building's contribution. Prefers flow_convert over yield_flat.
+ * Tick path may pass pendingSecondary + convertPrimary (ambientFlow.mjs)
+ * so catalyst demand is reconciled after every building's primary leg.
  */
 export function addBuildingFlows(flows, buildingDef, content, buildingInst = null, opts = {}) {
   const c = content || getContent();
@@ -266,13 +363,18 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
       const pri = opts.priorityEdge;
       const boost =
         pri && fromC === pri.from && toC === pri.to ? Number(opts.priorityBoost ?? 1.35) : 1;
-      applyFlowConvert(flows, args, {
-        buildingTier: tier,
-        biosScale: opts.biosScale,
-        rateScale,
-        throughput: Number(e.args?.amount) || Math.max(1, Math.ceil(tier / 2) + 1),
-        priorityBoost: boost,
-      });
+      runBuildingConvert(
+        flows,
+        args,
+        {
+          buildingTier: tier,
+          biosScale: opts.biosScale,
+          rateScale,
+          throughput: Number(e.args?.amount) || Math.max(1, Math.ceil(tier / 2) + 1),
+          priorityBoost: boost,
+        },
+        opts,
+      );
     } else if (e.effect === "capacity_add") {
       const cc = e.args?.category;
       const tt = Number(e.args?.tier);
@@ -284,6 +386,12 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
     ) {
       const cur = e.args?.currency || e.args?.resource;
       const amt = (Number(e.args?.amount) || 0) * rateScale;
+      if (typeof cur === "string" && cur.startsWith("module.")) {
+        if (opts.namedProduction) {
+          opts.namedProduction[cur] = (opts.namedProduction[cur] || 0) + amt;
+        }
+        continue;
+      }
       const mapped = currencyToCategory(cur, c) || cat;
       if (mapped && flows[mapped]?.[tier]) {
         flows[mapped][tier].rate += amt;
@@ -302,7 +410,7 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
   ) {
     const edge = rpsEdges(c).find((ed) => ed.to === cat);
     if (edge && ["factory", "lab", "farm"].includes(buildingDef.kind)) {
-      applyFlowConvert(
+      runBuildingConvert(
         flows,
         {
           from: { category: edge.from, tier: `>=${Math.max(1, tier - 1)}` },
@@ -310,22 +418,47 @@ export function addBuildingFlows(flows, buildingDef, content, buildingInst = nul
           secondary: inferSecondary(edge.from, edge.to, tier),
         },
         { buildingTier: tier, biosScale: opts.biosScale, rateScale },
+        opts,
       );
     }
   }
 }
 
+/**
+ * Add upkeep demand. If buildingInst.slotFills[role] is a strategic resource,
+ * debit that named stock instead of the category bucket (B1 T1.6).
+ * Unfilled slots keep category demand (legacy saves).
+ *
+ * Empire-wide tech sockets (TECH_TREE_2 P1): pre-resolved `opts.socketEffects`
+ * may swap which flow category a matching building class demands. Named
+ * strategic slotFills still win. Category swap lives in techSockets.mjs.
+ */
 export function addUpkeepDemand(flows, consumerDef, opts = {}) {
   const scale = Number(opts.demandScale ?? 1);
+  const namedDemand = opts.namedDemand || null;
+  const fills = opts.buildingInst?.slotFills || {};
+  const content = opts.content || null;
+  const strategicIds = opts.strategicIds || null;
+  const socketEffects = opts.socketEffects || null;
   for (const slot of consumerDef.upkeep_slots || []) {
-    const cat = slot.require?.category;
+    const amt = (Number(slot.count) || 0) * scale;
+    if (amt <= 0) continue;
+    const filledId = fills[slot.role];
+    if (namedDemand && filledId && content) {
+      const resDef = lookupMapResource(content, filledId);
+      if (resDef && isStrategicResource(resDef, strategicIds)) {
+        namedDemand[resDef.id] = (namedDemand[resDef.id] || 0) + amt;
+        continue;
+      }
+    }
+    const cat = resolveUpkeepCategory(slot.require?.category, consumerDef, socketEffects);
     const tierMin = parseTierMin(slot.require?.tier) || 1;
     if (cat && flows[cat]?.[tierMin]) {
-      flows[cat][tierMin].demand += (Number(slot.count) || 0) * scale;
+      flows[cat][tierMin].demand += amt;
       continue;
     }
     if (slot.require?.properties?.length) {
-      flows.D[1].demand += (Number(slot.count) || 0) * scale;
+      flows.D[1].demand += amt;
     }
   }
 }
@@ -340,6 +473,10 @@ export function computeNets(flows) {
       const cap = cell.capacity || 0;
       const capped = cap > 0 ? Math.min(rate, cap) : rate;
       const net = capped - demand;
+      const sources =
+        cell.sources && Object.keys(cell.sources).length > 0
+          ? { ...cell.sources }
+          : {};
       out[cat][t] = {
         rate,
         demand,
@@ -348,6 +485,7 @@ export function computeNets(flows) {
         net,
         deficit: net < 0 ? -net : 0,
         surplus: net > 0 ? net : 0,
+        sources,
       };
     }
   }
@@ -404,7 +542,7 @@ export function applySpaceObjectEffects(flows, objDef, opts = {}) {
   }
 }
 
-/** Bios labor scale 0..1 from stock. */
+/** Legacy bios-stock proxy. Production now uses `laborAllocation.mjs` job slots. */
 export function biosLaborScale(eco) {
   const bios = Number(eco?.stocks?.["currency.bios"] ?? 0);
   if (bios <= 0) return 0.25;

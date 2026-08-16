@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "note": "Staff-radio interrupts, not UI clicks. Music out of scope. Token = brass on glass. Family: SONIC_BIBLE.md. Live wavs = physical-model foley until ElevenLabs is run from a permitted network.",
+  "elevenlabs": {
+    "endpoint": "https://api.elevenlabs.io/v1/sound-generation",
+    "model_id": "eleven_text_to_sound_v2",
+    "output_format": "mp3_44100_128",
+    "prompt_influence": 0.85,
+    "variants": 2
+  },
+  "cues": [
+    {
+      "id": "radio_squelch",
+      "role": "shared attack / channel open",
+      "duration_seconds": 0.5,
+      "prompt": "Quiet crystal glass chink in a small old study, gold metal and glass, 300 milliseconds, close but with a short plate reverb, meditative, no radio static, no hiss, no voice, no melody, no sci-fi, Banner Saga UI feeling, briefing table implement."
+    },
+    {
+      "id": "turn_advance",
+      "role": "turn changed, often offscreen",
+      "duration_seconds": 0.6,
+      "prompt": "Crystal glass ring decaying in a small plate reverb after a gold-metal chink, 600 milliseconds, one resonance only, no melody, no bells choir piano, no five-note motif, no hiss, meditative turn change, Banner Saga UI, old room of books and implements."
+    },
+    {
+      "id": "contact_alert",
+      "role": "combat or capture on an owned system not in view",
+      "duration_seconds": 0.6,
+      "prompt": "Two quiet crystal or gold-metal chinks, second slightly higher, 180 milliseconds apart, small plate reverb, no siren, no gunfire, no hiss, no explosion, meditative staff contact, Banner Saga UI implements."
+    },
+    {
+      "id": "seal_stamp",
+      "role": "irreversible HoldButton commit",
+      "duration_seconds": 0.5,
+      "prompt": "Closing a heavy book plus a brass box lid, one ritual impact, paper and gold metal, dry study with short plate, no wood knock, no oak, no melody, imperial seal, Banner Saga parchment room."
+    },
+    {
+      "id": "token_drop",
+      "role": "card / force dropped onto a system",
+      "duration_seconds": 0.5,
+      "prompt": "Glass token placed onto a glass table, short muted ring, gold and crystal, small plate, no wood, no coin till, no sparkle, no whoosh, meditative, Banner Saga UI."
+    }
+  ]
+}

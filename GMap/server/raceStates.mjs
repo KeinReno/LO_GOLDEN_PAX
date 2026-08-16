@@ -1,11 +1,18 @@
 /**
  * Race State — campaign-dynamic modifiers (RP / deficit / events).
  * Lives in data/race_states.json, not content packs.
+ * Local DATA_DIR (not from tableStore) avoids TDZ on circular import via
+ * tableStore → normalizeWorld → orderEngine → … → raceStates.
  */
 import path from "node:path";
-import { DATA_DIR, readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
+import { fileURLToPath } from "node:url";
+import { readJson, writeJson, ensureDataDir } from "./tableStore.mjs";
 import { resolveRace } from "./raceRegistry.mjs";
 
+const DATA_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../data",
+);
 export const RACE_STATES_PATH = path.join(DATA_DIR, "race_states.json");
 
 /**

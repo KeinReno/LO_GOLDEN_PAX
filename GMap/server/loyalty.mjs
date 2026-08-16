@@ -1,20 +1,41 @@
 /**
- * Population loyalty tick + revolt checks (A3).
- * Planet loyalty is derived from loyaltyMatrix, xenorelations, tax pressure, POIs.
+ * Population loyalty tick (A3).
+ * Planet loyalty = affinity (matrix/races/gov) + situational (tax/battle/logistics)
+ * + stacked `stability_add` (stability.mjs). Occupation `planet.stability` is
+ * ignored here — that meter is the 3-stage revolt machine (stabilityRevolt.mjs).
+ * loyalty < 20 does not spawn rebels.
+ * Matrix drifts toward affinity only — situational shocks must not permanently poison it.
  */
-import { randomInt } from "node:crypto";
 import {
   buildModifierStack,
   collectRaceEffects,
   resolvePlanetRaceComposition,
 } from "./modifierStack.mjs";
-import { spawnRefugees } from "./narrative.mjs";
 import { readLedger, ensureFactionEco } from "./ledger.mjs";
 import { npcLoyaltyDeltaForSystem } from "./courtGovernance.mjs";
+import { stabilityLoyaltyDelta } from "./stability.mjs";
+import {
+  isRebelFactionId,
+  isRebelLegion,
+} from "./stabilityRevolt.mjs";
 
 const BASE_LOYALTY = 50;
 const LOYALTY_MIN = 0;
 const LOYALTY_MAX = 100;
+/** Soft recovery floor when taxes/battle/logistics are calm. */
+const CALM_RECOVERY_FLOOR = 40;
+const CALM_RECOVERY_STEP = 2;
+/** Tax pressure → loyalty (was 0.8; that + matrix feedback wiped empires). */
+const PRESSURE_LOYALTY_COEFF = 0.25;
+const MILITARIST_PRESSURE_BONUS = 0.5;
+/** Hard cap so high taxes cannot solo-zero a healthy world. */
+const PRESSURE_LOYALTY_HIT_CAP = 10;
+/** Matrix cells below this heal faster toward BASE (guards poisoned saves). */
+const MATRIX_SOFT_FLOOR = 35;
+const MATRIX_HEAL_RATE = 0.35;
+const MATRIX_DRIFT_RATE = 0.05;
+/** Turns revolt-sourced unrest stays after spawn (clears earlier if rebels gone). */
+const REVOLT_CONTESTED_TURNS = 3;
 
 function clampLoyalty(n) {
   return Math.max(LOYALTY_MIN, Math.min(LOYALTY_MAX, Number(n) || 0));
@@ -46,7 +67,9 @@ function raceHasTrait(race, traitSuffix) {
 
 function systemHasPropaganda(system) {
   const tags = [
-    ...(system.spaceObjects || []).map((o) => typeof o === "string" ? o : (o.kind || o.tag || o.id || o)),
+    ...(system.spaceObjects || []).map((o) =>
+      typeof o === "string" ? o : o.kind || o.tag || o.id || o,
+    ),
     system.poi,
     ...(system.poiTags || []),
   ]
@@ -62,11 +85,34 @@ function systemDisconnected(system) {
   );
 }
 
-function afterBattlePenalty(system) {
-  if (system.activity === "battle" || system.contested) return -8;
+function afterBattlePenalty(system, world = null) {
+  if (system.activity === "battle") return -8;
+  // Revolt-sourced unrest is milder than a real multi-faction fight.
+  if (system.revoltContested) return -4;
+  if (system.contested) {
+    // Orphan contested left by old revolt spawns (revoltContested stripped / missing):
+    // if the only hostile presence is rebels, treat as revolt unrest, not war.
+    if (world && contestedOnlyByRebels(world, system)) return -4;
+    return -8;
+  }
   const cons = system.lastConsequence || system.consequence;
   if (cons === "after_battle" || cons?.id === "after_battle") return -10;
   return 0;
+}
+
+function contestedOnlyByRebels(world, system) {
+  const owner = system.ownerFactionId;
+  const hostiles = new Set();
+  for (const f of world.fleets || []) {
+    if (f.systemId !== system.id) continue;
+    if (f.factionId && f.factionId !== owner) hostiles.add(f.factionId);
+  }
+  for (const l of world.legions || []) {
+    if (l.systemId !== system.id) continue;
+    if (l.factionId && l.factionId !== owner) hostiles.add(l.factionId);
+  }
+  if (hostiles.size === 0) return true; // contested flag with no hostiles = stale
+  return [...hostiles].every((id) => isRebelFactionId(id));
 }
 
 function taxPressureForFaction(world, factionId) {
@@ -77,6 +123,12 @@ function taxPressureForFaction(world, factionId) {
   } catch {
     return 0;
   }
+}
+
+function rebelLegionsInSystem(world, systemId) {
+  return (world.legions || []).filter(
+    (l) => l.systemId === systemId && isRebelLegion(l),
+  );
 }
 
 /**
@@ -145,11 +197,11 @@ export function collectLoyaltyTierEffects(world, factionId, content) {
 }
 
 /**
- * Compute planet loyalty 0–100 from matrix + modifiers.
+ * Structural affinity 0–100 (matrix + xeno + race traits + governors).
+ * Used for matrix drift — must NOT include tax/battle/logistics shocks.
  */
-export function computePlanetLoyalty(world, system, planet, content) {
-  const ownerId =
-    planet.ownerFactionId || system.ownerFactionId || null;
+export function computePlanetAffinity(world, system, planet, content) {
+  const ownerId = planet.ownerFactionId || system.ownerFactionId || null;
   if (!ownerId || (planet.population ?? 0) <= 0) {
     return planet.loyalty ?? BASE_LOYALTY;
   }
@@ -175,29 +227,11 @@ export function computePlanetLoyalty(world, system, planet, content) {
       const xeno = Number(race.xenorelations[primaryRace] ?? 0);
       base += xeno * 20;
     }
-    // Mixed-pop cosmopolitan bonus: human cosmopolitan handled via loyalty_add in stack
     weighted += base * w;
     wSum += w;
   }
   let loyalty = wSum > 0 ? weighted / wSum : BASE_LOYALTY;
 
-  const pressure = taxPressureForFaction(world, ownerId);
-  let pressureDelta = -pressure * 0.8;
-  // Belator militarist_loyalty: tax pressure raises loyalty
-  for (const share of composition) {
-    const race = races[share.raceId];
-    if (raceHasTrait(race, "militarist_loyalty")) {
-      const w = (share.percent ?? 0) / 100;
-      pressureDelta += pressure * 1.6 * w;
-    }
-  }
-  loyalty += pressureDelta;
-
-  if (systemHasPropaganda(system)) loyalty += 5;
-  if (systemDisconnected(system)) loyalty -= 12;
-  loyalty += afterBattlePenalty(system);
-
-  // Synth logistics_independent: ocean climate loyalty hit
   const climate = planet.climate || planet.type || "";
   if (climate === "ocean") {
     for (const share of composition) {
@@ -208,7 +242,6 @@ export function computePlanetLoyalty(world, system, planet, content) {
     }
   }
 
-  // Human cosmopolitan: bonus on mixed-population worlds
   const distinctRaces = composition.filter((s) => (s.percent ?? 0) > 0).length;
   if (distinctRaces >= 2) {
     for (const share of composition) {
@@ -219,7 +252,6 @@ export function computePlanetLoyalty(world, system, planet, content) {
     }
   }
 
-  // Apply race trait loyalty_add / loyalty_mult via stack (+ race_states)
   const raceEffects = collectRaceEffects(races, composition, {
     factionId: ownerId,
     turn: world.meta?.turn ?? 0,
@@ -238,11 +270,56 @@ export function computePlanetLoyalty(world, system, planet, content) {
     }
   }
   loyalty = (loyalty + flat) * mult;
-
-  // NPC governors / traits scoped to this system (+ ungoverned penalty)
   loyalty += npcLoyaltyDeltaForSystem(world, system, ownerId);
 
   return clampLoyalty(loyalty);
+}
+
+/**
+ * Compute planet loyalty 0–100 from affinity + situational modifiers.
+ */
+export function computePlanetLoyalty(world, system, planet, content) {
+  const ownerId = planet.ownerFactionId || system.ownerFactionId || null;
+  if (!ownerId || (planet.population ?? 0) <= 0) {
+    return planet.loyalty ?? BASE_LOYALTY;
+  }
+
+  const faction = (world.factions ?? []).find((f) => f.id === ownerId) ?? null;
+  const composition = resolvePlanetRaceComposition(planet, faction);
+  const races = content.races || {};
+
+  let loyalty = computePlanetAffinity(world, system, planet, content);
+
+  const pressure = taxPressureForFaction(world, ownerId);
+  let pressureDelta = -Math.min(
+    PRESSURE_LOYALTY_HIT_CAP,
+    pressure * PRESSURE_LOYALTY_COEFF,
+  );
+  for (const share of composition) {
+    const race = races[share.raceId];
+    if (raceHasTrait(race, "militarist_loyalty")) {
+      const w = (share.percent ?? 0) / 100;
+      pressureDelta +=
+        Math.min(PRESSURE_LOYALTY_HIT_CAP, pressure * MILITARIST_PRESSURE_BONUS) *
+        w;
+    }
+  }
+  loyalty += pressureDelta;
+
+  if (systemHasPropaganda(system)) loyalty += 5;
+  if (systemDisconnected(system)) loyalty -= 12;
+  loyalty += afterBattlePenalty(system, world);
+  loyalty += stabilityLoyaltyDelta(world, system, planet, content);
+
+  return clampLoyalty(loyalty);
+}
+
+function isCalmForRecovery(world, system, ownerId) {
+  if (system.activity === "battle") return false;
+  if (system.revoltContested || system.contested) return false;
+  if (systemDisconnected(system)) return false;
+  const pressure = taxPressureForFaction(world, ownerId);
+  return pressure < 3;
 }
 
 /**
@@ -262,17 +339,37 @@ export function loyaltyTick(world, factionId, content) {
         continue;
       }
       const composition = resolvePlanetRaceComposition(planet, faction);
-      // Soft drift of matrix toward computed target
+      // Matrix = base racial affinity only. Mean-revert toward BASE±xeno.
+      // Do NOT drift toward affinity/loyalty (those already add gov/traits on top
+      // of matrix — that double-count was the empire-wide death spiral).
+      const primaryRace =
+        faction?.primaryRaceId ||
+        faction?.primaryRace ||
+        faction?.dominantRaceId ||
+        null;
+      const races = content.races || {};
       for (const share of composition) {
+        let target = BASE_LOYALTY;
+        const race = races[share.raceId];
+        if (race?.xenorelations && primaryRace) {
+          target += Number(race.xenorelations[primaryRace] ?? 0) * 20;
+        }
         const current = matrixValue(matrix, share.raceId, factionId);
-        const target = computePlanetLoyalty(world, sys, planet, content);
-        const next = current + (target - current) * 0.15;
+        const tgt = clampLoyalty(target);
+        const rate =
+          current < MATRIX_SOFT_FLOOR ? MATRIX_HEAL_RATE : MATRIX_DRIFT_RATE;
+        const next = current + (tgt - current) * rate;
         setMatrixValue(matrix, share.raceId, factionId, next);
       }
       const before = planet.loyalty ?? BASE_LOYALTY;
       planet.loyalty = computePlanetLoyalty(world, sys, planet, content);
 
-      // High-tier loyalty_add drift
+      if (isCalmForRecovery(world, sys, factionId) && planet.loyalty < CALM_RECOVERY_FLOOR) {
+        planet.loyalty = clampLoyalty(
+          Math.min(CALM_RECOVERY_FLOOR, planet.loyalty + CALM_RECOVERY_STEP),
+        );
+      }
+
       const tier = loyaltyTierFor(planet.loyalty, content);
       for (const e of tier.effects || []) {
         if (e.effect === "loyalty_add") {
@@ -297,102 +394,70 @@ export function loyaltyTick(world, factionId, content) {
   return { journal };
 }
 
-function rollChance(chance) {
-  const p = Math.max(0, Math.min(1, Number(chance) || 0));
-  if (p <= 0) return false;
-  // 0..9999 vs threshold
-  return randomInt(10000) < Math.floor(p * 10000);
+/**
+ * Clear expired revolt unrest + orphan contested left by old revolt spawns.
+ * Contested must not stick forever after rebels are gone (that permanently
+ * applied afterBattle −8 and re-zeroed loyalty across the map).
+ */
+export function clearExpiredRevoltContested(world) {
+  const journal = [];
+  const turn = world.meta?.turn ?? 0;
+  for (const sys of world.systems ?? []) {
+    const rebels = rebelLegionsInSystem(world, sys.id);
+    const marked = !!(sys.revoltContested || sys.revoltUntilTurn);
+    const until = sys.revoltUntilTurn;
+    const expired = until == null || turn >= until;
+    const orphanContested =
+      !!sys.contested &&
+      sys.activity !== "battle" &&
+      contestedOnlyByRebels(world, sys) &&
+      rebels.length === 0;
+
+    if (marked) {
+      if (rebels.length > 0 && !expired) continue;
+      if (rebels.length > 0 && expired) continue;
+    } else if (!orphanContested) {
+      continue;
+    }
+
+    sys.revoltContested = false;
+    sys.revoltUntilTurn = null;
+    if (sys.activity !== "battle" && contestedOnlyByRebels(world, sys)) {
+      sys.contested = false;
+    }
+    for (const planet of sys.planets ?? []) {
+      if (planet.contested) planet.contested = false;
+    }
+    journal.push({
+      type: "revolt_cleared",
+      systemId: sys.id,
+      turn,
+      orphan: orphanContested && !marked,
+    });
+  }
+  return journal;
 }
 
 /**
- * If loyalty < 20, roll revolt_risk. On fail: spawn rebels / flip / refugees.
+ * Superseded by stabilityRevolt.mjs. loyalty < 20 does not spawn.
  */
 export function checkRevolt(world, system, planet, content) {
+  void world;
+  void system;
+  void content;
   const loyalty = planet.loyalty ?? BASE_LOYALTY;
   if (loyalty >= 20) return null;
-  if ((planet.population ?? 0) <= 0) return null;
-
-  const tier = loyaltyTierFor(loyalty, content);
-  let chance = 0.05;
-  for (const e of tier.effects || []) {
-    if (e.effect === "revolt_risk") {
-      chance = Math.max(chance, Number(e.args?.chancePerTurn ?? chance));
-    }
-  }
-  // Extra race revolt_risk
-  const ownerId = planet.ownerFactionId || system.ownerFactionId;
-  const faction = (world.factions ?? []).find((f) => f.id === ownerId);
-  const composition = resolvePlanetRaceComposition(planet, faction);
-  const raceEffects = collectRaceEffects(content.races || {}, composition, {
-    factionId: ownerId || undefined,
-    turn: world.meta?.turn ?? 0,
-  });
-  for (const e of raceEffects) {
-    if (e.effect === "revolt_risk") {
-      chance += Number(e.args?.chancePerTurn ?? 0);
-    }
-  }
-
-  if (!rollChance(chance)) {
-    return {
-      type: "revolt_check",
-      systemId: system.id,
-      planetId: planet.id,
-      loyalty: Math.round(loyalty),
-      rolled: false,
-    };
-  }
-
-  const lostPop = Math.max(1, Math.floor((planet.population || 1) * 0.2));
-  planet.population = Math.max(0, (planet.population || 0) - lostPop);
-  planet.loyalty = 35;
-
-  // Spawn rebel legion remnant
-  const rebelId = `legion_rebel_${system.id}_${Date.now().toString(36)}`;
-  if (!Array.isArray(world.legions)) world.legions = [];
-  world.legions.push({
-    id: rebelId,
-    name: `Мятеж · ${planet.name || system.name}`,
-    factionId: "faction_rebels",
-    systemId: system.id,
-    strength: Math.max(1, Math.round(lostPop / 5)),
-    status: "idle",
-    raceId: composition[0]?.raceId || "race_human",
-    composition: [
-      {
-        defId: "unit.generic_line",
-        count: Math.max(1, Math.round(lostPop / 5)),
-        hp: 100,
-      },
-    ],
-    route: [],
-  });
-
-  // Contested / owner shaken
-  system.contested = true;
-  planet.contested = true;
-  if ((planet.population || 0) <= 0 && system.ownerFactionId === ownerId) {
-    // Depopulated capital planet — soft owner clear on planet only
-    planet.ownerFactionId = null;
-  }
-
-  const journal = [];
-  spawnRefugees(world, system.id, lostPop, journal, { share: 0.6 });
-
   return {
-    type: "revolt",
-    systemId: system.id,
+    type: "revolt_deferred",
     planetId: planet.id,
-    factionId: ownerId,
     loyalty: Math.round(loyalty),
-    lostPop,
-    rebelLegionId: rebelId,
-    refugees: journal,
+    reason: "stability_meter",
   };
 }
 
 /**
- * Run loyalty tick for all factions, then revolt checks.
+ * Run loyalty tick for all factions, then clear expired unrest.
+ * Revolt spawn lives in applyStabilityRevolt (processTurn).
  */
 export function runLoyaltyPhase(world, content) {
   const journal = [];
@@ -401,13 +466,7 @@ export function runLoyaltyPhase(world, content) {
     for (const e of r.journal) journal.push(e);
   }
 
-  for (const sys of world.systems ?? []) {
-    for (const planet of sys.planets ?? []) {
-      if ((planet.loyalty ?? BASE_LOYALTY) >= 20) continue;
-      const ev = checkRevolt(world, sys, planet, content);
-      if (ev) journal.push(ev);
-    }
-  }
+  for (const e of clearExpiredRevoltContested(world)) journal.push(e);
   return { journal };
 }
 
@@ -419,4 +478,75 @@ export function systemAvgLoyalty(system) {
   if (!inhabited.length) return null;
   const sum = inhabited.reduce((s, p) => s + (p.loyalty ?? BASE_LOYALTY), 0);
   return sum / inhabited.length;
+}
+
+/**
+ * One-shot GM repair: reset poisoned matrix / loyalty / revolt spam.
+ * Mutates world in place; does not touch ledger (caller seeds stocks).
+ */
+export function repairLoyaltyCollapse(world, opts = {}) {
+  const matrixTarget = Number(opts.matrixTarget ?? BASE_LOYALTY);
+  const planetLoyalty = Number(opts.planetLoyalty ?? 55);
+  const removeRebels = opts.removeRebels !== false;
+  const clearRevoltFlags = opts.clearRevoltFlags !== false;
+
+  const stats = {
+    matrixCells: 0,
+    planetsReset: 0,
+    rebelsRemoved: 0,
+    systemsCleared: 0,
+  };
+
+  const matrix = ensureLoyaltyMatrix(world);
+  for (const raceId of Object.keys(matrix)) {
+    const row = matrix[raceId];
+    if (!row || typeof row !== "object") continue;
+    for (const facId of Object.keys(row)) {
+      if (typeof row[facId] === "number") {
+        row[facId] = matrixTarget;
+        stats.matrixCells += 1;
+      }
+    }
+  }
+
+  for (const sys of world.systems ?? []) {
+    let cleared = false;
+    if (clearRevoltFlags) {
+      if (sys.revoltContested || sys.revoltUntilTurn || sys.contested) {
+        // Clear revolt-sourced and orphan contested; leave activity:battle alone.
+        if (sys.activity !== "battle") {
+          sys.contested = false;
+        }
+        sys.revoltContested = false;
+        sys.revoltUntilTurn = null;
+        cleared = true;
+      }
+    }
+    for (const planet of sys.planets ?? []) {
+      if ((planet.population ?? 0) > 0) {
+        planet.loyalty = planetLoyalty;
+        stats.planetsReset += 1;
+      } else if (planet.loyalty == null) {
+        planet.loyalty = BASE_LOYALTY;
+      }
+      if (clearRevoltFlags) {
+        planet.revolt = null;
+        planet.revoltStage2SinceTurn = null;
+        planet.rebelForceId = null;
+      }
+      if (clearRevoltFlags && planet.contested) {
+        planet.contested = false;
+        cleared = true;
+      }
+    }
+    if (cleared) stats.systemsCleared += 1;
+  }
+
+  if (removeRebels && Array.isArray(world.legions)) {
+    const before = world.legions.length;
+    world.legions = world.legions.filter((l) => !isRebelLegion(l));
+    stats.rebelsRemoved = before - world.legions.length;
+  }
+
+  return stats;
 }

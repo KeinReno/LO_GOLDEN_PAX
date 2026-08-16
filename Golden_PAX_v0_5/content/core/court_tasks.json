@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Каталог коротких поручений двора (taskId → effects)."
+  },
+  "tasks": {
+    "court_task.survey": {
+      "id": "court_task.survey",
+      "label": "Разведка провинции",
+      "etaTurns": 2,
+      "roles": ["agent", "strategist"],
+      "effects": [
+        { "effect": "ap_add", "args": { "amount": 1 } }
+      ]
+    },
+    "court_task.rebuild": {
+      "id": "court_task.rebuild",
+      "label": "Восстановительные работы",
+      "etaTurns": 3,
+      "roles": ["architect", "ruler", "strategist"],
+      "effects": [
+        { "effect": "loyalty_add", "args": { "amount": 2 } },
+        { "effect": "stability_add", "args": { "amount": 1 } }
+      ]
+    },
+    "court_task.sermon": {
+      "id": "court_task.sermon",
+      "label": "Проповедь и канон",
+      "etaTurns": 2,
+      "roles": ["priest"],
+      "effects": [
+        { "effect": "loyalty_add", "args": { "amount": 3 } }
+      ]
+    },
+    "court_task.drill": {
+      "id": "court_task.drill",
+      "label": "Учения войск",
+      "etaTurns": 3,
+      "roles": ["strategist"],
+      "effects": [
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.05 } }
+      ]
+    },
+    "court_task.negotiate": {
+      "id": "court_task.negotiate",
+      "label": "Переговоры",
+      "etaTurns": 2,
+      "roles": ["agent", "ruler", "other"],
+      "effects": [
+        { "effect": "diplomacy_opinion_add", "args": { "amount": 3 } }
+      ]
+    }
+  }
+}

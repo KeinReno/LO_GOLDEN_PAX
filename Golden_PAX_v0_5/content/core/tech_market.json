@@ -1,0 +1,57 @@
+{
+  "tech.khanate.market": {
+    "id": "tech.khanate.market",
+    "name": "Базар Ханства",
+    "listings": [
+      {
+        "listingId": "khanate.geology",
+        "techId": "tech.geology",
+        "price": { "currency.metal": 22, "currency.cognitio": 20 },
+        "minRelation": "trade",
+        "note": "era1 research×~1.7 cogn + metalByTier[2]×2"
+      },
+      {
+        "listingId": "khanate.recipe_geo_materials",
+        "recipeId": "recipe.live_geo_materials",
+        "price": { "currency.cognitio": 6 },
+        "minRelation": "trade",
+        "note": "1.0× alchemy same-era (baseCost 6)"
+      },
+      {
+        "listingId": "khanate.recipe_lab_chain",
+        "recipeId": "recipe.live_lab_chain",
+        "price": { "currency.cognitio": 9 },
+        "minRelation": "trade",
+        "note": "1.0× alchemy gap1 (6+3)"
+      },
+      {
+        "listingId": "khanate.recipe_grid_hydro",
+        "recipeId": "recipe.live_grid_hydro",
+        "price": { "currency.cognitio": 6 },
+        "minRelation": "trade",
+        "note": "era1 recipe; no bios tax"
+      }
+    ]
+  },
+  "tech.archive.bazaar": {
+    "id": "tech.archive.bazaar",
+    "name": "Архивный базар",
+    "listings": [
+      {
+        "listingId": "archive.recipe_charter_geo",
+        "recipeId": "recipe.live_charter_geo",
+        "price": { "currency.cognitio": 6 },
+        "minRelation": "neutral",
+        "note": "1.0× alchemy same-era"
+      },
+      {
+        "listingId": "archive.recipe_med_psi",
+        "recipeId": "recipe.live_med_psi",
+        "price": { "currency.cognitio": 12 },
+        "minRelation": "trade",
+        "note": "gap1 alchemy 9, floor era2×0.5=12"
+      }
+    ]
+  }
+}
+

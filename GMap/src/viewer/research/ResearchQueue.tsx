@@ -1,12 +1,28 @@
-import { useRef, useState, type DragEvent } from "react";
+import { useRef, useState } from "react";
 import type { TechnologyDef, EconomyCategory } from "../../state/contentCatalog";
 import { effectiveCognitioCost } from "../../state/researchCosts";
 import type { ViewerPayload } from "../../state/types";
+import { useTouchDrag } from "../shared/useTouchDrag";
 import { ECO_CATEGORY_NAMES, ECO_CATEGORY_COLORS } from "../economyFlowTypes";
-import { QUEUE_MAX, TECH_DND_MIME } from "./constants";
+import { QUEUE_MAX } from "./constants";
+import {
+  getTechDragId,
+  setTechDragId,
+} from "./researchDragBus";
 
 function cognitioCost(tech: TechnologyDef, eco?: ViewerPayload["economy"]): number {
   return effectiveCognitioCost(tech, eco, tech.category);
+}
+
+function resolveDropTarget(x: number, y: number) {
+  const el = document.elementFromPoint(x, y);
+  if (el?.closest("[data-queue-trash]")) return { kind: "trash" as const };
+  const slotEl = el?.closest("[data-queue-slot]") as HTMLElement | null;
+  if (slotEl?.dataset.queueSlot != null) {
+    const index = Number(slotEl.dataset.queueSlot);
+    if (!Number.isNaN(index)) return { kind: "slot" as const, index };
+  }
+  return null;
 }
 
 export type QueueForecastItem = {
@@ -45,6 +61,7 @@ export function ResearchQueue({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [overTrash, setOverTrash] = useState(false);
   const trashRef = useRef<HTMLButtonElement>(null);
+  const externalDragRef = useRef(false);
 
   const slots = Array.from({ length: QUEUE_MAX }, (_, i) => queue[i] ?? null);
 
@@ -57,39 +74,70 @@ export function ResearchQueue({
     onChangeQueue(next.slice(0, QUEUE_MAX));
   };
 
-  const handleSlotDragOver = (e: DragEvent, index: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setOverIndex(index);
-  };
-
-  const handleSlotDrop = (e: DragEvent, index: number) => {
-    e.preventDefault();
-    setOverIndex(null);
-    setDragIndex(null);
-    const techId =
-      e.dataTransfer.getData(TECH_DND_MIME) ||
-      e.dataTransfer.getData("text/plain");
-    if (!techId) return;
-    onDropTech(techId, index);
-  };
-
-  const handleSlotDragStart = (e: DragEvent, index: number, techId: string) => {
-    e.dataTransfer.setData(TECH_DND_MIME, techId);
-    e.dataTransfer.setData("text/plain", techId);
-    e.dataTransfer.effectAllowed = "move";
-    setDragIndex(index);
-  };
-
-  const handleTrashDrop = (e: DragEvent) => {
-    e.preventDefault();
+  const updateHover = (x: number, y: number) => {
+    const target = resolveDropTarget(x, y);
+    if (target?.kind === "trash") {
+      setOverTrash(true);
+      setOverIndex(null);
+      return;
+    }
     setOverTrash(false);
-    const techId =
-      e.dataTransfer.getData(TECH_DND_MIME) ||
-      e.dataTransfer.getData("text/plain");
-    if (!techId) return;
-    onChangeQueue(queue.filter((id) => id !== techId));
+    setOverIndex(target?.kind === "slot" ? target.index : null);
   };
+
+  const finishDrop = (techId: string, x: number, y: number) => {
+    const target = resolveDropTarget(x, y);
+    if (target?.kind === "trash") {
+      onChangeQueue(queue.filter((id) => id !== techId));
+      return;
+    }
+    if (target?.kind === "slot") {
+      onDropTech(techId, target.index);
+    }
+  };
+
+  const bindSlotDrag = useTouchDrag(
+    ({ args, first, last, xy: [x, y] }) => {
+      const slotIndex = (args as [number])[0];
+      const techId = queue[slotIndex];
+      if (!techId || busy) return;
+      if (first) {
+        setDragIndex(slotIndex);
+        setTechDragId(techId);
+        externalDragRef.current = false;
+      }
+      updateHover(x, y);
+      if (last) {
+        finishDrop(techId, x, y);
+        setDragIndex(null);
+        setOverIndex(null);
+        setOverTrash(false);
+        setTechDragId(null);
+      }
+    },
+    { filterTaps: true },
+  );
+
+  const bindExternalDrop = useTouchDrag(
+    ({ first, last, xy: [x, y], movement: [mx, my] }) => {
+      const techId = getTechDragId();
+      if (!techId || busy) return;
+      if (dragIndex != null) return;
+      if (first) {
+        externalDragRef.current = true;
+        if (Math.hypot(mx, my) < 4) return;
+      }
+      updateHover(x, y);
+      if (last && externalDragRef.current) {
+        finishDrop(techId, x, y);
+        setOverIndex(null);
+        setOverTrash(false);
+        if (!getTechDragId()) return;
+        setTechDragId(null);
+      }
+    },
+    { filterTaps: false },
+  );
 
   return (
     <section className="research-queue" aria-label="Очередь исследований">
@@ -104,19 +152,14 @@ export function ResearchQueue({
           className={`research-queue-trash ${overTrash ? "is-hot" : ""}`}
           title="Перетащите сюда, чтобы убрать"
           aria-label="Удалить из очереди"
-          onDragOver={(e) => {
-            e.preventDefault();
-            setOverTrash(true);
-          }}
-          onDragLeave={() => setOverTrash(false)}
-          onDrop={handleTrashDrop}
+          data-queue-trash
           disabled={busy || queue.length === 0}
         >
           ✕
         </button>
       </header>
 
-      <ol className="research-queue-slots">
+      <ol className="research-queue-slots" {...bindExternalDrop()}>
         {slots.map((techId, i) => {
           const tech = techId ? byId.get(techId) : undefined;
           const cost = tech ? cognitioCost(tech, eco) : 0;
@@ -143,7 +186,7 @@ export function ResearchQueue({
                       } as React.CSSProperties)
                     : undefined
                 }
-                draggable={!empty && !busy}
+                data-queue-slot={i}
                 onClick={() => {
                   if (techId) onSelect(techId);
                 }}
@@ -155,17 +198,7 @@ export function ResearchQueue({
                 }}
                 role="button"
                 tabIndex={busy ? -1 : 0}
-                onDragStart={(e) => {
-                  if (!techId) return;
-                  handleSlotDragStart(e, i, techId);
-                }}
-                onDragEnd={() => {
-                  setDragIndex(null);
-                  setOverIndex(null);
-                }}
-                onDragOver={(e) => handleSlotDragOver(e, i)}
-                onDragLeave={() => setOverIndex(null)}
-                onDrop={(e) => handleSlotDrop(e, i)}
+                {...(tech && !busy ? bindSlotDrag(i) : {})}
                 aria-label={
                   tech
                     ? `${i + 1}. ${tech.name}`

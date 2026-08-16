@@ -26,6 +26,7 @@ type Props = {
   linkedSystemId?: string | null;
   onOpenSystem?: (systemId: string) => void;
   onFocusOnMap?: (systemId: string) => void;
+  onFocusBuild?: () => void;
   onSetFlowPriority?: (opts: {
     from: string;
     to: string;
@@ -140,19 +141,6 @@ function SystemRow({
           >
             <MapPinned size={14} strokeWidth={2} aria-hidden />
           </button>
-          <button
-            type="button"
-            className="eco-prod-row__icon-btn"
-            title={
-              priorityDisabled
-                ? "Сначала задайте цикл на цепочке выше"
-                : "Приоритет потока сюда"
-            }
-            disabled={!!priorityDisabled}
-            onClick={onPriorityHere}
-          >
-            <Star size={14} strokeWidth={2} aria-hidden />
-          </button>
         </div>
       </li>
       <ActionRing
@@ -173,6 +161,7 @@ export function ProductionSection({
   linkedSystemId,
   onOpenSystem,
   onFocusOnMap,
+  onFocusBuild,
   onSetFlowPriority,
   priorityBusy,
 }: Props) {
@@ -225,9 +214,6 @@ export function ProductionSection({
         onSetPriority={(from, to) =>
           applyPriority(from, to, linkedSystemId ?? null)
         }
-        onSelectEdge={(from, to) =>
-          applyPriority(from, to, linkedSystemId ?? null)
-        }
       />
 
       {factionBn.length > 0 && (
@@ -259,6 +245,17 @@ export function ProductionSection({
             filterCategory
               ? `Нет своих систем с акцентом на ${categoryFilterLabel(filterCategory)}. Снимите фильтр в шапке или постройте добычу.`
               : "Захватите или колонизируйте систему и постройте шахту."
+          }
+          action={
+            onFocusBuild ? (
+              <button
+                type="button"
+                className="btn sm primary"
+                onClick={onFocusBuild}
+              >
+                К системе
+              </button>
+            ) : undefined
           }
         />
       ) : (

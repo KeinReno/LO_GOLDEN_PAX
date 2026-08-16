@@ -2,6 +2,8 @@ import { Container, Graphics, Sprite, Text } from "pixi.js";
 import type { Fleet, Legion, StarSystem } from "../state/types";
 import { systemSpaceObjects } from "../state/spaceObjects";
 import type { AnimClock, MapLod } from "./drawMapIcons";
+import type { IconPlateStyle } from "./styles/mapTheme";
+import { ACTIVITY_COLOR } from "./drawMapIcons";
 import { toIso } from "./iso";
 import {
   activityIconId,
@@ -44,12 +46,50 @@ const POI_TINT: Record<string, number> = {
 };
 
 const ACTIVITY_TINT: Record<string, number> = {
-  battle: 0xe85d4c,
-  trade: 0xf0c14a,
-  repair: 0x6ec8d9,
-  garrison: 0x5cdb95,
-  transit: 0xa8b4c8,
+  battle: ACTIVITY_COLOR.battle,
+  trade: ACTIVITY_COLOR.trade,
+  repair: ACTIVITY_COLOR.repair,
+  garrison: ACTIVITY_COLOR.garrison,
+  transit: ACTIVITY_COLOR.transit,
 };
+
+function drawIconPlate(
+  plates: Graphics,
+  bx: number,
+  by: number,
+  radius: number,
+  plateStyle: IconPlateStyle,
+  dimA: number,
+): void {
+  if (plateStyle === "holo-outline") {
+    for (let i = 0; i <= 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      const x = bx + Math.cos(a) * radius;
+      const y = by + Math.sin(a) * radius;
+      if (i === 0) plates.moveTo(x, y);
+      else plates.lineTo(x, y);
+    }
+    plates.closePath();
+    plates.fill({ color: 0x05070c, alpha: 0.04 * dimA });
+    plates.stroke({
+      color: 0x5fe3d0,
+      width: 1,
+      alpha: 0.72 * dimA,
+    });
+    return;
+  }
+
+  plates.circle(bx, by, radius);
+  plates.fill({ color: 0x05070c, alpha: 0.22 * dimA });
+  if (plateStyle === "imperial-rim") {
+    plates.circle(bx, by, radius);
+    plates.stroke({
+      color: 0xc9a227,
+      width: 0.8,
+      alpha: 0.5 * dimA,
+    });
+  }
+}
 
 /** Priority: blockade > quest > economy > poi > activity (battle is separate marker). */
 export function collectSystemSignals(
@@ -173,12 +213,13 @@ export class MapIconOverlay {
     size: number,
     seen: Set<string>,
     dimA = 1,
+    plateStyle: IconPlateStyle = "classic",
   ): void {
     seen.add(key);
     const sp = this.ensure(key, icon);
     if (!sp) return;
-    this.plates.circle(bx, by, size * 0.55);
-    this.plates.fill({ color: 0x05070c, alpha: 0.22 * dimA });
+    const plateR = plateStyle === "holo-outline" ? size * 0.62 : size * 0.55;
+    drawIconPlate(this.plates, bx, by, plateR, plateStyle, dimA);
     sp.visible = true;
     sp.tint = tint;
     sp.alpha = 0.85 * dimA;
@@ -212,6 +253,19 @@ export class MapIconOverlay {
     }
   }
 
+  /**
+   * Override screen position for units mid-transit (smooth move between
+   * systems). Call every ticker frame, after tickBob, so it wins for any
+   * key present. Geometry/tint/size stay from the last sync().
+   */
+  overridePositions(overrides: Map<string, { x: number; y: number }>): void {
+    for (const [key, pos] of overrides) {
+      const sp = this.pool.get(key);
+      if (!sp?.visible) continue;
+      sp.position.set(pos.x, pos.y);
+    }
+  }
+
   sync(
     systems: StarSystem[],
     anim: AnimClock,
@@ -227,6 +281,8 @@ export class MapIconOverlay {
       emphasisId?: string | null;
       /** Quest drawn as map pin — omit quest signal badge. */
       questAsPin?: boolean;
+      /** Icon badge plate style from active map theme. */
+      plateStyle?: IconPlateStyle;
     },
   ): void {
     this.plates.clear();
@@ -241,6 +297,7 @@ export class MapIconOverlay {
     const emphasisId = opts.emphasisId ?? null;
     const hasFocus = !!emphasisId;
     const questAsPin = opts.questAsPin !== false;
+    const plateStyle = opts.plateStyle ?? "classic";
     const signalCap = fan
       ? lod === "far"
         ? 0
@@ -313,6 +370,7 @@ export class MapIconOverlay {
             sigSize,
             seen,
             dimA,
+            plateStyle,
           );
         }
 
@@ -341,14 +399,18 @@ export class MapIconOverlay {
         const bx = p.x - 20;
         const by = p.y - 16;
         const r = emph ? 7.5 : 6.5;
-        this.plates.circle(bx, by, r);
-        this.plates.fill({ color: 0x0a0c12, alpha: (emph ? 0.55 : 0.35) * dimA });
-        this.plates.circle(bx, by, r);
-        this.plates.stroke({
-          width: 1,
-          color: 0xc9a227,
-          alpha: (emph ? 0.7 : 0.4) * dimA,
-        });
+        if (plateStyle === "holo-outline") {
+          drawIconPlate(this.plates, bx, by, r, plateStyle, dimA);
+        } else {
+          this.plates.circle(bx, by, r);
+          this.plates.fill({ color: 0x0a0c12, alpha: (emph ? 0.55 : 0.35) * dimA });
+          this.plates.circle(bx, by, r);
+          this.plates.stroke({
+            width: plateStyle === "imperial-rim" ? 0.8 : 1,
+            color: 0xc9a227,
+            alpha: (emph ? 0.7 : 0.4) * dimA,
+          });
+        }
         seen.add(key);
         const ore = this.ensure(key, "ore");
         if (ore) {
@@ -435,12 +497,13 @@ export class MapIconOverlay {
   }
 
   destroy(): void {
-    for (const sp of this.pool.values()) sp.destroy();
     this.pool.clear();
-    for (const t of this.countPool.values()) t.destroy();
     this.countPool.clear();
-    this.plates.destroy();
-    this.root.destroy({ children: true });
+    this.bobBases.clear();
+    // plates is a child of root — one destroy walks the whole tree
+    if (!this.root.destroyed) {
+      this.root.destroy({ children: true });
+    }
   }
 }
 

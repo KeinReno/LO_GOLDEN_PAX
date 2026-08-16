@@ -13,6 +13,8 @@ export type AlertFocusAnchor = { clientX: number; clientY: number };
 export type AlertItem = {
   id: string;
   kind: "idle_fleet" | "engagement" | "orders" | "rp" | "economy";
+  /** Imperative CTA — shared with HQ «Внимание». */
+  verb: string;
   title: string;
   subtitle?: string;
   onFocus: (anchor?: AlertFocusAnchor) => void;
@@ -111,10 +113,11 @@ export function ViewerAlertFab({ items, unreadRp }: Props) {
                         <Icon size={15} strokeWidth={2} />
                       </span>
                       <span className="viewer-alert-item-text">
-                        <strong>{item.title}</strong>
-                        {item.subtitle ? (
-                          <span className="hint">{item.subtitle}</span>
-                        ) : null}
+                        <strong>{item.verb}</strong>
+                        <span className="hint">
+                          {item.title}
+                          {item.subtitle ? ` · ${item.subtitle}` : ""}
+                        </span>
                       </span>
                     </button>
                   </li>

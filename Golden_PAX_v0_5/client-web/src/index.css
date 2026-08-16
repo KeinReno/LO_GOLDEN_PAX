@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gp-gold: #c9a239;
+  --color-gp-gold-soft: #f0d878;
+  --color-gp-holo: #22d3ee;
+  --color-gp-panel: #0d1118;
+  --color-gp-map: #05060a;
+  --font-mono: ui-monospace, "Cascadia Mono", monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    @apply bg-gp-map text-slate-200 antialiased;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .gp-glass {
+    @apply border border-cyan-500/20 bg-slate-950/85 backdrop-blur-md;
+  }
+
+  .gp-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes gp-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-gp-spin-slow {
+  animation: gp-spin-slow 4s linear infinite;
+}

@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { CONTENT_ROOT, getContent, loadContent } from "./contentLoader.mjs";
 import { produceForceCost } from "./forceEconomy.mjs";
+import { appendGmIntervention } from "./gmCockpit.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GMAP_ROOT = path.resolve(__dirname, "..");
@@ -32,11 +33,27 @@ const SAMPLE_FORCES = [
 ];
 
 function readJsonFile(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (e) {
+    const msg = `[CONTENT_PARSE_FAIL] ${filePath}: ${e.message}`;
+    console.error(msg);
+    throw new Error(msg, { cause: e });
+  }
 }
 
 function writeJsonFile(filePath, data) {
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const body = `${JSON.stringify(data, null, 2)}\n`;
+  fs.writeFileSync(tmp, body, "utf8");
+  try {
+    fs.renameSync(tmp, filePath);
+  } catch {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    fs.renameSync(tmp, filePath);
+  }
 }
 
 function clampNum(n, min, max) {
@@ -141,6 +158,20 @@ export function buildGmBalanceSnapshot() {
   };
 }
 
+function logBalanceIntervention(action, before, after, body) {
+  try {
+    appendGmIntervention({
+      actor: body?.actor || "gm",
+      action,
+      before,
+      after,
+      detail: body?.detail ?? null,
+    });
+  } catch (e) {
+    console.error("[GM_INTERVENTION_LOG_FAIL]", e?.message || e);
+  }
+}
+
 export function applyGmBalancePatch(body) {
   const action = body?.action;
   if (!action) return { ok: false, error: "Нужен action" };
@@ -164,6 +195,12 @@ export function applyGmBalancePatch(body) {
       rules.forceAp = rules.forceAp || {};
       bal.ap.force = bal.ap.force || {};
 
+      const before = {
+        empirePerTurn: bal.ap.empirePerTurn ?? rules.apPerTurn ?? null,
+        forceBase: bal.ap.force.base ?? rules.forceAp.base ?? null,
+        forceMax: bal.ap.force.max ?? rules.forceAp.max ?? null,
+      };
+
       if (empire != null && Number.isFinite(empire)) {
         bal.ap.empirePerTurn = empire;
         rules.apPerTurn = empire;
@@ -180,6 +217,12 @@ export function applyGmBalancePatch(body) {
       writeJsonFile(ECON_BALANCE_PATH, bal);
       writeJsonFile(RULES_PATH, rules);
       loadContent();
+      const after = {
+        empirePerTurn: bal.ap.empirePerTurn ?? rules.apPerTurn ?? null,
+        forceBase: bal.ap.force.base ?? rules.forceAp.base ?? null,
+        forceMax: bal.ap.force.max ?? rules.forceAp.max ?? null,
+      };
+      logBalanceIntervention("setAp", before, after, body);
       return { ok: true, snapshot: buildGmBalanceSnapshot() };
     }
 
@@ -196,9 +239,16 @@ export function applyGmBalancePatch(body) {
       const bal = readJsonFile(ECON_BALANCE_PATH);
       bal.start = bal.start || {};
       bal.start.stocks = bal.start.stocks || {};
+      const before = { currencyId, amount: Number(bal.start.stocks[currencyId] || 0) };
       bal.start.stocks[currencyId] = amount;
       writeJsonFile(ECON_BALANCE_PATH, bal);
       loadContent();
+      logBalanceIntervention(
+        "setStartStock",
+        before,
+        { currencyId, amount },
+        body,
+      );
       return { ok: true, snapshot: buildGmBalanceSnapshot() };
     }
 
@@ -212,9 +262,16 @@ export function applyGmBalancePatch(body) {
       bal.start = bal.start || {};
       bal.start.stocks = bal.start.stocks || {};
       const cur = Number(bal.start.stocks[currencyId] || 0);
+      const before = { currencyId, amount: cur };
       bal.start.stocks[currencyId] = clampNum(cur + delta, 0, 99999);
       writeJsonFile(ECON_BALANCE_PATH, bal);
       loadContent();
+      logBalanceIntervention(
+        "bumpStartStock",
+        before,
+        { currencyId, amount: bal.start.stocks[currencyId], delta },
+        body,
+      );
       return { ok: true, snapshot: buildGmBalanceSnapshot() };
     }
 
@@ -224,6 +281,10 @@ export function applyGmBalancePatch(body) {
       }
       const bal = readJsonFile(ECON_BALANCE_PATH);
       bal.forces = bal.forces || {};
+      const before = {
+        shipCostMult: bal.forces.shipCostMult ?? null,
+        unitCostMult: bal.forces.unitCostMult ?? null,
+      };
       if (body.shipCostMult != null) {
         bal.forces.shipCostMult = clampNum(Number(body.shipCostMult), 0.5, 5);
       }
@@ -232,6 +293,15 @@ export function applyGmBalancePatch(body) {
       }
       writeJsonFile(ECON_BALANCE_PATH, bal);
       loadContent();
+      logBalanceIntervention(
+        "setForceMult",
+        before,
+        {
+          shipCostMult: bal.forces.shipCostMult ?? null,
+          unitCostMult: bal.forces.unitCostMult ?? null,
+        },
+        body,
+      );
       return { ok: true, snapshot: buildGmBalanceSnapshot() };
     }
 
@@ -240,6 +310,12 @@ export function applyGmBalancePatch(body) {
       const rules = readJsonFile(RULES_PATH);
       bal.alchemy = bal.alchemy || {};
       rules.alchemy = rules.alchemy || {};
+      const before = {
+        attemptsPerTurn:
+          bal.alchemy.attemptsPerTurn ?? rules.alchemy.attemptsPerTurn ?? null,
+        baseCost: bal.alchemy.baseCost ?? rules.alchemy.baseCost ?? null,
+        eraGapCost: bal.alchemy.eraGapCost ?? rules.alchemy.eraGapCost ?? null,
+      };
       if (body.attemptsPerTurn != null) {
         const n = clampNum(Number(body.attemptsPerTurn), 1, 5);
         bal.alchemy.attemptsPerTurn = n;
@@ -258,6 +334,16 @@ export function applyGmBalancePatch(body) {
       writeJsonFile(ECON_BALANCE_PATH, bal);
       writeJsonFile(RULES_PATH, rules);
       loadContent();
+      logBalanceIntervention(
+        "setAlchemy",
+        before,
+        {
+          attemptsPerTurn: bal.alchemy.attemptsPerTurn ?? null,
+          baseCost: bal.alchemy.baseCost ?? null,
+          eraGapCost: bal.alchemy.eraGapCost ?? null,
+        },
+        body,
+      );
       return { ok: true, snapshot: buildGmBalanceSnapshot() };
     }
 

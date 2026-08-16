@@ -1,4 +1,5 @@
 import type { ViewerPayload } from "../state/types";
+import { CATEGORY_CURRENCIES } from "../state/economyLabels";
 import { getCachedContent } from "../state/contentCatalog";
 import type {
   EconomyFlowBreakdown,
@@ -6,6 +7,30 @@ import type {
   FlowBottleneck,
 } from "./economyFlowTypes";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
+
+function turnsUntilEmpty(stock: number, net: number | null | undefined): number | null {
+  if (net == null || net >= 0) return null;
+  if (stock <= 0) return 0;
+  return Math.max(1, Math.ceil(stock / Math.abs(net)));
+}
+
+function signalTiming(
+  payload: ViewerPayload,
+  flowData: EconomyFlowBreakdown | null | undefined,
+  category: string,
+): { turnsUntil: number | null; consequence: string } {
+  const name = ECO_CATEGORY_NAMES[category] ?? category;
+  const currencyId =
+    CATEGORY_CURRENCIES.find((c) => c.letter === category)?.id ?? null;
+  const stock =
+    currencyId != null
+      ? (payload.economy?.stocks?.[currencyId] ?? 0)
+      : 0;
+  const net = flowData?.totals?.[category]?.net ?? null;
+  const turnsUntil = turnsUntilEmpty(stock, net);
+  const consequence = `производство «${name}» под угрозой`;
+  return { turnsUntil, consequence };
+}
 
 function normalizeBottleneck(
   v: FlowBottleneck | number | undefined,
@@ -78,12 +103,14 @@ export function buildEconomySystemSignals(
     for (const [cat, bn] of Object.entries(bottlenecks)) {
       if (!cats.has(cat)) continue;
       const name = ECO_CATEGORY_NAMES[cat] ?? cat;
+      const timing = signalTiming(payload, flowData, cat);
       signals.push({
         systemId: sys.id,
         systemName: sys.name,
         category: cat,
         reason: `${name} T${bn.tier} −${bn.deficit}`,
         severity: bn.deficit,
+        ...timing,
       });
     }
   }
@@ -91,12 +118,14 @@ export function buildEconomySystemSignals(
   if (signals.length === 0) {
     for (const [cat, bn] of Object.entries(bottlenecks)) {
       const name = ECO_CATEGORY_NAMES[cat] ?? cat;
+      const timing = signalTiming(payload, flowData, cat);
       signals.push({
         systemId: "",
         systemName: "Фракция",
         category: cat,
         reason: `${name} T${bn.tier} −${bn.deficit}`,
         severity: bn.deficit,
+        ...timing,
       });
     }
   }

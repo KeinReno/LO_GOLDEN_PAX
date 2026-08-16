@@ -14,6 +14,7 @@ import {
 import { writeLiveBoard } from "./tableStore.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { forgeMetalCost, disbandMetalRefund } from "./forceEconomy.mjs";
+import { crewCountForRaise } from "./forceKindGuard.mjs";
 
 const METAL = "currency.metal";
 
@@ -65,6 +66,9 @@ function normalizeGroup(g) {
   if (g.level != null && !isNaN(Number(g.level))) out.level = Math.max(0, Number(g.level));
   if (g.filledSlots && typeof g.filledSlots === "object") {
     out.filledSlots = { ...g.filledSlots };
+  }
+  if (g.crewCount != null && !isNaN(Number(g.crewCount))) {
+    out.crewCount = Math.max(0, Math.floor(Number(g.crewCount)));
   }
   return out;
 }
@@ -320,6 +324,20 @@ export function applyForcesMutate(opts) {
   }
 
   unit.composition = nextComp;
+  if (kind === "fleet") {
+    const content = getContent();
+    const per = content?.economy_balance?.forces?.crewPerTier ?? 5;
+    for (const g of nextComp) {
+      if (g.crewCount != null) continue;
+      const def =
+        content.ships?.[g.defId] ||
+        content.ships?.[g.type] ||
+        Object.values(content.ships || {}).find(
+          (s) => s.id === g.defId || s.name === g.type,
+        );
+      g.crewCount = crewCountForRaise("ship", def || { tier: 1 }, g.count, per);
+    }
+  }
   if (kind === "legion") {
     unit.strength = nextComp.reduce((s, g) => s + (g.count || 0), 0);
   }

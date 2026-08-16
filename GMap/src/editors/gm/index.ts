@@ -6,11 +6,7 @@ export { parseAttentionCard, encodeAttentionCard } from "./gmAttentionCard";
 export { GmWorkbench } from "./GmWorkbench";
 export { GmCommandCard } from "./GmCommandCard";
 export { GmLiveStage } from "./GmLiveStage";
-export {
-  GmSciencePanel,
-  GmIntelPanel,
-  GmDomainLauncher,
-} from "./GmSciencePanel";
+export { GmSciencePanel, GmIntelPanel } from "./GmSciencePanel";
 export { GmCourtPanel } from "./GmCourtPanel";
 export { GmAtelierPanel } from "./GmAtelierPanel";
 export { GmBalancePanel } from "./GmBalancePanel";

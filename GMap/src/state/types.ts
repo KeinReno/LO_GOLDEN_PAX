@@ -180,6 +180,8 @@ export interface Quest {
   expiresTurn?: number | null;
   /** Catalog id from yearly_quests.json (if spawned). */
   catalogId?: string | null;
+  /** GM story-quest targets (completionMode: objectives), independent of arc. */
+  objectives?: { id: string; text: string; done?: boolean }[];
 }
 
 /** Lasting ModifierStack effect attached to a faction (NPC tasks, etc.). */
@@ -450,7 +452,12 @@ export type DiplomacyRelation =
   | "nap"
   | "research_pact"
   | "migration_treaty"
-  | "embargo";
+  | "embargo"
+  | "currency_exchange"
+  | "currency_union";
+
+export type EconomicRelation = "currency_exchange" | "currency_union";
+export type TreatyType = DiplomacyRelation | EconomicRelation;
 
 /** Single modifier instance (content-driven; applied via ModifierStack). */
 export interface EffectInstance {
@@ -472,11 +479,19 @@ export interface FactionTrait {
 /** Bilateral treaty attached to a faction's diplomacy state. */
 export interface Treaty {
   id: string;
-  type: DiplomacyRelation;
+  type: TreatyType;
   withFactionId: string;
   startedTurn: number;
   expiresTurn?: number | null;
   effects: EffectInstance[];
+  track?: "political" | "economic";
+  basePeg?: string | null;
+  quotePeg?: string | null;
+  unitsQuotePerBase?: number;
+  hostFactionId?: string;
+  hostPeg?: string | null;
+  joiningFactionId?: string;
+  adoptedPeg?: string | null;
 }
 
 /** Soft history row for the diplomacy timeline UI. */
@@ -504,9 +519,29 @@ export type OrderType =
   | "attack_system"
   | "move_legion"
   | "blockade"
-  | "fortify";
+  | "fortify"
+  | "build"
+  | "research"
+  | "scout"
+  | "caravan"
+  | "siege";
 
-export type OrderStatus = "pending" | "accepted" | "rejected";
+export type OrderCategory = "instant" | "pending" | "eta";
+
+export type OrderStatus =
+  | "pending"
+  | "active"
+  | "accepted"
+  | "rejected"
+  | "resolved"
+  | "cancelled";
+
+export interface OrderModifier {
+  label: string;
+  mult?: number;
+  flat?: number;
+  source: string;
+}
 
 export type StationKind =
   | "science"
@@ -561,6 +596,11 @@ export interface PlanetBuilding {
   buildingId?: string;
   disabled?: boolean;
   /**
+   * Pinned job-slot count. Missing = auto-fill in placement order.
+   * 0 = keep the building empty.
+   */
+  assignedLabor?: number;
+  /**
    * New economy model: per-role resource fills (resourceId → map.<key>).
    * Keyed by slot `role` (hull, weapon, shield, structure, crew, tactic, ...).
    * Empty/missing = unfilled slot (building still functions at legacy yield, but no flow bonus).
@@ -574,6 +614,8 @@ export interface Planet {
   type: PlanetType;
   climate: Climate;
   population: number;
+  /** Lore census is locked; labor uses floor(census / 1000). */
+  censusLocked?: boolean;
   raceComposition: RaceShare[];
   resources: string[];
   /** Orbital order from the star (1 = closest). Schematic only — not galaxy coords. */
@@ -586,9 +628,13 @@ export interface Planet {
   colonyType?: ColonyType;
   /** Surface note / lore blurb. */
   notes?: string;
-  /** Max orbital construction slots. */
+  /** Earned orbital slot-grade 1–5. orbitalSlots is derived from this. */
+  orbitalGrade?: number;
+  /** Earned surface slot-grade 1–5. surfaceSlots is derived from this. */
+  grade?: number;
+  /** Max orbital construction slots (derived from orbitalGrade). */
   orbitalSlots?: number;
-  /** Max surface districts / buildings. */
+  /** Max surface districts / buildings (derived from grade). */
   surfaceSlots?: number;
   surfaceBuildings?: PlanetBuilding[];
   orbitalBuildings?: PlanetBuilding[];
@@ -598,8 +644,20 @@ export interface Planet {
   coOwnerFactionIds?: string[];
   /** Disputed claim — contested planet. */
   contested?: boolean;
-  /** Population loyalty 0–100 (server SoT, A3). */
+  /** Population loyalty 0–100 (server SoT, A3). Display/input; not the revolt spawner. */
   loyalty?: number;
+  /** Occupation / 3-stage revolt meter 0–100 (stabilityRevolt.mjs). */
+  stability?: number;
+  /** 0 stable, 1 production debuff, 2 rebel band. Stage 3 is duration. */
+  revoltStage?: number;
+  revoltStage2SinceTurn?: number | null;
+  rebelForceId?: string | null;
+  revolt?: {
+    stage2SinceTurn: number;
+    rebelLegionId?: string;
+    rebelFactionId?: string;
+    lostPop?: number;
+  } | null;
   /** Culture catalog id (content/cultures.json). */
   cultureId?: string;
   /** Active hybrid lineage on world (race_hybrid.*). */
@@ -663,6 +721,8 @@ export interface StarSystem {
    * Several space objects can share one system (anomaly + pirates + asteroids…).
    */
   spaceObjects?: SystemPoiType[];
+  /** Remaining extract for depleting fields (asteroid/comet/debris). Absent = not yet drawn. */
+  spaceObjectRemaining?: Record<string, number>;
   visibleToFactionIds: string[];
   /** Current situation in-system. */
   activity: SystemActivity;
@@ -759,6 +819,8 @@ export interface NpcPosting {
   legionId?: string;
   /** Target fleet when kind === "admiral". */
   fleetId?: string;
+  /** Unified force target (commander/admiral); GMap also keeps legionId/fleetId. */
+  forceId?: string;
   sinceTurn: number;
 }
 
@@ -766,6 +828,8 @@ export interface NpcPosting {
 export interface FactionNpc {
   id: string;
   name: string;
+  /** Canon race id (v0.5 roster). Distinct from raceLeadership.raceId. */
+  raceId?: string | null;
   title?: string;
   role?:
     | "ruler"
@@ -914,6 +978,10 @@ export interface Faction {
    * UI «Казна/Доход» читает этот ресурс; metal остаётся пром. мостом.
    */
   treasuryPeg?: string | null;
+  /** Turn the peg last switched (null = never switched / first peg). */
+  pegChangedTurn?: number | null;
+  /** Last applied peg id — used to detect a later switch. */
+  lastTreasuryPeg?: string | null;
 }
 
 export type PolityKind = "state" | "faction";
@@ -965,6 +1033,8 @@ export interface Race {
   habitability?: Record<string, number>;
   growth?: { baseRate?: number; crowdPenalty?: number };
   xenorelations?: Record<string, number>;
+  /** B9 lore flags — mind | will | chaos | shadow */
+  powerPath?: string[];
 }
 
 /** Campaign-dynamic race modifier (data/race_states.json). */
@@ -1000,6 +1070,8 @@ export interface Fleet {
   composition: ShipGroup[];
   stance: FleetStance;
   route: string[];
+  /** Set when raised from a planet (`/api/forces/raise`). */
+  homePlanetId?: string;
   /** Previous system after a hop — used for retreat. */
   lastSystemId?: string;
   /** Set while multi-hop en route; applied when route empties. */
@@ -1010,6 +1082,14 @@ export interface Fleet {
   };
   /** Attack resolves when unit reaches this system (multi-hop attack orders). */
   pendingAttackSystemId?: string;
+  /** B4: fleet held until travel Order resolves (no per-tick hop). */
+  travelOrderId?: string;
+  /** Engine hop-range tier (forceMp layer). */
+  engineTier?: number;
+  /** Fuel MP-pool tier (forceMp layer). */
+  fuelTier?: number;
+  /** Remaining movement points this turn. Refills to max each tick. */
+  movementPoints?: number;
 }
 
 /** Ground force / legion attached to a system. */
@@ -1020,12 +1100,18 @@ export interface Legion {
   systemId: string;
   strength: number;
   status: LegionStatus;
+  /** Set when raised from a planet (`/api/forces/raise`). */
+  homePlanetId?: string;
   /** Planned hops (system ids), same as fleets. */
   route?: string[];
   /** Attack resolves when legion reaches this system. */
   pendingAttackSystemId?: string;
   /** Previous system after a hop — used for retreat. */
   lastSystemId?: string;
+  /** B4: legion held until travel Order resolves. */
+  travelOrderId?: string;
+  /** Remaining movement points this turn. Refills to max each tick. */
+  movementPoints?: number;
   /** Species for raceVariants (A3). */
   raceId?: string | null;
   composition?: Array<{
@@ -1090,6 +1176,7 @@ export interface DiplomacyEdge {
   aId: string;
   bId: string;
   relation: DiplomacyRelation;
+  track?: "political" | "economic";
   /** Legacy/alternate serialized war state (quest engine). */
   status?: string;
   state?: string;
@@ -1101,12 +1188,30 @@ export interface PlayerOrder {
   type: OrderType;
   turn: number;
   status: OrderStatus;
+  /** B4: instant | pending (no ETA) | eta (timed process). Default eta for legacy. */
+  category?: OrderCategory;
+  startedAt?: number;
+  baseDuration?: number;
+  modifiers?: OrderModifier[];
+  resolvesAt?: number | null;
+  progress?: number;
+  ratePerTurn?: number;
+  apCost?: number;
+  forceApCost?: number;
+  intentId?: string;
   fleetId?: string;
   legionId?: string;
   fromSystemId?: string;
   toSystemId?: string;
+  systemId?: string;
+  planetId?: string;
+  buildingId?: string;
+  techId?: string;
+  buildingInstanceId?: string;
   note?: string;
   createdAt: string;
+  resolvedAt?: number;
+  payload?: Record<string, unknown>;
 }
 
 export interface CampaignMeta {
@@ -1122,6 +1227,8 @@ export interface CampaignMeta {
   contentPacks?: string[];
   /** FactionId → turn when yearly quest dice was last rolled (A9). */
   yearlyQuestRolls?: Record<string, number>;
+  /** Per-peg-resource GM dial, clamped to [0.8, 1.5] in currencyPeg. */
+  gmPegMultipliers?: Record<string, number>;
 }
 
 export interface WorldState {
@@ -1155,7 +1262,17 @@ export interface BrushSettings {
 export type SystemSelectMode = "replace" | "add" | "toggle";
 
 /** GM chrome: map session vs content atelier. */
-export type GmShellMode = "gm" | "atelier";
+export type GmShellMode =
+  | "gm"
+  | "rp"
+  | "simulator"
+  | "tech"
+  | "units"
+  | "buildings"
+  | "races"
+  | "polities"
+  | "rules"
+  | "atelier";
 
 /** Live table domain workbench (F1–F9). Null = closed. */
 export type GmLiveDomainId =
@@ -1228,6 +1345,8 @@ export interface UiState {
   rpFocusFactionId: string | null;
   /** Right-click radial / context menu target. */
   contextMenu: ContextMenuState | null;
+  /** Alt + click express property inspector target. */
+  altInspector: AltInspectorState | null;
   /** After RMB order pick — next system click applies route + stance. */
   pendingUnitOrder: PendingUnitOrder | null;
   /** After «Клонировать флот» — next system click places a copy. */
@@ -1254,6 +1373,15 @@ export interface ContextMenuState {
   fleetId: string | null;
   legionId: string | null;
   linkId: string | null;
+}
+
+export interface AltInspectorState {
+  screenX: number;
+  screenY: number;
+  systemId?: string | null;
+  fleetId?: string | null;
+  legionId?: string | null;
+  linkId?: string | null;
 }
 
 export interface TurnBriefingEvent {
@@ -1565,8 +1693,12 @@ export interface ViewerPayload {
       lastExperimentTurn?: number | null;
       journal?: Array<Record<string, unknown>>;
     };
-    /** Researched tech upgrade ids (e.g. tech.fusion.feature). */
+    /** Researched tech upgrade ids (legacy catalog; grades replace magnitude). */
     unlockedUpgrades?: string[];
+    /** Grade 1→5 per researched gradeable tech id. */
+    techGrades?: Record<string, number>;
+    /** Slotted resource id per researched socketed tech id (empire-wide). */
+    techSockets?: Record<string, string>;
     /** Trade / historical acquisitions (Phase D). */
     acquiredTechs?: Array<{
       techId: string;
@@ -1578,6 +1710,8 @@ export interface ViewerPayload {
     }>;
     /** Planned research order (tech ids, max 5). */
     researchQueue?: string[];
+    /** 3-candidate research offers keyed by economy category A–F. */
+    currentOffers?: Record<string, { candidates: string[]; rerolled?: boolean }>;
     /** Planned builds (max 5). */
     buildQueue?: Array<{
       systemId: string;
@@ -1611,6 +1745,34 @@ export interface ViewerPayload {
     flowPriorities?: Record<string, { from: string; to: string; edge?: string }>;
     /** Soft stock reserves (do not deduct from stocks). */
     stockReserves?: Record<string, { amount: number; label?: string }>;
+    /** RoleScore — lifetime extraction aggregates (never spent). 8 closed role ids. */
+    roleScores?: Record<string, number>;
+    /** v0.6 open development paths (A6 pilot). */
+    openPaths?: string[];
+    /** B9 — GM-granted Пути Силы (ledger); race defaults in content. */
+    powerPaths?: string[];
+    /** B6 civic path scores — lifetime trade/culture (never spent). */
+    civicScores?: { trade?: number; culture?: number };
+    /** B6 civic path status rows (thresholds + unlocks). */
+    civicPaths?: Array<{
+      id: string;
+      pathId: string;
+      name: string;
+      icon?: string;
+      score: number;
+      scoreKey: string;
+      unlocks?: Array<{
+        id: string;
+        kind: string;
+        name?: string;
+        threshold: number;
+        granted: boolean;
+        ready: boolean;
+        progress: number;
+      }>;
+      nextThreshold?: number | null;
+      progress?: number;
+    }>;
     /** Units pulled from fleets/legions into reserve pool. */
     forceReserve?: Array<{
       type?: string;

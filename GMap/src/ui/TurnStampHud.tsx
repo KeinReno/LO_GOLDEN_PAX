@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { playStaffCue } from "../audio/staffSfx";
 import { useWorldStore } from "../state/worldStore";
 
 /** On-map turn stamp (P8.4) — HTML overlay, not WebGL. */
@@ -21,6 +22,7 @@ export function TurnStampHud({
   useEffect(() => {
     if (prevTurn.current === t) return;
     prevTurn.current = t;
+    playStaffCue("turn_advance");
     setPulse(true);
     const id = window.setTimeout(() => setPulse(false), 750);
     return () => window.clearTimeout(id);

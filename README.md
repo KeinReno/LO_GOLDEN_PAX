@@ -47,3 +47,20 @@
 ## Откуда перенесено
 
 Источник: vault `LO_GALACTIC_STRATEGY_ARTEM` (игровой движок `game/` **не** переносился).
+
+---
+
+## Agent workflow
+
+Дисциплина агента (токены + качество). Канон и Boot — не always-on простыни.
+
+| Что | Где |
+|-----|-----|
+| Канон проекта (Boot) | [`PROJECT.md`](PROJECT.md) |
+| Живой статус | [`agent-tasks/STATUS.md`](agent-tasks/STATUS.md) |
+| Устойчивые факты | [`agent-tasks/MEMORY.md`](agent-tasks/MEMORY.md) |
+| Always-on rules | [`.cursor/rules/`](.cursor/rules/) |
+| Навигация по GMap | [`.cursor/skills/game-nav/SKILL.md`](.cursor/skills/game-nav/SKILL.md) |
+| Индекс ignore | [`.cursorignore`](.cursorignore) |
+
+Playable table: [`GMap/README.md`](GMap/README.md). Коммит только по явной просьбе.

@@ -2,6 +2,7 @@ import type { ViewerPayload } from "../state/types";
 import type { ViewerEngagement } from "./PlayerEngagementPanel";
 import type { AlertFocusAnchor, AlertItem } from "./ViewerAlertFab";
 import type { EconomySystemSignal } from "./economyFlowTypes";
+import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 
 const ENGAGEMENT_STATUS: Record<string, string> = {
   active: "выберите stance",
@@ -109,6 +110,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     items.push({
       id: `idle-fleet-${f.id}`,
       kind: "idle_fleet",
+      verb: "Назначить приказ",
       title: `Флот без приказа: ${f.name}`,
       subtitle: systemName(payload.world, f.systemId),
       onFocus: () => callbacks.onFocusIdleFleet(f.id, f.systemId),
@@ -118,6 +120,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     items.push({
       id: "idle-fleets",
       kind: "idle_fleet",
+      verb: "Назначить приказ",
       title: `${idleFleets.length} флота без приказа`,
       subtitle: first.name,
       onFocus: () => callbacks.onFocusIdleFleet(first.id, first.systemId),
@@ -140,6 +143,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
       items.push({
         id: `card-battle-${eng.id}`,
         kind: "engagement",
+        verb: "Открыть бой",
         title: "Карточный бой идёт",
         subtitle: systemName(payload.world, eng.systemId),
         onFocus: () => callbacks.onFocusEngagement(eng.systemId, eng.id),
@@ -148,6 +152,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
       items.push({
         id: `card-invite-${eng.id}`,
         kind: "engagement",
+        verb: "Принять вызов",
         title: "Вызов на карточный бой",
         subtitle: `${systemName(payload.world, eng.systemId)} · нажмите «Принять»`,
         onFocus: (anchor) =>
@@ -157,6 +162,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
       items.push({
         id: `engagement-${eng.id}`,
         kind: "engagement",
+        verb: "Выбрать stance",
         title: `Бой в системе ${systemName(payload.world, eng.systemId)}`,
         subtitle:
           mySide && !mySide.locked
@@ -172,6 +178,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     items.push({
       id: "pending-orders",
       kind: "orders",
+      verb: "Проверить очередь",
       title:
         pendingOrderCount === 1
           ? "1 приказ в очереди"
@@ -187,6 +194,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     items.push({
       id: "diplo-incoming",
       kind: "orders",
+      verb: "Ответить на сделку",
       title:
         incomingDiplo === 1
           ? "Входящее дипломатическое предложение"
@@ -200,6 +208,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     items.push({
       id: "rp-unread",
       kind: "rp",
+      verb: "Открыть хронику",
       title:
         rpUnread === 1
           ? "Новое сообщение в сцене"
@@ -212,15 +221,41 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
   const ecoWarn =
     economyWarning ??
     buildEconomyWarning(payload.economy, systemSignals);
+  const topEco = systemSignals?.[0];
   if (ecoWarn) {
+    const when =
+      topEco?.turnsUntil === 0
+        ? "уже не хватает"
+        : topEco?.turnsUntil != null
+          ? `через ~${topEco.turnsUntil} ход.`
+          : null;
+    const subtitle = topEco
+      ? [
+          topEco.systemName !== "Фракция" ? topEco.systemName : null,
+          topEco.reason,
+          when,
+          topEco.consequence,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : ecoWarn;
+    const pressure = payload.economy?.pressure ?? 0;
     items.push({
       id: "economy-warning",
       kind: "economy",
-      title: "Экономика требует внимания",
-      subtitle: ecoWarn,
+      verb:
+        pressure >= 2
+          ? "Открыть политики"
+          : topEco
+            ? "Проверить узкое место"
+            : "Открыть дефицит",
+      title: topEco
+        ? `Узкое место: ${ECO_CATEGORY_NAMES[topEco.category] ?? topEco.category}`
+        : "Экономика требует внимания",
+      subtitle,
       onFocus: callbacks.onFocusEconomy,
     });
   }
 
-  return items;
+  return items.slice(0, 5);
 }

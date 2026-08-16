@@ -79,6 +79,8 @@ export function CourtNationsView({
       a.label.localeCompare(b.label, "ru"),
     );
   }, [blocs, npcs, payload]);
+  // Exact NPC ids — replaces "*" now that CardBoard is shared app-wide.
+  const npcCardIds = useMemo(() => npcs.map((n) => n.id), [npcs]);
 
   if (rows.length === 0) {
     return (
@@ -103,7 +105,7 @@ export function CourtNationsView({
             <li key={row.raceId}>
               <DropZone
                 zoneId={`nation:${row.raceId}`}
-                accepts={["*"]}
+                accepts={npcCardIds}
                 armWhileDragging
                 onDrop={(cardId) => onDropLeader(cardId, row.raceId)}
                 className={`court-nation-slot${vacant ? " is-vacant" : ""}`}

@@ -1,0 +1,18 @@
+---
+description: Task→tool map; find entrypoint+dataflow before gameplay edits
+alwaysApply: true
+---
+
+# Agent tooling
+
+| Нужно | Инструмент |
+|-------|------------|
+| Синхрон сессии | `agent-tasks/STATUS.md` (вехи, не каждый ход) |
+| Устойчивый факт | `agent-tasks/MEMORY.md` (гейты в PROJECT.md) |
+| Найти систему GMap | skill `game-nav` → CBM `search_graph` / узкий Grep |
+| Править код | Read с limit → правка → smoke/validate по риску |
+| Build/test | shell в `GMap/`: `smoke`, `validate:tech`, `lint:balance` |
+
+Перед правкой геймплейной системы: **entrypoint + data flow** (input → sim/server → state → view). Не гадать.
+
+**Запрещено:** открывать редактор/карту «вместо» чтения кода; грузить forbidden; коммитить секреты; ставить пакеты/MCP без спроса.

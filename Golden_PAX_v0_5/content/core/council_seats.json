@@ -1,0 +1,330 @@
+{
+
+  "meta": {
+
+    "version": 3,
+
+    "description": "Слоты круглого стола. Места советников — универсальные; портфолио (роль) выбирается отдельно. angleDeg: 0=справа, −90=верх."
+
+  },
+
+  "portfolios": {
+
+    "military": {
+
+      "id": "military",
+
+      "label": "Военное дело",
+
+      "roles": ["strategist"],
+
+      "factionEffects": [
+
+        { "effect": "stat_mult", "args": { "stat": "damage", "mult": 1.02 } }
+
+      ]
+
+    },
+
+    "strategy": {
+
+      "id": "strategy",
+
+      "label": "Стратегия",
+
+      "roles": ["strategist"],
+
+      "factionEffects": [
+
+        { "effect": "stability_add", "args": { "amount": 1 } }
+
+      ]
+
+    },
+
+    "health": {
+
+      "id": "health",
+
+      "label": "Здравоохранение",
+
+      "roles": ["other"],
+
+      "factionEffects": [
+
+        { "effect": "loyalty_add", "args": { "amount": 1 } }
+
+      ]
+
+    },
+
+    "economy": {
+
+      "id": "economy",
+
+      "label": "Экономика",
+
+      "roles": ["architect"],
+
+      "factionEffects": [
+
+        {
+
+          "effect": "production_mult",
+
+          "args": { "resource": "currency.materia", "mult": 1.03 }
+
+        }
+
+      ]
+
+    },
+
+    "infrastructure": {
+
+      "id": "infrastructure",
+
+      "label": "Строительство",
+
+      "roles": ["architect"],
+
+      "factionEffects": [
+
+        {
+
+          "effect": "production_mult",
+
+          "args": { "resource": "currency.materia", "mult": 1.03 }
+
+        }
+
+      ]
+
+    },
+
+    "faith": {
+
+      "id": "faith",
+
+      "label": "Вера и культ",
+
+      "roles": ["priest"],
+
+      "factionEffects": [
+
+        { "effect": "loyalty_add", "args": { "amount": 1 } }
+
+      ]
+
+    },
+
+    "intel": {
+
+      "id": "intel",
+
+      "label": "Разведка",
+
+      "roles": ["agent"],
+
+      "factionEffects": [
+
+        { "effect": "npc_task_speed_mult", "args": { "mult": 1.05 } }
+
+      ]
+
+    },
+
+    "diplomacy": {
+
+      "id": "diplomacy",
+
+      "label": "Дипломатия",
+
+      "roles": ["other"],
+
+      "factionEffects": [
+
+        { "effect": "stability_add", "args": { "amount": 1 } }
+
+      ]
+
+    },
+
+    "science": {
+
+      "id": "science",
+
+      "label": "Наука",
+
+      "roles": ["architect"],
+
+      "factionEffects": [
+
+        { "effect": "stability_add", "args": { "amount": 1 } }
+
+      ]
+
+    },
+
+    "interior": {
+
+      "id": "interior",
+
+      "label": "Внутренние дела",
+
+      "roles": ["other"],
+
+      "factionEffects": [
+
+        { "effect": "stability_add", "args": { "amount": 1 } }
+
+      ]
+
+    }
+
+  },
+
+  "seats": {
+
+    "seat.ruler": {
+
+      "id": "seat.ruler",
+
+      "label": "Правитель",
+
+      "kind": "ruler",
+
+      "roles": ["ruler"],
+
+      "angleDeg": -90,
+
+      "defaultUnlocked": true,
+
+      "factionEffects": [
+
+        { "effect": "stability_add", "args": { "amount": 1 } }
+
+      ]
+
+    },
+
+    "seat.strategist": {
+
+      "id": "seat.strategist",
+
+      "label": "Советник",
+
+      "kind": "advisor",
+
+      "defaultPortfolio": "strategy",
+
+      "roles": [],
+
+      "angleDeg": -38,
+
+      "defaultUnlocked": true
+
+    },
+
+    "seat.warlord": {
+
+      "id": "seat.warlord",
+
+      "label": "Советник",
+
+      "kind": "advisor",
+
+      "defaultPortfolio": "military",
+
+      "roles": [],
+
+      "angleDeg": 38,
+
+      "defaultUnlocked": true
+
+    },
+
+    "seat.priest": {
+
+      "id": "seat.priest",
+
+      "label": "Советник",
+
+      "kind": "advisor",
+
+      "defaultPortfolio": "faith",
+
+      "roles": [],
+
+      "angleDeg": -142,
+
+      "defaultUnlocked": true
+
+    },
+
+    "seat.agent": {
+
+      "id": "seat.agent",
+
+      "label": "Советник",
+
+      "kind": "advisor",
+
+      "defaultPortfolio": "intel",
+
+      "roles": [],
+
+      "angleDeg": 142,
+
+      "defaultUnlocked": true
+
+    },
+
+    "seat.architect": {
+
+      "id": "seat.architect",
+
+      "label": "Советник",
+
+      "kind": "advisor",
+
+      "defaultPortfolio": "infrastructure",
+
+      "roles": [],
+
+      "angleDeg": 180,
+
+      "defaultUnlocked": true
+
+    },
+
+    "seat.at_large": {
+
+      "id": "seat.at_large",
+
+      "label": "Советник",
+
+      "kind": "advisor",
+
+      "defaultPortfolio": "interior",
+
+      "roles": [],
+
+      "angleDeg": 90,
+
+      "defaultUnlocked": false,
+
+      "unlockHint": "Открывается указом двора или при расширении державы",
+
+      "factionEffects": [
+
+        { "effect": "stability_add", "args": { "amount": 1 } }
+
+      ]
+
+    }
+
+  }
+
+}
+

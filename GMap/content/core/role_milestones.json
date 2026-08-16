@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "version": 2,
+    "pilot": false,
+    "note": "8 RoleScore roles. Thresholds are first-pass placeholders (B2 stub 5000 copied, not calibrated). See docs/ROLE_SCORE_THRESHOLDS.md. Authoritative for path gates. Breakthrough = RoleScore ≥ threshold + paid cognitio, not a silent unlock."
+  },
+  "structural": {
+    "id": "structural",
+    "label": "Структурный",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.fortress_station",
+        "name": "Крепость-станция"
+      }
+    ]
+  },
+  "energy": {
+    "id": "energy",
+    "label": "Энергетический",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.solar_forge",
+        "name": "Солнечная кузница"
+      }
+    ]
+  },
+  "offensive": {
+    "id": "offensive",
+    "label": "Ударный",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.siege_platform",
+        "name": "Осадная платформа"
+      }
+    ]
+  },
+  "defensive": {
+    "id": "defensive",
+    "label": "Защитный",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.planetary_shield",
+        "name": "Планетарный щит"
+      }
+    ]
+  },
+  "mobility": {
+    "id": "mobility",
+    "label": "Мобильность",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.jump_relay",
+        "name": "Прыжковый ретранслятор"
+      }
+    ]
+  },
+  "cognitive": {
+    "id": "cognitive",
+    "label": "Когнитивный",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.order_institute",
+        "name": "Орден-институт"
+      }
+    ]
+  },
+  "biological": {
+    "id": "biological",
+    "label": "Биологический",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.evolution_vat",
+        "name": "Чан эволюции"
+      }
+    ]
+  },
+  "exotic": {
+    "id": "exotic",
+    "label": "Экзотический",
+    "threshold": 5000,
+    "unlocks": [
+      {
+        "kind": "building",
+        "id": "building.relic_vault",
+        "name": "Реликтовое хранилище"
+      }
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "version": 1,
+    "note": "TECH_TREE_2 P2 — player-facing 6 directions. A–F stay the economy mechanic. Offers group by direction via this mapping; do not hardcode tech ids."
+  },
+  "order": [
+    "industry",
+    "military",
+    "culture",
+    "commerce",
+    "diplomacy",
+    "governance"
+  ],
+  "directions": {
+    "industry": {
+      "id": "industry",
+      "label": "Индустрия",
+      "labelEn": "Industry",
+      "colorVar": "--eco-dir-industry",
+      "categories": ["A", "B", "C", "D", "E", "F"],
+      "paths": ["structural", "energy", "biological", "exotic"],
+      "civicPaths": [],
+      "iconTags": [
+        "extraction",
+        "metallurgy",
+        "industry",
+        "energy",
+        "biology",
+        "megastructure"
+      ],
+      "tags": [],
+      "factionTraitLocks": []
+    },
+    "military": {
+      "id": "military",
+      "label": "Военное дело",
+      "labelEn": "Military",
+      "colorVar": "--eco-dir-military",
+      "categories": [],
+      "paths": ["offensive", "defensive", "mobility"],
+      "civicPaths": [],
+      "iconTags": [],
+      "tags": ["military", "combat", "trait.war_economy", "trait.psi_doctrine"],
+      "factionTraitLocks": [
+        "trait.war_economy",
+        "trait.standing_army",
+        "trait.void_navy",
+        "trait.psi_doctrine"
+      ]
+    },
+    "culture": {
+      "id": "culture",
+      "label": "Культура",
+      "labelEn": "Culture",
+      "colorVar": "--eco-dir-culture",
+      "categories": [],
+      "paths": [],
+      "civicPaths": ["culture"],
+      "iconTags": ["psionics"],
+      "tags": ["culture"],
+      "factionTraitLocks": []
+    },
+    "commerce": {
+      "id": "commerce",
+      "label": "Коммерция",
+      "labelEn": "Commerce",
+      "colorVar": "--eco-dir-commerce",
+      "categories": [],
+      "paths": [],
+      "civicPaths": ["trade"],
+      "iconTags": ["trade"],
+      "tags": ["commerce", "trade"],
+      "factionTraitLocks": ["trait.merchant_guilds"]
+    },
+    "diplomacy": {
+      "id": "diplomacy",
+      "label": "Дипломатия",
+      "labelEn": "Diplomacy",
+      "colorVar": "--eco-dir-diplomacy",
+      "categories": [],
+      "paths": ["will"],
+      "civicPaths": [],
+      "iconTags": ["diplomacy"],
+      "tags": ["diplomacy"],
+      "factionTraitLocks": ["trait.faction.diplomatic"]
+    },
+    "governance": {
+      "id": "governance",
+      "label": "Управление",
+      "labelEn": "Governance",
+      "colorVar": "--eco-dir-governance",
+      "categories": [],
+      "paths": ["cognitive"],
+      "civicPaths": [],
+      "iconTags": [],
+      "tags": ["governance", "trait.technocracy"],
+      "factionTraitLocks": ["trait.technocracy"]
+    }
+  }
+}

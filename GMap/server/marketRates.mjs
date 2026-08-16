@@ -1,6 +1,7 @@
 /**
  * Live GM market rates (override content placeholder_rates).
  * Stored in data/market-rates.json: { rates: [{ pair, buy, sell, note? }] }
+ * v0.5: fx.* pairs from fxExchange (EMA) are merged unless GM override covers them.
  */
 import path from "node:path";
 import {
@@ -10,6 +11,7 @@ import {
   ensureDataDir,
   bumpTableRevision,
 } from "./tableStore.mjs";
+import { getFxRateRows, readFxExchangeState } from "./fxExchange.mjs";
 
 export const MARKET_RATES_PATH = path.join(DATA_DIR, "market-rates.json");
 
@@ -31,20 +33,45 @@ export function getContentDefaultRates(content) {
   return content?.economy_schema?.market?.placeholder_rates ?? [];
 }
 
-/** Effective rates: live override file, else content defaults. */
+function mergeRateLists(base, fxRows) {
+  const byPair = new Map();
+  for (const row of base || []) {
+    if (row?.pair) byPair.set(row.pair, row);
+  }
+  for (const row of fxRows || []) {
+    if (!row?.pair) continue;
+    // GM/content row wins if already present for that exact pair.
+    if (!byPair.has(row.pair)) byPair.set(row.pair, row);
+  }
+  return [...byPair.values()];
+}
+
+/** Effective rates: live override file, else content defaults, plus computed fx.*. */
 export function getEffectiveMarketRates(content) {
   const override = readMarketRatesFile();
-  if (override?.rates?.length) return override.rates;
-  return getContentDefaultRates(content);
+  const base = override?.rates?.length
+    ? override.rates
+    : getContentDefaultRates(content);
+  return mergeRateLists(base, getFxRateRows());
 }
 
 export function getMarketRatesPayload(content) {
   const override = readMarketRatesFile();
+  const fxState = readFxExchangeState();
   const rates = getEffectiveMarketRates(content);
   return {
     rates,
-    source: override?.rates?.length ? "override" : "content",
-    updatedAt: override?.updatedAt ?? null,
+    source: override?.rates?.length
+      ? "override+fx"
+      : fxState.rates?.length
+        ? "content+fx"
+        : "content",
+    updatedAt: override?.updatedAt ?? fxState.updatedAt ?? null,
+    fx: {
+      variant: fxState.variant || content?.economy_schema?.fx_exchange?.variant || null,
+      credits: fxState.credits || {},
+      turn: fxState.turn ?? null,
+    },
   };
 }
 

@@ -1,6 +1,5 @@
 import { useMemo, useState, type CSSProperties } from "react";
-import { useDrag } from "@use-gesture/react";
-import { CATEGORY_CURRENCIES } from "../../../state/economyLabels";
+import { useTouchDrag } from "../../shared/useTouchDrag";
 import {
   ECO_CATEGORY_COLORS,
   ECO_CATEGORY_NAMES,
@@ -13,6 +12,7 @@ type Props = {
   activeEdge?: string | null;
   previewEdge?: string | null;
   onSetPriority?: (from: string, to: string) => void;
+  /** Click highlight only — does not commit priority. */
   onSelectEdge?: (from: string, to: string) => void;
 };
 
@@ -25,6 +25,7 @@ export function RpsChain({
 }: Props) {
   const [dragFrom, setDragFrom] = useState<string | null>(null);
   const [hoverTo, setHoverTo] = useState<string | null>(null);
+  const [pickedEdge, setPickedEdge] = useState<string | null>(null);
 
   const volumes = useMemo(() => {
     const out: Record<string, number> = {};
@@ -41,7 +42,7 @@ export function RpsChain({
 
   const maxVol = Math.max(1, ...Object.values(volumes));
 
-  const bindCat = useDrag(
+  const bindCat = useTouchDrag(
     ({ args, first, last, xy: [x, y] }) => {
       const from = (args as [string])[0];
       if (first) {
@@ -54,27 +55,35 @@ export function RpsChain({
       setHoverTo(to && to !== from ? to : null);
       if (last) {
         if (to && to !== from && isAdjacentRps(from, to)) {
+          setPickedEdge(null);
           onSetPriority?.(from, to);
         }
         setDragFrom(null);
         setHoverTo(null);
       }
     },
-    { filterTaps: true, pointer: { touch: true } },
   );
 
   const preview =
     previewEdge ||
     (dragFrom && hoverTo && isAdjacentRps(dragFrom, hoverTo)
       ? edgeKey(dragFrom, hoverTo)
-      : null);
+      : null) ||
+    pickedEdge;
+
+  const pickEdge = (from: string, to: string) => {
+    if (!isAdjacentRps(from, to)) return;
+    const edge = edgeKey(from, to);
+    setPickedEdge(edge);
+    onSelectEdge?.(from, to);
+  };
 
   return (
     <div className="eco-rps" aria-label="Цикл ресурсов">
       <header className="eco-chart-block__head">
         <h4>Цикл производства</h4>
         <span className="hint">
-          клик по категории/стрелке — приоритет · перетащите на соседнюю
+          перетащите категорию на соседнюю — приоритет · клик — превью
         </span>
       </header>
       <div className="eco-rps__chain">
@@ -85,7 +94,6 @@ export function RpsChain({
           const thickness = 2 + Math.round((vol / maxVol) * 10);
           const isActive = activeEdge === edge;
           const isPreview = preview === edge;
-          const cat = CATEGORY_CURRENCIES.find((c) => c.letter === letter);
           return (
             <div key={letter} className="eco-rps__node-wrap">
               <button
@@ -99,9 +107,9 @@ export function RpsChain({
                     "--eco-rps-color": ECO_CATEGORY_COLORS[letter],
                   } as CSSProperties
                 }
-                title={`${ECO_CATEGORY_NAMES[letter]} · ${cat?.name ?? ""} · клик: ${letter}→${next}`}
+                title={`${ECO_CATEGORY_NAMES[letter] ?? letter} · перетащите на соседнюю`}
                 {...bindCat(letter)}
-                onClick={() => onSelectEdge?.(letter, next)}
+                onClick={() => pickEdge(letter, next)}
               >
                 <span className="eco-rps__letter">{letter}</span>
                 <span className="eco-rps__name">
@@ -117,8 +125,8 @@ export function RpsChain({
                   height: thickness,
                   ["--eco-rps-color" as string]: ECO_CATEGORY_COLORS[letter],
                 }}
-                title={`${letter}→${next}: ~${Math.round(vol)}/ход`}
-                onClick={() => onSelectEdge?.(letter, next)}
+                title={`${letter}→${next}: ~${Math.round(vol)}/ход · клик — превью`}
+                onClick={() => pickEdge(letter, next)}
               >
                 <span className="eco-rps__arrow-cap" aria-hidden>
                   →
@@ -131,7 +139,7 @@ export function RpsChain({
       {(activeEdge || preview) && (
         <p className="hint eco-rps__status">
           {preview && preview !== activeEdge
-            ? `Превью: ${preview.replace("->", " → ")} (усиление на следующем ходу)`
+            ? `Превью: ${preview.replace("->", " → ")} — перетащите, чтобы применить`
             : activeEdge
               ? `Приоритет: ${activeEdge.replace("->", " → ")}`
               : null}

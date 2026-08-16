@@ -1,0 +1,281 @@
+{
+  "module.space.kinetic_cannon": {
+    "id": "module.space.kinetic_cannon",
+    "name": "Кинетическая пушка",
+    "kind": "module",
+    "theater": "space",
+    "category": "C",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "kinetic"
+    ]
+  },
+  "module.space.light_laser": {
+    "id": "module.space.light_laser",
+    "name": "Лёгкий лазер",
+    "kind": "module",
+    "theater": "space",
+    "category": "D",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "laser"
+    ]
+  },
+  "module.space.missile_rack": {
+    "id": "module.space.missile_rack",
+    "name": "Ракетная кассета",
+    "kind": "module",
+    "theater": "space",
+    "category": "C",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "missile"
+    ]
+  },
+  "module.space.plasma_projector": {
+    "id": "module.space.plasma_projector",
+    "name": "Плазменный проектор",
+    "kind": "module",
+    "theater": "space",
+    "category": "D",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "weapon_amp",
+      "plasma"
+    ]
+  },
+  "module.space.torpedo": {
+    "id": "module.space.torpedo",
+    "name": "Корабельная торпеда",
+    "kind": "module",
+    "theater": "space",
+    "category": "C",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "weapon_amp",
+      "torpedo"
+    ]
+  },
+  "module.space.chem_drive": {
+    "id": "module.space.chem_drive",
+    "name": "Химический привод",
+    "kind": "module",
+    "theater": "space",
+    "category": "D",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "fuel",
+      "chem_drive"
+    ]
+  },
+  "module.space.ion_drive": {
+    "id": "module.space.ion_drive",
+    "name": "Ионный привод",
+    "kind": "module",
+    "theater": "space",
+    "category": "D",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "fuel",
+      "accelerate"
+    ]
+  },
+  "module.space.fusion_drive": {
+    "id": "module.space.fusion_drive",
+    "name": "Термоядерный привод",
+    "kind": "module",
+    "theater": "space",
+    "category": "D",
+    "tier": 3,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "fuel",
+      "accelerate"
+    ]
+  },
+  "module.space.screen_emitter": {
+    "id": "module.space.screen_emitter",
+    "name": "Экранный излучатель",
+    "kind": "module",
+    "theater": "space",
+    "category": "D",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "shield"
+    ]
+  },
+  "module.space.deep_scanner": {
+    "id": "module.space.deep_scanner",
+    "name": "Глубинный сканер",
+    "kind": "module",
+    "theater": "space",
+    "category": "F",
+    "tier": 3,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "info_store"
+    ]
+  },
+  "module.ground.rifle": {
+    "id": "module.ground.rifle",
+    "name": "Штурмовая винтовка",
+    "kind": "module",
+    "theater": "ground",
+    "category": "C",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "small_arms"
+    ]
+  },
+  "module.ground.laser_rifle": {
+    "id": "module.ground.laser_rifle",
+    "name": "Лазерный карабин",
+    "kind": "module",
+    "theater": "ground",
+    "category": "D",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "small_arms",
+      "laser"
+    ]
+  },
+  "module.ground.at_launcher": {
+    "id": "module.ground.at_launcher",
+    "name": "ПТ-пусковая",
+    "kind": "module",
+    "theater": "ground",
+    "category": "C",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "weapon_amp",
+      "missile"
+    ]
+  },
+  "module.ground.siege_piece": {
+    "id": "module.ground.siege_piece",
+    "name": "Осадный ствол",
+    "kind": "module",
+    "theater": "ground",
+    "category": "C",
+    "tier": 3,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "weapon_amp",
+      "siege_gun"
+    ]
+  },
+  "module.ground.armor_vest": {
+    "id": "module.ground.armor_vest",
+    "name": "Полевой панцирь",
+    "kind": "module",
+    "theater": "ground",
+    "category": "C",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "armor_kit"
+    ]
+  },
+  "module.ground.ablative_plate": {
+    "id": "module.ground.ablative_plate",
+    "name": "Абляционные пластины",
+    "kind": "module",
+    "theater": "ground",
+    "category": "C",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "armor_kit"
+    ]
+  },
+  "module.ground.field_kit": {
+    "id": "module.ground.field_kit",
+    "name": "Полевой набор",
+    "kind": "module",
+    "theater": "ground",
+    "category": "E",
+    "tier": 1,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "field_kit"
+    ]
+  },
+  "module.ground.vehicle_cannon": {
+    "id": "module.ground.vehicle_cannon",
+    "name": "Орудие машины",
+    "kind": "module",
+    "theater": "ground",
+    "category": "C",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "weapon",
+      "kinetic"
+    ]
+  },
+  "module.ground.track_drive": {
+    "id": "module.ground.track_drive",
+    "name": "Гусеничный привод",
+    "kind": "module",
+    "theater": "ground",
+    "category": "D",
+    "tier": 2,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "fuel",
+      "accelerate"
+    ]
+  },
+  "module.ground.dome_emitter": {
+    "id": "module.ground.dome_emitter",
+    "name": "Излучатель купола",
+    "kind": "module",
+    "theater": "ground",
+    "category": "D",
+    "tier": 3,
+    "rank": "bulk",
+    "notDeposit": true,
+    "properties": [
+      "shield"
+    ]
+  }
+}

@@ -31,8 +31,16 @@ import { getContent } from "./contentLoader.mjs";
  * @param {Object} require - { category?, tier?, properties? }
  * @returns {boolean}
  */
+export function isCraftedModule(resource) {
+  const id = resource?.id || resource?.resourceId || "";
+  return resource?.kind === "module" || String(id).startsWith("module.");
+}
+
 export function resourceMatchesRequire(resource, require) {
   if (!require) return true;
+  // Crafted modules never fill building/ore slots (no theater on the require).
+  if (isCraftedModule(resource) && !require.theater) return false;
+  if (require.theater && (resource.theater || "") !== require.theater) return false;
   if (require.category && (resource.category || "") !== require.category) return false;
   if (require.properties && require.properties.length > 0) {
     const have = resource.properties || [];
@@ -78,6 +86,8 @@ export function buildResourceIndex(content) {
       properties: def.properties || [],
       toxic: !!def.toxic,
       biome_tags: def.biome_tags || [],
+      kind: def.kind || null,
+      theater: def.theater || null,
     };
     all.push(entry);
     (byCategory[def.category] = byCategory[def.category] || []).push(entry);

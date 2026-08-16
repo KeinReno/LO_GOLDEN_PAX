@@ -13,7 +13,7 @@ import {
   readLiveBoard,
 } from "./tableStore.mjs";
 
-const DEFAULT_KEEP = 40;
+const DEFAULT_KEEP = 80;
 
 export function listBackupDirs() {
   ensureDataDir();

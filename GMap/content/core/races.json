@@ -104,7 +104,10 @@
       "race_horn": 0
     },
     "kind": "race",
-    "origin": "Базовый человеческий генотип"
+    "origin": "Базовый человеческий генотип",
+    "powerPath": [
+      "will"
+    ]
   },
   "race_belator": {
     "id": "race_belator",
@@ -207,17 +210,35 @@
   "race_nagaar": {
     "id": "race_nagaar",
     "name": "Нагааритяне",
-    "tags": ["imperial", "titular"],
+    "tags": [
+      "imperial",
+      "titular"
+    ],
     "traits": [
       {
         "id": "trait.nagaar.titular",
         "effects": [
           {
             "effect": "loyalty_add",
-            "args": { "amount": 2 }
+            "args": {
+              "amount": 2
+            }
           }
         ],
         "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.nagaar.caravan_burden",
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "diplomacy",
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
       }
     ],
     "habitability": {
@@ -555,7 +576,10 @@
       "race_horn": 0
     },
     "kind": "race",
-    "origin": "Псионически одарённые"
+    "origin": "Псионически одарённые",
+    "powerPath": [
+      "mind"
+    ]
   },
   "race_swarm": {
     "id": "race_swarm",
@@ -1113,19 +1137,31 @@
     "name": "Эмпаты",
     "kind": "hybrid",
     "origin": "Синтез людей и псиоников",
-    "hybridOf": ["race_human", "race_psionic"],
-    "tags": ["hybrid", "psionic", "baseline"],
+    "hybridOf": [
+      "race_human",
+      "race_psionic"
+    ],
+    "tags": [
+      "hybrid",
+      "psionic",
+      "baseline"
+    ],
     "traits": [
       {
         "id": "trait.hybrid.human_psi.link",
         "effects": [
           {
             "effect": "loyalty_add",
-            "args": { "amount": 2 }
+            "args": {
+              "amount": 2
+            }
           },
           {
             "effect": "stat_mult",
-            "args": { "stat": "damage", "mult": 1.08 }
+            "args": {
+              "stat": "damage",
+              "mult": 1.08
+            }
           }
         ],
         "balanceBudget": 0.5
@@ -1135,11 +1171,15 @@
         "effects": [
           {
             "effect": "revolt_risk",
-            "args": { "chancePerTurn": 0.015 }
+            "args": {
+              "chancePerTurn": 0.015
+            }
           },
           {
             "effect": "production_mult",
-            "args": { "mult": 0.96 }
+            "args": {
+              "mult": 0.96
+            }
           }
         ],
         "balanceBudget": -0.5
@@ -1159,26 +1199,43 @@
     "xenorelations": {
       "race_swarm": -0.28,
       "race_synth": 0.02
-    }
+    },
+    "powerPath": [
+      "will",
+      "mind"
+    ]
   },
   "race_hybrid.karned_synth": {
     "id": "race_hybrid.karned_synth",
     "name": "Холодные литейщики",
     "kind": "hybrid",
     "origin": "Карнеды + синты: автоматизированные плавильни",
-    "hybridOf": ["race_karned", "race_synth"],
-    "tags": ["hybrid", "lithoid", "synthetic"],
+    "hybridOf": [
+      "race_karned",
+      "race_synth"
+    ],
+    "tags": [
+      "hybrid",
+      "lithoid",
+      "synthetic"
+    ],
     "traits": [
       {
         "id": "trait.hybrid.karned_synth.foundry",
         "effects": [
           {
             "effect": "production_mult",
-            "args": { "resource": "currency.materia", "mult": 1.12 }
+            "args": {
+              "resource": "currency.materia",
+              "mult": 1.12
+            }
           },
           {
             "effect": "production_mult",
-            "args": { "resource": "currency.industria", "mult": 1.08 }
+            "args": {
+              "resource": "currency.industria",
+              "mult": 1.08
+            }
           }
         ],
         "balanceBudget": 0.5
@@ -1188,11 +1245,15 @@
         "effects": [
           {
             "effect": "pop_growth_mult",
-            "args": { "mult": 0.72 }
+            "args": {
+              "mult": 0.72
+            }
           },
           {
             "effect": "move_cost_mult",
-            "args": { "mult": 1.08 }
+            "args": {
+              "mult": 1.08
+            }
           }
         ],
         "balanceBudget": -0.5
@@ -1218,19 +1279,31 @@
     "name": "Имперские рогатые",
     "kind": "hybrid",
     "origin": "Белаторцы и хорны — двор и легион",
-    "hybridOf": ["race_belator", "race_horn"],
-    "tags": ["hybrid", "imperial", "horn"],
+    "hybridOf": [
+      "race_belator",
+      "race_horn"
+    ],
+    "tags": [
+      "hybrid",
+      "imperial",
+      "horn"
+    ],
     "traits": [
       {
         "id": "trait.hybrid.belator_horn.legion",
         "effects": [
           {
             "effect": "stat_mult",
-            "args": { "stat": "defense", "mult": 1.12 }
+            "args": {
+              "stat": "defense",
+              "mult": 1.12
+            }
           },
           {
             "effect": "loyalty_add",
-            "args": { "amount": 1 }
+            "args": {
+              "amount": 1
+            }
           }
         ],
         "balanceBudget": 0.5
@@ -1240,11 +1313,16 @@
         "effects": [
           {
             "effect": "upkeep_flat",
-            "args": { "resource": "currency.supply", "amount": 1 }
+            "args": {
+              "resource": "currency.supply",
+              "amount": 1
+            }
           },
           {
             "effect": "research_cost_mult",
-            "args": { "mult": 1.05 }
+            "args": {
+              "mult": 1.05
+            }
           }
         ],
         "balanceBudget": -0.5
@@ -1270,19 +1348,30 @@
     "name": "Пустотные адаптанты",
     "kind": "hybrid",
     "origin": "Люди и войдборн — мост между мирами",
-    "hybridOf": ["race_human", "race_voidborn"],
-    "tags": ["hybrid", "void", "baseline"],
+    "hybridOf": [
+      "race_human",
+      "race_voidborn"
+    ],
+    "tags": [
+      "hybrid",
+      "void",
+      "baseline"
+    ],
     "traits": [
       {
         "id": "trait.hybrid.human_void.lanes",
         "effects": [
           {
             "effect": "move_cost_mult",
-            "args": { "mult": 0.92 }
+            "args": {
+              "mult": 0.92
+            }
           },
           {
             "effect": "habitability_mult",
-            "args": { "mult": 1.05 }
+            "args": {
+              "mult": 1.05
+            }
           }
         ],
         "balanceBudget": 0.5
@@ -1292,11 +1381,15 @@
         "effects": [
           {
             "effect": "loyalty_add",
-            "args": { "amount": -1 }
+            "args": {
+              "amount": -1
+            }
           },
           {
             "effect": "pop_growth_mult",
-            "args": { "mult": 0.88 }
+            "args": {
+              "mult": 0.88
+            }
           }
         ],
         "balanceBudget": -0.5
@@ -1320,8 +1413,15 @@
     "name": "Хор Праха",
     "kind": "hybrid",
     "origin": "Лорды Праха и псионики — резонанс завета",
-    "hybridOf": ["race_lord_dust", "race_psionic"],
-    "tags": ["hybrid", "ghost", "psionic"],
+    "hybridOf": [
+      "race_lord_dust",
+      "race_psionic"
+    ],
+    "tags": [
+      "hybrid",
+      "ghost",
+      "psionic"
+    ],
     "reproduction": {
       "requires": "currency.energia"
     },
@@ -1331,11 +1431,16 @@
         "effects": [
           {
             "effect": "research_cost_mult",
-            "args": { "mult": 0.9 }
+            "args": {
+              "mult": 0.9
+            }
           },
           {
             "effect": "production_mult",
-            "args": { "resource": "currency.cognitio", "mult": 1.1 }
+            "args": {
+              "resource": "currency.cognitio",
+              "mult": 1.1
+            }
           }
         ],
         "balanceBudget": 0.5
@@ -1345,11 +1450,17 @@
         "effects": [
           {
             "effect": "stat_mult",
-            "args": { "stat": "hp", "mult": 0.88 }
+            "args": {
+              "stat": "hp",
+              "mult": 0.88
+            }
           },
           {
             "effect": "upkeep_flat",
-            "args": { "resource": "currency.energia", "amount": 1 }
+            "args": {
+              "resource": "currency.energia",
+              "amount": 1
+            }
           }
         ],
         "balanceBudget": -0.5
@@ -1369,6 +1480,69 @@
     },
     "xenorelations": {
       "race_synth": -0.15
-    }
+    },
+    "powerPath": [
+      "mind"
+    ]
+  },
+  "race_damilian": {
+    "id": "race_damilian",
+    "name": "Дамиляне",
+    "tags": [
+      "gatewright",
+      "corridor"
+    ],
+    "traits": [
+      {
+        "id": "trait.damilian.corridor_sense",
+        "effects": [
+          {
+            "effect": "logistics_range_add",
+            "args": {
+              "hops": 1
+            }
+          },
+          {
+            "effect": "upkeep_flat",
+            "args": {
+              "resource": "currency.energia",
+              "amount": 1
+            }
+          }
+        ],
+        "balanceBudget": 0.5
+      },
+      {
+        "id": "trait.damilian.gate_tithe",
+        "effects": [
+          {
+            "effect": "cost_mult",
+            "args": {
+              "tag": "build",
+              "mult": 1.1
+            }
+          }
+        ],
+        "balanceBudget": -0.5
+      }
+    ],
+    "habitability": {
+      "rocky": 0.85,
+      "desert": 0.7,
+      "ocean": 0.75,
+      "ice": 0.65,
+      "toxic": 0.15
+    },
+    "growth": {
+      "baseRate": 0.009,
+      "crowdPenalty": 0.45
+    },
+    "xenorelations": {
+      "race_human": 0,
+      "race_voidborn": 0.1,
+      "race_belator": -0.05
+    },
+    "kind": "race",
+    "origin": "Строители межзвёздных коридоров Дамиля; хранители врат"
   }
 }

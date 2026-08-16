@@ -68,10 +68,37 @@ export function loadTaxSlots(): TaxSlotDef[] {
         name: "Промышленный сбор",
         resource: "currency.materia",
         tiers: [
-          { id: "none", label: "0%" },
-          { id: "low", label: "8%" },
-          { id: "mid", label: "15%" },
-          { id: "high", label: "25%" },
+          { id: "none", label: "0%", rate: 0, effects: [] },
+          {
+            id: "low",
+            label: "8%",
+            rate: 0.08,
+            effects: [{ effect: "tax_pressure", args: { amount: 1 } }],
+          },
+          {
+            id: "mid",
+            label: "15%",
+            rate: 0.15,
+            effects: [
+              { effect: "tax_pressure", args: { amount: 3 } },
+              {
+                effect: "production_mult",
+                args: { resource: "currency.materia", mult: 0.95 },
+              },
+            ],
+          },
+          {
+            id: "high",
+            label: "25%",
+            rate: 0.25,
+            effects: [
+              { effect: "tax_pressure", args: { amount: 5 } },
+              {
+                effect: "production_mult",
+                args: { resource: "currency.materia", mult: 0.9 },
+              },
+            ],
+          },
         ],
       },
       {
@@ -79,10 +106,25 @@ export function loadTaxSlots(): TaxSlotDef[] {
         name: "Энергетический сбор",
         resource: "currency.energia",
         tiers: [
-          { id: "none", label: "0%" },
-          { id: "low", label: "8%" },
-          { id: "mid", label: "15%" },
-          { id: "high", label: "22%" },
+          { id: "none", label: "0%", rate: 0, effects: [] },
+          {
+            id: "low",
+            label: "8%",
+            rate: 0.08,
+            effects: [{ effect: "tax_pressure", args: { amount: 1 } }],
+          },
+          {
+            id: "mid",
+            label: "15%",
+            rate: 0.15,
+            effects: [{ effect: "tax_pressure", args: { amount: 2 } }],
+          },
+          {
+            id: "high",
+            label: "22%",
+            rate: 0.22,
+            effects: [{ effect: "tax_pressure", args: { amount: 4 } }],
+          },
         ],
       },
       {
@@ -90,10 +132,25 @@ export function loadTaxSlots(): TaxSlotDef[] {
         name: "Биосбор",
         resource: "currency.bios",
         tiers: [
-          { id: "none", label: "0%" },
-          { id: "low", label: "5%" },
-          { id: "mid", label: "12%" },
-          { id: "high", label: "18%" },
+          { id: "none", label: "0%", rate: 0, effects: [] },
+          {
+            id: "low",
+            label: "5%",
+            rate: 0.05,
+            effects: [{ effect: "tax_pressure", args: { amount: 1 } }],
+          },
+          {
+            id: "mid",
+            label: "12%",
+            rate: 0.12,
+            effects: [{ effect: "tax_pressure", args: { amount: 2 } }],
+          },
+          {
+            id: "high",
+            label: "18%",
+            rate: 0.18,
+            effects: [{ effect: "tax_pressure", args: { amount: 3 } }],
+          },
         ],
       },
     ];

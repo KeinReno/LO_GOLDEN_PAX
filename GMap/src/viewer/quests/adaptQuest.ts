@@ -1,4 +1,5 @@
 import type {
+  FactionNpc,
   Quest as WorldQuest,
   QuestHistoryEntry,
   QuestType,
@@ -12,6 +13,7 @@ import type {
   QuestChoice,
   QuestKind,
   QuestLogEntry,
+  QuestObjective,
   QuestStatus,
 } from "./types";
 import { QUEST_ART_BY_KIND } from "./types";
@@ -35,7 +37,7 @@ function mapKind(type: QuestType | undefined): QuestKind {
   return "side";
 }
 
-function mapStatus(status: WorldQuest["status"]): QuestStatus {
+export function mapStatus(status: WorldQuest["status"]): QuestStatus {
   switch (status) {
     case "active":
       return "active";
@@ -173,6 +175,31 @@ function factionName(world: WorldState, id: string | null | undefined): string |
   return world.factions.find((f) => f.id === id)?.name;
 }
 
+function npcById(
+  world: WorldState,
+  id: string | null | undefined,
+): FactionNpc | undefined {
+  if (!id) return undefined;
+  for (const f of world.factions) {
+    const found = f.npcs?.find((n) => n.id === id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function npcAssignedToQuest(
+  world: WorldState,
+  questId: string,
+): FactionNpc | undefined {
+  for (const f of world.factions) {
+    for (const n of f.npcs ?? []) {
+      if (n.status === "hidden" || n.status === "dead") continue;
+      if (n.currentTask?.linkedQuestId === questId) return n;
+    }
+  }
+  return undefined;
+}
+
 /** Adapt a world Quest into the Quests UI model. */
 export function adaptQuest(
   q: WorldQuest,
@@ -191,6 +218,7 @@ export function adaptQuest(
 
   const sysId = q.systemId ?? q.sourceSystemId ?? null;
   const arcId = q.arc?.stages?.length ? `arc:${q.id}` : undefined;
+  const assigned = npcAssignedToQuest(world, q.id);
 
   return {
     id: q.id,
@@ -199,7 +227,8 @@ export function adaptQuest(
     status: mapStatus(q.status),
     giverFactionId: q.sourceFactionId ?? undefined,
     giverFactionName: factionName(world, q.sourceFactionId),
-    giverSystemId: q.sourceNpcId ?? undefined,
+    giverNpcId: q.sourceNpcId ?? undefined,
+    giverNpcName: npcById(world, q.sourceNpcId)?.name,
     systemId: sysId ?? undefined,
     systemName: systemName(world, sysId),
     arcId,
@@ -212,30 +241,75 @@ export function adaptQuest(
     description: q.detail?.trim() || q.summary,
     choices: activeChoices(q),
     diceCheck: activeDice(q),
-    objectives: q.arc?.stages?.map((s, i) => ({
-      id: s.id,
-      text: s.label + (s.summary ? ` — ${s.summary}` : ""),
-      done: i < (q.arc?.currentStage ?? 0),
-    })),
+    objectives: mapObjectives(q),
     secret: q.status === "hidden",
     tags: q.type === "yearly" ? ["perturn"] : undefined,
     log,
     artUrl: QUEST_ART_BY_KIND[kind],
     expiresTurn: q.expiresTurn,
+    assignedNpcId: assigned?.id,
+    assignedNpcName: assigned?.name,
+    assignedNpcEtaTurn: assigned?.currentTask?.etaTurn,
   };
 }
 
-function mergeLogs(a: QuestLogEntry[], b: QuestLogEntry[]): QuestLogEntry[] {
-  const seen = new Set<string>();
+/** Content key: local optimistic ids (`pl-…`) differ from server (`questId-h-i-at`). */
+function logFingerprint(e: QuestLogEntry): string {
+  return `${e.turn}\0${e.author}\0${e.text.trim()}`;
+}
+
+/**
+ * Prefer server history; drop a local extra only when it 1:1-matches an unused
+ * server row (same turn/author/text). Optimistic chat uses authorName "Вы",
+ * server writes "Игрок" — role is the same. Identical texts in one turn stay
+ * distinct as long as the server recorded both.
+ */
+function mergeLogs(
+  server: QuestLogEntry[],
+  local: QuestLogEntry[],
+): QuestLogEntry[] {
+  const seenIds = new Set<string>();
   const out: QuestLogEntry[] = [];
-  for (const e of [...a, ...b].sort((x, y) =>
-    x.timestamp.localeCompare(y.timestamp),
-  )) {
-    if (seen.has(e.id)) continue;
-    seen.add(e.id);
+  for (const e of server) {
+    if (seenIds.has(e.id)) continue;
+    seenIds.add(e.id);
     out.push(e);
   }
+  const claimed = new Set<number>();
+  const serverCount = out.length;
+  for (const e of local) {
+    if (seenIds.has(e.id)) continue;
+    const fp = logFingerprint(e);
+    const idx = out.findIndex(
+      (s, i) => i < serverCount && !claimed.has(i) && logFingerprint(s) === fp,
+    );
+    if (idx >= 0) {
+      claimed.add(idx);
+      continue;
+    }
+    seenIds.add(e.id);
+    out.push(e);
+  }
+  out.sort((x, y) => x.timestamp.localeCompare(y.timestamp));
   return out;
+}
+
+function mapObjectives(q: WorldQuest): QuestObjective[] | undefined {
+  if (q.objectives?.length) {
+    return q.objectives.map((o) => ({
+      id: o.id,
+      text: o.text,
+      done: Boolean(o.done),
+    }));
+  }
+  const stages = q.arc?.stages;
+  if (!stages?.length) return undefined;
+  const current = q.arc?.currentStage ?? 0;
+  return stages.map((s, i) => ({
+    id: s.id,
+    text: s.label + (s.summary ? ` — ${s.summary}` : ""),
+    done: i < current,
+  }));
 }
 
 export function adaptQuests(
