@@ -119,4 +119,36 @@ describe("content bind", () => {
     const cRate = Object.values(flows.C || {}).reduce((s, cell) => s + (cell.rate || 0), 0);
     assert.equal(cRate, 0);
   });
+
+  it("produces previously orphan modules from workshops", () => {
+    const named = {};
+    addBuildingFlows(emptyFlows(), c.buildings["building.ion_yard"], c, null, {
+      namedProduction: named,
+      rateScale: 1,
+    });
+    addBuildingFlows(emptyFlows(), c.buildings["building.laser_armory"], c, null, {
+      namedProduction: named,
+      rateScale: 1,
+    });
+    addBuildingFlows(emptyFlows(), c.buildings["building.track_works"], c, null, {
+      namedProduction: named,
+      rateScale: 1,
+    });
+    assert.equal(named["module.space.ion_drive"], 1);
+    assert.equal(named["module.ground.laser_rifle"], 1);
+    assert.equal(named["module.ground.track_drive"], 1);
+  });
+
+  it("gates trade station on market_hall, mining stays open", () => {
+    const trade = c.stations.trade;
+    assert.equal(
+      canBuildWithTech({ unlockedProperties: [] }, trade).ok,
+      false,
+    );
+    assert.equal(
+      canBuildWithTech({ unlockedProperties: ["market_hall"] }, trade).ok,
+      true,
+    );
+    assert.equal(canBuildWithTech({ unlockedProperties: [] }, c.stations.mining).ok, true);
+  });
 });
