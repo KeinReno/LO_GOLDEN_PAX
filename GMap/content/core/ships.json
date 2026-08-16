@@ -918,7 +918,8 @@
         "role": "tactic",
         "require": {
           "category": "F",
-          "tier": ">=4"
+          "tier": ">=4",
+          "theater": "space"
         },
         "count": 1
       }
@@ -1166,7 +1167,8 @@
         "role": "tactic",
         "require": {
           "category": "F",
-          "tier": ">=5"
+          "tier": ">=5",
+          "theater": "space"
         },
         "count": 2
       }
@@ -1322,7 +1324,8 @@
         "role": "tactic",
         "require": {
           "category": "F",
-          "tier": ">=5"
+          "tier": ">=5",
+          "theater": "space"
         },
         "count": 2
       }
@@ -1473,7 +1476,8 @@
           "properties": [
             "psion_store"
           ],
-          "tier": ">=6"
+          "tier": ">=6",
+          "theater": "space"
         },
         "count": 2
       },
@@ -1675,7 +1679,8 @@
         "role": "tactic",
         "require": {
           "category": "F",
-          "tier": ">=6"
+          "tier": ">=6",
+          "theater": "space"
         },
         "count": 3
       }
@@ -1855,7 +1860,8 @@
         "role": "tactic",
         "require": {
           "category": "F",
-          "tier": ">=7"
+          "tier": ">=7",
+          "theater": "space"
         },
         "count": 4
       }

@@ -18,6 +18,7 @@ import { writeLiveBoard } from "./tableStore.mjs";
 import { produceForceAp, stationCost } from "./forceEconomy.mjs";
 import { intentApCosts } from "./apBudget.mjs";
 import { applyForceRaise } from "./forceRecruit.mjs";
+import { canBuildWithTech } from "./techActions.mjs";
 
 const STATION_DEFS = {
   mining: {
@@ -275,6 +276,7 @@ function resolveStationDef(kind) {
       kind: fromContent.kind ?? kind,
       name: fromContent.name,
       ap: Number(fromContent.ap ?? 1),
+      requireProperties: fromContent.requireProperties || [],
       cost:
         fromContent.cost ??
         stationCost(kind) ??
@@ -334,6 +336,10 @@ export function applySystemAction({
   if (action === "build_station") {
     const def = resolveStationDef(stationKind);
     if (!def) return { ok: false, error: "Неизвестный тип станции" };
+    const ledgerGate = readLedger();
+    const ecoGate = ensureFactionEco(ledgerGate, factionId);
+    const techGate = canBuildWithTech(ecoGate, def);
+    if (!techGate.ok) return techGate;
     system.stations = system.stations ?? [];
     if (system.stations.length >= MAX_STATIONS) {
       return { ok: false, error: `Лимит станций в системе (${MAX_STATIONS})` };

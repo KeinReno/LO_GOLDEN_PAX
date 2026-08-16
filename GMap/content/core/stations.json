@@ -90,6 +90,9 @@
       "currency.metal": 24,
       "currency.supply": 10
     },
+    "requireProperties": [
+      "market_hall"
+    ],
     "effects": [
       {
         "effect": "yield_flat",

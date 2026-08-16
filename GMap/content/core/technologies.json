@@ -43632,6 +43632,12 @@
         "args": {
           "mult": 0.94
         }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "ion_drive"
+        }
       }
     ],
     "upgrades": [

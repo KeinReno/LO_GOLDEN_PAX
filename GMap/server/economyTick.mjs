@@ -60,6 +60,7 @@ import { applyCurrencyUnionIncome } from "./economicTrack.mjs";
 import { collectLoyaltyTierEffects } from "./loyalty.mjs";
 import { collectRevoltProductionEffects } from "./stabilityRevolt.mjs";
 import { collectTechModifierEffects } from "./techActions.mjs";
+import { collectLawModifierEffects } from "./civicPaths.mjs";
 import { activeSocketEffects } from "./techSockets.mjs";
 import { filterPowerGatedEffects } from "./powerPaths.mjs";
 import {
@@ -288,6 +289,7 @@ function collectFactionEffects(world, factionId, eco, content, turn = 0) {
   effects.push(...collectLoyaltyTierEffects(world, factionId, content));
   effects.push(...collectRevoltProductionEffects(world, factionId, content));
   effects.push(...collectTechModifierEffects(eco, content));
+  effects.push(...collectLawModifierEffects(eco, content));
 
   if (faction) {
     effects.push(...collectTreatyEffects(faction));

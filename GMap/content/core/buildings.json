@@ -4573,5 +4573,311 @@
     ],
     "signature": "Архив имён — наука дешевле временем",
     "tradeoff": "не лаборатория F-тиров"
+  },
+  "building.ion_yard": {
+    "id": "building.ion_yard",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Ионный двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "ion_drive"
+    ],
+    "cost": {
+      "currency.metal": 18,
+      "currency.supply": 8,
+      "currency.industria": 3
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.ion_drive",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Ионный привод флота 1/ход",
+    "tradeoff": "не термояд"
+  },
+  "building.scanner_bay": {
+    "id": "building.scanner_bay",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Сканерная бухта",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "info_store"
+    ],
+    "cost": {
+      "currency.metal": 20,
+      "currency.supply": 7,
+      "currency.industria": 3
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.space.deep_scanner",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Глубинный сканер в слот тактики",
+    "tradeoff": "не орудие"
+  },
+  "building.laser_armory": {
+    "id": "building.laser_armory",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Лазерная оружейная",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "laser"
+    ],
+    "cost": {
+      "currency.metal": 15,
+      "currency.supply": 6,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.laser_rifle",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Карабин легиона 1/ход",
+    "tradeoff": "не корабельный луч"
+  },
+  "building.at_works": {
+    "id": "building.at_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "ПТ-двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "missile"
+    ],
+    "cost": {
+      "currency.metal": 16,
+      "currency.supply": 7,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.at_launcher",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "ПТ-пусковая легиона",
+    "tradeoff": "не корабельная кассета"
+  },
+  "building.ablative_shop": {
+    "id": "building.ablative_shop",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Абляционный цех",
+    "ap": 1,
+    "category": "C",
+    "tier": 2,
+    "laborSlots": 3,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "armor_kit"
+    ],
+    "cost": {
+      "currency.metal": 16,
+      "currency.supply": 6,
+      "currency.industria": 2
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.ablative_plate",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Пластины легиона T2",
+    "tradeoff": "не обшивка корпуса"
+  },
+  "building.track_works": {
+    "id": "building.track_works",
+    "kind": "forge",
+    "zone": "surface",
+    "name": "Гусеничный двор",
+    "ap": 1,
+    "category": "C",
+    "tier": 3,
+    "laborSlots": 4,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "requireProperties": [
+      "armor_cadre"
+    ],
+    "cost": {
+      "currency.metal": 18,
+      "currency.supply": 8,
+      "currency.industria": 3
+    },
+    "effects": [
+      {
+        "effect": "production_flat",
+        "args": {
+          "resource": "module.ground.track_drive",
+          "amount": 1
+        }
+      }
+    ],
+    "slots": [
+      {
+        "role": "structure",
+        "require": {
+          "category": "B",
+          "tier": ">=1"
+        },
+        "count": 4
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": {
+          "category": "E",
+          "tier": ">=1"
+        },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Привод бронекадра",
+    "tradeoff": "не корабельный двигатель"
   }
 }

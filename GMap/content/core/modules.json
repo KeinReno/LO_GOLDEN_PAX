@@ -96,7 +96,8 @@
     "notDeposit": true,
     "properties": [
       "fuel",
-      "accelerate"
+      "accelerate",
+      "ion_drive"
     ]
   },
   "module.space.fusion_drive": {

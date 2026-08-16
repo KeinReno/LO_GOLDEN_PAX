@@ -99,6 +99,34 @@ export function applyCivicPathUnlocks(eco, pathKey, content) {
   return journal;
 }
 
+export function listLawUnlocks(content) {
+  const out = [];
+  for (const path of listCivicPathDefs(content)) {
+    for (const u of path.unlocks || []) {
+      if (u?.kind === "law" && u.id) out.push(u);
+    }
+  }
+  return out;
+}
+
+/** Faction-wide modifiers from granted civic laws (content describes effects). */
+export function collectLawModifierEffects(eco, content) {
+  const have = new Set(eco?.laws || []);
+  if (have.size === 0) return [];
+  const effects = [];
+  for (const unlock of listLawUnlocks(content)) {
+    if (!have.has(unlock.id)) continue;
+    for (const e of unlock.effects || []) {
+      if (!e?.effect) continue;
+      effects.push({
+        ...e,
+        source: { kind: "law", id: unlock.id, label: unlock.name || unlock.id },
+      });
+    }
+  }
+  return effects;
+}
+
 /** Player-facing civic path rows for economy API / B7 HUD. */
 export function civicStatusPayload(eco, content) {
   const c = content || getContent();
