@@ -229,6 +229,31 @@ function hasCycle() {
 }
 hasCycle();
 
+// tech_paths.json cross-check: a path's breakthroughTechId/cluster members
+// that don't resolve into technologies.json render a free-looking "Прорыв"
+// button that always fails server-side (canQueueTech -> "Неизвестная
+// технология") once RoleScore hits the threshold — this went unnoticed for
+// 6 of 8 paths because nothing checked the cross-reference. WARN, not err:
+// tech_paths.json's own meta.note says clusters intentionally stay empty
+// until a real content pass, so an empty/missing path is expected content
+// debt, not a hard failure — but it must stay visible in this script's output.
+try {
+  const paths = loadJson("content/core/tech_paths.json");
+  for (const [pathId, def] of Object.entries(paths.paths || {})) {
+    const bid = def.breakthroughTechId;
+    if (bid && !byId.has(bid)) {
+      warn(`tech_paths.${pathId}: breakthroughTechId ${bid} not in technologies.json`);
+    }
+    for (const tid of paths.cluster?.[pathId] || []) {
+      if (!byId.has(tid)) {
+        warn(`tech_paths.${pathId}: cluster member ${tid} not in technologies.json`);
+      }
+    }
+  }
+} catch {
+  /* tech_paths.json optional for this validator */
+}
+
 // Schema file sanity
 if (!schema.definitions?.effect) err("tech_schema.json missing definitions.effect");
 for (const k of Object.keys(icons)) {

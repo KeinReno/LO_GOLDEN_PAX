@@ -47,6 +47,7 @@ Thumbs.db
 **/table.sqlite
 **/table.sqlite-*
 GMap/data/tick-journal.json
+GMap/data/*.tmp-*
 .claude/settings.local.json
 
 # Local poster dumps (too large for git)

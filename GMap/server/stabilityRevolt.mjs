@@ -411,6 +411,16 @@ function clearRevoltFields(planet) {
   planet.contested = false;
 }
 
+/** Suppress/recover: drop the (defeated) rebel legion and an emptied rebel faction. */
+function standDown(world, planet) {
+  const revolt = revoltState(planet);
+  const legionId = revolt?.rebelLegionId ?? null;
+  const rebelFactionId = revolt?.rebelFactionId ?? null;
+  clearRevoltFields(planet);
+  if (legionId) removeForce(world, legionId);
+  if (rebelFactionId) pruneEmptyRebelFaction(world, rebelFactionId);
+}
+
 function livingRebel(world, revolt) {
   if (!revolt?.rebelLegionId) return null;
   return (world.legions || []).find((l) => l.id === revolt.rebelLegionId) || null;

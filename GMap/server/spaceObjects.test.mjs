@@ -155,8 +155,8 @@ describe("planet deposits stay infinite", () => {
     addPlanetExtraction(b, world.systems[0].planets[0].resources, fixture, {
       skipExtractGate: true,
     });
-    assert.equal(a.B[1].rate, 2);
-    assert.equal(b.B[1].rate, 2);
+    assert.equal(a.A[1].rate, 2);
+    assert.equal(b.A[1].rate, 2);
   });
 });
 

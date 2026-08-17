@@ -31,13 +31,14 @@ Peg, boarding, stability, labor, offers, 3-stage revolt, economic track **are bu
 
 6 directions (landed) · court extend (consumers live, incl. loyalty + `move_cost_mult` in `forceMp`) · sockets/grades (landed) · **catalog slice** (осталось).
 
-## Product gaps (code-verified 2026-08-16)
+## Product gaps (code-verified 2026-08-17, corrects a stale 2026-08-16 claim — this section was reverted once already by a concurrent write, reapplied, check timestamps before trusting an older cached copy)
 
-- `tech_paths.json` clusters: structural/energy live; **biological** filled 2026-08-16 (`tech.biological.*` ×4 + `tech.path.biological_breakthrough`). Other RoleScore clusters may be in parallel chats — check `tech_paths.cluster` vs ids in `technologies.json`.
-- `canRaiseUnit` (`forceRecruit.mjs`): building gate only — no `requiresTech` / `weapon.*` (v0.5 Tech Tree 2 §5a/5b).
-- Alchemy: `alchemyActions.mjs` + `AlchemyLab.tsx` live; `tech_recipes.json` 42/81 `catalogPending`.
+- **CORRECTION:** "biological filled 2026-08-16" is **false against current files** — re-verified live: only `offensive`/`defensive` have a resolving `breakthroughTechId` + real `researchPath`-gated 4-tech cluster. `structural`/`energy` have non-empty `cluster` arrays but those techs are pre-existing legacy entries, not `researchPath`-gated path content, and BOTH paths' `breakthroughTechId` is still missing. `mobility`/`cognitive`/`biological`/`exotic` clusters are empty and their breakthroughs are missing too. **6 of 8 RoleScore paths are broken**: a player grinding RoleScore to 5000 sees a free-looking "Прорыв" button (missing cost defaults to 0 in `ResearchPathsPanel.tsx`/`buildPathStripRows.ts`) that always fails server-side with "Неизвестная технология". Root cause: authored twice in 2026-08-16 sessions, both landed "in working tree, no commit," both lost before commit. `npm run validate:tech` now cross-checks `tech_paths.json` against `technologies.json` (added 2026-08-17, WARN-level) — re-run it after any path-content pass to confirm it landed before moving on.
+- `canRaiseUnit` (`forceRecruit.mjs`): **narrower than previously stated** — not "building gate only." 17/20 units/ships already gate indirectly via `requireProperties` → real `tech.military.*` unlock techs. Remaining gap: no *tiered* `weapon.tier`/`hull.tier` check at raise time (only at combat-resolve time) — v0.5 Tech Tree 2 §5a/5b not fully ported, but smaller than "no tech gate at all."
+- Alchemy: `alchemyActions.mjs` + `AlchemyLab.tsx` live, fully playable end-to-end (verified, not a stub). `tech_recipes.json` 42/81 `catalogPending` confirmed exact; only 3 (`recipe.geo_materials`, `recipe.greenhouse_power`, `recipe.anomaly_prospect`) are truly dead (ingredient tech id doesn't exist), each has a working `recipe.live_*` duplicate — no real gameplay loss.
+- **Tech catalog totals** (2026-08-17): 608 techs, 387 `catalogPending` (63.7%), concentrated by category not era — A/B/D/E ~92% placeholder each, C/F ~55-65% real. Consistently hidden from players (3 independent guards) — inert scaffolding, not a reachability bug.
 - v0.5 leftover that is **not** gameplay: domain-split, sqlite-only, placeholder UI, galaxy migrate into v0.5.
-- **Content delegation:** `GMap/docs/agents-content/PATH_SIGNATURE_CATALOG/` + skill `tech-path-catalog`. One `PATH_ID` per chat. Breakthrough ids in `tech_paths.json` may be missing from `technologies.json` (UI cost 0 until authored).
+- **Content delegation:** `GMap/docs/agents-content/PATH_SIGNATURE_CATALOG/` + skill `tech-path-catalog`. One `PATH_ID` per chat. **Commit each path's content immediately after `validate:tech` passes clean** — "landed, uncommitted" across a session boundary is exactly how biological/structural/energy/mobility/cognitive/exotic got lost.
 
 ## Do NOT take
 

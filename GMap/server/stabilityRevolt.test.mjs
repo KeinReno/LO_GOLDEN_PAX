@@ -337,3 +337,42 @@ describe("contingent retreat (combatResolve 80% rule)", () => {
     assert.deepEqual(result.lossesB, []);
   });
 });
+
+describe("standDown after suppression/recovery (was: ReferenceError, undefined standDown)", () => {
+  // Garrison-instant-wipe (spawnAndMaybeEngage's `result.ok && !rebelsAlive`)
+  // shares the exact same standDown(world, planet) as the recovery path below —
+  // a garrison sweep (1..30, several rebel pop sizes) never lands a clean
+  // single-exchange kill: it's either a rebel win/draw (too weak) or an
+  // auto-retreat (stanceB "retreat" trips <80%-power before any exchange
+  // happens). Not reachable from a single spawn tick via count tuning alone;
+  // covered indirectly since both call sites invoke the same function.
+
+  it("stability recovery stands down an ongoing revolt", () => {
+    const planet = planetBase({ stability: 8, loyalty: 50, population: 40 });
+    const world = worldOf(planet, { turn: 10 });
+    const first = applyStabilityRevolt(world, content);
+    const spawnEv = first.journal.find((e) => e.type === "revolt");
+    assert.ok(spawnEv);
+    assert.equal(world.legions.length, 1);
+    assert.equal(world.factions.length, 2);
+
+    planet.stability = 45;
+    world.meta.turn = 11;
+    const second = applyStabilityRevolt(world, content);
+    const standDownEv = second.journal.find((e) => e.type === "revolt_stand_down");
+    assert.ok(standDownEv);
+    assert.equal(planet.revolt, null);
+    assert.equal(world.legions.length, 0);
+    assert.equal(world.factions.length, 1);
+  });
+});
+
+
+
+
+
+
+
+
+
+

@@ -10,6 +10,14 @@ import {
   setKnowledgeLevel,
 } from "../intel.mjs";
 import { getContent } from "../contentLoader.mjs";
+import {
+  readLedger,
+  writeLedger,
+  ensureFactionEco,
+  ensureAllFactions,
+  adjustStock,
+} from "../ledger.mjs";
+import { bumpOpinion } from "../opinionTick.mjs";
 
 export function applyScoutReveal(world, intent, journal) {
   const systemId = intent.payload?.systemId || intent.payload?.toSystemId;
