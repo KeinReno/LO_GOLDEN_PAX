@@ -13,7 +13,8 @@ export type PlayerView =
   | "map"
   | "court"
   | "rp"
-  | "codex";
+  | "codex"
+  | "planet";
 
 /** Sub-tabs when биржа room is open (1–4): лоты / котировки / валюты / державы. */
 export const MARKET_TAB_BY_DIGIT: Record<string, MarketTab> = {

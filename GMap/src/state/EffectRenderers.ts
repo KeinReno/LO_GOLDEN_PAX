@@ -46,8 +46,8 @@ const RENDERERS: Record<string, Renderer> = {
     const to = a.to;
     return {
       icon: "🔓",
-      short: `${name} → T${to}`,
-      tip: `Разблокирует тир ${to} категории ${name}`,
+      short: `открывает тир ${to} в потоке «${name}»`,
+      tip: `Можно строить и производить в категории «${name}» до тира ${to}`,
     };
   },
   unlock_property: (a) => ({
@@ -72,10 +72,15 @@ const RENDERERS: Record<string, Renderer> = {
   upkeep_mult: (a) => {
     const pct = Math.round(Number(a.mult) * 100);
     const label = resourceLabel(a);
+    const cheaper = Number(a.mult) < 1;
     return {
       icon: "📉",
-      short: `${pct}% апкип ${label}`,
-      tip: `Множитель апкипа ×${a.mult}`,
+      short: cheaper
+        ? `содержание «${label}» −${100 - pct}%`
+        : `содержание «${label}» ${pct}%`,
+      tip: cheaper
+        ? `Содержание меньше: множитель ×${a.mult}`
+        : `Множитель содержания ×${a.mult}`,
     };
   },
   production_flat: (a) => ({
@@ -105,14 +110,21 @@ const RENDERERS: Record<string, Renderer> = {
   }),
   ap_add: (a) => ({
     icon: "◆",
-    short: `+${a.amount} AP`,
-    tip: `Добавляет ${a.amount} очко(а) действий`,
+    short: `+${a.amount} ОД`,
+    tip: `Добавляет ${a.amount} очко(а) действий за ход`,
   }),
-  cost_mult: (a) => ({
-    icon: "🏗",
-    short: `стоимость ×${a.mult}${a.tag ? ` (${a.tag})` : ""}`,
-    tip: `Множитель стоимости ×${a.mult}`,
-  }),
+  cost_mult: (a) => {
+    const m = Number(a.mult);
+    const pct = Math.round((1 - m) * 100);
+    return {
+      icon: "🏗",
+      short:
+        m < 1
+          ? `стройка дешевле на ${pct}%`
+          : `стоимость строек ×${a.mult}`,
+      tip: `Множитель стоимости построек ×${a.mult}`,
+    };
+  },
   pop_growth_mult: (a) => ({
     icon: "🌱",
     short: `рост ×${a.mult}`,

@@ -223,6 +223,7 @@ export function PlanetRadialSlots({
   onLaborDragBuilding,
   onLaborTapBuilding,
   gmFree = false,
+  deckMode = "float",
 }: {
   planet: Planet;
   systemId: string;
@@ -253,6 +254,8 @@ export function PlanetRadialSlots({
   onLaborTapBuilding?: (instanceId: string) => void;
   /** GM: no tech/AP/biome gate, full live catalog. */
   gmFree?: boolean;
+  /** float = overlay deck; dock = right column; none = rings only. */
+  deckMode?: "float" | "dock" | "none";
 }) {
   const surfaceSlots = buildSlots(planet, "surface", buildings);
   const orbitalSlots = buildSlots(planet, "orbital", buildings);
@@ -297,8 +300,11 @@ export function PlanetRadialSlots({
     if (!el) return;
     const measure = () => {
       const w = el.clientWidth;
+      const h = el.clientHeight;
       if (w <= 0 || layout.size <= 0) return;
-      setFitScale(Math.min(1, w / layout.size));
+      const byW = w / layout.size;
+      const byH = h > 0 ? h / layout.size : byW;
+      setFitScale(Math.min(1, byW, byH));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -335,11 +341,12 @@ export function PlanetRadialSlots({
   const apLeft = Math.max(0, apMax - reservedAp);
 
   const deckDefs = useMemo(() => {
-    if (!openSlot) return [];
+    if (deckMode === "none") return [];
+    if (deckMode === "float" && !openSlot) return [];
     const zoneForCatalog: PaletteZone =
-      openSlot.zone === "orbital" ? "orbital" : paletteZone;
+      openSlot?.zone === "orbital" ? "orbital" : paletteZone;
     return catalog(zoneForCatalog);
-  }, [openSlot, paletteZone, catalog]);
+  }, [deckMode, openSlot, paletteZone, catalog]);
 
   const zoneForDeck: PaletteZone =
     openSlot?.zone === "orbital" ? "orbital" : paletteZone;
@@ -540,8 +547,8 @@ export function PlanetRadialSlots({
       fill = "rgba(16,22,31,0.95)";
       stroke = isInspect ? "#e8c547" : "#c9a227";
     } else if (slot.state === "empty-open") {
-      fill = isDrop || isTarget ? "rgba(232,197,71,0.12)" : "rgba(10,14,22,0.55)";
-      stroke = isDrop || isTarget ? "#e8c547" : "#7a9bb8";
+      fill = isDrop || isTarget ? "rgba(232,197,71,0.16)" : "rgba(16,24,36,0.72)";
+      stroke = isDrop || isTarget ? "#e8c547" : "#8fb4cc";
     } else if (slot.state === "expandable") {
       fill = "rgba(10,14,22,0.3)";
       stroke = "#5cdb95";
@@ -705,8 +712,8 @@ export function PlanetRadialSlots({
           cy={layout.center}
           r={r}
           fill="none"
-          stroke="rgba(120,140,170,0.14)"
-          strokeWidth={2}
+          stroke="rgba(120,140,170,0.28)"
+          strokeWidth={2.4}
         />
         {occLen > 0 && (
           <circle
@@ -714,8 +721,8 @@ export function PlanetRadialSlots({
             cy={layout.center}
             r={r}
             fill="none"
-            stroke="rgba(201,162,39,0.55)"
-            strokeWidth={2.2}
+            stroke="rgba(201,162,39,0.78)"
+            strokeWidth={2.6}
             strokeDasharray={`${occLen} ${circ}`}
             strokeLinecap="round"
             transform={`rotate(-90 ${layout.center} ${layout.center})`}
@@ -727,8 +734,8 @@ export function PlanetRadialSlots({
             cy={layout.center}
             r={r}
             fill="none"
-            stroke="rgba(122,155,184,0.45)"
-            strokeWidth={2}
+            stroke="rgba(143,180,204,0.62)"
+            strokeWidth={2.2}
             strokeDasharray={`${openLen} ${circ}`}
             strokeDashoffset={-occLen}
             strokeLinecap="round"
@@ -739,51 +746,38 @@ export function PlanetRadialSlots({
     );
   };
 
-  const surfacePaletteOpen = openSlot?.zone === "surface";
+  const surfacePaletteOpen =
+    openSlot?.zone === "surface" ||
+    (deckMode === "dock" && zoneForDeck !== "orbital");
   const groundChips: PaletteZone[] = ["surface", "subsurface", "deep"];
-
-  return (
-    <div className="planet-radial planet-radial--deck">
-      {surfacePaletteOpen && (
-        <div
-          className="order-type-chips planet-zone-chips"
-          role="group"
-          aria-label="Зона строительства"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          {groundChips.map((z) => {
-            const count = catalog(z).length;
-            return (
-              <button
-                key={z}
-                type="button"
-                className={`order-type-chip ${paletteZone === z ? "on" : ""}`}
-                disabled={count === 0}
-                title={count === 0 ? "Нет доступных зданий" : ZONE_CHIP_LABEL[z]}
-                onClick={() => setPaletteZone(z)}
-              >
-                {ZONE_CHIP_LABEL[z]}
-                {count > 0 ? ` · ${count}` : ""}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <FloatingPanel
-        open={!!openSlot}
-        onClose={() => {
-          setOpenSlot(null);
-          setSelectedBuildId(null);
-        }}
-        title={`Колода · ${ZONE_CHIP_LABEL[zoneForDeck]}`}
-        storageKey="gmap-planet-build-deck"
-        defaultGeom={{ x: 20, y: 120, w: 270, h: 420 }}
-        minW={220}
-        minH={200}
-        zIndex={gmFree ? 440 : 370}
-        className="gmap-float-panel--build-deck"
+  const zoneChipBar =
+    surfacePaletteOpen ? (
+      <div
+        className="order-type-chips planet-zone-chips"
+        role="group"
+        aria-label="Зона строительства"
+        onPointerDown={(e) => e.stopPropagation()}
       >
+        {groundChips.map((z) => {
+          const count = catalog(z).length;
+          return (
+            <button
+              key={z}
+              type="button"
+              className={`order-type-chip ${paletteZone === z ? "on" : ""}`}
+              disabled={count === 0}
+              title={count > 0 ? ZONE_CHIP_LABEL[z] : "Нет доступных зданий"}
+              onClick={() => setPaletteZone(z)}
+            >
+              {ZONE_CHIP_LABEL[z]}
+              {count > 0 ? ` · ${count}` : ""}
+            </button>
+          );
+        })}
+      </div>
+    ) : null;
+
+  const deckNode = (
         <BuildDeck
           embedded
           defs={deckDefs}
@@ -815,7 +809,31 @@ export function PlanetRadialSlots({
           onOpenResearch={onOpenResearch}
           freeBuild={gmFree}
         />
+  );
+
+  return (
+    <>
+    <div className={`planet-radial planet-radial--deck${deckMode === "dock" ? " planet-radial--lcr" : ""}`}>
+      {deckMode !== "dock" && zoneChipBar}
+
+      {deckMode === "float" && (
+      <FloatingPanel
+        open={!!openSlot}
+        onClose={() => {
+          setOpenSlot(null);
+          setSelectedBuildId(null);
+        }}
+        title={`Колода · ${ZONE_CHIP_LABEL[zoneForDeck]}`}
+        storageKey="gmap-planet-build-deck"
+        defaultGeom={{ x: 20, y: 120, w: 270, h: 420 }}
+        minW={220}
+        minH={200}
+        zIndex={gmFree ? 440 : 370}
+        className="gmap-float-panel--build-deck"
+      >
+        {deckNode}
       </FloatingPanel>
+      )}
 
       <div className="planet-radial-fit" ref={fitRef}>
         <div
@@ -856,17 +874,32 @@ export function PlanetRadialSlots({
           <circle
             cx={layout.center}
             cy={layout.center}
+            r={DISC_R + 28}
+            fill="rgba(201,162,39,0.07)"
+            stroke="none"
+          />
+          <circle
+            cx={layout.center}
+            cy={layout.center}
+            r={DISC_R + 14}
+            fill="none"
+            stroke="rgba(201,162,39,0.22)"
+            strokeWidth={10}
+          />
+          <circle
+            cx={layout.center}
+            cy={layout.center}
             r={DISC_R + 6}
-            fill="rgba(61,206,168,0.05)"
+            fill="rgba(61,206,168,0.08)"
             stroke="none"
           />
           <circle
             cx={layout.center}
             cy={layout.center}
             r={DISC_R}
-            fill="rgba(16,22,31,0.96)"
-            stroke="rgba(201,162,39,0.55)"
-            strokeWidth={1.5}
+            fill="rgba(14, 20, 30, 0.96)"
+            stroke="rgba(232, 197, 71, 0.78)"
+            strokeWidth={1.7}
           />
           <text
             x={layout.center}
@@ -1090,5 +1123,21 @@ export function PlanetRadialSlots({
           document.body,
         )}
     </div>
+    {deckMode === "dock" && (
+      <aside className="planet-dive-deck" aria-label="Колода строительства">
+        {zoneChipBar}
+        {!openSlot ? (
+          <p className="hint planet-dive-deck__hint">
+            Слот не выбран — перетащи карту на кольцо или нажми пустой слот.
+          </p>
+        ) : (
+          <p className="hint planet-dive-deck__hint">
+            Слот взят. Зажми карту или перетащи.
+          </p>
+        )}
+        {deckNode}
+      </aside>
+    )}
+    </>
   );
 }

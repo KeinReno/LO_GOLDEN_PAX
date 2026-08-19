@@ -21,8 +21,8 @@ const STUDIO_JUMPS: {
   label: string;
   hint: string;
 }[] = [
-  { mode: "tech", label: "Технологии", hint: "Конструктор + вкладка JSON" },
-  { mode: "units", label: "Юниты и корабли", hint: "Конструктор карт + JSON" },
+  { mode: "tech", label: "Технологии", hint: "Конструктор и вкладка кода" },
+  { mode: "units", label: "Юниты и корабли", hint: "Конструктор карт" },
   {
     mode: "buildings",
     catalog: "buildings",
@@ -41,25 +41,25 @@ const STUDIO_JUMPS: {
     label: "Космо-объекты",
     hint: "Аномалии, туманности, поля",
   },
-  { mode: "races", label: "Расы", hint: "Конструктор + JSON" },
+  { mode: "races", label: "Расы", hint: "Конструктор цивилизаций" },
   { mode: "polities", label: "Державы", hint: "Редактор государств" },
   { mode: "rules", label: "Темп", hint: "Пресеты кампании" },
 ];
 
 const CATALOGS: { id: AtelierNavId; label: string; hint: string }[] = [
   { id: "gate_campaigns", label: "Карточки входа", hint: "постеры и описания на /view" },
-  { id: "tech_recipes", label: "Рецепты алхимии", hint: "tech_recipes.json" },
-  { id: "tech_combos", label: "Combo-tech", hint: "tech_combos.json" },
-  { id: "economy_balance", label: "Баланс экономики", hint: "economy_balance.json" },
-  { id: "council_seats", label: "Места совета", hint: "council_seats.json" },
-  { id: "court_tasks", label: "Поручения двора", hint: "court_tasks.json" },
-  { id: "npc_traits", label: "Трейты NPC", hint: "npc_traits.json" },
-  { id: "yearly_quests", label: "Ежеходные квесты", hint: "yearly_quests.json · форма" },
-  { id: "story_quests", label: "Сюжетные квесты", hint: "story_quests.json · выдача игрокам" },
-  { id: "faction_traits", label: "Трейты фракций", hint: "faction_traits.json" },
-  { id: "faiths", label: "Верования", hint: "faiths.json" },
-  { id: "cultures", label: "Культуры", hint: "cultures.json" },
-  { id: "rules", label: "Правила (JSON)", hint: "rules.json · alchemy/intel" },
+  { id: "tech_recipes", label: "Рецепты алхимии", hint: "Ингредиенты и результаты" },
+  { id: "tech_combos", label: "Связки технологий", hint: "Комбинации открытий" },
+  { id: "economy_balance", label: "Баланс экономики", hint: "Числа добычи и конверсии" },
+  { id: "council_seats", label: "Места совета", hint: "Кресла двора" },
+  { id: "court_tasks", label: "Поручения двора", hint: "Задания советникам" },
+  { id: "npc_traits", label: "Черты персонажей", hint: "Пассивные эффекты NPC" },
+  { id: "yearly_quests", label: "Ежеходные квесты", hint: "События пула хода" },
+  { id: "story_quests", label: "Сюжетные квесты", hint: "Выдача игрокам" },
+  { id: "faction_traits", label: "Черты держав", hint: "Доктрины государств" },
+  { id: "faiths", label: "Верования", hint: "Культы и веры" },
+  { id: "cultures", label: "Культуры", hint: "Культуры колоний" },
+  { id: "rules", label: "Правила", hint: "Алхимия, разведка, служебные ключи" },
 ];
 
 function pickCatalog(content: ReturnType<typeof getCachedContent>, id: AtelierCatalogId): unknown {

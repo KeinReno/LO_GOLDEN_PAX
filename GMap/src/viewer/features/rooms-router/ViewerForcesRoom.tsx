@@ -29,6 +29,7 @@ type Props = {
     fleetId?: string;
     legionId?: string;
   }) => void;
+  onBeginRecruit: (tab: "ships" | "units") => void;
   onRecruitSession: (data: Recruit) => void;
   onSessionPatch: (data: ViewerActionSource) => void;
 };
@@ -43,6 +44,7 @@ export function ViewerForcesRoom({
   onOrderWithLegion,
   onOpenCardBattle,
   onOpenProduce,
+  onBeginRecruit,
   onRecruitSession,
   onSessionPatch,
 }: Props) {
@@ -118,6 +120,7 @@ export function ViewerForcesRoom({
       onOpenCardBattle={onOpenCardBattle}
       onOpenEconomy={() => navigateViewerRoom("economy")}
       onOpenProduce={onOpenProduce}
+      onBeginRecruit={onBeginRecruit}
     />
   );
 }

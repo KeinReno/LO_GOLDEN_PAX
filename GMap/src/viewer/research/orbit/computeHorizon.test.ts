@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computeHorizon, type HorizonTech } from "./computeHorizon.ts";
+import { computeHorizon, firstFrontierId, type HorizonTech } from "./computeHorizon.ts";
 import { computeDirectionProgress } from "./computeDirectionProgress.ts";
 
 /** A linear chain t0 -> t1 -> t2 -> ... each requiring the previous. */
@@ -109,5 +109,14 @@ describe("computeHorizon", () => {
     const [h] = computeHorizon({ a: techs }, unlocked, progress);
     const accountedFor = h.visible.length + h.badgeCount;
     assert.equal(accountedFor, techs.length);
+  });
+
+  it("firstFrontierId returns the nearest unresearched tech with prereqs met", () => {
+    const techs = chain(4);
+    const unlocked = ["t.0"];
+    const progress = computeDirectionProgress({ industry: techs }, unlocked);
+    const horizon = computeHorizon({ industry: techs }, unlocked, progress);
+    assert.equal(firstFrontierId(horizon, "industry"), "t.1");
+    assert.equal(firstFrontierId(horizon, null), null);
   });
 });

@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { ChevronLeft, SlidersHorizontal } from "lucide-react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import type { FactionNpc, ViewerPayload } from "../state/types";
 import { playerAuthHeaders, playerJsonBody } from "../state/playerAuth";
 import { BackgroundBeamsLite } from "../ui/BackgroundBeamsLite";
@@ -71,6 +71,7 @@ type ChannelPick = {
 };
 
 type Voice = "ic" | "action" | "context" | "ooc";
+type RpToolTab = "gestures" | "dice" | "orders";
 type Persona =
   | { kind: "self" }
   | { kind: "npc"; npc: FactionNpc };
@@ -386,6 +387,7 @@ export function RpStage({
     "all",
   );
   const [intentsOpen, setIntentsOpen] = useState(false);
+  const [toolTab, setToolTab] = useState<RpToolTab | null>(null);
   const [intentConfirm, setIntentConfirm] = useState<{
     type?: Voice;
     text?: string;
@@ -395,7 +397,6 @@ export function RpStage({
     intent?: { defId: string; note?: string };
   } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [desktopToolsCollapsed, setDesktopToolsCollapsed] = useState(false);
   const seenIds = useRef<Set<string>>(new Set());
   const firstLoad = useRef(true);
 
@@ -449,7 +450,7 @@ export function RpStage({
           chapterId,
           episodeId,
           readOnly: ep?.status === "closed",
-          title: ep?.title || `RP · ${factionName}`,
+          title: ep?.title || `Сцена · ${factionName}`,
           visibility: ep?.visibility,
         });
       } else {
@@ -567,6 +568,11 @@ export function RpStage({
 
   const pack =
     GESTURE_PACKS.find((p) => p.id === gesturePack) || GESTURE_PACKS[0];
+
+  const toggleTool = (id: RpToolTab) => {
+    setToolTab((cur) => (cur === id ? null : id));
+    if (id !== "dice") setDiceOpen(false);
+  };
 
   const post = async (
     opts?: {
@@ -867,12 +873,26 @@ export function RpStage({
 
   return (
     <div
-      className={`rp-stage rp-stage--${layout}${compact ? " rp-stage--compact" : ""}`}
+      className={`rp-stage rp-stage--${layout}${compact ? " rp-stage--compact" : " rp-stage--desk"}`}
       style={{ ["--rp-accent" as string]: accent }}
-      aria-label="RP"
+      aria-label="Сцена"
     >
       {!compact && <BackgroundBeamsLite className="rp-stage__beams" />}
 
+      {!compact ? (
+        <aside className="rp-stage__scenes" aria-label="Сцены">
+          <ChroniclePanel
+            headers={headers}
+            mode="player"
+            hideHq={false}
+            activeEpisodeId={channel.episodeId}
+            onMsg={onMsg}
+            onOpenEpisode={openScene}
+          />
+        </aside>
+      ) : null}
+
+      <div className="rp-stage__main">
       <header className="rp-stage__notch">
         {compact && onBack ? (
           <button
@@ -898,7 +918,7 @@ export function RpStage({
             {!crest && initialOf(factionName)}
           </span>
           <div className="rp-stage__titles">
-            <strong>{channel.title || `RP · ${factionName}`}</strong>
+            <strong>{channel.title || `Сцена · ${factionName}`}</strong>
             <span>
               {factionName} · ход {payload.world.meta.turn}
               {channel.readOnly ? " · архив" : ""}
@@ -907,41 +927,8 @@ export function RpStage({
           </div>
         </div>
         <div className="rp-stage__notch-actions">
-          {!compact && !channel.readOnly && (
-            <button
-              type="button"
-              className={`rp-stage__icon-btn ${!desktopToolsCollapsed ? "on" : ""}`}
-              title={
-                desktopToolsCollapsed
-                  ? "Показать панель ввода"
-                  : "Свернуть панель ввода"
-              }
-              aria-label={
-                desktopToolsCollapsed
-                  ? "Показать панель ввода"
-                  : "Свернуть панель ввода"
-              }
-              aria-expanded={!desktopToolsCollapsed}
-              onClick={() => setDesktopToolsCollapsed((v) => !v)}
-            >
-              <SlidersHorizontal size={16} aria-hidden />
-            </button>
-          )}
-          {!channel.readOnly &&
-            !compact &&
-            DICE_MACROS.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className="rp-stage__icon-btn rp-stage__icon-btn--macro"
-                title={`Бросить ${m.label}`}
-                aria-label={`Бросить ${m.label}`}
-                disabled={busy}
-                onClick={() => void rollDice({ count: m.count, sides: m.sides })}
-              >
-                {m.label}
-              </button>
-            ))}
+          {compact ? (
+            <>
           <button
             type="button"
             className={`rp-stage__icon-btn ${diceOpen ? "on" : ""}`}
@@ -969,11 +956,13 @@ export function RpStage({
           >
             Сцены
           </button>
+            </>
+          ) : null}
         </div>
       </header>
 
       <AnimatePresence>
-        {diceOpen && (
+        {compact && diceOpen && (
           <motion.div
             className="rp-stage__sheet rp-stage__sheet--dice"
             initial={{ opacity: 0, y: -8 }}
@@ -1371,7 +1360,7 @@ export function RpStage({
             </div>
           ) : null}
 
-          {(compact ? toolsOpen : !desktopToolsCollapsed) && (
+          {(compact ? toolsOpen : true) && (
             <>
           <div
             className={`rp-stage__cast ${persona.kind !== "self" ? "rp-stage__cast--focus" : ""}`}
@@ -1431,8 +1420,7 @@ export function RpStage({
             ))}
           </div>
 
-          <LayoutGroup>
-            <div className="rp-stage__voices" role="tablist" aria-label="Голос">
+          <div className="rp-stage__voices" role="tablist" aria-label="Голос">
               {VOICES.map((v) => (
                 <button
                   key={v.id}
@@ -1443,24 +1431,13 @@ export function RpStage({
                   className={`rp-voice ${voice === v.id ? "on" : ""}`}
                   onClick={() => setVoice(v.id)}
                 >
-                  {voice === v.id && (
-                    <motion.span
-                      layoutId="rp-voice-pill"
-                      className="rp-voice__pill"
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 36,
-                      }}
-                    />
-                  )}
                   <span className="rp-voice__label">{v.label}</span>
                 </button>
               ))}
             </div>
-          </LayoutGroup>
 
-          {(voice === "action" || voice === "ic") && (
+          {((compact && toolsOpen && (voice === "action" || voice === "ic")) ||
+            (!compact && toolTab === "gestures")) && (
             <div className="rp-stage__gesture-panel">
               <div className="rp-stage__packs" role="tablist" aria-label="Жесты">
                 {GESTURE_PACKS.map((p) => (
@@ -1481,6 +1458,20 @@ export function RpStage({
                 <span className="rp-stage__gesture-tip hint">
                   тап — в текст · двойной / удержание — сразу
                 </span>
+                {!compact ? (
+                  <select
+                    className="rp-stage__tone"
+                    value={tone}
+                    aria-label="Тон речи"
+                    onChange={(e) => setTone(e.target.value)}
+                  >
+                    {TONES.map((t) => (
+                      <option key={t.id || "none"} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
               <div className="rp-stage__gestures">
                 {pack.items.map((g) => (
@@ -1521,6 +1512,42 @@ export function RpStage({
             )}
           </AnimatePresence>
 
+          {!compact ? (
+            <div className="rp-stage__tasks" role="tablist">
+              {(
+                [
+                  ["gestures", "Жесты"],
+                  ["dice", "Кубики"],
+                  ["orders", "Приказ"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={toolTab === id}
+                  className={toolTab === id ? "is-on" : ""}
+                  onClick={() => toggleTool(id)}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`rp-stage__whisper ${whisper ? "on" : ""}`}
+                title="Только мастеру"
+                aria-pressed={whisper}
+                aria-label={
+                  whisper
+                    ? "Шёпот только мастеру, включён"
+                    : "Шёпот только мастеру"
+                }
+                onClick={() => setWhisper((v) => !v)}
+              >
+                {whisper ? "Шёпот → ГМ" : "Шёпот"}
+              </button>
+            </div>
+          ) : (
           <div className="rp-stage__meta-row">
             <button
               type="button"
@@ -1553,8 +1580,71 @@ export function RpStage({
               Приказ
             </button>
           </div>
+          )}
 
-          {intentsOpen && (
+          {!compact && toolTab === "dice" ? (
+            <div className="rp-stage__sheet rp-stage__sheet--dice">
+              <div className="rp-stage__dice-row">
+                {DICE_MACROS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="rp-stage__icon-btn rp-stage__icon-btn--macro"
+                    title={`Бросить ${m.label}`}
+                    disabled={busy}
+                    onClick={() =>
+                      void rollDice({ count: m.count, sides: m.sides })
+                    }
+                  >
+                    {m.label}
+                  </button>
+                ))}
+                {DICE.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`rp-stage__die ${diceSides === s ? "on" : ""}`}
+                    onClick={() => setDiceSides(s)}
+                  >
+                    d{s}
+                  </button>
+                ))}
+                <label className="rp-stage__die-count">
+                  ×
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={diceCount}
+                    onChange={(e) =>
+                      setDiceCount(
+                        Math.max(1, Math.min(10, Number(e.target.value) || 1)),
+                      )
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={busy || channel.readOnly}
+                  onClick={() => void rollDice()}
+                >
+                  Бросить
+                </button>
+              </div>
+              {diceAnim && (
+                <div className="rp-stage__dice-stage">
+                  <DiceRoller
+                    value={diceAnim.value}
+                    sides={diceAnim.sides}
+                    rolling={diceAnim.rolling}
+                  />
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {((compact && intentsOpen) || (!compact && toolTab === "orders")) && (
             <div className="rp-stage__intent-hot" aria-label="Горячие приказы">
               {INTENT_HOT.map((h) => (
                 <button
@@ -1642,45 +1732,51 @@ export function RpStage({
           )}
         </footer>
       )}
+      </div>
 
-      <AnimatePresence>
-        {scenesOpen && (
-          <motion.aside
-            className="rp-stage__drawer"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 36 }}
-            aria-label="Сцены"
-          >
-            <header className="rp-stage__drawer-head">
-              <h3>Сцены</h3>
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => setScenesOpen(false)}
+      {compact ? (
+        <>
+          <AnimatePresence>
+            {scenesOpen && (
+              <motion.aside
+                className="rp-stage__drawer"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 380, damping: 36 }}
+                aria-label="Сцены"
               >
-                Закрыть
-              </button>
-            </header>
-            <ChroniclePanel
-              headers={headers}
-              mode="player"
-              hideHq
-              onMsg={onMsg}
-              onOpenEpisode={openScene}
+                <header className="rp-stage__drawer-head">
+                  <h3>Сцены</h3>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => setScenesOpen(false)}
+                  >
+                    Закрыть
+                  </button>
+                </header>
+                <ChroniclePanel
+                  headers={headers}
+                  mode="player"
+                  hideHq={false}
+                  activeEpisodeId={channel.episodeId}
+                  onMsg={onMsg}
+                  onOpenEpisode={openScene}
+                />
+              </motion.aside>
+            )}
+          </AnimatePresence>
+          {scenesOpen && (
+            <button
+              type="button"
+              className="rp-stage__scrim"
+              aria-label="Закрыть сцены"
+              onClick={() => setScenesOpen(false)}
             />
-          </motion.aside>
-        )}
-      </AnimatePresence>
-      {scenesOpen && (
-        <button
-          type="button"
-          className="rp-stage__scrim"
-          aria-label="Закрыть сцены"
-          onClick={() => setScenesOpen(false)}
-        />
-      )}
+          )}
+        </>
+      ) : null}
       <ConfirmModal
         open={!!intentConfirm}
         title="Потратить ОД на приказ?"

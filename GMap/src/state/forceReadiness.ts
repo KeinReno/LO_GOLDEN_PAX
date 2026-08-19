@@ -413,6 +413,24 @@ export function findProductionHubs(
   return { shipyardSystemId, barracksSystemId };
 }
 
+/** All owned systems that can hire this kind — for map highlight, not just the first hub. */
+export function listProductionHubSystemIds(
+  world: ViewerPayload["world"],
+  factionId: string,
+  hub: "shipyard" | "barracks",
+): string[] {
+  const ids: string[] = [];
+  for (const sys of world.systems ?? []) {
+    if (sys.ownerFactionId !== factionId) continue;
+    const ok =
+      hub === "shipyard"
+        ? systemHasShipyardForFaction(sys, factionId)
+        : systemHasBarracksForFaction(sys, factionId);
+    if (ok) ids.push(sys.id);
+  }
+  return ids;
+}
+
 export function empireForceTotals(payload: ViewerPayload) {
   const fid = payload.factionId;
   const fleets = (payload.world.fleets ?? []).filter((f) => f.factionId === fid);

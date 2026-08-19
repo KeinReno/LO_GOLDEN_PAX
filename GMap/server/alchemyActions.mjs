@@ -382,6 +382,29 @@ export function discoverRecipeOnEco(eco, recipeId) {
   return false;
 }
 
+/** GM: drop a discovered recipe. */
+export function revokeRecipe(factionId, recipeId, meta = {}) {
+  const id = String(recipeId || "").trim();
+  if (!factionId || !id) return { ok: false, error: "Нужны держава и рецепт" };
+  const ledger = meta.ledger || readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  const al = ensureAlchemyState(eco);
+  const before = al.discoveredRecipes.length;
+  al.discoveredRecipes = al.discoveredRecipes.filter((r) => r !== id);
+  const removed = al.discoveredRecipes.length !== before;
+  if (!removed) return { ok: false, error: "Рецепт не открыт" };
+  if (!meta.ledger) writeLedger(ledger);
+  return {
+    ok: true,
+    removed: true,
+    recipe: { id },
+    alchemy: {
+      attemptsUsedThisTurn: al.attemptsUsedThisTurn,
+      discoveredRecipes: [...al.discoveredRecipes],
+    },
+  };
+}
+
 /** GM / quest / market: unlock a recipe without experimenting. */
 export function grantRecipe(factionId, recipeId, meta = {}) {
   const content = meta.content || getContent();

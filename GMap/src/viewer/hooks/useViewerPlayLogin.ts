@@ -9,6 +9,7 @@ import {
   writeStoredGraphics,
 } from "../../ui/viewerGraphics";
 import { closeViewerMapOverlays } from "../features/rooms-router/navigateViewerRoom";
+import { isLikelyMobile } from "../useViewerViewport";
 import {
   defaultStartForDevice,
   readStoredStart,
@@ -106,7 +107,9 @@ export function useViewerPlayLogin(opts: Opts) {
     opts.closeShellOverlays();
     closeViewerMapOverlays();
     {
-      const start = readStoredStart() ?? defaultStartForDevice();
+      const start = isLikelyMobile()
+        ? "map"
+        : (readStoredStart() ?? defaultStartForDevice());
       opts.setViewMode(start);
       writeStoredStart(start);
     }

@@ -22,6 +22,8 @@ interface ViewerPanelFocusState {
   researchHighlightTechId: string | null;
   researchBranch: string | null;
   techMapHighlightIds: string[];
+  /** Map pick: new fleet/legion at a highlighted yard/barracks. */
+  recruitMapPick: { tab: "ships" | "units"; hubIds: string[] } | null;
   forcesHighlightDefIds: string[] | null;
   courtFocusNpcId: string | null;
 
@@ -34,6 +36,9 @@ interface ViewerPanelFocusState {
   setResearchHighlightTechId: (id: string | null) => void;
   setResearchBranch: (c: string | null) => void;
   setTechMapHighlightIds: (ids: string[]) => void;
+  setRecruitMapPick: (
+    pick: { tab: "ships" | "units"; hubIds: string[] } | null,
+  ) => void;
   setForcesHighlightDefIds: (ids: string[] | null) => void;
   setCourtFocusNpcId: (id: string | null) => void;
 
@@ -56,6 +61,7 @@ export const useViewerPanelFocusStore = create<ViewerPanelFocusState>(
     researchHighlightTechId: null,
     researchBranch: null,
     techMapHighlightIds: [],
+    recruitMapPick: null,
     forcesHighlightDefIds: null,
     courtFocusNpcId: null,
 
@@ -68,6 +74,7 @@ export const useViewerPanelFocusStore = create<ViewerPanelFocusState>(
     setResearchHighlightTechId: (id) => set({ researchHighlightTechId: id }),
     setResearchBranch: (c) => set({ researchBranch: c }),
     setTechMapHighlightIds: (ids) => set({ techMapHighlightIds: ids }),
+    setRecruitMapPick: (pick) => set({ recruitMapPick: pick }),
     setForcesHighlightDefIds: (ids) => set({ forcesHighlightDefIds: ids }),
     setCourtFocusNpcId: (id) => set({ courtFocusNpcId: id }),
 
@@ -82,6 +89,7 @@ export const useViewerPanelFocusStore = create<ViewerPanelFocusState>(
         marketPrefillCurrency: currencyId,
         marketTab: "trade",
       }),
-    clearTechMapHighlight: () => set({ techMapHighlightIds: [] }),
+    clearTechMapHighlight: () =>
+      set({ techMapHighlightIds: [], recruitMapPick: null }),
   }),
 );

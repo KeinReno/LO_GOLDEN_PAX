@@ -38,7 +38,6 @@ export function ViewerRoomHost({
   const setEconomyLinkedSystemId = useViewerPanelFocusStore(
     (s) => s.setEconomyLinkedSystemId,
   );
-  const setSystemFocusId = useViewerSystemDiveStore((s) => s.setSystemFocusId);
   const systemFocusId = useViewerSystemDiveStore((s) => s.systemFocusId);
   const economyLinkedSystemId = useViewerPanelFocusStore(
     (s) => s.economyLinkedSystemId,
@@ -77,7 +76,8 @@ export function ViewerRoomHost({
           viewMode === "economy" ||
           viewMode === "quests" ||
           viewMode === "court" ||
-          viewMode === "codex"
+          viewMode === "codex" ||
+          viewMode === "rp"
         }
         className={
           viewMode === "economy"
@@ -86,7 +86,15 @@ export function ViewerRoomHost({
               ? "workbench-panel--market"
               : viewMode === "hq"
                 ? "workbench-panel--hq"
-                : undefined
+                : viewMode === "planet"
+                ? "workbench-panel--planet"
+                : viewMode === "research"
+                  ? "workbench-panel--research"
+                  : viewMode === "rp"
+                    ? "workbench-panel--rp"
+                    : viewMode === "quests"
+                      ? "workbench-panel--quests"
+                      : undefined
         }
         masterDetail={
           !mobile &&
@@ -101,7 +109,6 @@ export function ViewerRoomHost({
         onClose={() => {
           if (viewMode === "economy") {
             setEconomyLinkedSystemId(null);
-            setSystemFocusId(null);
           }
           navigateViewerRoom("map");
         }}
@@ -130,16 +137,7 @@ export function ViewerRoomHost({
         }}
         title={roomTitle}
         className="viewer-sheet--room"
-        maxHeightVh={
-          viewMode === "diplomacy" ||
-          viewMode === "forces" ||
-          viewMode === "economy" ||
-          viewMode === "court" ||
-          viewMode === "research" ||
-          viewMode === "hq"
-            ? 92
-            : 88
-        }
+        aboveDock={mobile}
       >
         {roomPanel}
       </BottomSheet>

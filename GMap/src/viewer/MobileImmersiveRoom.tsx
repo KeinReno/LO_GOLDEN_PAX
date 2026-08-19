@@ -14,7 +14,7 @@ export type MobileImmersiveRoomProps = {
  */
 export function MobileImmersiveRoom({
   open,
-  onClose: _onClose,
+  onClose,
   children,
   className = "",
 }: MobileImmersiveRoomProps) {
@@ -26,6 +26,13 @@ export function MobileImmersiveRoom({
       role="dialog"
       aria-modal="true"
     >
+      <button
+        type="button"
+        className="mobile-room__close"
+        onClick={onClose}
+      >
+        Карта
+      </button>
       <div className="mobile-room__panel">{children}</div>
     </div>
   );

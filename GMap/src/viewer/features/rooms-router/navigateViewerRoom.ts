@@ -6,6 +6,7 @@ import { writeStoredStart, type PlayerView } from "../../viewerNavTypes";
 
 export {
   isDesktopWorkbenchView,
+  isPlayerDockCompact,
   isMobileImmersiveView,
   pickRoomKey,
 } from "./roomViewFlags";
@@ -23,7 +24,7 @@ export function navigateViewerRoom(v: PlayerView): void {
     menuOpen: false,
     settingsOpen: false,
     mapFiltersOpen: false,
-    rpFloatOpen: v === "rp",
+    rpFloatOpen: false,
     sheetOpen: false,
     dockMoreOpen: false,
     queueOpen: false,
@@ -32,5 +33,5 @@ export function navigateViewerRoom(v: PlayerView): void {
   useViewerPanelFocusStore.getState().clearEconomyLinkIfLeaving(v);
   useViewerPanelFocusStore.getState().clearCourtFocusIfLeaving(v);
   closeViewerMapOverlays();
-  writeStoredStart(v === "map" ? "map" : "hq");
+  if (v === "map") writeStoredStart("map");
 }

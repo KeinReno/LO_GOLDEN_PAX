@@ -1,6 +1,6 @@
 import type { ViewerPayload } from "../state/types";
 import { DealDesk } from "./DealDesk";
-import type { DiploDealItem, DiploOffer } from "./diploTradeTypes";
+import type { DiploDealItem, DiploOffer, DiploUnilateralStance } from "./diploTradeTypes";
 
 export type { DiploDealItem, DiploOffer };
 
@@ -48,7 +48,7 @@ export function ViewerDiploPanel({
   onGift?: (toFactionId: string, currencyId: string, amount: number) => void;
   onStance?: (
     toFactionId: string,
-    stance: "war" | "embargo" | "break",
+    stance: DiploUnilateralStance,
   ) => void | boolean | Promise<void | boolean>;
   onEconomicTrack?: (
     kind: "quote" | "union",

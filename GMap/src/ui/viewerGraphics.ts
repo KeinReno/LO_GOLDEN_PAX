@@ -1,3 +1,5 @@
+import { isPhoneViewport } from "../viewer/phone/isPhoneViewport";
+
 /** Viewer graphics toggles — independent of which map layers are on. */
 
 export interface ViewerGraphicsPrefs {
@@ -108,14 +110,13 @@ export const EDITOR_DEFAULT_GRAPHICS: ViewerGraphicsPrefs = {
 };
 
 export function isLikelyMobileViewport(): boolean {
-  // Keep in sync with viewer/useViewerViewport.isLikelyMobile (layout + portrait).
+  // Keep in sync with viewer/useViewerViewport.isLikelyMobile.
   if (typeof window === "undefined") return false;
   try {
     const mq = window.matchMedia("(max-width: 900px)").matches;
     const vw = window.visualViewport?.width ?? window.innerWidth;
     const vh = window.visualViewport?.height ?? window.innerHeight;
-    const portraitPhone = vw <= 900 || (vw < vh && vw <= 980);
-    return mq || portraitPhone;
+    return mq || isPhoneViewport(vw, vh);
   } catch {
     return false;
   }

@@ -206,7 +206,9 @@ export function ViewerPlayMapStage({
             name={payload.world.meta.name}
             enabled={graphics.turnStamp}
           />
-          <ViewerAlertFab items={viewerAlertItems} unreadRp={rpUnread} />
+          {!mobile && (
+            <ViewerAlertFab items={viewerAlertItems} unreadRp={rpUnread} />
+          )}
           {economyPopover ? (
             <EconomySignalPopover
               open

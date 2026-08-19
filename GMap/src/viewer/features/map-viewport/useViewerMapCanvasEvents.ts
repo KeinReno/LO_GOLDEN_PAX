@@ -10,6 +10,7 @@ import type { ViewerPayload } from "../../../state/types";
 import { useViewerChromeStore } from "../../../state/viewerChromeStore";
 import { useViewerMapOverlayStore } from "../../../state/viewerMapOverlayStore";
 import { useViewerOrderSessionStore } from "../../../state/viewerOrderSessionStore";
+import { useViewerPanelFocusStore } from "../../../state/viewerPanelFocusStore";
 import { useViewerSessionStore } from "../../../state/viewerSessionStore";
 import { resolveFleetOrderRing } from "../../FleetOrderRing";
 import { isInputFocused } from "../../hooks/isInputFocused";
@@ -166,6 +167,14 @@ export function useViewerMapCanvasEvents({
 
   const onSystemClick = (id: string | null) => {
     if (!payload) return;
+    if (id && useViewerPanelFocusStore.getState().recruitMapPick) {
+      setSelectedSystemId(id);
+      setSheetOpen(false);
+      setTouchMoveArmed(false);
+      actions.openPlayerSystem(id);
+      bump();
+      return;
+    }
     const session = useViewerSessionStore.getState();
     if (id) setTargetSystemId(id);
     const unitKind = session.selectedLegionId ? "legion" : "fleet";

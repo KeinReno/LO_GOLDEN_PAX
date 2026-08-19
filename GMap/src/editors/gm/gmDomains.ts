@@ -60,7 +60,7 @@ export const GM_LIVE_DOMAINS: GmDomainDef[] = [
   },
   {
     id: "intel",
-    label: "Intel",
+    label: "Разведка",
     hint: "Уровни знания 0–4",
     hotkey: 6,
     workbench: true,

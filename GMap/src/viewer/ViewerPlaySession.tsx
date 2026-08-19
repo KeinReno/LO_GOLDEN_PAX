@@ -68,6 +68,8 @@ import {
   mapGraphicsWhenPaused,
   useViewerViewport,
 } from "./useViewerViewport";
+import { PhoneStatusBar } from "./phone/PhoneStatusBar";
+import { usePhoneBackStack } from "./phone/usePhoneBackStack";
 import { useViewerAlerts } from "./useViewerAlerts";
 import { useViewerDockChrome } from "./useViewerDockChrome";
 import { useViewerHotkeys } from "./useViewerHotkeys";
@@ -78,6 +80,7 @@ import {
 
 export function ViewerPlaySession() {
   const { mobile } = useViewerViewport();
+  usePhoneBackStack(mobile);
   useViewerDockChrome();
   const dockCollapsed = useViewerChromeStore((s) => s.dockCollapsed);
   const queueOpen = useViewerChromeStore((s) => s.queueOpen);
@@ -468,7 +471,9 @@ export function ViewerPlaySession() {
     <CardBoard>
     <div
       className={`viewer-shell ${
-        mobile ? "viewer-shell--mobile viewer-shell--v2" : "viewer-shell--desktop"
+        mobile
+          ? "viewer-shell--mobile viewer-shell--v2 viewer-shell--phone"
+          : "viewer-shell--desktop"
       }${dockCollapsed ? " viewer-shell--dock-collapsed" : ""}${
         mapBackgroundPaused ? " viewer-shell--map-paused" : ""
       }${mobileImmersive ? " viewer-shell--immersive" : ""}`}
@@ -484,15 +489,25 @@ export function ViewerPlaySession() {
           style={{ backgroundImage: `url(${faction.emblemPath})` }}
         />
       )}
-      <ViewerPlayTopbar
-        payload={payload}
-        mobile={mobile}
-        showMapLayer={showMapLayer}
-        mapResourcesCatalog={mapResourcesCatalog}
-        pendingCount={pendingCount}
-        ordersPanel={ordersPanel}
-        isStale={isStale}
-      />
+      {mobile ? (
+        <PhoneStatusBar
+          payload={payload}
+          pendingCount={pendingCount}
+          ordersPanel={ordersPanel}
+          isStale={isStale}
+          viewerAlertItems={viewerAlertItems}
+        />
+      ) : (
+        <ViewerPlayTopbar
+          payload={payload}
+          mobile={mobile}
+          showMapLayer={showMapLayer}
+          mapResourcesCatalog={mapResourcesCatalog}
+          pendingCount={pendingCount}
+          ordersPanel={ordersPanel}
+          isStale={isStale}
+        />
+      )}
 
       <ViewerPlayMapStage
         payload={payload}
@@ -559,6 +574,11 @@ export function ViewerPlaySession() {
           setEconomicPolicy,
           reserveStock,
           sendCaravan,
+          runPlanetAction,
+          setBuildQueue,
+          previewBuild,
+          openResearchWithTech,
+          runFoundHybridLineage,
         }}
       />
 
@@ -581,13 +601,7 @@ export function ViewerPlaySession() {
         openPlayerSystem={openPlayerSystem}
       />
 
-      <ViewerPlayFloats
-        payload={payload}
-        mobile={mobile}
-        chronicleRoom={chronicleRoom}
-        onFocusSystem={focusSystemOnMap}
-        submitQuestAction={submitQuestAction}
-      />
+      <ViewerPlayFloats payload={payload} />
 
       <ViewerPlayDock
         payload={payload}

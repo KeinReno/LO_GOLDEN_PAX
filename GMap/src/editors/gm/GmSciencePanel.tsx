@@ -21,12 +21,12 @@ const ENTITY_TYPES: { id: EntityType; label: string }[] = [
 ];
 
 /** GM Science domain — grant research / view queue & alchemy for active faction. */
-export function GmSciencePanel() {
+export function GmSciencePanel({ factionId }: { factionId?: string } = {}) {
   const world = useWorldStore((s) => s.world);
   const activeFactionId = useWorldStore((s) => s.activeFactionId);
   const { masterToken, setSyncMsg } = useCampaignSessionCtx();
   const content = getCachedContent();
-  const facId = activeFactionId ?? world.factions[0]?.id;
+  const facId = factionId ?? activeFactionId ?? world.factions[0]?.id;
   const faction = world.factions.find((f) => f.id === facId);
 
   const [eco, setEco] = useState<EcoSlice | null>(null);
@@ -121,8 +121,8 @@ export function GmSciencePanel() {
   return (
     <div className="gm-domain-body">
       <p className="hint">
-        Держава: <strong>{faction?.name ?? "—"}</strong>. Выдача техов и рецептов
-        этой державе. Правка техов — Мастерская → Технологии. Рецепты — Каталоги.
+        Держава: <strong>{faction?.name ?? "—"}</strong>. Выдача технологий и рецептов
+        этой державе. Правка каталога — Мастерская → Технологии.
       </p>
       <button type="button" className="btn ghost" onClick={() => void refresh()}>
         Обновить пул
@@ -132,7 +132,7 @@ export function GmSciencePanel() {
         <p className="hint gm-domain-chips">
           {[...unlocked].slice(0, 12).map((id) => (
             <span key={id} className="gm-pill">
-              {id.replace(/^tech\./, "")}
+              {techs.find((t) => t.id === id)?.name ?? id}
             </span>
           ))}
           {unlocked.size === 0 && "нет"}
@@ -143,7 +143,9 @@ export function GmSciencePanel() {
         <h4>Очередь · {queue.length}</h4>
         <p className="hint">
           {queue.length
-            ? queue.map((id) => id.replace(/^tech\./, "")).join(" → ")
+            ? queue
+                .map((id) => techs.find((t) => t.id === id)?.name ?? id)
+                .join(" → ")
             : "пуста"}
         </p>
       </div>
@@ -153,7 +155,7 @@ export function GmSciencePanel() {
           {recipes.length
             ? recipes.slice(0, 8).map((id) => (
                 <span key={id} className="gm-pill">
-                  {id.replace(/^recipe\./, "")}
+                  {catalogRecipes.find((r) => r.id === id)?.name ?? id}
                 </span>
               ))
             : "ещё не открыто"}
@@ -288,7 +290,7 @@ export function GmIntelPanel() {
       if (!res.ok) throw new Error(data.error || res.statusText);
       setSyncMsg(
         data.changed
-          ? `Intel ${entityType}/${entityId} → ${level}`
+          ? `Разведка обновлена · уровень ${level}`
           : `Без изменений (уже ≥ ${level})`,
       );
     } catch (e) {
@@ -303,7 +305,7 @@ export function GmIntelPanel() {
       <GmPlayerVision />
 
       <div className="gm-domain-block">
-        <h4>Intel · уровень знания</h4>
+        <h4>Разведка · уровень знания</h4>
         <p className="hint">
           Для державы <strong>{faction?.name ?? "—"}</strong>. Уровень только
           растёт (0…4).

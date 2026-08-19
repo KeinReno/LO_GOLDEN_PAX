@@ -126,6 +126,7 @@ export function SystemCommandPanel({
   /** Kind armed for next belt tap / hold. */
   placingKind,
   onArmKind,
+  gmFree = false,
 }: {
   system: StarSystem;
   factionId: string;
@@ -152,8 +153,9 @@ export function SystemCommandPanel({
   pendingBeltAngle?: number | null;
   placingKind?: StationKind | null;
   onArmKind?: (kind: StationKind) => void;
+  gmFree?: boolean;
 }) {
-  const owned = system.ownerFactionId === factionId;
+  const owned = gmFree || system.ownerFactionId === factionId;
   const apLeft = Math.max(0, apMax - reservedAp);
   const [stationsOpen, setStationsOpen] = useState(false);
   const [produceOpen, setProduceOpen] = useState(false);
@@ -296,11 +298,12 @@ export function SystemCommandPanel({
             { requireProperties: def.requireProperties },
           ).ok;
           const ok =
-            !busy &&
-            apLeft >= def.ap &&
-            metal >= (def.cost["currency.metal"] ?? 0) &&
-            supply >= (def.cost["currency.supply"] ?? 0) &&
-            techOk;
+            gmFree ||
+            (!busy &&
+              apLeft >= def.ap &&
+              metal >= (def.cost["currency.metal"] ?? 0) &&
+              supply >= (def.cost["currency.supply"] ?? 0) &&
+              techOk);
           const preferred =
             preferKind === def.kind || placingKind === def.kind;
           const canCommit = ok && pendingBeltAngle != null;
@@ -406,12 +409,13 @@ export function SystemCommandPanel({
               ? hasShipyard
               : hasBarracks || !!def.raisableWithoutBuilding;
           const ok =
-            !busy &&
-            buildingOk &&
-            raisePop > 0 &&
-            apLeft >= 1 &&
-            (stocks["currency.metal"] ?? 0) >= costM &&
-            (stocks["currency.supply"] ?? 0) >= costS;
+            gmFree ||
+            (!busy &&
+              buildingOk &&
+              raisePop > 0 &&
+              apLeft >= 1 &&
+              (stocks["currency.metal"] ?? 0) >= costM &&
+              (stocks["currency.supply"] ?? 0) >= costS);
           return (
             <HoldRevealButton
               key={def.id}

@@ -3,6 +3,9 @@ import {
   EFFECT_PRESETS,
   effectsFromPreset,
 } from "./questCatalogShared";
+import { CatalogIdSelect } from "../CatalogIdSelect";
+import { getCachedContent } from "../../../state/contentCatalog";
+import { useMemo } from "react";
 
 type EffectRow = { effect: string; args?: Record<string, unknown> };
 
@@ -14,14 +17,15 @@ type Props = {
 
 function effectSummary(e: EffectRow): string {
   const args = e.args || {};
-  if (e.effect === "loyalty_add") return `loyalty ${args.amount ?? 0}`;
+  if (e.effect === "loyalty_add") return `лояльность ${args.amount ?? 0}`;
   if (e.effect === "upkeep_flat" || e.effect === "production_flat") {
     const res = String(args.resource || "?").replace("currency.", "");
     return `${res} ${args.amount ?? 0}`;
   }
-  if (e.effect === "grant_tech") return `tech: ${args.techId ?? "?"}`;
-  if (e.effect === "grant_recipe") return `recipe: ${args.recipeId ?? "?"}`;
+  if (e.effect === "grant_tech") return "технология";
+  if (e.effect === "grant_recipe") return "рецепт";
   if (e.effect === "ap_add") return `ОД ${args.amount ?? 0}`;
+  if (e.effect === "grant_intel") return "разведка";
   return e.effect;
 }
 
@@ -38,6 +42,22 @@ function patchEffectArg(
 
 /** Visual builder for quest/catalog effects (no raw JSON). */
 export function GmEffectBuilder({ effects, onChange, label }: Props) {
+  const content = getCachedContent();
+  const techOptions = useMemo(
+    () =>
+      Object.values(content?.technologies ?? {})
+        .filter((t) => t?.id)
+        .map((t) => ({ id: t.id, name: t.name ?? t.id })),
+    [content],
+  );
+  const recipeOptions = useMemo(
+    () =>
+      Object.values(content?.tech_recipes ?? {})
+        .filter((r) => r?.id)
+        .map((r) => ({ id: r.id, name: r.name ?? r.id })),
+    [content],
+  );
+
   const addPreset = (preset: (typeof EFFECT_PRESETS)[number]) => {
     onChange([...effects, effectsFromPreset(preset)]);
   };
@@ -97,23 +117,23 @@ export function GmEffectBuilder({ effects, onChange, label }: Props) {
                 </>
               )}
               {e.effect === "grant_tech" && (
-                <input
-                  type="text"
-                  placeholder="tech.id"
+                <CatalogIdSelect
                   value={String(e.args?.techId ?? "")}
-                  onChange={(ev) =>
-                    onChange(patchEffectArg(effects, i, "techId", ev.target.value))
+                  onChange={(id) =>
+                    onChange(patchEffectArg(effects, i, "techId", id))
                   }
+                  options={techOptions}
+                  emptyLabel="— технология —"
                 />
               )}
               {e.effect === "grant_recipe" && (
-                <input
-                  type="text"
-                  placeholder="recipe.id"
+                <CatalogIdSelect
                   value={String(e.args?.recipeId ?? "")}
-                  onChange={(ev) =>
-                    onChange(patchEffectArg(effects, i, "recipeId", ev.target.value))
+                  onChange={(id) =>
+                    onChange(patchEffectArg(effects, i, "recipeId", id))
                   }
+                  options={recipeOptions}
+                  emptyLabel="— рецепт —"
                 />
               )}
               {e.effect === "ap_add" && (

@@ -28,6 +28,8 @@ import {
   canAfford,
   publicEcoSlice,
   offerOpts,
+  stripTechFromEco,
+  recomputeUnlocksFromTechs,
 } from "./helpers.mjs";
 import { removeFromResearchQueue } from "./queue.mjs";
 
@@ -235,6 +237,30 @@ export function gmGrantTech(factionId, techId, meta = {}) {
     worldMutated: Boolean(
       world && (def.effects || []).some((e) => e?.effect === "unit_upgrade"),
     ),
+  };
+}
+
+/**
+ * Master-only: drop a tech and rebuild derived tiers/properties.
+ */
+export function gmRevokeTech(factionId, techId, meta = {}) {
+  const id = String(techId || "").trim();
+  if (!factionId || !id) return { ok: false, error: "Нужны держава и технология" };
+
+  const content = getContent();
+  const world = meta.world ?? readLiveBoard();
+  const ledger = readLedger();
+  const eco = ensureFactionEco(ledger, factionId);
+  if (!stripTechFromEco(eco, id)) {
+    return { ok: false, error: "Технология не открыта" };
+  }
+  recomputeUnlocksFromTechs(eco, content, factionId, world);
+  writeLedger(ledger);
+  const def = resolveTechDef(content, id);
+  return {
+    ok: true,
+    eco: publicEcoSlice(eco),
+    tech: def ? { id: def.id, name: def.name } : { id },
   };
 }
 

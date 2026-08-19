@@ -258,3 +258,18 @@ export function resolveResourceOrCurrencyLabel(
   if (local) return local;
   return resourceDisplayName(id);
 }
+
+export {
+  COMBAT_ROLE_LABELS,
+  COMBAT_STAT_LABELS,
+  COURT_ROLE_LABELS,
+  PATH_LABELS,
+  RACE_TAG_LABELS,
+  YEARLY_CATEGORY_LABELS,
+  combatRoleLabel,
+  combatStatLabel,
+  courtRoleLabel,
+  pathLabel,
+  raceTagLabel,
+  yearlyCategoryLabel,
+} from "./gmUiLabels";

@@ -1,4 +1,8 @@
 import type { EffectInstance } from "../../state/contentCatalog";
+import { getCachedContent } from "../../state/contentCatalog";
+import { CATEGORY_CURRENCIES } from "../../state/economyLabels";
+import { COURT_ROLE_LABELS, courtRoleLabel } from "../../state/displayLabels";
+import { CatalogIdMulti } from "./CatalogIdSelect";
 import { GmEffectBuilder } from "./atelier/GmEffectBuilder";
 import type { AtelierCatalogId } from "./GmCatalogEditor";
 
@@ -28,7 +32,7 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
             />
           </label>
           <label className="gm-form-field">
-            <span>Tier</span>
+            <span>Тир</span>
             <input
               type="number"
               className="gm-form-input"
@@ -51,7 +55,7 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
             />
           </label>
           <label className="gm-form-field">
-            <span>Supply</span>
+            <span>Снабжение</span>
             <input
               type="number"
               className="gm-form-input"
@@ -84,15 +88,20 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
           </label>
           <label className="gm-form-field">
             <span>Категория</span>
-            <input
+            <select
               className="gm-form-input"
-              maxLength={1}
               value={String(data.category ?? "A")}
-              onChange={(e) => patch("category", e.target.value.toUpperCase())}
-            />
+              onChange={(e) => patch("category", e.target.value)}
+            >
+              {CATEGORY_CURRENCIES.map((c) => (
+                <option key={c.letter} value={c.letter}>
+                  {c.letter} · {c.name}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="gm-form-field">
-            <span>Era</span>
+            <span>Эра</span>
             <input
               type="number"
               className="gm-form-input"
@@ -101,7 +110,7 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
             />
           </label>
           <label className="gm-form-field">
-            <span>Cognitio</span>
+            <span>Знание</span>
             <input
               type="number"
               className="gm-form-input"
@@ -116,7 +125,7 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
           </label>
         </div>
         <label className="gm-form-field">
-          <span>Flavor</span>
+          <span>Описание</span>
           <textarea
             className="gm-form-input"
             rows={2}
@@ -135,7 +144,7 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
       <div className="gm-entry-form">
         <div className="gm-form-grid">
           <label className="gm-form-field gm-form-field--wide">
-            <span>Label</span>
+            <span>Название</span>
             <input
               className="gm-form-input"
               value={String(data.label ?? "")}
@@ -143,7 +152,7 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
             />
           </label>
           <label className="gm-form-field">
-            <span>ETA (ходов)</span>
+            <span>Срок (ходов)</span>
             <input
               type="number"
               className="gm-form-input"
@@ -152,19 +161,15 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
             />
           </label>
           <label className="gm-form-field gm-form-field--wide">
-            <span>Roles (через запятую)</span>
-            <input
-              className="gm-form-input"
-              value={roles.join(", ")}
-              onChange={(e) =>
-                patch(
-                  "roles",
-                  e.target.value
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                )
-              }
+            <span>Роли двора</span>
+            <CatalogIdMulti
+              values={roles}
+              onChange={(ids) => patch("roles", ids)}
+              options={Object.keys(COURT_ROLE_LABELS).map((id) => ({
+                id,
+                name: courtRoleLabel(id),
+              }))}
+              addLabel="— добавить роль —"
             />
           </label>
         </div>
@@ -191,14 +196,14 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
             />
           </label>
           <label className="gm-form-field">
-            <span>Scope</span>
+            <span>Область</span>
             <select
               className="gm-form-input"
               value={String(data.scope ?? "faction")}
               onChange={(e) => patch("scope", e.target.value)}
             >
-              <option value="faction">faction</option>
-              <option value="both">both</option>
+              <option value="faction">Держава</option>
+              <option value="both">Держава и персонаж</option>
             </select>
           </label>
         </div>
@@ -223,6 +228,13 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
   if (catalog === "tech_recipes") {
     const ingredients = (data.ingredients as string[]) || [];
     const results = (data.results as string[]) || [];
+    const techOpts = Object.values(getCachedContent()?.technologies ?? {})
+      .filter((t) => t?.id)
+      .map((t) => ({ id: t.id, name: t.name ?? t.id }));
+    const recipeOpts = Object.values(getCachedContent()?.tech_recipes ?? {})
+      .filter((r) => r?.id)
+      .map((r) => ({ id: r.id, name: r.name ?? r.id }));
+    const resultOpts = [...techOpts, ...recipeOpts];
     return (
       <div className="gm-entry-form">
         <label className="gm-form-field">
@@ -234,33 +246,25 @@ export function GmEntryFormPanel({ catalog, data, onChange }: Props) {
           />
         </label>
         <label className="gm-form-field">
-          <span>Ингредиенты (id через запятую)</span>
-          <input
-            className="gm-form-input"
-            value={ingredients.join(", ")}
-            onChange={(e) =>
-              patch(
-                "ingredients",
-                e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              )
-            }
+          <span>Ингредиенты</span>
+          <CatalogIdMulti
+            values={ingredients}
+            onChange={(ids) => patch("ingredients", ids)}
+            options={techOpts}
+            addLabel="— добавить технологию —"
           />
         </label>
         <label className="gm-form-field">
-          <span>Результат (id через запятую)</span>
-          <input
-            className="gm-form-input"
-            value={results.join(", ")}
-            onChange={(e) =>
-              patch(
-                "results",
-                e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-              )
-            }
+          <span>Результат</span>
+          <CatalogIdMulti
+            values={results}
+            onChange={(ids) => patch("results", ids)}
+            options={resultOpts}
+            addLabel="— добавить результат —"
           />
         </label>
         <label className="gm-form-field">
-          <span>Era</span>
+          <span>Эра</span>
           <input
             type="number"
             className="gm-form-input"

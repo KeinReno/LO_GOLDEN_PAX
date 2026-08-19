@@ -352,6 +352,43 @@ export function applyUnlockEffects(eco, effects) {
 }
 
 /**
+ * Remove one unlocked tech and related bags. Does not recompute tiers.
+ * @returns {boolean} true if the tech was present
+ */
+export function stripTechFromEco(eco, techId) {
+  const id = String(techId || "").trim();
+  if (!id || !eco) return false;
+  const before = Array.isArray(eco.unlockedTechs) ? eco.unlockedTechs : [];
+  if (!before.includes(id)) return false;
+  eco.unlockedTechs = before.filter((t) => t !== id);
+  if (Array.isArray(eco.unlockedUpgrades)) {
+    eco.unlockedUpgrades = eco.unlockedUpgrades.filter((u) => {
+      const sid = String(u || "");
+      return sid !== id && !sid.startsWith(`${id}.`);
+    });
+  }
+  if (eco.techGrades && typeof eco.techGrades === "object") {
+    delete eco.techGrades[id];
+  }
+  if (eco.techSockets && typeof eco.techSockets === "object") {
+    delete eco.techSockets[id];
+  }
+  if (Array.isArray(eco.researchQueue)) {
+    eco.researchQueue = eco.researchQueue.filter((row) => {
+      const tid = typeof row === "string" ? row : row?.techId;
+      return tid !== id;
+    });
+  }
+  if (Array.isArray(eco.acquiredTechs)) {
+    eco.acquiredTechs = eco.acquiredTechs.filter((row) => {
+      const tid = typeof row === "string" ? row : row?.techId;
+      return tid !== id;
+    });
+  }
+  return true;
+}
+
+/**
  * Recompute techTiers / properties from unlockedTechs + upgrades + standing buildings.
  */
 export function recomputeUnlocksFromTechs(eco, content, factionId = null, world = null) {

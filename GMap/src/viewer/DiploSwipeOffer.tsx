@@ -16,6 +16,7 @@ export function DiploSwipeOffer({
   needsHold,
   onAccept,
   onReject,
+  onSelect,
 }: {
   title: string;
   subtitle: string;
@@ -24,6 +25,7 @@ export function DiploSwipeOffer({
   needsHold?: boolean;
   onAccept: () => void;
   onReject: () => void;
+  onSelect?: () => void;
 }) {
   const reduce = useReducedMotion();
   const x = useMotionValue(0);
@@ -90,7 +92,20 @@ export function DiploSwipeOffer({
       >
         <motion.div className="gc-swipe-offer__card fx-spotlight" style={{ x }}>
           <div>
-            <strong>{title}</strong>
+            <strong>
+              {onSelect ? (
+                <button
+                  type="button"
+                  className="gc-swipe-offer__focus"
+                  disabled={busy}
+                  onClick={() => onSelect()}
+                >
+                  {title}
+                </button>
+              ) : (
+                title
+              )}
+            </strong>
             <p className="hint">{subtitle}</p>
             {!reduce && (
               <p className="gc-swipe-offer__gesture hint">

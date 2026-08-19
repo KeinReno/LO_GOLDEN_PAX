@@ -143,7 +143,7 @@ export function GmRulesKnobEditor() {
         )}
       </ul>
 
-      <h5>Intel</h5>
+      <h5>Разведка</h5>
       <ul className="gm-atelier-kv gm-rules-knob-list">
         {intel
           ? Object.entries(intel).map(([k, v]) => (

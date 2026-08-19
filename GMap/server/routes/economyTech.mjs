@@ -13,6 +13,7 @@ import {
 function isEconomyTechPath(pathname) {
   return (
     pathname === "/api/economy/research" ||
+    pathname === "/api/economy/research/revoke" ||
     pathname === "/api/economy/research-upgrade" ||
     pathname === "/api/economy/research-queue" ||
     pathname === "/api/economy/research-accelerate" ||
@@ -78,6 +79,33 @@ export async function tryHandleEconomyTechRoutes(req, res, url, ctx) {
       tech: result.tech,
       offerBypass: Boolean(result.offerBypass),
       economy: playerEconomy(body.factionId, world),
+    });
+    return true;
+  }
+
+  if (url.pathname === "/api/economy/research/revoke" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = await readBody(req);
+    if (!body.factionId || !body.techId) {
+      sendJson(res, 400, { error: "factionId + techId required" });
+      return true;
+    }
+    const world = readLiveBoard();
+    const { gmRevokeTech } = await import("../techActions.mjs");
+    const result = gmRevokeTech(body.factionId, body.techId, { world });
+    if (!result.ok) {
+      sendJson(res, 400, result);
+      return true;
+    }
+    sendJson(res, 200, {
+      ok: true,
+      tech: result.tech,
+      economy: world
+        ? playerEconomy(body.factionId, world)
+        : getFactionPublicEco(body.factionId),
     });
     return true;
   }
@@ -262,6 +290,32 @@ export async function tryHandleEconomyTechRoutes(req, res, url, ctx) {
     const result = grantRecipe(body.factionId, body.recipeId, {
       turn: world?.meta?.turn ?? null,
     });
+    if (!result.ok) {
+      sendJson(res, 400, result);
+      return true;
+    }
+    sendJson(res, 200, {
+      ...result,
+      economy: world
+        ? playerEconomy(body.factionId, world)
+        : getFactionPublicEco(body.factionId),
+    });
+    return true;
+  }
+
+  if (url.pathname === "/api/economy/alchemy/revoke-recipe" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = await readBody(req);
+    if (!body.factionId || !body.recipeId) {
+      sendJson(res, 400, { error: "factionId + recipeId required" });
+      return true;
+    }
+    const world = readLiveBoard();
+    const { revokeRecipe } = await import("../alchemyActions.mjs");
+    const result = revokeRecipe(body.factionId, body.recipeId);
     if (!result.ok) {
       sendJson(res, 400, result);
       return true;

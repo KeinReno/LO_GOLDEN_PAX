@@ -3,6 +3,11 @@
  */
 import type { DiceSpec, QuestChoice, QuestType } from "../../../state/types";
 import type { EffectInstance } from "../../../state/contentCatalog";
+import {
+  BUILD_METAL,
+  BUILD_SUPPLY,
+  CATEGORY_CURRENCIES,
+} from "../../../state/economyLabels";
 
 export type YearlyQuestDef = {
   id: string;
@@ -72,25 +77,23 @@ export const YEARLY_CATEGORIES = [
 export const FILTER_FIELDS: {
   key: string;
   label: string;
-  type: "number" | "bool" | "text";
+  type: "number" | "bool" | "text" | "race" | "building";
   placeholder?: string;
 }[] = [
   { key: "minEra", label: "Мин. эра", type: "number" },
   { key: "maxWarCount", label: "Макс. войн", type: "number" },
   { key: "hasRefugees", label: "Есть беженцы", type: "bool" },
   { key: "borderWithWar", label: "Граница с войной", type: "bool" },
-  { key: "requiresRace", label: "Нужна раса", type: "text", placeholder: "race.human" },
+  { key: "requiresRace", label: "Нужна раса", type: "race" },
   {
     key: "requiresBuilding",
     label: "Нужно здание",
-    type: "text",
-    placeholder: "building.barracks",
+    type: "building",
   },
   {
     key: "lowLoyaltyRace",
     label: "Низкая лояльность расы",
-    type: "text",
-    placeholder: "race.human",
+    type: "race",
   },
   {
     key: "excludeIfArcActive",
@@ -101,11 +104,9 @@ export const FILTER_FIELDS: {
 ];
 
 export const CURRENCY_OPTIONS = [
-  { id: "currency.metal", label: "Металл" },
-  { id: "currency.supply", label: "Снабжение" },
-  { id: "currency.cognitio", label: "Когнитио" },
-  { id: "currency.bios", label: "Биос" },
-  { id: "currency.extracta", label: "Экстракта" },
+  { id: BUILD_METAL.id, label: BUILD_METAL.label },
+  { id: BUILD_SUPPLY.id, label: BUILD_SUPPLY.label },
+  ...CATEGORY_CURRENCIES.map((c) => ({ id: c.id, label: c.name })),
 ] as const;
 
 export type EffectPreset = {
@@ -128,15 +129,15 @@ export const EFFECT_PRESETS: EffectPreset[] = [
   },
   { id: "stability_add", label: "Стабильность ±", defaults: { amount: 1 } },
   { id: "ap_add", label: "ОД ±", defaults: { amount: 1 } },
-  { id: "grant_tech", label: "Выдать tech", defaults: { techId: "tech.geology" } },
+  { id: "grant_tech", label: "Выдать технологию", defaults: { techId: "" } },
   {
     id: "grant_recipe",
     label: "Выдать рецепт",
-    defaults: { recipeId: "recipe.geo_materials" },
+    defaults: { recipeId: "" },
   },
   {
     id: "grant_intel",
-    label: "Intel",
+    label: "Разведка",
     defaults: { entityType: "faction", entityId: "", level: 2 },
   },
 ];

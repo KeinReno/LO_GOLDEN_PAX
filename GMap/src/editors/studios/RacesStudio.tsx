@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCampaignSessionCtx } from "../CampaignSessionContext";
 import { fetchContent, getCachedContent } from "../../state/contentCatalog";
+import { raceTagLabel } from "../../state/displayLabels";
 import { StudioEffectList } from "./StudioEffectEditor";
 
 export type RaceTraitEffect = {
@@ -240,7 +241,7 @@ export function RacesStudio() {
               className={`studio-filter-chip ${tagFilter === t ? "active" : ""}`}
               onClick={() => setTagFilter(t)}
             >
-              {t}
+              {raceTagLabel(t)}
             </button>
           ))}
         </div>
@@ -258,11 +259,11 @@ export function RacesStudio() {
               >
                 <div className="studio-item-main">
                   <strong>{r.name || id}</strong>
-                  <span className="studio-item-id">{id}</span>
+                    {r.name ? null : <span className="studio-item-id">{id}</span>}
                 </div>
                 <div className="studio-item-meta">
                   <span className="studio-badge">
-                    Трейтов: {r.traits?.length || 0}
+                    Черт: {r.traits?.length || 0}
                   </span>
                   <span
                     className={`studio-badge ${
@@ -280,7 +281,7 @@ export function RacesStudio() {
                   <div className="studio-tags-row">
                     {r.tags.map((tg) => (
                       <span key={tg} className="studio-tag">
-                        {tg}
+                        {raceTagLabel(tg)}
                       </span>
                     ))}
                   </div>
@@ -311,7 +312,7 @@ export function RacesStudio() {
                     placeholder="Название цивилизации..."
                   />
                   <p className="hint">
-                    ID: <code>{selectedRace.id}</code>
+                    Служебный код: <code>{selectedRace.id}</code>
                     {selectedRace.base ? ` · Подраса от «${selectedRace.base}»` : ""}
                   </p>
                 </div>
@@ -331,7 +332,7 @@ export function RacesStudio() {
                     className={`gm-mode-btn ${viewMode === "json" ? "on" : ""}`}
                     onClick={() => setViewMode("json")}
                   >
-                    JSON
+                    Код
                   </button>
                 </div>
                 <button
@@ -389,7 +390,7 @@ export function RacesStudio() {
                           .filter((k) => k !== selectedRace.id)
                           .map((k) => (
                             <option key={k} value={k}>
-                              {races[k]?.name || k} ({k})
+                              {races[k]?.name || k}
                             </option>
                           ))}
                       </select>
@@ -415,7 +416,7 @@ export function RacesStudio() {
                               setRaces((prev) => ({ ...prev, [selectedRace.id]: updated }));
                             }}
                           >
-                            {tg}
+                            {raceTagLabel(tg)}
                           </button>
                         );
                       })}
@@ -427,7 +428,7 @@ export function RacesStudio() {
                 <section className="studio-section-card">
                   <div className="studio-section-head">
                     <div>
-                      <h4>Видовые трейты & Баланс</h4>
+                      <h4>Видовые черты и баланс</h4>
                       <p className="hint">
                         Суммарный баланс-бюджет:{" "}
                         <strong
@@ -451,7 +452,7 @@ export function RacesStudio() {
                       onClick={() => {
                         const nextTrait: RaceTrait = {
                           id: `trait.${selectedRace.id}.${Date.now().toString(36)}`,
-                          name: "Новый трейт",
+                          name: "Новая черта",
                           balanceBudget: 0.5,
                           effects: [
                             {
@@ -467,7 +468,7 @@ export function RacesStudio() {
                         setRaces((prev) => ({ ...prev, [selectedRace.id]: updated }));
                       }}
                     >
-                      + Добавить трейт
+                      + Добавить черту
                     </button>
                   </div>
 
@@ -485,7 +486,7 @@ export function RacesStudio() {
                               const updated = { ...selectedRace, traits: copy };
                               setRaces((prev) => ({ ...prev, [selectedRace.id]: updated }));
                             }}
-                            placeholder="Название трейта..."
+                            placeholder="Название черты..."
                           />
                           <div className="studio-trait-budget">
                             <span className="hint">Бюджет:</span>
@@ -523,7 +524,7 @@ export function RacesStudio() {
                         {/* Effects inside Trait */}
                         <div style={{ marginTop: 8 }}>
                           <StudioEffectList
-                            title="Эффекты трейта"
+                            title="Эффекты черты"
                             context="race"
                             effects={(tr.effects || []).map((e) => ({
                               effect: e.effect,

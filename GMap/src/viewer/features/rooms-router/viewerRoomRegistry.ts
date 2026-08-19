@@ -10,7 +10,6 @@ export function resolveViewerRoomPanel(
   panels: ViewerRoomPanels,
 ): ReactNode {
   if (mobileImmersive) return null;
-  if (viewMode === "rp") return null;
   const key = pickRoomKey(viewMode, mobileImmersive);
   if (!key) return null;
   return panels[key] ?? null;

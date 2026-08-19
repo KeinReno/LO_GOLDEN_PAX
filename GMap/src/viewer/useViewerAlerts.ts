@@ -10,6 +10,9 @@ import { buildViewerAlerts } from "./buildViewerAlerts";
 import type { AlertFocusAnchor } from "./ViewerAlertFab";
 import type { EconomySystemSignal } from "./economyFlowTypes";
 import { questAttentionCount } from "./quests/questAttention";
+import { adaptQuests } from "./quests/adaptQuest";
+import { firstAttentionQuestId } from "./quests/questAttention";
+import { useQuestsState } from "./quests/useQuestsState";
 import { writeStoredStart } from "./viewerNavTypes";
 import { navigateViewerRoom } from "./features/rooms-router/navigateViewerRoom";
 import { ECO_SECTION_STORAGE, type EconomySectionId } from "./economy/types";
@@ -182,25 +185,9 @@ export function useViewerAlerts({
   );
 
   const focusAlertRp = useCallback(() => {
-    setViewMode("rp");
-    closeMapOverlays();
-    setMenuOpen(false);
-    setSettingsOpen(false);
-    setMapFiltersOpen(false);
-    setRpFloatOpen(true);
-    setTouchMoveArmed(false);
+    navigateViewerRoom("rp");
     setRpUnread(0);
-    writeStoredStart("hq");
-  }, [
-    closeMapOverlays,
-    setViewMode,
-    setMenuOpen,
-    setSettingsOpen,
-    setMapFiltersOpen,
-    setRpFloatOpen,
-    setTouchMoveArmed,
-    setRpUnread,
-  ]);
+  }, [setRpUnread]);
 
   const focusAlertQuests = useCallback(() => {
     closeMapOverlays();
@@ -210,9 +197,17 @@ export function useViewerAlerts({
     setMapFiltersOpen(false);
     setRpFloatOpen(false);
     setTouchMoveArmed(false);
+    if (payload) {
+      const quests = adaptQuests(payload, {});
+      const turn = payload.world.meta?.turn ?? 0;
+      const id = firstAttentionQuestId(quests, turn);
+      if (id) useQuestsState.getState().selectQuest(id);
+      else useQuestsState.getState().clearQuest();
+    }
     goView("quests");
     writeStoredStart("hq");
   }, [
+    payload,
     closeMapOverlays,
     goView,
     setQueueOpen,
@@ -270,12 +265,19 @@ export function useViewerAlerts({
 
   const viewerAlertItems = useMemo(() => {
     if (!payload) return [];
+    const quests = adaptQuests(payload, {});
+    const turn = payload.world.meta?.turn ?? 0;
+    const focusId = firstAttentionQuestId(quests, turn);
+    const questFocusTitle = focusId
+      ? (quests.find((q) => q.id === focusId)?.title ?? undefined)
+      : undefined;
     return buildViewerAlerts({
       payload,
       engagements,
       pendingOrderCount: pendingCount,
       rpUnread,
       questAttention: questAttentionCount(payload),
+      questFocusTitle,
       systemSignals: economySystemSignals,
       callbacks: {
         onFocusIdleFleet: focusAlertIdleFleet,

@@ -24,6 +24,7 @@ export type AlertItem = {
 type Props = {
   items: AlertItem[];
   unreadRp?: number;
+  menuPlacement?: "up" | "down";
 };
 
 const KIND_ICONS = {
@@ -35,7 +36,11 @@ const KIND_ICONS = {
   quest: BookMarked,
 } as const;
 
-export function ViewerAlertFab({ items, unreadRp }: Props) {
+export function ViewerAlertFab({
+  items,
+  unreadRp,
+  menuPlacement = "up",
+}: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -63,7 +68,10 @@ export function ViewerAlertFab({ items, unreadRp }: Props) {
   };
 
   return (
-    <div className="viewer-alert-fab" ref={rootRef}>
+    <div
+      className={`viewer-alert-fab${menuPlacement === "down" ? " viewer-alert-fab--down" : ""}`}
+      ref={rootRef}
+    >
       <button
         type="button"
         className={`viewer-alert-fab-btn ${open ? "on" : ""}`}

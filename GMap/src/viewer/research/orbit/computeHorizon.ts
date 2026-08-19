@@ -124,3 +124,13 @@ export function computeHorizon(
     return { direction, mode: "horizon", visible, badgeCount };
   });
 }
+
+/** Nearest researchable tech on an axis — prereqs met, not yet unlocked. */
+export function firstFrontierId(
+  horizon: SectorHorizon[],
+  direction: string | null | undefined,
+): string | null {
+  if (!direction) return null;
+  const h = horizon.find((s) => s.direction === direction);
+  return h?.visible.find((n) => n.state === "frontier")?.id ?? null;
+}

@@ -63,12 +63,33 @@ function parseJson(text: string): { ok: true; value: unknown } | { ok: false; er
   }
 }
 
+function autoCatalogKey(catalog: string): string {
+  const prefix: Record<string, string> = {
+    technologies: "tech",
+    tech_recipes: "recipe",
+    tech_combos: "combo",
+    council_seats: "seat",
+    court_tasks: "task",
+    npc_traits: "npc_trait",
+    faction_traits: "trait",
+    faiths: "faith",
+    cultures: "culture",
+    buildings: "building",
+    ships: "ship",
+    units: "unit",
+    races: "race",
+    stations: "station",
+    space_objects: "space",
+    yearly_quests: "yq",
+    story_quests: "sq",
+  };
+  return `${prefix[catalog] ?? catalog}.${Date.now().toString(36)}`;
+}
+
 function entryTitle(data: Record<string, unknown> | null, key: string): string {
   if (!data) return key;
   return String(data.name ?? data.label ?? data.id ?? key);
 }
-
-/** GM Atelier — browse, search, edit catalog entries and documents. */
 export function GmCatalogEditor({
   catalog,
   showDocumentEditor = true,
@@ -286,16 +307,20 @@ export function GmCatalogEditor({
   };
 
   const createEntry = async () => {
-    const key = newKey.trim();
-    if (!key) {
-      setErr("Укажите id новой записи");
+    const title = newKey.trim();
+    if (!title) {
+      setErr("Укажите название новой записи");
       return;
     }
+    const key = autoCatalogKey(catalog);
     const parsed = parseJson(draft);
-    if (!parsed.ok) {
-      setErr(parsed.error);
-      return;
-    }
+    const base =
+      parsed.ok && parsed.value && typeof parsed.value === "object"
+        ? { ...(parsed.value as Record<string, unknown>) }
+        : {};
+    if (!base.name && !base.label) base.name = title;
+    else if (!base.name) base.name = title;
+    base.id = key;
     setBusy(true);
     try {
       await api("/api/gm/content/entry", {
@@ -305,13 +330,13 @@ export function GmCatalogEditor({
           catalog,
           key,
           bag: bag || null,
-          data: parsed.value,
+          data: base,
           create: true,
         }),
       });
       setShowNew(false);
       setNewKey("");
-      setSyncMsg(`${key}: создано`);
+      setSyncMsg(`Создано: ${title}`);
       await loadEntries();
       await loadEntry(key, bag || null);
       await fetchContent(true);
@@ -382,7 +407,7 @@ export function GmCatalogEditor({
           <input
             type="search"
             className="gm-catalog-search"
-            placeholder="Поиск по id / названию…"
+                placeholder="Поиск по названию…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Поиск записей"
@@ -500,7 +525,6 @@ export function GmCatalogEditor({
                   onClick={() => void loadEntry(row.key, row.bag)}
                 >
                   <span className="gm-catalog-row-label">{row.label}</span>
-                  <code className="gm-catalog-row-id">{row.key}</code>
                   {row.preview && (
                     <span className="gm-catalog-row-preview">{row.preview}</span>
                   )}
@@ -517,13 +541,13 @@ export function GmCatalogEditor({
           {showNew && (
             <div className="gm-catalog-new">
               <label className="hint">
-                Id новой записи
+                Название новой записи
                 <input
                   type="text"
                   value={newKey}
                   onChange={(e) => setNewKey(e.target.value)}
-                  placeholder="tech.example"
-                  spellCheck={false}
+                  placeholder="Например: Новая черта"
+                  spellCheck={true}
                 />
               </label>
               <button

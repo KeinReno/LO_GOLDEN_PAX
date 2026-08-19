@@ -14,8 +14,6 @@ import {
   Store,
   Users,
 } from "lucide-react";
-import type { PlayerOrder } from "../state/types";
-import { OrderTray } from "./OrderTray";
 import type { AlertItem } from "./ViewerAlertFab";
 import type { DiploOffer } from "./DealDesk";
 import type { PlayerView } from "./viewerNavTypes";
@@ -23,17 +21,13 @@ import type { PlayerView } from "./viewerNavTypes";
 export interface ViewerDockProps {
   mobile: boolean;
   viewMode: PlayerView;
+  /** Map button is active when not in a room overlay. */
+  desktopGlass?: boolean;
   roomCompact?: boolean;
   dockCollapsed: boolean;
   dockMoreOpen: boolean;
   cardBattleId: string | null;
   cardBattleMinimized: boolean;
-  reservedAp: number;
-  apMax: number;
-  reservedForceAp: number;
-  forceApMax: number;
-  activeOrders: PlayerOrder[];
-  currentTurn: number;
   affordableResearch: number;
   rpUnread: number;
   diploIncoming: DiploOffer[];
@@ -51,18 +45,12 @@ export interface ViewerDockProps {
 export function ViewerDock({
   mobile,
   viewMode,
-  desktopGlass,
+  desktopGlass = false,
   roomCompact = false,
   dockCollapsed,
   dockMoreOpen,
   cardBattleId,
   cardBattleMinimized,
-  reservedAp,
-  apMax,
-  reservedForceAp,
-  forceApMax,
-  activeOrders,
-  currentTurn,
   affordableResearch,
   rpUnread,
   diploIncoming,
@@ -89,14 +77,6 @@ export function ViewerDock({
       aria-expanded={!dockCollapsed}
       aria-hidden={Boolean(cardBattleId && !cardBattleMinimized)}
     >
-      <OrderTray
-        apUsed={reservedAp}
-        apMax={apMax}
-        forceApUsed={reservedForceAp}
-        forceApMax={forceApMax}
-        activeOrders={activeOrders}
-        currentTurn={currentTurn}
-      />
       <button
         type="button"
         className="viewer-dock-toggle"
@@ -314,15 +294,15 @@ export function ViewerDock({
               type="button"
               className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
               onClick={onRpOpen}
-              title="RP · R"
+              title="Сцена · R"
               aria-label={
-                rpUnread > 0 ? `RP, ${rpUnread} непрочитанных` : "RP"
+                rpUnread > 0 ? `Сцена, ${rpUnread} непрочитанных` : "Сцена"
               }
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <MessageSquare size={18} strokeWidth={2} />
               </span>
-              RP
+              Сцена
               <kbd className="viewer-dock-kbd">R</kbd>
               {rpUnread > 0 && viewMode !== "rp" && (
                 <span className="dock-badge dock-badge--hot">
@@ -407,7 +387,7 @@ export function ViewerDock({
                   onClick={onRpOpen}
                 >
                   <MessageSquare size={16} strokeWidth={2} aria-hidden />
-                  RP
+                  Сцена
                   {rpUnread > 0 && (
                     <span className="dock-badge dock-badge--hot">
                       {rpUnread > 9 ? "9+" : rpUnread}

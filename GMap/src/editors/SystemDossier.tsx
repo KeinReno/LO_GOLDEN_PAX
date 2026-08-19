@@ -1,7 +1,8 @@
 import { createPortal } from "react-dom";
 import { useWorldStore } from "../state/worldStore";
+import type { StarSystem } from "../state/types";
 import { SystemView, type PlayerPlanetManageProps } from "./SystemView";
-import { computePlanetRevoltReadout } from "../state/stabilityRevolt";
+import { useGmSystemDive } from "./gm/useGmSystemDive";
 
 export type PlayerSystemActions = {
   factionId: string;
@@ -11,58 +12,6 @@ export type PlayerSystemActions = {
   onSelectOwnFleet?: (fleetId: string) => void;
   onSelectOwnLegion?: (legionId: string) => void;
 };
-
-function ruHopsWord(n: number): string {
-  const abs = Math.abs(Math.trunc(n));
-  const mod100 = abs % 100;
-  const mod10 = abs % 10;
-  if (mod100 >= 11 && mod100 <= 14) return "хопов";
-  if (mod10 === 1) return "хоп";
-  if (mod10 >= 2 && mod10 <= 4) return "хопа";
-  return "хопов";
-}
-
-function formatSupplyLine(
-  system: {
-    logistics?: {
-      connectedToCapital: boolean;
-      hopsToCapital: number;
-      viaDepot: boolean;
-      supplyLevel: number;
-      bottlenecked?: boolean;
-      parentId?: string | null;
-    };
-  },
-  parentName: string | null,
-): { text: string; tone: "ok" | "warn" | "bad" | "muted" } {
-  const L = system.logistics;
-  if (!L) {
-    return {
-      text: "нет данных (после тика)",
-      tone: "muted",
-    };
-  }
-  if (!L.connectedToCapital) {
-    return {
-      text: "отрезана от столицы",
-      tone: "bad",
-    };
-  }
-  const hops = Number.isFinite(L.hopsToCapital) ? L.hopsToCapital : 0;
-  const via = parentName
-    ? `через ${parentName}`
-    : L.viaDepot
-      ? "через депо"
-      : "прямая линия";
-  const level = (L.supplyLevel ?? 0).toFixed(2);
-  const hopWord = ruHopsWord(hops);
-  const hopPart =
-    hops === 0 ? "столица" : `${hops} ${hopWord} до столицы`;
-  return {
-    text: `${hopPart}, ${via} · уровень ${level}`,
-    tone: L.bottlenecked ? "warn" : "ok",
-  };
-}
 
 /** Full-screen system drill-down (double-click / ПКМ → открыть систему). */
 export function SystemDossier({
@@ -84,99 +33,111 @@ export function SystemDossier({
   const system = useWorldStore((s) =>
     s.world.systems.find((sys) => sys.id === s.dossierSystemId),
   );
-  const parentName = useWorldStore((s) => {
-    const id = s.world.systems.find((sys) => sys.id === s.dossierSystemId)
-      ?.logistics?.parentId;
-    if (!id) return null;
-    return s.world.systems.find((sys) => sys.id === id)?.name ?? null;
+  const faction = useWorldStore((s) => {
+    const sys = s.world.systems.find((sys) => sys.id === s.dossierSystemId);
+    const id = sys?.ownerFactionId || s.activeFactionId;
+    return s.world.factions.find((f) => f.id === id);
   });
-
-  const currentTurn = useWorldStore((s) => s.world.meta.turn ?? 0);
 
   if (gmShellMode !== "gm") return null;
   if (!dossierSystemId || !system) return null;
+
+  return createPortal(
+      <SystemDossierBody
+      system={system}
+      factionId={faction?.id ?? playerActions?.factionId ?? ""}
+      defaultCultureId={faction?.defaultCultureId}
+      primaryFaith={faction?.primaryFaith}
+      readOnly={readOnly}
+      playerActions={playerActions}
+      planetManage={planetManage}
+      onClose={close}
+    />,
+    document.body,
+  );
+}
+
+function SystemDossierBody({
+  system,
+  factionId,
+  defaultCultureId,
+  primaryFaith,
+  readOnly,
+  playerActions,
+  planetManage: planetManageProp,
+  onClose,
+}: {
+  system: StarSystem;
+  factionId: string;
+  defaultCultureId?: string;
+  primaryFaith?: string;
+  readOnly: boolean;
+  playerActions?: PlayerSystemActions;
+  planetManage?: PlayerPlanetManageProps;
+  onClose: () => void;
+}) {
+  const dive = useGmSystemDive(system);
+  const playAs = dive.factionId || factionId;
+  const eco = dive.play.payload.economy;
+  const gmPlay = !readOnly && !!playAs;
+
+  const planetManage: PlayerPlanetManageProps | undefined = gmPlay
+    ? {
+        factionId: playAs,
+        stocks: eco?.stocks ?? {},
+        reservedAp: 0,
+        apMax: 99,
+        buildings: dive.catalogs.buildings,
+        colonies: dive.catalogs.colonies,
+        mapResources: dive.catalogs.mapResources,
+        techEco: {
+          techTiers: eco?.techTiers,
+          unlockedProperties: eco?.unlockedProperties,
+          unlockedLineages: eco?.unlockedLineages,
+          roleScores: eco?.roleScores,
+        },
+        defaultCultureId: defaultCultureId ?? "culture.baseline",
+        primaryFaith: primaryFaith ?? "faith.secular",
+        unlockedLineages: eco?.unlockedLineages ?? [],
+        message: dive.message,
+        onAction: dive.onPlanetAction,
+        godMode: true,
+      }
+    : planetManageProp;
 
   const ownedByOther =
     !!system.ownerFactionId &&
     !!playerActions &&
     system.ownerFactionId !== playerActions.factionId;
 
-  const supply = formatSupplyLine(system, parentName);
-  const inhabited = (system.planets || []).filter((p) => (p.population ?? 0) > 0);
-  const loyaltyAvg = inhabited.length
-    ? Math.round(
-        inhabited.reduce((s, p) => s + (p.loyalty ?? 50), 0) / inhabited.length,
-      )
-    : null;
-  const loyaltyTone =
-    loyaltyAvg == null
-      ? "mid"
-      : loyaltyAvg < 20
-        ? "low"
-        : loyaltyAvg < 40
-          ? "warn"
-          : loyaltyAvg < 60
-            ? "mid"
-            : "high";
-
-  const systemRevoltSummaries = inhabited.map((p) => computePlanetRevoltReadout(p, currentTurn));
-  const worstRevolt = systemRevoltSummaries.length
-    ? systemRevoltSummaries.reduce((worst, cur) => (cur.stage > worst.stage || (cur.stage === worst.stage && cur.stability < worst.stability) ? cur : worst))
-    : null;
-  const stabilityAvg = inhabited.length
-    ? Math.round(
-        systemRevoltSummaries.reduce((s, r) => s + r.stability, 0) / inhabited.length,
-      )
-    : null;
-
   const node = (
-    <div
-      className="gm-system-layer"
-      role="region"
-      aria-label={system.name}
-    >
-      <header className="viewer-system-head gm-system-layer__head">
-        <button
-          type="button"
-          className="btn viewer-system-back"
-          onClick={() => close()}
-        >
-          К карте
-          <span className="viewer-system-back-kbd">Esc</span>
-        </button>
-        <h2 className="viewer-system-title">{system.name}</h2>
-        <p
-          className={`dossier-supply dossier-supply-${supply.tone} gm-system-layer__supply`}
-          title="Статус снабжения от столицы"
-        >
-          <span className="dossier-supply-label">Снабжение</span>
-          {supply.text}
-        </p>
-        {loyaltyAvg != null ? (
-          <p
-            className={`hint loyalty-dossier-avg loyalty-ring-${loyaltyTone}`}
-            title="Средняя лояльность населённых планет"
-          >
-            Лояльность · {loyaltyAvg}
-          </p>
-        ) : null}
-        {worstRevolt != null ? (
-          <p
-            className={`hint loyalty-dossier-avg loyalty-ring-${worstRevolt.tone === "critical" || worstRevolt.tone === "bad" ? "low" : worstRevolt.tone === "warn" ? "warn" : "high"}`}
-            title={`Стабильность: ср. ${stabilityAvg}, худшая стадия ${worstRevolt.stage} (${worstRevolt.stageName})`}
-          >
-            Стаб. · {stabilityAvg}/100 · ст. {worstRevolt.stage}
-          </p>
-        ) : null}
-      </header>
+    <div className="gm-system-layer" role="region" aria-label={system.name}>
       <div className="viewer-system-body gm-system-layer__body">
         <SystemView
           system={system}
           readOnly={readOnly}
-          playerFactionId={playerActions?.factionId}
+          playerFactionId={playAs || playerActions?.factionId}
           onSelectOwnFleet={playerActions?.onSelectOwnFleet}
           onSelectOwnLegion={playerActions?.onSelectOwnLegion}
           planetManage={planetManage}
+          systemManage={
+            gmPlay
+              ? {
+                  factionId: playAs,
+                  stocks: eco?.stocks ?? {},
+                  reservedAp: 0,
+                  apMax: 99,
+                  unlockedProperties: eco?.unlockedProperties,
+                  ships: dive.catalogs.ships,
+                  units: dive.catalogs.units,
+                  mapResourceNames: dive.catalogs.mapResourceNames,
+                  message: dive.message,
+                  onAction: dive.onSystemAction,
+                  buildings: dive.catalogs.buildings,
+                  gmFree: true,
+                }
+              : undefined
+          }
         />
       </div>
       {readOnly && playerActions && (
@@ -185,7 +146,7 @@ export function SystemDossier({
             type="button"
             className="btn ghost"
             onClick={() => {
-              close();
+              onClose();
               playerActions.onClaim(system.id);
             }}
           >
@@ -199,7 +160,7 @@ export function SystemDossier({
               ownedByOther ? "Атаковать систему" : "Нет чужого владельца"
             }
             onClick={() => {
-              close();
+              onClose();
               playerActions.onAttack(system.id);
             }}
           >
@@ -209,7 +170,7 @@ export function SystemDossier({
             type="button"
             className="btn primary"
             onClick={() => {
-              close();
+              onClose();
               playerActions.onOpenRp();
             }}
           >
@@ -220,9 +181,5 @@ export function SystemDossier({
     </div>
   );
 
-  // Portal out of map stacking context so mobile dock / topbar stay under.
-  if (typeof document !== "undefined") {
-    return createPortal(node, document.body);
-  }
   return node;
 }

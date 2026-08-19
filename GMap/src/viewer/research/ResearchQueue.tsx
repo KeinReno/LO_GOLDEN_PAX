@@ -43,7 +43,9 @@ export function ResearchQueue({
   onChangeQueue,
   onAccelerate,
   eco,
+  compact = false,
 }: {
+  compact?: boolean;
   queue: string[];
   byId: Map<string, TechnologyDef>;
   cognitio: number;
@@ -140,11 +142,16 @@ export function ResearchQueue({
   );
 
   return (
-    <section className="research-queue" aria-label="Очередь исследований">
+    <section
+      className={`research-queue${compact ? " research-queue--strip" : ""}`}
+      aria-label="Очередь исследований"
+    >
       <header className="research-queue-head">
         <strong>Очередь</strong>
         <span className="hint">
-          {queue.length}/{QUEUE_MAX} · drag из дерева
+          {compact
+            ? `${queue.length}/${QUEUE_MAX} · 1-я в этот ход`
+            : `${queue.length}/${QUEUE_MAX} · слот 1 = этот ход, дальше по порядку`}
         </span>
         <button
           ref={trashRef}
@@ -199,14 +206,18 @@ export function ResearchQueue({
               >
                 {tech ? (
                   <>
-                    <span className="research-queue-slot-idx">{i + 1}</span>
+                    <span className="research-queue-slot-idx">
+                      {i === 0 ? "1 · сейчас" : `${i + 1} · +${i}х`}
+                    </span>
                     <strong className="research-queue-slot-name">
                       {tech.name}
                     </strong>
+                    {compact ? null : (
                     <span className="hint">
                       {cat}
                       {tech.era} · {ECO_CATEGORY_NAMES[cat]}
                     </span>
+                    )}
                     <span className="tabular research-queue-slot-cost">
                       {cost}
                       {forecast?.ready
@@ -215,7 +226,7 @@ export function ResearchQueue({
                           ? ` · ${forecast.turns}х`
                           : ""}
                     </span>
-                    {onAccelerate && techId ? (
+                    {!compact && onAccelerate && techId ? (
                       <button
                         type="button"
                         className="research-queue-rush"
@@ -233,7 +244,9 @@ export function ResearchQueue({
                     ) : null}
                   </>
                 ) : (
-                  <span className="hint">+</span>
+                  <span className="hint">
+                    {i === 0 ? "1" : i + 1}
+                  </span>
                 )}
               </div>
             </li>
@@ -241,6 +254,7 @@ export function ResearchQueue({
         })}
       </ol>
 
+      {compact ? null : (
       <p className="hint research-queue-stock">
         Знание: <strong className="tabular">{cognitio}</strong>
         {income !== 0 ? (
@@ -251,6 +265,7 @@ export function ResearchQueue({
           </span>
         ) : null}
       </p>
+      )}
     </section>
   );
 }

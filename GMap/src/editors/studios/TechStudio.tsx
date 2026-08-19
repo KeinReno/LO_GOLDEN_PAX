@@ -309,7 +309,8 @@ export function TechStudio() {
                     placeholder="Название технологии..."
                   />
                   <p className="hint">
-                    ID: <code>{selectedTech.id}</code> · Категория {selectedTech.category} · Эра {selectedTech.era}
+                    Служебный код: <code>{selectedTech.id}</code> · Категория{" "}
+                    {selectedTech.category} · Эра {selectedTech.era}
                   </p>
                 </div>
               </div>
@@ -328,7 +329,7 @@ export function TechStudio() {
                     className={`gm-mode-btn ${viewMode === "json" ? "on" : ""}`}
                     onClick={() => setViewMode("json")}
                   >
-                    JSON
+                    Код
                   </button>
                 </div>
                 <button

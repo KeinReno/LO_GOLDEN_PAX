@@ -1,10 +1,12 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
+  type CSSProperties,
+  type SVGProps,
 } from "react";
 import { Search, Maximize2, Minimize2 } from "lucide-react";
 import type { TechnologyDef } from "../../../state/contentCatalog";
@@ -13,11 +15,11 @@ import {
   directionLabel,
   type TechDirectionId,
 } from "../../../state/techDirections";
-import { computeOrbitLayout, type OrbitLayoutTech, type OrbitNode } from "./computeOrbitLayout";
+import { computeFocusedOrbitLayout, computeOrbitLayout, type OrbitLayoutTech, type OrbitNode } from "./computeOrbitLayout";
 import { computeDirectionProgress, type DirectionProgress } from "./computeDirectionProgress";
 import { computeHorizon, type HorizonNodeState } from "./computeHorizon";
 import { SILHOUETTE_SHAPES } from "./silhouetteShapes";
-import { setTechDragId, clearTechDragIdDeferred, isCognitioDragging } from "../researchDragBus";
+import { techGlyph } from "../techGlyph";
 
 /**
  * Tier 2 of the science screen (§1a-§1e of SCIENCE_ORBIT_REDESIGN_SPEC.md) —
@@ -47,6 +49,13 @@ function zoomToward(view: ViewState, nextZoom: number, originX: number, originY:
   return { zoom, panX: originX - wx * zoom, panY: originY - wy * zoom };
 }
 
+function hexPoints(r: number): string {
+  return Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i - Math.PI / 6;
+    return `${(Math.cos(a) * r).toFixed(2)},${(Math.sin(a) * r).toFixed(2)}`;
+  }).join(" ");
+}
+
 export type OrbitGraphProps = {
   directions: TechDirectionId[];
   /** direction id -> that direction's real (non-catalog-stub) tech list, stable rank order. */
@@ -62,6 +71,12 @@ export type OrbitGraphProps = {
   onFocusDirectionChange: (direction: TechDirectionId | null) => void;
   /** Dropping the header's dragged cognitio chip onto a node — research it now or accelerate its queue slot. */
   onCognitioDrop?: (id: string) => void;
+  /** Hide the 6-direction chip bar when the parent already has a task rail. */
+  hideDirectionTabs?: boolean;
+  /** Palette filter (economy A–F). Layout stays; non-matching nodes fade. */
+  categoryFilter?: string | null;
+  onCategoryFilterChange?: (id: string | null) => void;
+  categoryChips?: { id: string; name: string; color: string; tier: number }[];
 };
 
 export function OrbitGraph({
@@ -74,13 +89,23 @@ export function OrbitGraph({
   focusDirection,
   onFocusDirectionChange,
   onCognitioDrop,
+  hideDirectionTabs = false,
+  categoryFilter = null,
+  onCategoryFilterChange,
+  categoryChips,
 }: OrbitGraphProps) {
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<ViewState>({ panX: 0, panY: 0, zoom: 1 });
   const [search, setSearch] = useState("");
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+
+  useEffect(() => {
+    setView({ panX: 0, panY: 0, zoom: 1 });
+    setExpanded(false);
+  }, [focusDirection]);
 
   const techById = useMemo(() => {
     const m = new Map<string, TechnologyDef>();
@@ -105,7 +130,15 @@ export function OrbitGraph({
     return out;
   }, [techsByDirection]);
 
-  const layout = useMemo(() => computeOrbitLayout(directions, layoutTechs), [directions, layoutTechs]);
+  const layout = useMemo(() => {
+    if (focusDirection) {
+      return computeFocusedOrbitLayout(
+        focusDirection,
+        layoutTechs.filter((t) => t.direction === focusDirection),
+      );
+    }
+    return computeOrbitLayout(directions, layoutTechs);
+  }, [directions, layoutTechs, focusDirection]);
   const nodeById = useMemo(() => new Map(layout.nodes.map((n) => [n.id, n])), [layout]);
 
   const horizon = useMemo(
@@ -114,14 +147,20 @@ export function OrbitGraph({
   );
   const horizonByDirection = useMemo(() => new Map(horizon.map((h) => [h.direction, h])), [horizon]);
 
-  const maxOuterRadius = useMemo(
-    () =>
-      layout.sectors.reduce(
-        (m, s) => Math.max(m, Math.hypot(s.apexX, s.apexY) + s.outerRadius),
-        100,
-      ),
-    [layout],
-  );
+  const maxOuterRadius = useMemo(() => {
+    if (focusDirection) {
+      return layout.sectors[0]?.outerRadius ?? 100;
+    }
+    return layout.sectors.reduce(
+      (m, s) => Math.max(m, Math.hypot(s.apexX, s.apexY) + s.outerRadius),
+      100,
+    );
+  }, [layout, focusDirection]);
+  const ringRadii = useMemo(() => {
+    const set = new Set<number>();
+    for (const n of layout.nodes) set.add(Math.round(n.radius));
+    return [...set].sort((a, b) => a - b);
+  }, [layout.nodes]);
   const stageSize = (maxOuterRadius + STAGE_PAD) * 2;
 
   const searchLower = search.trim().toLowerCase();
@@ -154,18 +193,25 @@ export function OrbitGraph({
     [expanded, expandedSectors, techsByDirection, nodeById, unlocked, horizonByDirection],
   );
 
-  const onWheel = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const rect = stageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const ox = e.clientX - rect.left;
-    const oy = e.clientY - rect.top;
-    setView((v) => zoomToward(v, v.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), ox, oy));
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const ox = e.clientX - rect.left;
+      const oy = e.clientY - rect.top;
+      setView((v) =>
+        zoomToward(v, v.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), ox, oy),
+      );
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if ((e.target as Element)?.closest("[data-orbit-node], [data-orbit-badge]")) return;
+      if ((e.target as Element)?.closest("[data-orbit-node], [data-orbit-badge], .orbit-legend")) return;
       panStateRef.current = { x: e.clientX, y: e.clientY, panX: view.panX, panY: view.panY };
       (e.target as Element).setPointerCapture?.(e.pointerId);
     },
@@ -200,6 +246,7 @@ export function OrbitGraph({
   return (
     <div className="orbit-graph-panel">
       <div className="orbit-graph-toolbar">
+        {!hideDirectionTabs ? (
         <div className="orbit-dir-legend" role="tablist" aria-label="Направления">
           {directions.map((d) => {
             const p = progressByDirection.get(d);
@@ -211,7 +258,7 @@ export function OrbitGraph({
                 role="tab"
                 aria-selected={on}
                 className={`orbit-dir-chip${on ? " on" : ""}`}
-                style={{ "--dot-c": directionColor(d) } as React.CSSProperties}
+                style={{ "--dot-c": directionColor(d) } as CSSProperties}
                 onClick={() => onFocusDirectionChange(on ? null : d)}
                 title={p ? `${directionLabel(d)}: ${p.researched}/${p.total}` : directionLabel(d)}
               >
@@ -221,6 +268,37 @@ export function OrbitGraph({
             );
           })}
         </div>
+        ) : (
+          <span className="orbit-graph-axis">
+            {focusDirection ? directionLabel(focusDirection) : "Направление"}
+          </span>
+        )}
+        {categoryChips && onCategoryFilterChange ? (
+          <div className="orbit-cat-chips" role="group" aria-label="Потоки экономики">
+            <button
+              type="button"
+              className={`orbit-cat-chip ${categoryFilter == null ? "on" : ""}`}
+              onClick={() => onCategoryFilterChange(null)}
+            >
+              Все
+            </button>
+            {categoryChips.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`orbit-cat-chip ${categoryFilter === c.id ? "on" : ""}`}
+                style={{ "--dot-c": c.color } as CSSProperties}
+                title={`${c.name} · тир ${c.tier}`}
+                onClick={() =>
+                  onCategoryFilterChange(categoryFilter === c.id ? null : c.id)
+                }
+              >
+                <span className="orbit-dir-dot" aria-hidden />
+                {c.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="orbit-toolbar-spacer" />
         <label className="orbit-search-box">
           <Search size={12} strokeWidth={1.8} aria-hidden />
@@ -256,7 +334,6 @@ export function OrbitGraph({
       <div
         className="orbit-graph-stage"
         ref={stageRef}
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -269,7 +346,18 @@ export function OrbitGraph({
           viewBox={`${-stageSize / 2} ${-stageSize / 2} ${stageSize} ${stageSize}`}
         >
           <g transform={`translate(${view.panX} ${view.panY}) scale(${view.zoom})`}>
-            {layout.sectors.map((s) => {
+            {focusDirection
+              ? ringRadii.map((r) => (
+                  <circle
+                    key={`ring-${r}`}
+                    r={r}
+                    fill="none"
+                    stroke="rgba(120,140,170,0.28)"
+                    strokeWidth={1.4}
+                    strokeDasharray="5 7"
+                  />
+                ))
+              : layout.sectors.map((s) => {
               const dim = focusDirection != null && focusDirection !== s.direction;
               const large = s.endAngle - s.startAngle > Math.PI ? 1 : 0;
               const r = s.outerRadius + 30;
@@ -287,7 +375,8 @@ export function OrbitGraph({
               );
             })}
 
-            {layout.sectors.map((s) => (
+            {!focusDirection &&
+            layout.sectors.map((s) => (
               <line
                 key={`stem-${s.direction}`}
                 x1={0}
@@ -296,12 +385,23 @@ export function OrbitGraph({
                 y2={s.apexY}
                 stroke={directionColor(s.direction)}
                 strokeWidth={1}
-                opacity={focusDirection != null && focusDirection !== s.direction ? 0.05 : 0.18}
+                opacity={0.18}
               />
             ))}
 
-            <circle r={26} fill="var(--accent, #c9a227)" opacity={0.12} />
-            <circle r={26} fill="none" stroke="var(--line-accent, rgba(201,162,39,.45))" strokeWidth={1} />
+            <circle r={52} fill="var(--accent, #c9a227)" opacity={0.06} />
+            <circle r={26} fill="var(--accent, #c9a227)" opacity={0.16} />
+            <circle r={26} fill="none" stroke="var(--line-accent, rgba(201,162,39,.45))" strokeWidth={1.4} />
+            {focusDirection ? (
+              <text
+                y={4}
+                textAnchor="middle"
+                className="orbit-node-label"
+                fill="var(--accent-2, #e8c547)"
+              >
+                {directionLabel(focusDirection)}
+              </text>
+            ) : null}
 
             {layout.sectors.map((s) => {
               const phase = progressByDirection.get(s.direction)?.phase ?? "dormant";
@@ -364,11 +464,16 @@ export function OrbitGraph({
                     const tech = techById.get(node.id);
                     if (!tech) return null;
                     const matches = searchLower && tech.name.toLowerCase().includes(searchLower);
-                    const faded = searchLower.length > 0 && !matches;
+                    const catMiss =
+                      !!categoryFilter && tech.category !== categoryFilter;
+                    const faded =
+                      (searchLower.length > 0 && !matches) || catMiss;
                     const isSelected = node.id === selectedId;
                     const isQueued = queue.includes(node.id);
                     const isDoor = phase === "dormant";
-                    const radius = isDoor ? 9 : state === "done" ? 5 : 4.5;
+                    const radius =
+                      isDoor || state === "frontier" ? 11 : state === "done" ? 9 : 7;
+                    const glyph = techGlyph(tech);
                     // SVG elements support the native `draggable` DOM attribute at
                     // runtime, but React's SVGProps typings omit it (HTML-only) —
                     // spread it in via an explicit cast rather than sprinkling
@@ -379,7 +484,7 @@ export function OrbitGraph({
                             draggable: true,
                             onDragStart: startDrag(node.id),
                             onDragEnd: () => clearTechDragIdDeferred(),
-                          } as unknown as React.SVGProps<SVGCircleElement>)
+                          } as unknown as SVGProps<SVGCircleElement>)
                         : {};
                     // Header's cognitio chip drop target: drag the "Знание"
                     // number onto a node to research it now (or accelerate
@@ -396,57 +501,69 @@ export function OrbitGraph({
                               e.preventDefault();
                               onCognitioDrop(node.id);
                             },
-                          } as unknown as React.SVGProps<SVGCircleElement>)
+                          } as unknown as SVGProps<SVGCircleElement>)
                         : {};
+                    const kind =
+                      state === "frontier"
+                        ? "frontier"
+                        : state === "done"
+                          ? "done"
+                          : "dim";
                     return (
                       <g
                         key={node.id}
                         transform={`translate(${node.x} ${node.y})`}
-                        opacity={faded ? 0.15 : 1}
+                        opacity={faded ? 0.18 : 1}
+                        className={[
+                          "orbit-node",
+                          `orbit-node--${kind}`,
+                          isSelected ? "is-sel" : "",
+                          isQueued ? "is-q" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        style={{ "--node-c": color } as CSSProperties}
+                        onPointerEnter={() => setHoveredId(node.id)}
+                        onPointerLeave={() =>
+                          setHoveredId((cur) => (cur === node.id ? null : cur))
+                        }
                       >
+                        <polygon
+                          className="orbit-node-halo"
+                          points={hexPoints(radius + 5)}
+                        />
+                        <polygon
+                          className="orbit-node-core"
+                          points={hexPoints(radius)}
+                        />
+                        <circle className="orbit-node-iris" r={Math.max(3.2, radius - 4)} />
                         <circle
                           data-orbit-node
-                          r={radius}
-                          fill={
-                            state === "done"
-                              ? color
-                              : state === "frontier"
-                                ? "var(--ok, #5cdb95)"
-                                : "rgba(255,255,255,0.12)"
-                          }
-                          stroke={
-                            isSelected
-                              ? "var(--accent-2, #e8c547)"
-                              : state === "dim"
-                                ? "rgba(255,255,255,0.25)"
-                                : color
-                          }
-                          strokeWidth={isSelected ? 2 : 1}
-                          strokeDasharray={state === "dim" ? "2 2" : undefined}
-                          style={
-                            isQueued
-                              ? { filter: "drop-shadow(0 0 4px var(--accent-2, #e8c547))" }
-                              : undefined
-                          }
+                          className="orbit-node-hit"
+                          r={radius + 9}
+                          fill="transparent"
                           {...dragProps}
                           {...cognitioDropProps}
                           onClick={() => onSelect(node.id)}
                           role="button"
-                          aria-label={tech.name}
+                          aria-label={`${tech.name}${
+                            state === "done"
+                              ? " · изучено"
+                              : state === "frontier"
+                                ? " · можно изучить"
+                                : " · закрыто"
+                          }`}
                         >
-                          <title>{`${tech.name}${isDoor ? " (вход)" : ""}`}</title>
+                          <title>{tech.name}</title>
                         </circle>
-                        {isDoor && (
-                          <text
-                            x={0}
-                            y={-14}
-                            textAnchor="middle"
-                            className="orbit-node-label"
-                            fill="var(--text, #e8eef4)"
-                          >
-                            {tech.name}
-                          </text>
-                        )}
+                        <text
+                          y={1.2}
+                          textAnchor="middle"
+                          className="orbit-node-glyph"
+                          style={{ pointerEvents: "none", fontSize: state === "dim" ? 7 : 9 }}
+                        >
+                          {state === "done" ? "✓" : state === "dim" ? "🔒" : glyph}
+                        </text>
                       </g>
                     );
                   })}
@@ -482,13 +599,55 @@ export function OrbitGraph({
                 </g>
               );
             })}
+            {hoveredId
+              ? (() => {
+                  const n = nodeById.get(hoveredId);
+                  const tech = techById.get(hoveredId);
+                  if (!n || !tech) return null;
+                  return (
+                    <text
+                      key={`label-${hoveredId}`}
+                      x={n.x}
+                      y={n.y - 22}
+                      textAnchor="middle"
+                      className="orbit-node-label is-up"
+                    >
+                      {tech.name}
+                    </text>
+                  );
+                })()
+              : null}
           </g>
         </svg>
 
+        <ul className="orbit-legend" aria-label="Состояния узлов">
+          <li>
+            <span className="orbit-legend__swatch is-done" aria-hidden>
+              ✓
+            </span>
+            изучено
+          </li>
+          <li>
+            <span className="orbit-legend__swatch is-now" aria-hidden />
+            можно сейчас
+          </li>
+          <li>
+            <span className="orbit-legend__swatch is-lock" aria-hidden>
+              🔒
+            </span>
+            закрыто
+          </li>
+          <li>
+            <span className="orbit-legend__swatch is-queue" aria-hidden />
+            в очереди
+          </li>
+        </ul>
         <div className="orbit-horizon-caption">
           {expanded
-            ? `Полный обзор · ${layoutTechs.length} технологий · ${directions.length} направлений`
-            : "Горизонт: изучено + ближайшие соседи · кликните «+N», чтобы развернуть направление"}
+            ? focusDirection
+              ? `Все ноды · ${directionLabel(focusDirection)}`
+              : `Полный обзор · ${layoutTechs.length} технологий · ${directions.length} направлений`
+            : "Зелёные — ближайшие неизученные. За ход идёт только 1-я в очереди, не параллельно."}
         </div>
       </div>
     </div>

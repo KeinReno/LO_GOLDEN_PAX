@@ -10,6 +10,7 @@ export {
 export { AttentionInbox } from "./AttentionInbox";
 export {
   collectAttention,
+  firstAttentionQuestId,
   questAttentionCount,
 } from "./questAttention";
 export type {

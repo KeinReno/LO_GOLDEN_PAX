@@ -74,6 +74,13 @@ export function liveQuests(quests: Quest[]): Quest[] {
   );
 }
 
+export function firstAttentionQuestId(
+  quests: Quest[],
+  turn: number,
+): string | null {
+  return collectAttention(quests, turn)[0]?.quest.id ?? null;
+}
+
 export function workingQuests(
   quests: Quest[],
   attention: AttentionItem[],

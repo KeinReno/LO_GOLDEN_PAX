@@ -37,6 +37,17 @@ export function isTechInOffer(
   return candidates.includes(tech.id);
 }
 
+/** True only if this tech is one of the current 3-card offer on its axis. */
+export function isOfferedCandidate(
+  tech: TechnologyDef,
+  eco: EcoSlice | undefined,
+): boolean {
+  const axis = resolveTechDirection(tech);
+  if (!axis) return false;
+  const grouped = groupOffersByDirection(eco?.currentOffers);
+  return (grouped[axis]?.candidates || []).includes(tech.id);
+}
+
 function researchCostMult(
   eco: EcoSlice | undefined,
   category: string | undefined,

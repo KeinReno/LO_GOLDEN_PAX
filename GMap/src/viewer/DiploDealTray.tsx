@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { DragCard } from "../ui/DragCard";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import {
@@ -13,6 +12,11 @@ import { getCachedContent } from "../state/contentCatalog";
 import type { DiplomacyRelation } from "../state/types";
 import type { TradeAssetPool } from "./diploTradeTypes";
 import { diploCardId } from "./diploDealCards";
+import { groupByKey, groupByStar, worldsLine } from "./diploHandGroups";
+import {
+  directionLabel,
+  FALLBACK_DIRECTION_IDS,
+} from "../state/techDirections";
 
 const TREASURY = [
   { id: BUILD_METAL.id, short: BUILD_METAL.short, name: BUILD_METAL.label, accent: "var(--text-secondary)" },
@@ -35,10 +39,54 @@ const MUTUAL_TREATIES: DiplomacyRelation[] = [
   "vassal",
 ];
 
-type HandTab = "treasury" | "forces" | "treaties";
+type HandTab = "treasury" | "forces" | "worlds" | "techs" | "treaties" | "acts";
 
-function giveBlocked(target: "give" | "want", stock: number, disabled?: boolean) {
-  return !!disabled || (target === "give" && stock <= 0);
+export type DiploHandTab = HandTab;
+
+export const DIPLO_GIVE_SECTIONS: { id: HandTab; label: string }[] = [
+  { id: "treasury", label: "Казна" },
+  { id: "forces", label: "Силы" },
+  { id: "worlds", label: "Миры" },
+  { id: "techs", label: "Технологии" },
+  { id: "treaties", label: "Договоры" },
+  { id: "acts", label: "Жесты" },
+];
+
+export const DIPLO_WANT_SECTIONS: { id: HandTab; label: string }[] = [
+  { id: "treasury", label: "Ресурсы" },
+  { id: "forces", label: "Их силы" },
+  { id: "worlds", label: "Их миры" },
+  { id: "treaties", label: "Договоры" },
+];
+
+export function DiploDealSections({
+  sections,
+  value,
+  disabled,
+  onChange,
+}: {
+  sections: { id: HandTab; label: string }[];
+  value: HandTab | null;
+  disabled?: boolean;
+  onChange: (id: HandTab | null) => void;
+}) {
+  return (
+    <div className="diplo-desk__tasks" role="tablist">
+      {sections.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          role="tab"
+          aria-selected={value === s.id}
+          className={value === s.id ? "is-on" : ""}
+          disabled={disabled}
+          onClick={() => onChange(value === s.id ? null : s.id)}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function ownedMaterials(stocks?: Record<string, number>) {
@@ -57,95 +105,59 @@ function ownedMaterials(stocks?: Record<string, number>) {
 }
 
 /**
- * Deal hand: informative cards. Drop onto the offer columns (not empty boxes).
- * Click uses the Отдаю/Прошу target — keyboard/touch fallback for drag.
+ * Cards for one chosen section. Empty until the sidebar picks a tab.
  */
 export function DiploDealTray({
+  side,
+  tab,
   stocks,
-  myAssets,
-  theirAssets,
+  assets,
   disabled,
-  target,
-  onTarget,
   onActivate,
-  dealHint,
 }: {
+  side: "give" | "want";
+  tab: DiploHandTab | null;
   stocks?: Record<string, number>;
-  myAssets: TradeAssetPool;
-  theirAssets: TradeAssetPool;
+  assets: TradeAssetPool;
   disabled?: boolean;
-  target: "give" | "want";
-  onTarget: (side: "give" | "want") => void;
   onActivate: (cardId: string) => void;
-  dealHint?: string;
 }) {
-  const [tab, setTab] = useState<HandTab>("treasury");
-  const materials = ownedMaterials(stocks);
+  const materials = side === "give" ? ownedMaterials(stocks) : [];
+  const asking = side === "want";
+
+  if (!tab) {
+    return (
+      <p className="hint diplo-desk__hand-empty">
+        {asking
+          ? "Справа выберите раздел — карты появятся здесь"
+          : "Слева выберите раздел — карты появятся здесь"}
+      </p>
+    );
+  }
 
   return (
-    <div className="gc-deal-tray">
-      <div className="gc-deal-tray__toolbar">
-        <div className="gc-deal-tray__sides" role="group" aria-label="Куда класть кликом">
-          <button
-            type="button"
-            className={target === "give" ? "on" : ""}
-            disabled={disabled}
-            onClick={() => onTarget("give")}
-          >
-            Отдаю
-          </button>
-          <button
-            type="button"
-            className={target === "want" ? "on" : ""}
-            disabled={disabled}
-            onClick={() => onTarget("want")}
-          >
-            Прошу
-          </button>
-        </div>
-        <p className="hint gc-deal-tray__hint" role="status">
-          {dealHint ||
-            `Перетащите на колонку слева/справа или кликните карту → ${target === "give" ? "отдаю" : "прошу"}`}
-        </p>
-      </div>
-      <div className="gc-deal-tray__tabs anim-tabs" role="tablist">
-        {(
-          [
-            ["treasury", "Казна"],
-            ["forces", "Силы и миры"],
-            ["treaties", "Договоры"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            className={tab === id ? "on" : ""}
-            disabled={disabled}
-            onClick={() => setTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="gc-deal-tray__hand" aria-label="Карты для сделки">
+    <div className={`gc-deal-tray gc-deal-tray--${side}`}>
+      <div className="gc-deal-tray__hand" aria-label={asking ? "Карты в Прошу" : "Карты в Отдаю"}>
         {tab === "treasury" && (
           <>
             {TREASURY.map((c) => {
               const stock = stocks?.[c.id] ?? 0;
               const cardId = diploCardId({ kind: "resource", currencyId: c.id });
-              const blocked = giveBlocked(target, stock, disabled);
+              const blocked = !!disabled || (!asking && stock <= 0);
               return (
                 <DragCard
                   key={c.id}
                   cardId={cardId}
                   title={c.name}
-                  subtitle={`${c.short} · в казне ${stock}`}
+                  subtitle={
+                    asking
+                      ? `${c.short} · запросить`
+                      : `${c.short} · в казне ${stock}`
+                  }
                   accent={c.accent}
                   tilt
                   pinned={blocked}
-                  className={stock <= 0 ? "gc-deal-card--empty" : ""}
+                  className={!asking && stock <= 0 ? "gc-deal-card--empty" : ""}
                   icon={<ResourceIcon resourceId={c.id} stocks={stocks} size={16} />}
                 >
                   <button
@@ -162,7 +174,6 @@ export function DiploDealTray({
             })}
             {materials.map((m) => {
               const cardId = diploCardId({ kind: "resource", currencyId: m.id });
-              const blocked = giveBlocked(target, m.stock, disabled);
               return (
                 <DragCard
                   key={m.id}
@@ -171,14 +182,13 @@ export function DiploDealTray({
                   subtitle={`сырьё · ${m.stock}`}
                   accent="var(--signal-warning, #c9a227)"
                   tilt
-                  pinned={blocked}
-                  className={m.stock <= 0 ? "gc-deal-card--empty" : ""}
+                  pinned={!!disabled}
                   icon={<ResourceIcon resourceId={m.id} stocks={stocks} size={16} />}
                 >
                   <button
                     type="button"
                     className="gc-deal-card__act"
-                    disabled={blocked}
+                    disabled={disabled}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={() => onActivate(cardId)}
                   >
@@ -190,83 +200,64 @@ export function DiploDealTray({
           </>
         )}
         {tab === "forces" && (
+          <ForceGroups
+            fleets={assets.fleets}
+            legions={assets.legions}
+            asking={asking}
+            disabled={disabled}
+            onActivate={onActivate}
+          />
+        )}
+        {tab === "worlds" && (
           <>
-            <p className="gc-deal-tray__group">Моё — только в «Отдаю»</p>
-            {myAssets.fleets.slice(0, 12).map((f) => (
-              <ForceCard
-                key={f.id}
-                cardId={diploCardId({ kind: "fleet", fleetId: f.id })}
-                title={f.name}
-                subtitle={f.where ? `флот · ${f.where}` : "флот"}
-                disabled={disabled}
-                onActivate={onActivate}
-              />
-            ))}
-            {myAssets.legions.slice(0, 8).map((l) => (
-              <ForceCard
-                key={l.id}
-                cardId={diploCardId({ kind: "legion", legionId: l.id })}
-                title={l.name}
-                subtitle={l.where ? `легион · ${l.where}` : "легион"}
-                disabled={disabled}
-                onActivate={onActivate}
-              />
-            ))}
-            {myAssets.systems.slice(0, 12).map((s) => (
+            {assets.systems.map((s) => (
               <ForceCard
                 key={s.id}
                 cardId={diploCardId({ kind: "system", systemId: s.id })}
                 title={s.name}
-                subtitle="система"
+                subtitle={worldsLine(s.worlds)}
                 disabled={disabled}
                 onActivate={onActivate}
               />
             ))}
-            {myAssets.techs.slice(0, 10).map((t) => (
-              <ForceCard
-                key={t.id}
-                cardId={diploCardId({ kind: "tech", techId: t.id })}
-                title={t.name}
-                subtitle="технология"
-                disabled={disabled}
-                onActivate={onActivate}
-              />
-            ))}
-            {theirAssets.fleets.length + theirAssets.systems.length > 0 && (
-              <p className="gc-deal-tray__group">Их видимое — только в «Прошу»</p>
+            {assets.systems.length === 0 && (
+              <p className="hint">
+                {asking
+                  ? "Их миры пока не видны разведке."
+                  : "Нет систем, которые можно отдать."}
+              </p>
             )}
-            {theirAssets.fleets.slice(0, 8).map((f) => (
-              <ForceCard
-                key={`t-${f.id}`}
-                cardId={diploCardId({ kind: "fleet", fleetId: f.id })}
-                title={f.name}
-                subtitle={f.where ? `их флот · ${f.where}` : "их флот"}
-                disabled={disabled}
-                onActivate={onActivate}
-              />
+          </>
+        )}
+        {tab === "techs" && (
+          <>
+            {groupByKey(
+              assets.techs,
+              (t) => t.direction || "industry",
+              FALLBACK_DIRECTION_IDS,
+            ).map((g) => (
+              <div key={g.key} className="gc-deal-tray__star-group">
+                <p className="gc-deal-tray__star">{directionLabel(g.key)}</p>
+                <div className="gc-deal-tray__star-cards">
+                  {g.items.map((t) => (
+                    <ForceCard
+                      key={t.id}
+                      cardId={diploCardId({ kind: "tech", techId: t.id })}
+                      title={t.name}
+                      subtitle="на стол"
+                      disabled={disabled}
+                      onActivate={onActivate}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
-            {theirAssets.legions.slice(0, 6).map((l) => (
-              <ForceCard
-                key={`t-${l.id}`}
-                cardId={diploCardId({ kind: "legion", legionId: l.id })}
-                title={l.name}
-                subtitle="их легион"
-                disabled={disabled}
-                onActivate={onActivate}
-              />
-            ))}
-            {theirAssets.systems.slice(0, 8).map((s) => (
-              <ForceCard
-                key={`t-${s.id}`}
-                cardId={diploCardId({ kind: "system", systemId: s.id })}
-                title={s.name}
-                subtitle="их система"
-                disabled={disabled}
-                onActivate={onActivate}
-              />
-            ))}
-            {myAssets.fleets.length + myAssets.systems.length + theirAssets.fleets.length === 0 && (
-              <p className="hint">Нет флотов и систем на руке — полный список в колонке сделки.</p>
+            {assets.techs.length === 0 && (
+              <p className="hint">
+                {asking
+                  ? "Их науки скрыты."
+                  : "Нет технологий, которые можно передать."}
+              </p>
             )}
           </>
         )}
@@ -278,7 +269,7 @@ export function DiploDealTray({
                 key={t}
                 cardId={cardId}
                 title={DIPLOMACY_LABELS[t] ?? t}
-                subtitle="взаимный договор · нужна их печать"
+                subtitle={asking ? "просим их печать" : "предлагаем договор"}
                 accent="var(--accent)"
                 tilt
                 pinned={!!disabled}
@@ -297,6 +288,65 @@ export function DiploDealTray({
           })}
       </div>
     </div>
+  );
+}
+
+function ForceGroups({
+  fleets,
+  legions,
+  asking,
+  disabled,
+  onActivate,
+}: {
+  fleets: TradeAssetPool["fleets"];
+  legions: TradeAssetPool["legions"];
+  asking: boolean;
+  disabled?: boolean;
+  onActivate: (cardId: string) => void;
+}) {
+  const mixed = [
+    ...fleets.map((f) => ({
+      ...f,
+      kind: "fleet" as const,
+    })),
+    ...legions.map((l) => ({
+      ...l,
+      kind: "legion" as const,
+    })),
+  ];
+  if (mixed.length === 0) {
+    return (
+      <p className="hint">
+        {asking
+          ? "Их флоты и легионы пока не видны разведке."
+          : "Нет сил на руке."}
+      </p>
+    );
+  }
+  return (
+    <>
+      {groupByStar(mixed).map((g) => (
+        <div key={g.star} className="gc-deal-tray__star-group">
+          <p className="gc-deal-tray__star">{g.star}</p>
+          <div className="gc-deal-tray__star-cards">
+            {g.items.map((item) => (
+              <ForceCard
+                key={item.id}
+                cardId={
+                  item.kind === "fleet"
+                    ? diploCardId({ kind: "fleet", fleetId: item.id })
+                    : diploCardId({ kind: "legion", legionId: item.id })
+                }
+                title={item.name}
+                subtitle={item.kind === "fleet" ? "флот" : "легион"}
+                disabled={disabled}
+                onActivate={onActivate}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 

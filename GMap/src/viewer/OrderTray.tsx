@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import type { PlayerOrder } from "../state/types";
 import {
   formatOrderEtaChip,
+  formatOrderEtaShort,
   isActiveProcessOrder,
   orderTypeLabel,
 } from "./orderEtaLabels";
 import {
+  formatForceOdHud,
   formatForceOdMeter,
+  formatOdHud,
   formatOdMeter,
   FORCE_OD_TOOLTIP,
   OD_TOOLTIP,
@@ -31,12 +34,21 @@ function Meter({ label, used, max, tooltip }: MeterProps) {
   );
 }
 
-function ProcessChip({ order, currentTurn }: { order: PlayerOrder; currentTurn: number }) {
+function ProcessChip({
+  order,
+  currentTurn,
+  compact,
+}: {
+  order: PlayerOrder;
+  currentTurn: number;
+  compact?: boolean;
+}) {
   const label = orderTypeLabel(order.type);
-  const eta = formatOrderEtaChip(order, currentTurn);
-  const title = `${label}: ${eta}`;
+  const eta = compact
+    ? formatOrderEtaShort(order, currentTurn)
+    : formatOrderEtaChip(order, currentTurn);
   return (
-    <span className="order-tray__chip" title={title}>
+    <span className="order-tray__chip" title={`${label}: ${eta}`}>
       <span className="order-tray__chip-label">{label}</span>
       <span className="order-tray__chip-eta">{eta}</span>
     </span>
@@ -52,11 +64,7 @@ export type OrderTrayProps = {
   currentTurn?: number;
 };
 
-/**
- * Shared, always-visible action-budget readout — same numbers regardless of
- * which room spent them (Наука/Биржа/Карта/…). Mounted as an unconditional
- * dock sibling in ViewerPage so it survives every viewMode switch.
- */
+/** Map HUD: compact OD + in-flight processes, top-right. */
 export function OrderTray({
   apUsed,
   apMax,
@@ -65,108 +73,83 @@ export function OrderTray({
   activeOrders = [],
   currentTurn = 0,
 }: OrderTrayProps) {
-  const [compact, setCompact] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const processes = activeOrders.filter(isActiveProcessOrder);
+  const odShort = formatOdHud(apUsed, apMax);
+  const forceShort = formatForceOdHud(forceApUsed, forceApMax);
   const odLabel = formatOdMeter(apUsed, apMax);
   const forceLabel = formatForceOdMeter(forceApUsed, forceApMax);
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 720px)");
-    const sync = () => setCompact(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    if (!sheetOpen) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSheetOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sheetOpen]);
-
-  if (compact) {
-    return (
-      <>
-        <button
-          type="button"
-          className="order-tray order-tray--compact"
-          aria-label={`Очки действия: ${odLabel}, силы: ${forceLabel}`}
-          aria-expanded={sheetOpen}
-          onClick={() => setSheetOpen((v) => !v)}
-        >
-          <span className="order-tray__compact-line">
-            {odLabel} · {forceLabel}
-          </span>
-        </button>
-        {sheetOpen ? (
-          <div
-            className="order-tray-sheet"
-            role="dialog"
-            aria-label="Очки действия"
-          >
-            <div className="order-tray-sheet__body">
-              <Meter
-                label={odLabel}
-                used={apUsed}
-                max={apMax}
-                tooltip={OD_TOOLTIP}
-              />
-              <Meter
-                label={forceLabel}
-                used={forceApUsed}
-                max={forceApMax}
-                tooltip={FORCE_OD_TOOLTIP}
-              />
-              {processes.length > 0 ? (
-                <div className="order-tray__processes" aria-label="Активные процессы">
-                  {processes.slice(0, 4).map((o) => (
-                    <ProcessChip key={o.id} order={o} currentTurn={currentTurn} />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              className="order-tray-sheet__backdrop"
-              aria-label="Закрыть"
-              onClick={() => setSheetOpen(false)}
-            />
-          </div>
-        ) : null}
-      </>
-    );
-  }
+  }, [open]);
 
   return (
-    <div className="order-tray" role="group" aria-label="Очки действия">
-      <Meter
-        label={odLabel}
-        used={apUsed}
-        max={apMax}
-        tooltip={OD_TOOLTIP}
-      />
-      <Meter
-        label={forceLabel}
-        used={forceApUsed}
-        max={forceApMax}
-        tooltip={FORCE_OD_TOOLTIP}
-      />
-      {processes.length > 0 && (
-        <div className="order-tray__processes" aria-label="Активные процессы">
-          {processes.slice(0, 4).map((o) => (
-            <ProcessChip key={o.id} order={o} currentTurn={currentTurn} />
-          ))}
-          {processes.length > 4 && (
-            <span className="order-tray__chip order-tray__chip--more">
-              +{processes.length - 4}
-            </span>
+    <div
+      className={`order-tray order-tray--hud${open ? " is-open" : ""}`}
+      role="group"
+      aria-label="Очки действия"
+    >
+      <button
+        type="button"
+        className="order-tray__toggle"
+        aria-expanded={open}
+        aria-label={`Очки действия: ${odLabel}, силы: ${forceLabel}${
+          processes.length ? `, в пути ${processes.length}` : ""
+        }`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="order-tray__compact-line">
+          {odShort}
+          <span className="order-tray__sep" aria-hidden>
+            ·
+          </span>
+          {forceShort}
+        </span>
+        {processes.length > 0 ? (
+          <span className="order-tray__count">{processes.length}</span>
+        ) : null}
+      </button>
+      {open ? (
+        <div className="order-tray__panel">
+          <Meter
+            label={odLabel}
+            used={apUsed}
+            max={apMax}
+            tooltip={OD_TOOLTIP}
+          />
+          <Meter
+            label={forceLabel}
+            used={forceApUsed}
+            max={forceApMax}
+            tooltip={FORCE_OD_TOOLTIP}
+          />
+          {processes.length > 0 ? (
+            <div className="order-tray__processes" aria-label="Активные процессы">
+              {processes.slice(0, 6).map((o) => (
+                <ProcessChip
+                  key={o.id}
+                  order={o}
+                  currentTurn={currentTurn}
+                  compact
+                />
+              ))}
+              {processes.length > 6 ? (
+                <span className="order-tray__chip order-tray__chip--more">
+                  +{processes.length - 6}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <p className="hint order-tray__empty">В пути ничего нет.</p>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

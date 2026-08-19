@@ -1,8 +1,11 @@
 import {
   type CSSProperties,
+  useEffect,
+  useState,
 } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { BookOpen, MapPin } from "lucide-react";
+import { HoldRevealButton } from "../../ui/HoldRevealButton";
 import { StatefulButton } from "../../ui/StatefulButton";
 import { QuestDiceRoller } from "./DiceRoller";
 import { canAffordCosts } from "./adaptQuest";
@@ -12,6 +15,15 @@ import {
   openCourtForNpc,
   QuestAssignedChip,
 } from "./QuestDossierView";
+import {
+  choiceNeedsHold,
+  diceDifficultyLabel,
+  digitChoiceIndex,
+  enterChoiceAction,
+  formatChoiceOutcome,
+} from "./questChoiceUi";
+
+const EMPTY_CHOICES: QuestChoice[] = [];
 
 export type QuestStageProps = {
   quest: Quest | null;
@@ -30,34 +42,89 @@ export type QuestStageProps = {
   } | null;
   onDiceSettled?: () => void;
   compact?: boolean;
+  /** Spend/dice: Enter does not resolve — player must hold the card. */
+  onNeedHold?: () => void;
 };
+
+function ChoiceBody({
+  choice,
+  index,
+  affordable,
+}: {
+  choice: QuestChoice;
+  index: number;
+  affordable: boolean;
+}) {
+  const outcome = formatChoiceOutcome(choice);
+  return (
+    <>
+      <span className="quest-choice-card__hotkey">{index + 1}</span>
+      <strong>{choice.label}</strong>
+      {choice.hint ? <span className="hint">{choice.hint}</span> : null}
+      {choice.costLabel ? (
+        <span
+          className={`quest-choice-card__cost ${!affordable ? "is-short" : ""}`}
+        >
+          {choice.costLabel}
+        </span>
+      ) : null}
+      {outcome ? (
+        <span className="quest-choice-card__outcome">{outcome}</span>
+      ) : null}
+      {choiceNeedsHold(choice) ? (
+        <span className="hint quest-choice-card__hold">удержите</span>
+      ) : null}
+    </>
+  );
+}
 
 function ChoiceFan({
   choices,
   busy,
   stocks,
+  pendingId,
+  onArm,
   onChoose,
 }: {
   choices: QuestChoice[];
   busy?: boolean;
   stocks?: Record<string, number>;
+  pendingId: string | null;
+  onArm: (id: string) => void;
   onChoose: (id: string) => void;
 }) {
+  const holdCount = choices.filter(choiceNeedsHold).length;
   return (
     <div className="quest-choice-fan">
       <p className="hint quest-choice-fan__hint">
-        Выберите вариант (1–{choices.length})
+        {holdCount > 0
+          ? `Цифра ${choices.length > 1 ? `1–${choices.length}` : "1"} подсвечивает. Обычный — клик или Enter. Трата — удержите.`
+          : `Цифра подсвечивает, клик или Enter подтверждает`}
       </p>
       <div className="quest-choice-fan__row" role="list">
         {choices.map((c, i) => {
           const affordable = canAffordCosts(c.costs, stocks);
+          const hold = choiceNeedsHold(c);
+          const armed = pendingId === c.id;
           const title = [
             c.hint,
+            formatChoiceOutcome(c),
             c.costLabel,
             !affordable ? "Недостаточно ресурсов" : null,
+            hold ? "Удержите, отменить нельзя" : null,
           ]
             .filter(Boolean)
             .join(" · ");
+          const className = [
+            "quest-choice-card",
+            !affordable ? "is-unaffordable" : "",
+            armed ? "is-armed" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          const fanStyle = {
+            "--fan-i": i - (choices.length - 1) / 2,
+          } as CSSProperties;
           return (
             <motion.div
               key={c.id}
@@ -66,32 +133,30 @@ function ChoiceFan({
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: i * 0.04 }}
             >
-              <button
-                type="button"
-                className={`quest-choice-card ${!affordable ? "is-unaffordable" : ""}`}
-                disabled={busy || !affordable}
-                style={
-                  {
-                    "--fan-i": i - (choices.length - 1) / 2,
-                  } as CSSProperties
-                }
-                onClick={() => onChoose(c.id)}
-                title={title}
-              >
-                <span className="quest-choice-card__hotkey">{i + 1}</span>
-                <strong>{c.label}</strong>
-                {c.hint ? <span className="hint">{c.hint}</span> : null}
-                {c.costLabel ? (
-                  <span
-                    className={`quest-choice-card__cost ${!affordable ? "is-short" : ""}`}
-                  >
-                    {c.costLabel}
-                  </span>
-                ) : null}
-                {c.needsDice ? (
-                  <span className="quest-choice-card__dice">🎲</span>
-                ) : null}
-              </button>
+              {hold ? (
+                <HoldRevealButton
+                  className={className}
+                  disabled={busy || !affordable}
+                  style={fanStyle}
+                  title={title}
+                  danger={(c.effects ?? []).some((e) => e.value < 0)}
+                  onPressStart={() => onArm(c.id)}
+                  onHoldComplete={() => onChoose(c.id)}
+                >
+                  <ChoiceBody choice={c} index={i} affordable={affordable} />
+                </HoldRevealButton>
+              ) : (
+                <button
+                  type="button"
+                  className={className}
+                  disabled={busy || !affordable}
+                  style={fanStyle}
+                  title={title}
+                  onClick={() => onChoose(c.id)}
+                >
+                  <ChoiceBody choice={c} index={i} affordable={affordable} />
+                </button>
+              )}
             </motion.div>
           );
         })}
@@ -197,10 +262,10 @@ function Briefing({
             ) : null}
             {quest.diceCheck ? (
               <span className="quest-card-chip">
-                d{quest.diceCheck.dice}
-                {quest.diceCheck.dc != null
-                  ? ` · DC ${quest.diceCheck.dc}`
-                  : ""}
+                {diceDifficultyLabel(
+                  quest.diceCheck.dice,
+                  quest.diceCheck.dc,
+                )}
               </span>
             ) : null}
             {quest.choices?.length ? (
@@ -258,7 +323,59 @@ export function QuestStage({
   onOpenCourt,
   dicePreview,
   onDiceSettled,
+  onNeedHold,
 }: QuestStageProps) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const questId = quest?.id ?? null;
+  const choices = quest?.status === "active" ? quest.choices ?? EMPTY_CHOICES : EMPTY_CHOICES;
+
+  useEffect(() => {
+    setPendingId(null);
+  }, [questId]);
+
+  useEffect(() => {
+    if (!quest || quest.status !== "active" || !choices.length) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "Escape" && pendingId) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setPendingId(null);
+        return;
+      }
+      const idx = digitChoiceIndex(e.key, choices.length);
+      if (idx != null) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const next = choices[idx];
+        if (next) setPendingId(next.id);
+        return;
+      }
+      if (e.key === "Enter") {
+        const armed = choices.find((c) => c.id === pendingId);
+        const act = enterChoiceAction(pendingId, armed);
+        if (act === "ignore") return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (act === "hold-only") {
+          onNeedHold?.();
+          return;
+        }
+        if (armed) void onChoose(armed.id);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [quest, choices, pendingId, onChoose, onNeedHold]);
+
   if (!quest) {
     return (
       <div className="quest-stage quest-stage--empty">
@@ -267,7 +384,6 @@ export function QuestStage({
     );
   }
 
-  const choices = quest.status === "active" ? quest.choices ?? [] : [];
   const showDice =
     quest.status === "active" &&
     quest.diceCheck &&
@@ -290,6 +406,8 @@ export function QuestStage({
             choices={choices}
             busy={busy}
             stocks={stocks}
+            pendingId={pendingId}
+            onArm={setPendingId}
             onChoose={(id) => void onChoose(id)}
           />
         ) : null}
@@ -301,11 +419,10 @@ export function QuestStage({
                 value={dicePreview.value}
                 rolling={dicePreview.rolling}
                 sides={quest.diceCheck?.dice ?? 6}
-                label={
-                  quest.diceCheck?.dc != null
-                    ? `Сложность ${quest.diceCheck.dc}`
-                    : "Проверка"
-                }
+                label={diceDifficultyLabel(
+                  quest.diceCheck?.dice,
+                  quest.diceCheck?.dc,
+                )}
                 onSettled={() => onDiceSettled?.()}
               />
             ) : (
@@ -314,7 +431,7 @@ export function QuestStage({
                 busy={busy}
                 onClick={() => void onRollDice()}
               >
-                🎲 Бросить кубик
+                Бросить кубик
               </StatefulButton>
             )}
             {dicePreview && !dicePreview.rolling && dicePreview.message ? (

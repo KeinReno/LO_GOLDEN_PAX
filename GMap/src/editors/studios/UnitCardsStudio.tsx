@@ -358,7 +358,7 @@ export function UnitCardsStudio() {
                       placeholder="Название единицы..."
                     />
                     <p className="hint">
-                      ID: <code>{selectedUnit.id}</code> · Фракция: {selectedUnit.faction || "generic"}
+                      Служебный код: <code>{selectedUnit.id}</code>
                     </p>
                   </div>
                 </div>
@@ -377,7 +377,7 @@ export function UnitCardsStudio() {
                       className={`gm-mode-btn ${viewMode === "json" ? "on" : ""}`}
                       onClick={() => setViewMode("json")}
                     >
-                      JSON
+                      Код
                     </button>
                   </div>
                   <button

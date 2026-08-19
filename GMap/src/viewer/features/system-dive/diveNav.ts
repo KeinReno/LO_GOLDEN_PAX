@@ -20,3 +20,13 @@ export function diveCloseWorldPatch() {
     mapFocus: { level: "galaxy" as const },
   };
 }
+
+/** Hide the dive stage under a workbench room; keep systemFocusId. */
+export function diveLayerHiddenByRoom(
+  viewMode: string,
+  economyLinked: boolean,
+): boolean {
+  if (viewMode === "map" || viewMode === "orders") return false;
+  if (viewMode === "economy" && economyLinked) return false;
+  return true;
+}

@@ -76,6 +76,7 @@ export function ViewerPlaySheet({
         />
       )}
 
+      {(!mobile || (sheetOpen && hasTarget)) && (
       <aside
         className={`viewer-sheet ${sheetOpen && hasTarget ? "open" : ""}`}
       >
@@ -254,6 +255,7 @@ export function ViewerPlaySheet({
           </div>
         </div>
       </aside>
+      )}
     </>
   );
 }

@@ -154,4 +154,18 @@ describe("buildViewerAlerts", () => {
     assert.equal(quest?.verb, "Открыть квесты");
     assert.equal(quest?.title, "Есть решение по квесту");
   });
+
+  it("names the quest when a focus title is passed", () => {
+    const items = buildViewerAlerts({
+      payload: payload(),
+      engagements: [],
+      pendingOrderCount: 0,
+      rpUnread: 0,
+      questAttention: 1,
+      questFocusTitle: "Пиратский ультиматум",
+      callbacks: noop,
+    });
+    const quest = items.find((i) => i.kind === "quest");
+    assert.equal(quest?.title, "Пиратский ультиматум");
+  });
 });

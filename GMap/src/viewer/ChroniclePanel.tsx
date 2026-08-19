@@ -33,6 +33,8 @@ export type ChroniclePanelProps = {
   onMsg?: (m: string | null) => void;
   /** GM-only: show chapter/scene create + close/reopen controls. Requires master-token headers. */
   canManage?: boolean;
+  /** Highlight the open episode in the rail. */
+  activeEpisodeId?: string;
 };
 
 /** Scroll / chronicle of RP episodes grouped by chapter. */
@@ -43,6 +45,7 @@ export function ChroniclePanel({
   onOpenEpisode,
   onMsg,
   canManage = false,
+  activeEpisodeId,
 }: ChroniclePanelProps) {
   const [index, setIndex] = useState<ChronicleIndex | null>(null);
   const [loading, setLoading] = useState(true);
@@ -191,7 +194,9 @@ export function ChroniclePanel({
                   <li key={ep.id} className="chronicle-ep-row">
                     <button
                       type="button"
-                      className="chronicle-ep chronicle-ep--active"
+                      className={`chronicle-ep chronicle-ep--active${
+                        activeEpisodeId === ep.id ? " is-on" : ""
+                      }`}
                       onClick={() => onOpenEpisode(ch.id, ep.id, false)}
                     >
                       <strong>{ep.title}</strong>
@@ -221,7 +226,9 @@ export function ChroniclePanel({
                   <li key={ep.id} className="chronicle-ep-row">
                     <button
                       type="button"
-                      className="chronicle-ep chronicle-ep--closed"
+                      className={`chronicle-ep chronicle-ep--closed${
+                        activeEpisodeId === ep.id ? " is-on" : ""
+                      }`}
                       onClick={() => onOpenEpisode(ch.id, ep.id, true)}
                     >
                       <strong>{ep.title}</strong>

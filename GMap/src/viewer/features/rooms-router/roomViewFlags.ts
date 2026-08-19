@@ -10,6 +10,7 @@ const DESKTOP_WORKBENCH: ReadonlySet<PlayerView> = new Set([
   "quests",
   "court",
   "codex",
+  "rp",
 ]);
 
 export function isDesktopWorkbenchView(
@@ -17,6 +18,16 @@ export function isDesktopWorkbenchView(
   viewMode: PlayerView,
 ): boolean {
   return !mobile && DESKTOP_WORKBENCH.has(viewMode);
+}
+
+/** Icon-strip dock: workbench rooms and system/planet dive. */
+export function isPlayerDockCompact(
+  mobile: boolean,
+  viewMode: PlayerView,
+  diveOpen: boolean,
+): boolean {
+  if (mobile) return false;
+  return diveOpen || isDesktopWorkbenchView(mobile, viewMode);
 }
 
 export function isMobileImmersiveView(

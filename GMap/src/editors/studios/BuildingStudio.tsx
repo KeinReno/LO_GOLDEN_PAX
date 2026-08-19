@@ -58,9 +58,9 @@ function readBuildingStudioCatalog(): BuildingStudioCatalog {
 }
 
 const ZONES = [
-  { id: "surface", label: "Планетарная поверхность (Surface)" },
-  { id: "orbit", label: "Орбитальные сооружения (Orbit)" },
-  { id: "deep_space", label: "Глубокий космос / Мегаструктуры (Deep Space)" },
+  { id: "surface", label: "Планетарная поверхность" },
+  { id: "orbit", label: "Орбитальные сооружения" },
+  { id: "deep_space", label: "Глубокий космос / мегаструктуры" },
 ];
 
 const CATEGORIES = ["A", "B", "C", "D", "E", "F"];
@@ -395,7 +395,12 @@ export function BuildingStudio() {
                     placeholder="Название сооружения..."
                   />
                   <p className="hint">
-                    ID: <code>{selectedBuilding.id}</code> · Зона: {selectedBuilding.zone || "surface"}
+                    Служебный код: <code>{selectedBuilding.id}</code> ·{" "}
+                    {selectedBuilding.zone === "orbit"
+                      ? "орбита"
+                      : selectedBuilding.zone === "deep_space"
+                        ? "космос"
+                        : "поверхность"}
                   </p>
                 </div>
               </div>
@@ -414,7 +419,7 @@ export function BuildingStudio() {
                     className={`gm-mode-btn ${viewMode === "json" ? "on" : ""}`}
                     onClick={() => setViewMode("json")}
                   >
-                    JSON
+                    Код
                   </button>
                 </div>
                 <button

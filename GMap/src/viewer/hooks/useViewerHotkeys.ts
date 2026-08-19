@@ -14,6 +14,7 @@ import {
 } from "../viewerNavTypes";
 import { navigateViewerRoom } from "../features/rooms-router";
 import { isInputFocused } from "./isInputFocused";
+import { useViewerPanelFocusStore } from "../../state/viewerPanelFocusStore";
 
 export { isInputFocused } from "./isInputFocused";
 
@@ -56,6 +57,7 @@ export function useViewerHotkeys({
     const onKey = (e: KeyboardEvent) => {
       if (isInputFocused(e.target) || e.key !== "Escape") return;
       setTechMapHighlightIds([]);
+      useViewerPanelFocusStore.getState().setRecruitMapPick(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

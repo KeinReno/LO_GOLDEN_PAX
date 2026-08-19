@@ -16,6 +16,7 @@ export {
   applyResearchCostMult,
   applyUnlockEffects,
   recomputeUnlocksFromTechs,
+  stripTechFromEco,
   factionMaxTier,
   canBuildWithTech,
   collectRequiredProperties,
@@ -36,5 +37,6 @@ export {
   upgradeResearchedTechGrade,
   fillResearchedTechSocket,
   gmGrantTech,
+  gmRevokeTech,
   researchUpgrade,
 } from "./techActions/actions.mjs";

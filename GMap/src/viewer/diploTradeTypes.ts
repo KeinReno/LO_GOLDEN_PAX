@@ -20,7 +20,15 @@ export type DiploOffer = {
   createdAt?: string;
 };
 
-export type TradeAsset = { id: string; name: string; where?: string };
+export type DiploUnilateralStance = "war" | "embargo" | "break" | "insult";
+
+export type TradeAsset = {
+  id: string;
+  name: string;
+  where?: string;
+  worlds?: string[];
+  direction?: string;
+};
 
 export type TradeAssetPool = {
   fleets: TradeAsset[];

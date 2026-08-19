@@ -3,7 +3,7 @@ import {
   economyDeficitLabel,
   resolveResourceOrCurrencyLabel,
 } from "../state/displayLabels";
-import { BUILD_METAL, BUILD_SUPPLY } from "../state/economyLabels";
+import { BUILD_METAL, BUILD_SUPPLY, STOCKPILE_CARD_IDS } from "../state/economyLabels";
 import { isCraftedModule } from "../state/resourceIndex";
 import { useWorldStore } from "../state/worldStore";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
@@ -25,7 +25,7 @@ type LedgerPayload = {
   entries: { factionId: string; currencyId: string; delta: number; reason?: string; turn?: number }[];
 };
 
-export function GmLedgerPanel() {
+export function GmLedgerPanel({ factionId }: { factionId?: string } = {}) {
   const world = useWorldStore((s) => s.world);
   const activeFactionId = useWorldStore((s) => s.activeFactionId);
   const { masterToken, setSyncMsg } = useCampaignSessionCtx();
@@ -82,8 +82,30 @@ export function GmLedgerPanel() {
     }
   };
 
-  const facId = activeFactionId ?? world.factions[0]?.id;
+  const facId = factionId ?? activeFactionId ?? world.factions[0]?.id;
   const eco = facId && ledger?.factions?.[facId];
+
+  const setStock = async (currencyId: string, amount: number) => {
+    if (!facId) return;
+    try {
+      const res = await fetch("/api/gm/ledger/stock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": masterToken,
+        },
+        body: JSON.stringify({ factionId: facId, currencyId, amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      setSyncMsg(
+        `${resolveResourceOrCurrencyLabel(currencyId)} → ${data.amount ?? amount}`,
+      );
+      void refresh();
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   return (
     <section>
@@ -111,15 +133,46 @@ export function GmLedgerPanel() {
               {eco.pressure}
             </span>
           </div>
-          <ul className="hint" style={{ paddingLeft: 16 }}>
-            {Object.entries(eco.stocks || {})
-              .filter(([k]) => !isCraftedModule({ id: k }))
-              .map(([k, v]) => (
-              <li key={k}>
-                {resolveResourceOrCurrencyLabel(k)}: {v}
-              </li>
+          <div className="polity-stock-grid">
+            {Array.from(
+              new Set([
+                ...STOCKPILE_CARD_IDS,
+                ...Object.keys(eco.stocks || {}).filter(
+                  (k) => !isCraftedModule({ id: k }),
+                ),
+              ]),
+            ).map((k) => (
+              <label key={k} className="field">
+                <span>{resolveResourceOrCurrencyLabel(k)}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={eco.stocks?.[k] ?? 0}
+                  onBlur={(e) =>
+                    void setStock(k, Number(e.target.value) || 0)
+                  }
+                  onChange={(e) => {
+                    const n = Number(e.target.value) || 0;
+                    setLedger((prev) => {
+                      if (!prev || !facId) return prev;
+                      const row = prev.factions[facId];
+                      if (!row) return prev;
+                      return {
+                        ...prev,
+                        factions: {
+                          ...prev.factions,
+                          [facId]: {
+                            ...row,
+                            stocks: { ...row.stocks, [k]: n },
+                          },
+                        },
+                      };
+                    });
+                  }}
+                />
+              </label>
             ))}
-          </ul>
+          </div>
           {Object.entries(taxDefs)
             .filter(([, def]) => !(def as { hidden?: boolean }).hidden)
             .map(([slot, def]) => (

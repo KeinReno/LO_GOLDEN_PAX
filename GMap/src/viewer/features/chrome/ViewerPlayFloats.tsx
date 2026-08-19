@@ -1,71 +1,37 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { getCachedContent } from "../../../state/contentCatalog";
 import type { ViewerPayload } from "../../../state/types";
-import { useViewerChromeStore } from "../../../state/viewerChromeStore";
-import { useViewerOrderSessionStore } from "../../../state/viewerOrderSessionStore";
-import { useViewerSessionStore } from "../../../state/viewerSessionStore";
 import { useWorldStore } from "../../../state/worldStore";
-import { FloatingRpWindow } from "../../../editors/FloatingRpWindow";
-import {
-  closeViewerMapOverlays,
-  navigateViewerRoom,
-} from "../rooms-router/navigateViewerRoom";
-import {
-  ViewerQuestDossier,
-  visiblePlayerQuests,
-} from "../../ViewerQuestPanel";
+import { navigateViewerRoom } from "../rooms-router/navigateViewerRoom";
+import { visiblePlayerQuests } from "../../ViewerQuestPanel";
+import { useQuestsState } from "../../quests/useQuestsState";
 import {
   decideEraAdvance,
   eraSeenStorageKey,
   maxTechEra,
 } from "./eraAdvance";
-import {
-  questChoiceAppliedNote,
-  questDiceNote,
-} from "./questActionCopy";
-import type { QuestActionResult } from "../../hooks/useViewerQuestActions";
 
 type Props = {
   payload: ViewerPayload;
-  mobile: boolean;
-  chronicleRoom: ReactNode;
-  onFocusSystem: (systemId: string) => void;
-  submitQuestAction: (
-    action: string,
-    extra?: Record<string, unknown>,
-  ) => Promise<QuestActionResult>;
 };
 
-export function ViewerPlayFloats({
-  payload,
-  mobile,
-  chronicleRoom,
-  onFocusSystem,
-  submitQuestAction,
-}: Props) {
-  const viewMode = useViewerSessionStore((s) => s.viewMode);
-  const setViewMode = useViewerSessionStore((s) => s.setViewMode);
-  const rpFloatOpen = useViewerChromeStore((s) => s.rpFloatOpen);
-  const rpUnread = useViewerChromeStore((s) => s.rpUnread);
-  const setRpFloatOpen = useViewerChromeStore((s) => s.setRpFloatOpen);
-  const setRpUnread = useViewerChromeStore((s) => s.setRpUnread);
-  const setOrderMsg = useViewerOrderSessionStore((s) => s.setOrderMsg);
+export function ViewerPlayFloats({ payload }: Props) {
   const openQuestId = useWorldStore((s) => s.openQuestId);
   const setOpenQuestId = useWorldStore((s) => s.setOpenQuestId);
   const [eraBanner, setEraBanner] = useState<number | null>(null);
 
   const playerQuests = visiblePlayerQuests(payload.world, payload.factionId);
-  const openQuest =
-    openQuestId != null
-      ? playerQuests.find((q) => q.id === openQuestId) ?? null
-      : null;
 
   useEffect(() => {
     if (openQuestId == null) return;
     if (!playerQuests.some((q) => q.id === openQuestId)) {
       setOpenQuestId(null);
+      return;
     }
-  }, [playerQuests, openQuestId, setOpenQuestId]);
+    useQuestsState.getState().selectQuest(openQuestId);
+    navigateViewerRoom("quests");
+    setOpenQuestId(null);
+  }, [openQuestId, playerQuests, setOpenQuestId]);
 
   useEffect(() => {
     if (!payload.factionId) return;
@@ -91,89 +57,23 @@ export function ViewerPlayFloats({
     return () => window.clearTimeout(t);
   }, [payload.factionId, payload.economy?.unlockedTechs]);
 
+  if (eraBanner == null) return null;
+
   return (
-    <>
-      {!mobile && (
-        <FloatingRpWindow
-          open={viewMode === "rp" || rpFloatOpen}
-          onOpenChange={(o) => {
-            if (o) {
-              navigateViewerRoom("rp");
-              setRpUnread(0);
-              return;
-            }
-            setRpFloatOpen(false);
-            if (viewMode === "rp") {
-              setViewMode("map");
-              closeViewerMapOverlays();
-            }
-          }}
-          unread={rpUnread}
-          zIndex={520}
-          storageKey={`gmap-rp-float-geom-player-${payload.factionId}`}
-          title="RP"
+    <div className="viewer-era-cinematic" role="status" aria-live="polite">
+      <div className="viewer-era-cinematic-veil" aria-hidden />
+      <div className="viewer-era-cinematic-card">
+        <p className="viewer-era-cinematic-kicker">Новая эра</p>
+        <strong>Эра {eraBanner}</strong>
+        <p className="hint">Знание открыло следующий горизонт</p>
+        <button
+          type="button"
+          className="btn sm ghost"
+          onClick={() => setEraBanner(null)}
         >
-          {chronicleRoom}
-        </FloatingRpWindow>
-      )}
-
-      {openQuest && (
-        <ViewerQuestDossier
-          quest={openQuest}
-          world={payload.world}
-          stocks={payload.economy?.stocks}
-          onClose={() => setOpenQuestId(null)}
-          onFocusSystem={(systemId) => {
-            setOpenQuestId(null);
-            onFocusSystem(systemId);
-          }}
-          onOpenCourt={() => {
-            setOpenQuestId(null);
-            navigateViewerRoom("court");
-          }}
-          onResolveChoice={async (questId, choiceId) => {
-            const res = await submitQuestAction("resolve_quest_choice", {
-              questId,
-              choiceId,
-            });
-            if (res.ok) setOrderMsg(questChoiceAppliedNote());
-            return res.ok;
-          }}
-          onResolveDice={async (questId, specIndex, choiceId) => {
-            const res = await submitQuestAction("resolve_quest_dice", {
-              questId,
-              specIndex,
-              choiceId,
-            });
-            if (!res.ok) return { ok: false };
-            setOrderMsg(questDiceNote(res.message));
-            return {
-              ok: true,
-              rolls: res.rolls,
-              success: res.success,
-              message: res.message,
-            };
-          }}
-        />
-      )}
-
-      {eraBanner != null && (
-        <div className="viewer-era-cinematic" role="status" aria-live="polite">
-          <div className="viewer-era-cinematic-veil" aria-hidden />
-          <div className="viewer-era-cinematic-card">
-            <p className="viewer-era-cinematic-kicker">Новая эра</p>
-            <strong>Эра {eraBanner}</strong>
-            <p className="hint">Знание открыло следующий горизонт</p>
-            <button
-              type="button"
-              className="btn sm ghost"
-              onClick={() => setEraBanner(null)}
-            >
-              Продолжить
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+          Продолжить
+        </button>
+      </div>
+    </div>
   );
 }

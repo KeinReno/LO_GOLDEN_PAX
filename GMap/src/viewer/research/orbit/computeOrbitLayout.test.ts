@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computeOrbitLayout, type OrbitLayoutTech } from "./computeOrbitLayout.ts";
+import { computeFocusedOrbitLayout, computeOrbitLayout, type OrbitLayoutTech } from "./computeOrbitLayout.ts";
 
 function techs(direction: string, count: number, prefix = direction): OrbitLayoutTech[] {
   return Array.from({ length: count }, (_, i) => ({ id: `${prefix}.${i}`, direction }));
@@ -127,5 +127,26 @@ describe("computeOrbitLayout", () => {
     assert.equal(nodes.length, 0);
     assert.equal(sectors.length, 2);
     for (const s of sectors) assert.equal(s.count, 0);
+  });
+});
+
+describe("computeFocusedOrbitLayout", () => {
+  it("anchors a single direction at the origin with a full ring", () => {
+    const list = techs("military", 12);
+    const { nodes, sectors } = computeFocusedOrbitLayout("military", list);
+    assert.equal(sectors.length, 1);
+    assert.ok(Math.abs(sectors[0].apexX) < 1e-9);
+    assert.ok(Math.abs(sectors[0].apexY) < 1e-9);
+    assert.equal(nodes.length, 12);
+    const arc = sectors[0].endAngle - sectors[0].startAngle;
+    assert.ok(Math.abs(arc - Math.PI * 2) < 1e-6);
+  });
+
+  it("ignores other directions in the input list", () => {
+    const list = [...techs("military", 4), ...techs("industry", 40)];
+    const { nodes, sectors } = computeFocusedOrbitLayout("military", list);
+    assert.equal(sectors[0].count, 4);
+    assert.equal(nodes.length, 4);
+    assert.ok(nodes.every((n) => n.direction === "military"));
   });
 });

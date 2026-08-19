@@ -549,9 +549,7 @@ export function PlayerHqHome({
             onClick={onOpenQuests}
           >
             Квесты
-            {activeQuestCount
-              ? ` · ${ruCount(activeQuestCount, "квест", "квеста", "квестов")}`
-              : ""}
+            {activeQuestCount ? ` · ${activeQuestCount} ждут` : ""}
           </button>
           {onOpenCourt ? (
             <button type="button" className="hq-deep-chip" onClick={onOpenCourt}>

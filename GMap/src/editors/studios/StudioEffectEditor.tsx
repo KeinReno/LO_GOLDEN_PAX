@@ -1,4 +1,15 @@
 import { useState } from "react";
+import {
+  COMBAT_STAT_LABELS,
+  combatRoleLabel,
+  pathLabel,
+} from "../../state/displayLabels";
+import {
+  BUILD_METAL,
+  BUILD_SUPPLY,
+  CATEGORY_CURRENCIES,
+} from "../../state/economyLabels";
+import { VISUAL_EFFECT_IDS } from "./studioEffectIds";
 
 export type EffectData = {
   effect: string;
@@ -156,11 +167,19 @@ export const KNOWN_EFFECTS: EffectDef[] = [
   },
   {
     id: "stat_mult",
-    label: "Множитель боевых параметров (Урон/Броня)",
+    label: "Множитель боевых параметров (урон / броня)",
     icon: "🛡",
     group: "military",
     hint: "Процентный модификатор характеристик боевых единиц",
     defaultArgs: { stat: "damage", mult: 1.1 },
+  },
+  {
+    id: "cost_mult",
+    label: "Множитель стоимости строек",
+    icon: "🏗",
+    group: "economy",
+    hint: "Делает постройки дешевле или дороже",
+    defaultArgs: { mult: 0.9 },
   },
 
   // Экономика & Дипломатия
@@ -209,54 +228,56 @@ export const KNOWN_EFFECTS: EffectDef[] = [
 ];
 
 export const RESOURCE_OPTIONS = [
-  { id: "currency.extracta", label: "Сырье (Extracta · Кат. A)", color: "#f59e0b" },
-  { id: "currency.metal", label: "Металл (Metal · Кат. B)", color: "#94a3b8" },
-  { id: "currency.solari", label: "Энергия (Solari · Кат. C)", color: "#eab308" },
-  { id: "currency.supply", label: "Снабжение (Supply · Кат. D)", color: "#38bdf8" },
-  { id: "currency.bios", label: "Биомасса (Bios · Кат. E)", color: "#22c55e" },
-  { id: "currency.cognitio", label: "Когниция (Cognitio · Кат. F)", color: "#a855f7" },
-  { id: "all", label: "Все ресурсы (Комплексно)", color: "#38bdf8" },
+  { id: BUILD_METAL.id, label: BUILD_METAL.label },
+  { id: BUILD_SUPPLY.id, label: BUILD_SUPPLY.label },
+  ...CATEGORY_CURRENCIES.map((c) => ({
+    id: c.id,
+    label: `${c.name} · ${c.letter}`,
+  })),
+  { id: "all", label: "Все ресурсы" },
 ];
 
-export const CATEGORY_OPTIONS = [
-  { id: "A", label: "A · Экстракция & Руда" },
-  { id: "B", label: "B · Металлургия & Каркасы" },
-  { id: "C", label: "C · Энергетика & Реакторы" },
-  { id: "D", label: "D · Индустрия & Снабжение" },
-  { id: "E", label: "E · Биология & Органика" },
-  { id: "F", label: "F · Когниция & Псионика" },
-];
+export const CATEGORY_OPTIONS = CATEGORY_CURRENCIES.map((c) => ({
+  id: c.letter,
+  label: `${c.letter} · ${c.name}`,
+}));
 
 export const ROLE_OPTIONS = [
-  { id: "screen", label: "Фронт / Разведка (Screen)" },
-  { id: "capital", label: "Линкор / Тяжелый корабль (Capital)" },
-  { id: "carrier", label: "Авианосец (Carrier)" },
-  { id: "infantry", label: "Пехота (Infantry)" },
-  { id: "armor", label: "Бронетехника / Танки (Armor)" },
-  { id: "siege", label: "Осада / Бомбардировка (Siege)" },
-  { id: "titan", label: "Титан / Флагман (Titan)" },
-];
+  "screen",
+  "capital",
+  "carrier",
+  "infantry",
+  "armor",
+  "siege",
+  "titan",
+].map((id) => ({ id, label: combatRoleLabel(id) }));
 
 export const PROPERTY_OPTIONS = [
-  { id: "strong", label: "Крепкий (Strong) — повышенная прочность" },
-  { id: "agile", label: "Ловкий (Agile) — маневренность и скорость" },
-  { id: "psionic", label: "Псионический (Psionic) — ментальные ауры" },
-  { id: "bio", label: "Биологический (Bio) — регенерация" },
-  { id: "quantum", label: "Квантовый (Quantum) — фазовые щиты" },
-  { id: "relic", label: "Реликт (Relic) — древние технологии" },
-  { id: "dense", label: "Плотный (Dense) — защита от пробития" },
+  { id: "strong", label: "Крепкий — повышенная прочность" },
+  { id: "agile", label: "Ловкий — манёвр и скорость" },
+  { id: "psionic", label: "Псионический — ментальные ауры" },
+  { id: "bio", label: "Биологический — регенерация" },
+  { id: "quantum", label: "Квантовый — фазовые щиты" },
+  { id: "relic", label: "Реликт — древние технологии" },
+  { id: "dense", label: "Плотный — защита от пробития" },
 ];
 
 export const PATH_OPTIONS = [
-  { id: "offensive", label: "⚔ Путь Удара (Offensive)" },
-  { id: "defensive", label: "🛡 Путь Защиты (Defensive)" },
-  { id: "mobility", label: "🚀 Путь Мобильности (Mobility)" },
-  { id: "cognitive", label: "🧠 Путь Когниции (Cognitive)" },
-  { id: "biological", label: "🧬 Путь Биологии (Biological)" },
-  { id: "exotic", label: "✨ Путь Экзотики (Exotic)" },
-  { id: "structural", label: "🏗 Путь Структуры (Structural)" },
-  { id: "energy", label: "⚡ Путь Энергии (Energy)" },
-];
+  "offensive",
+  "defensive",
+  "mobility",
+  "cognitive",
+  "biological",
+  "exotic",
+  "structural",
+  "energy",
+].map((id) => ({ id, label: pathLabel(id) }));
+
+export { VISUAL_EFFECT_IDS } from "./studioEffectIds";
+
+export const STAT_OPTIONS = Object.entries(COMBAT_STAT_LABELS).map(
+  ([id, label]) => ({ id, label }),
+);
 
 interface Props {
   effects: EffectData[];
@@ -309,7 +330,7 @@ export function StudioEffectList({
             onClick={() => setExpertMode(!expertMode)}
             title="Переключить экспертный режим JSON для тонкой настройки"
           >
-            {expertMode ? "⚙ Эксперт [ON]" : "⚙ Эксперт"}
+            {expertMode ? "Сырые параметры" : "Поля"}
           </button>
           <button
             type="button"
@@ -910,36 +931,136 @@ function StudioEffectRow({
             </div>
           )}
 
+          {(effect.effect === "stat_mult" || effect.effect === "cost_mult") && (
+            <div className="studio-effect-fields-flex">
+              {effect.effect === "stat_mult" && (
+                <label className="studio-ctrl-field">
+                  <span className="studio-ctrl-label">Параметр:</span>
+                  <select
+                    className="studio-select studio-select--sm"
+                    value={String(args.stat || "damage")}
+                    onChange={(e) => setArg("stat", e.target.value)}
+                  >
+                    {STAT_OPTIONS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="studio-ctrl-field">
+                <span className="studio-ctrl-label">
+                  {effect.effect === "cost_mult"
+                    ? "Множитель стоимости (0.90 = −10%):"
+                    : "Множитель (1.15 = +15%):"}
+                </span>
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="studio-input studio-input--num"
+                    value={Number(args.mult ?? 1.1)}
+                    onChange={(e) => setArg("mult", parseFloat(e.target.value) || 1.0)}
+                  />
+                  <span className="studio-mult-preview">
+                    {Number(args.mult ?? 1.1) >= 1
+                      ? `+${Math.round((Number(args.mult ?? 1.1) - 1) * 100)}%`
+                      : `−${Math.round((1 - Number(args.mult ?? 1.1)) * 100)}%`}
+                  </span>
+                </div>
+              </label>
+            </div>
+          )}
+
           {/* Fallback for unhandled known types or custom */}
-          {!["production_mult", "upkeep_mult", "flow_convert", "capacity_add", "rate_mod", "demand_mod", "pop_cap_add", "pop_cap_flat", "loyalty_add", "stability_add", "ap_add", "pop_growth_mult", "habitability_mult", "diplomacy_trust_decay_mult", "research_cost_mult", "combat_role_mult", "unlock_tech_tier", "unlock_property", "open_path", "production_flat", "yield_flat", "upkeep_flat"].includes(effect.effect) && (
+          {!(VISUAL_EFFECT_IDS as readonly string[]).includes(effect.effect) && (
             <div className="studio-effect-custom-box">
               <label className="studio-ctrl-field" style={{ flex: "1 1 100%" }}>
-                <span className="studio-ctrl-label">ID Эффекта:</span>
-                <input
-                  type="text"
-                  className="studio-input"
-                  value={effect.effect}
-                  onChange={(e) => onChange({ ...effect, effect: e.target.value })}
-                />
+                <span className="studio-ctrl-label">Тип эффекта:</span>
+                <select
+                  className="studio-select"
+                  value={
+                    KNOWN_EFFECTS.some((k) => k.id === effect.effect)
+                      ? effect.effect
+                      : "custom"
+                  }
+                  onChange={(e) => handleTypeChange(e.target.value)}
+                >
+                  {KNOWN_EFFECTS.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.label}
+                    </option>
+                  ))}
+                </select>
               </label>
-              <label className="studio-ctrl-field" style={{ flex: "1 1 100%" }}>
-                <span className="studio-ctrl-label">Аргументы (JSON):</span>
-                <input
-                  type="text"
-                  className="studio-input studio-input--mono"
-                  value={JSON.stringify(args)}
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value);
-                      if (typeof parsed === "object" && parsed !== null) {
-                        onChange({ ...effect, args: parsed });
-                      }
-                    } catch {
-                      /* allow typing */
-                    }
-                  }}
-                />
-              </label>
+              {Object.keys(args).length > 0 && (
+                <div className="studio-effect-fields-flex">
+                  {Object.entries(args).map(([key, val]) => (
+                    <label key={key} className="studio-ctrl-field">
+                      <span className="studio-ctrl-label">
+                        {key === "stat"
+                          ? "Параметр"
+                          : key === "mult"
+                            ? "Множитель"
+                            : key === "amount"
+                              ? "Величина"
+                              : key === "resource" || key === "currency"
+                                ? "Ресурс"
+                                : key === "category"
+                                  ? "Категория"
+                                  : key === "role"
+                                    ? "Роль"
+                                    : key === "pathId"
+                                      ? "Путь"
+                                      : "Значение"}
+                      </span>
+                      {key === "stat" ? (
+                        <select
+                          className="studio-select studio-select--sm"
+                          value={String(val ?? "damage")}
+                          onChange={(e) => setArg(key, e.target.value)}
+                        >
+                          {STAT_OPTIONS.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : key === "resource" || key === "currency" ? (
+                        <select
+                          className="studio-select studio-select--sm"
+                          value={String(val ?? "currency.metal")}
+                          onChange={(e) => setArg(key, e.target.value)}
+                        >
+                          {RESOURCE_OPTIONS.filter((r) => r.id !== "all").map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : typeof val === "number" ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="studio-input studio-input--num"
+                          value={Number(val)}
+                          onChange={(e) =>
+                            setArg(key, parseFloat(e.target.value) || 0)
+                          }
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          className="studio-input"
+                          value={String(val ?? "")}
+                          onChange={(e) => setArg(key, e.target.value)}
+                        />
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -86,7 +86,7 @@ export function GmCommandCard({
               className="btn ghost"
               onClick={() => onOpenDomain("intel")}
             >
-              Intel
+              Разведка
             </button>
             <button
               type="button"

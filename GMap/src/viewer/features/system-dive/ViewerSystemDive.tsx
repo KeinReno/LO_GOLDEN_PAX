@@ -17,6 +17,7 @@ import type { SystemActionRequest } from "../../SystemCommandPanel";
 import type { BuildPreviewResult, BuildQueueItem } from "../../system/types";
 import { isInputFocused } from "../../hooks/isInputFocused";
 import { navigateViewerRoom } from "../rooms-router/navigateViewerRoom";
+import { diveLayerHiddenByRoom } from "./diveNav";
 import {
   attackSystemTitle,
   catalogDisplayNames,
@@ -72,7 +73,6 @@ export function ViewerSystemDive({
   unitsCatalog,
   onClose,
   onOpenPlanet,
-  onFocusSystem,
   onPlanetAction,
   onSystemAction,
   onFoundHybrid,
@@ -114,6 +114,7 @@ export function ViewerSystemDive({
     (s) => s.setEcoHighlightCategory,
   );
   const selectedFleetId = useViewerSessionStore((s) => s.selectedFleetId);
+  const viewMode = useViewerSessionStore((s) => s.viewMode);
   const selectFleet = useViewerSessionStore((s) => s.selectFleet);
   const selectLegion = useViewerSessionStore((s) => s.selectLegion);
   const setSelectedSystemId = useViewerSessionStore(
@@ -155,6 +156,8 @@ export function ViewerSystemDive({
   useEffect(() => {
     if (!systemFocusId) return;
     const onKey = (e: KeyboardEvent) => {
+      const vm = useViewerSessionStore.getState().viewMode;
+      if (vm !== "map" && vm !== "orders") return;
       if (e.key === "Escape") {
         if (isInputFocused(e.target)) return;
         if (document.querySelector(".gmap-float-panel")) return;
@@ -200,17 +203,21 @@ export function ViewerSystemDive({
   const hasFleet = Boolean(selectedFleetId);
   const economyLinked =
     Boolean(focusedSystem) && economyLinkedSystemId === focusedSystem?.id;
+  const atPlanet =
+    mapFocus.level === "planet" && mapFocus.systemId === systemFocusId;
+  const roomOverDive = diveLayerHiddenByRoom(viewMode, economyLinked);
 
   return (
     <>
-      {systemFocusId && focusedSystem && (
+      {systemFocusId && focusedSystem && !roomOverDive && (
         <div
-          className={`viewer-system-layer ${
+          className={`viewer-system-layer viewer-system-layer--compact-dock ${
             economyLinked ? "viewer-system-layer--docked-right" : ""
-          }`}
+          }${atPlanet ? " viewer-system-layer--planet" : ""}`}
           role="region"
           aria-label={focusedSystem.name}
         >
+          {!atPlanet && (
           <header className="viewer-system-head">
             <button
               type="button"
@@ -256,6 +263,7 @@ export function ViewerSystemDive({
               <kbd className="sys-codex__kbd">I</kbd>
             </button>
           </header>
+          )}
           <div className="viewer-system-body">
             <SystemView
               system={focusedSystem}
@@ -263,18 +271,12 @@ export function ViewerSystemDive({
               playerFactionId={payload.factionId}
               nav={playerSystemNav}
               onSelectOwnFleet={(fleetId) => {
-                onClose();
                 const fleet = payload.world.fleets.find((f) => f.id === fleetId);
                 selectFleet(fleetId, fleet?.systemId);
-                if (fleet) onFocusSystem(fleet.systemId);
-                else navigateViewerRoom("map");
               }}
               onSelectOwnLegion={(legionId) => {
-                onClose();
                 const leg = payload.world.legions.find((l) => l.id === legionId);
                 selectLegion(legionId, leg?.systemId);
-                if (leg) onFocusSystem(leg.systemId);
-                else navigateViewerRoom("map");
               }}
               planetManage={{
                 factionId: payload.factionId,
@@ -349,6 +351,7 @@ export function ViewerSystemDive({
               }}
             />
           </div>
+          {!atPlanet && (
           <footer className="viewer-system-actions">
             <button
               type="button"
@@ -382,6 +385,7 @@ export function ViewerSystemDive({
               Сцена с ГМом
             </button>
           </footer>
+          )}
         </div>
       )}
       <SystemCodex

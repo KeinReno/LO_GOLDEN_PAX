@@ -127,7 +127,7 @@ export function GmLiveStage({
       },
       {
         id: "intel",
-        label: "Intel",
+        label: "Разведка",
         onSelect: () => onOpenDomain("intel"),
       },
       {

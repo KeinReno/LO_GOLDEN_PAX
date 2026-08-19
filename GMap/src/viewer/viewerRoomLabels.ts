@@ -20,8 +20,10 @@ export function viewerRoomTitle(viewMode: PlayerView): string {
       return "Двор";
     case "codex":
       return "Справочник";
+    case "planet":
+      return "Планета";
     case "rp":
-      return "RP";
+      return "Сцена";
     default:
       return "Штаб";
   }
@@ -34,7 +36,7 @@ export function viewerWorkbenchSubtitle(
     case "hq":
       return "Сводка и внимание. Приказы — на карте (drag / ПКМ / кольцо).";
     case "diplomacy":
-      return "Сделки — по согласию. Война и разрыв — сразу, без ответа.";
+      return "Слева и справа — разделы. Карты внизу после выбора. Центр — стол.";
     case "market":
       return "Лоты · котировки · валюты · державы. Alt+1–4.";
     case "research":
@@ -42,13 +44,17 @@ export function viewerWorkbenchSubtitle(
     case "economy":
       return "Казна · производство · бюджет · склад · налоги. Вкладки — в панели.";
     case "forces":
-      return "Состав, оснащение, готовность. Приказы — на карте.";
+      return "Конструктор оснащения. Приказы — на карте.";
     case "quests":
-      return "Сюжет · сайды · фракции · ежеходные. СКМ — перевернуть карту.";
+      return "Что сделать в этот ход. Сцена с мастером — R.";
     case "court":
       return "Совет, поле, народы, дома. Вкладки 1–4.";
     case "codex":
       return "Расы · государства · постройки · юниты · технологии — по уровню знания.";
+    case "planet":
+      return "Сейчас этот ход · слот · почему нельзя. Док 1–5 не перекрыт.";
+    case "rp":
+      return "Слева — сцены. Внизу жесты и кубики после выбора.";
     default:
       return undefined;
   }

@@ -79,6 +79,7 @@ type Props = {
   onArmBelt: () => void;
   onQuickMine: () => void;
   onOpenProduce: (tab: "ships" | "units") => void;
+  hidePlanetList?: boolean;
   onRenameSystem?: (name: string) => void;
   onRenamePlanet?: (planetId: string, name: string) => void;
 };
@@ -119,6 +120,7 @@ export function SystemDiveDock({
   onOpenProduce,
   onRenameSystem,
   onRenamePlanet,
+  hidePlanetList = false,
 }: Props) {
   const [filter, setFilter] = useState<"all" | "own" | "empty">("all");
   const mine = systemMineInfo(system, factionId);
@@ -351,6 +353,7 @@ export function SystemDiveDock({
       )}
 
       {/* Planet outliner — Focus Cards: settled own stay bright */}
+      {!hidePlanetList && (
       <div className="sys-dive-outliner">
         <div className="sys-dive-outliner__head">
           <strong>Планеты</strong>
@@ -529,6 +532,7 @@ export function SystemDiveDock({
           })}
         </ul>
       </div>
+      )}
 
       <SystemHistory history={system.history} />
     </div>

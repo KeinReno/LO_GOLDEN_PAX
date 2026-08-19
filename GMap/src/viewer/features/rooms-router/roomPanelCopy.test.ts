@@ -43,6 +43,7 @@ describe("roomPanelCopy", () => {
   it("diplo stance toasts", () => {
     assert.equal(diploStanceOkMsg("war"), "Война объявлена");
     assert.equal(diploStanceOkMsg("embargo"), "Эмбарго введено");
+    assert.equal(diploStanceOkMsg("insult"), "Оскорбление нанесено");
     assert.equal(diploStanceOkMsg("break"), "Договор разорван");
   });
 });

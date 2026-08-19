@@ -54,6 +54,8 @@ import {
 } from "../viewer/PlayerPlanetManage";
 import { SystemStatusStrip } from "../viewer/SystemStatusStrip";
 import { SystemDiveDock } from "../viewer/SystemDiveDock";
+import { SystemDiveOutliner } from "../viewer/features/system-dive/SystemDiveOutliner";
+import { isOwnSettledPlanet } from "../viewer/features/system-dive/diveChrome";
 import { resolvePoiIntel } from "../viewer/poiIntel";
 import { GmPlanetSocietyFields } from "./GmPlanetSocietyFields";
 import { InlineRename } from "../ui/InlineRename";
@@ -110,6 +112,7 @@ export type PlayerPlanetManageProps = {
   onForceRecruitSession?: (
     data: import("../state/forceRaiseClient").ForceRecruitSession,
   ) => void;
+  godMode?: boolean;
 };
 
 export type PlayerSystemManageProps = {
@@ -135,6 +138,7 @@ export type PlayerSystemManageProps = {
   produceFleetId?: string | null;
   produceLegionId?: string | null;
   onSetProduceTab?: (tab: "ships" | "units") => void;
+  gmFree?: boolean;
 };
 
 /** Full drill-down: Galaxy → System schematic → Planet card. */
@@ -253,12 +257,12 @@ export function SystemView({
     }
   }, [system.id, systemManage?.preferDeck]);
 
-  const playerDive = !!(readOnly && systemManage);
+  const playerChrome = !!systemManage;
   const gmDive = !readOnly;
-  const immersive = playerDive || gmDive;
+  const immersive = playerChrome || gmDive;
   const canBuildBelt =
     gmDive ||
-    (playerDive &&
+    (playerChrome &&
       !!systemManage &&
       system.ownerFactionId === systemManage.factionId);
   const drilledPlanet = planet;
@@ -271,7 +275,7 @@ export function SystemView({
   );
   const mineInfo = systemMineInfo(system, systemManage?.factionId);
   const showBeltDock =
-    playerDive &&
+    playerChrome &&
     (placeMode ||
       !!selectedFeature ||
       !!selectedStationId ||
@@ -497,7 +501,7 @@ export function SystemView({
       return;
     }
 
-    if (!playerDive || !systemManage) return;
+    if (!playerChrome || !systemManage) return;
 
     if (t.kind === "planet") {
       const pl = system.planets.find((p) => p.id === t.planetId);
@@ -633,7 +637,7 @@ export function SystemView({
     <div
       className={`system-view${immersive ? " system-view--dive" : ""}${
         immersive && drilledPlanet ? " system-view--planet-manage" : ""
-      }${gmDive ? " system-view--gm" : ""}`}
+      }${gmDive && !playerChrome ? " system-view--gm" : ""}`}
     >
       <nav className="sys-crumb" aria-label="Иерархия">
         <button type="button" className="crumb-link" onClick={goGalaxy}>
@@ -652,7 +656,7 @@ export function SystemView({
         >
           {system.name}
         </button>
-        {playerDive && canBuildBelt && systemManage && (
+        {playerChrome && canBuildBelt && systemManage && !gmDive && (
           <InlineRename
             value={system.name}
             affordanceOnly
@@ -682,7 +686,7 @@ export function SystemView({
                 const p = drilledPlanet ?? previewPlanet!;
                 const canRename =
                   gmDive ||
-                  (!!playerDive &&
+                  (!!playerChrome &&
                     !!planetManage &&
                     (p.ownerFactionId || system.ownerFactionId) ===
                       planetManage.factionId);
@@ -724,9 +728,87 @@ export function SystemView({
             </span>
           </>
         )}
+        {gmDive && (systemManage?.factionId || playerFactionId) ? (
+          <span className="hint sys-crumb-as">
+            {world.factions.find(
+              (f) => f.id === (systemManage?.factionId || playerFactionId),
+            )?.name ?? "игрок"}
+          </span>
+        ) : null}
       </nav>
 
-      <div className="system-view-grid">
+      <div
+        className={`system-view-grid${playerChrome ? " system-view-grid--lcr" : ""}${
+          playerChrome && drilledPlanet ? " system-view-grid--planet" : ""
+        }`}
+      >
+        {playerChrome && drilledPlanet && planetManage ? (
+          <PlayerPlanetManage
+            chrome="lcr"
+            system={system}
+            planet={drilledPlanet}
+            factionId={planetManage.factionId}
+            stocks={planetManage.stocks}
+            reservedAp={planetManage.reservedAp}
+            apMax={planetManage.apMax}
+            buildings={planetManage.buildings}
+            colonies={planetManage.colonies}
+            mapResources={planetManage.mapResources}
+            techEco={planetManage.techEco}
+            busy={planetManage.busy}
+            message={planetManage.message}
+            onAction={planetManage.onAction}
+            onOpenResearch={planetManage.onOpenResearch}
+            buildQueue={planetManage.buildQueue}
+            onChangeBuildQueue={planetManage.onChangeBuildQueue}
+            onPreviewBuild={planetManage.onPreviewBuild}
+            highlightCategory={planetManage.highlightCategory}
+            onShowInEconomy={planetManage.onShowInEconomy}
+            defaultCultureId={planetManage.defaultCultureId}
+            primaryFaith={planetManage.primaryFaith}
+            unlockedLineages={planetManage.unlockedLineages}
+            onFoundHybrid={planetManage.onFoundHybrid}
+            password={planetManage.password}
+            onForceRecruitSession={planetManage.onForceRecruitSession}
+            godMode={planetManage.godMode ?? gmDive}
+            onBack={() => {
+              setPreviewPlanetId(drilledPlanet.id);
+              goSystem(system.id);
+            }}
+          />
+        ) : (
+          <>
+            {playerChrome && systemManage ? (
+              <SystemDiveOutliner
+                system={system}
+                factionId={systemManage.factionId}
+                fleets={fleetsHere}
+                legions={legionsHere}
+                previewPlanetId={previewPlanetId}
+                selectedStationId={selectedStationId}
+                selectedFleetId={selectedFleetIdState}
+                selectedLegionId={selectedLegionIdState}
+                onSelectSystem={() => {
+                  clearSoft();
+                  goSystem(system.id);
+                }}
+                onDrillPlanet={(id) => {
+                  if (applyPlanetTool(id)) return;
+                  goPlanet(system.id, id);
+                }}
+                onPreviewPlanet={(id) => {
+                  if (applyPlanetTool(id)) return;
+                  setPreviewPlanetId(id);
+                }}
+                onSelectStation={(id) => {
+                  setSelectedStationId(id);
+                  setPreviewPlanetId(null);
+                  setForceDeck("stations");
+                }}
+                onSelectFleet={onSelectOwnFleet}
+                onSelectLegion={onSelectOwnLegion}
+              />
+            ) : null}
         <div className="system-view-map">
           {!isCorridorSystem(system) ? (
             <SystemSchematic
@@ -749,6 +831,16 @@ export function SystemView({
                 immersive
                   ? (id) => {
                       if (applyPlanetTool(id)) return;
+                      const p = system.planets.find((x) => x.id === id);
+                      if (
+                        playerChrome &&
+                        planetManage &&
+                        p &&
+                        isOwnSettledPlanet(p, system, planetManage.factionId)
+                      ) {
+                        goPlanet(system.id, id);
+                        return;
+                      }
                       clearPlace();
                       setSelectedFeature(null);
                       setSelectedStationId(null);
@@ -771,9 +863,13 @@ export function SystemView({
               fleets={fleetsHere}
               legions={legionsHere}
               factions={world.factions}
-              playerFactionId={readOnly ? playerFactionId : null}
-              selectedFleetId={readOnly ? selectedFleetIdState : null}
-              selectedLegionId={readOnly ? selectedLegionIdState : null}
+              playerFactionId={playerFactionId ?? null}
+              selectedFleetId={
+                playerChrome || readOnly ? selectedFleetIdState : null
+              }
+              selectedLegionId={
+                playerChrome || readOnly ? selectedLegionIdState : null
+              }
               onSelectFleet={onSelectOwnFleet}
               onSelectLegion={onSelectOwnLegion}
               selectedStationId={selectedStationId}
@@ -805,13 +901,16 @@ export function SystemView({
                       setPreviewPlanetId(null);
                       setSelectedFeature(null);
                       if (placingKind) {
-                        if (gmDive) commitGmStation(placingKind, angle);
-                        else commitStation(placingKind, angle);
+                        if (playerChrome && systemManage) {
+                          commitStation(placingKind, angle);
+                        } else if (gmDive) {
+                          commitGmStation(placingKind, angle);
+                        }
                         return;
                       }
                       setPlaceMode(true);
                       setPendingBeltAngle(angle);
-                      if (playerDive) setForceDeck("stations");
+                      if (playerChrome) setForceDeck("stations");
                     }
                   : undefined
               }
@@ -840,7 +939,7 @@ export function SystemView({
         </div>
 
         <div className="system-view-side">
-          {playerDive &&
+          {playerChrome &&
             systemManage &&
             (drilledPlanet || previewPlanet || showBeltDock) && (
               <SystemStatusStrip
@@ -856,40 +955,7 @@ export function SystemView({
               />
             )}
 
-          {drilledPlanet &&
-            (readOnly && planetManage ? (
-              <PlayerPlanetManage
-                system={system}
-                planet={drilledPlanet}
-                factionId={planetManage.factionId}
-                stocks={planetManage.stocks}
-                reservedAp={planetManage.reservedAp}
-                apMax={planetManage.apMax}
-                buildings={planetManage.buildings}
-                colonies={planetManage.colonies}
-                mapResources={planetManage.mapResources}
-                techEco={planetManage.techEco}
-                busy={planetManage.busy}
-                message={planetManage.message}
-                onAction={planetManage.onAction}
-                onOpenResearch={planetManage.onOpenResearch}
-                buildQueue={planetManage.buildQueue}
-                onChangeBuildQueue={planetManage.onChangeBuildQueue}
-                onPreviewBuild={planetManage.onPreviewBuild}
-                highlightCategory={planetManage.highlightCategory}
-                onShowInEconomy={planetManage.onShowInEconomy}
-                defaultCultureId={planetManage.defaultCultureId}
-                primaryFaith={planetManage.primaryFaith}
-                unlockedLineages={planetManage.unlockedLineages}
-                onFoundHybrid={planetManage.onFoundHybrid}
-                password={planetManage.password}
-                onForceRecruitSession={planetManage.onForceRecruitSession}
-                onBack={() => {
-                  setPreviewPlanetId(drilledPlanet.id);
-                  goSystem(system.id);
-                }}
-              />
-            ) : gmDive ? (
+          {drilledPlanet && !playerChrome && (gmDive ? (
               <>
                 <GmPlanetStage
                   system={system}
@@ -1118,12 +1184,13 @@ export function SystemView({
                 forceProduceTab={systemManage.preferProduceTab}
                 produceFleetId={systemManage.produceFleetId}
                 produceLegionId={systemManage.produceLegionId}
+                gmFree={systemManage.gmFree}
                 onDeckChange={setForceDeck}
               />
             </>
           )}
 
-          {!drilledPlanet && !previewPlanet && !showBeltDock && playerDive && systemManage && (
+          {!drilledPlanet && !previewPlanet && !showBeltDock && playerChrome && systemManage && (
             <SystemDiveDock
               system={system}
               factionId={systemManage.factionId}
@@ -1141,6 +1208,7 @@ export function SystemView({
               buildings={systemManage.buildings ?? planetManage?.buildings}
               highlightCategory={systemManage.highlightCategory}
               onHighlightCategory={systemManage.onHighlightCategory}
+              hidePlanetList={playerChrome}
               onPreviewPlanet={(id) => {
                 if (applyPlanetTool(id)) return;
                 setPreviewPlanetId(id);
@@ -1193,7 +1261,7 @@ export function SystemView({
           )}
 
           {/* GM rail: same schematic as player, tools on the side / RMB */}
-          {!drilledPlanet && !previewPlanet && !playerDive && gmDive && (
+          {!drilledPlanet && !previewPlanet && !playerChrome && gmDive && (
             <>
               {placeMode && (
                 <p className="sys-place-tip">
@@ -1281,9 +1349,11 @@ export function SystemView({
             </>
           )}
         </div>
+          </>
+        )}
       </div>
 
-      {gmDive && (
+      {gmDive && !drilledPlanet && (
         <details className="sys-editor-fold">
           <summary>Полная правка (звёзды, владение, список станций)</summary>
           <SystemEditor system={system} />

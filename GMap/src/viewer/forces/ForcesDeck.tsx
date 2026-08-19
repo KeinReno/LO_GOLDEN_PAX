@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, MapPin, Crosshair, Package } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { MapPin, Crosshair, Package, Plus } from "lucide-react";
 import type { ShipGroup, ViewerPayload } from "../../state/types";
 import { getCachedContent } from "../../state/contentCatalog";
 import { outfitResourceBag } from "../../state/resourceIndex";
-import { FleetCover } from "./FleetCover";
-import { LegionCover } from "./LegionCover";
 import { UnitCard, type UnitCardModel } from "./UnitCard";
 import { CardDetailStrip } from "./CardDetailStrip";
 import { DropZones, canDropZone } from "./DropZones";
@@ -29,6 +27,7 @@ import {
 } from "./compositionOps";
 import { hitDropZone } from "./useDeckGestures";
 import { canOutfitUnit } from "./outfitRules";
+import { ForceOutfitConstructor } from "./ForceOutfitConstructor";
 import { ForceReadinessBar } from "./ForceReadinessBar";
 import {
   compositionUpkeep,
@@ -87,6 +86,8 @@ export type ForcesDeckProps = {
     fleetId?: string;
     legionId?: string;
   }) => void;
+  /** Map pick: highlight yards/barracks, then produce (pop + metal/supply). */
+  onBeginRecruit?: (tab: "ships" | "units") => void;
   /** Phone sheet: tighter list layout, larger tap targets. */
   compact?: boolean;
   onForceRecruitSession?: (data: ForceRecruitSession) => void;
@@ -132,11 +133,11 @@ export function ForcesDeck({
   onOpenCardBattle,
   onOpenEconomy,
   onOpenProduce,
+  onBeginRecruit,
   compact = false,
   password,
   onForceRecruitSession,
 }: ForcesDeckProps) {
-  const reduce = useReducedMotion();
   const pendingStock = useRef<Record<string, number>>({});
   const mutateBusyRef = useRef(false);
   const hoverRafRef = useRef<number | null>(null);
@@ -159,8 +160,6 @@ export function ForcesDeck({
     reserve,
     openFleetDeck,
     openLegionDeck,
-    closeDeck,
-    toggleCard,
     selectCard,
     setStripMode,
     openEquip,
@@ -182,6 +181,18 @@ export function ForcesDeck({
   const legions = (payload.world.legions ?? []).filter(
     (l) => l.factionId === fid,
   );
+  const firstFleetId = fleets[0]?.id ?? null;
+  const firstLegionId = legions[0]?.id ?? null;
+
+  useEffect(() => {
+    if (tab === "fleets") {
+      if (activeFleetId && fleets.some((f) => f.id === activeFleetId)) return;
+      if (firstFleetId) openFleetDeck(firstFleetId);
+      return;
+    }
+    if (activeLegionId && legions.some((l) => l.id === activeLegionId)) return;
+    if (firstLegionId) openLegionDeck(firstLegionId);
+  }, [tab, activeFleetId, activeLegionId, firstFleetId, firstLegionId]);
 
   const { ships, units, mapResources } = useMemo(() => {
     const c = getCachedContent();
@@ -231,25 +242,18 @@ export function ForcesDeck({
   }, []);
 
   useEffect(() => {
-    if (mode !== "deck") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || isInputFocused(e.target)) return;
-      e.preventDefault();
-      e.stopPropagation();
       const s = useForcesState.getState();
-      if (s.stripMode === "equip" || s.stripMode === "confirm-disband") {
+      if (s.stripMode === "confirm-disband") {
+        e.preventDefault();
+        e.stopPropagation();
         s.setStripMode("summary");
-        return;
       }
-      if (s.selectedCardIndex != null) {
-        s.selectCard(null);
-        return;
-      }
-      s.closeDeck();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [mode]);
+  }, []);
 
   const notify = (msg: string) => setToast(msg);
 
@@ -534,6 +538,17 @@ export function ForcesDeck({
     [payload.world, fid],
   );
 
+  useEffect(() => {
+    if (mode !== "deck") return;
+    if (composition.length === 0) return;
+    if (
+      selectedCardIndex == null ||
+      selectedCardIndex >= composition.length
+    ) {
+      selectCard(0);
+    }
+  }, [mode, activeFleetId, activeLegionId, composition.length, selectedCardIndex]);
+
   const buildProduceActions = (ctx?: {
     systemId?: string;
     fleetId?: string;
@@ -597,133 +612,130 @@ export function ForcesDeck({
     );
   };
 
-  if (deckOpen) {
-    const title =
-      deckKind === "fleet" ? activeFleet!.name : activeLegion!.name;
-    const systemId =
-      deckKind === "fleet" ? activeFleet!.systemId : activeLegion!.systemId;
-    const produceActions = buildProduceActions({
-      systemId,
-      fleetId: deckKind === "fleet" ? activeFleet!.id : undefined,
-      legionId: deckKind === "legion" ? activeLegion!.id : undefined,
-    });
-    const stance =
-      deckKind === "fleet" ? activeFleet!.stance : activeLegion!.status;
-    const StanceIcon = STANCE_ICONS[stance] ?? STANCE_ICONS.idle;
-    const stanceLabel = STANCE_LABELS[stance] ?? stance;
+  const empire = empireForceTotals(payload);
+  const title = deckOpen
+    ? deckKind === "fleet"
+      ? activeFleet!.name
+      : activeLegion!.name
+    : "Силы";
+  const systemId = deckOpen
+    ? deckKind === "fleet"
+      ? activeFleet!.systemId
+      : activeLegion!.systemId
+    : "";
+  const produceActions = deckOpen
+    ? buildProduceActions({
+        systemId,
+        fleetId: deckKind === "fleet" ? activeFleet!.id : undefined,
+        legionId: deckKind === "legion" ? activeLegion!.id : undefined,
+      })
+    : buildProduceActions();
+  const stance = deckOpen
+    ? deckKind === "fleet"
+      ? activeFleet!.stance
+      : activeLegion!.status
+    : "idle";
+  const StanceIcon = STANCE_ICONS[stance] ?? STANCE_ICONS.idle;
+  const stanceLabel = STANCE_LABELS[stance] ?? stance;
+  const deckEngagements = deckOpen
+    ? deckKind === "fleet" && activeFleet
+      ? engagementsForForce(engagements, {
+          forceId: activeFleet.id,
+          kind: "fleet",
+          systemId: activeFleet.systemId,
+          factionId: fid,
+        })
+      : deckKind === "legion" && activeLegion
+        ? engagementsForForce(engagements, {
+            forceId: activeLegion.id,
+            kind: "legion",
+            systemId: activeLegion.systemId,
+            factionId: fid,
+          })
+        : []
+    : [];
 
-    return (
-      <motion.div
-        className={`forces-deck forces-deck--open${
-          compact ? " forces-deck--compact" : ""
-        }`}
-        initial={reduce ? false : { opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 280, damping: 28 }}
-      >
-        <header className="forces-deck-bar">
+  return (
+    <div
+      className={`forces-dive${compact ? " forces-dive--compact" : ""}`}
+    >
+      <header className="forces-dive__sum">
+        <div>
+          <h2>{title}</h2>
+          {deckOpen ? (
+            <p className="hint forces-dive__rule">
+              <StanceIcon size={14} aria-hidden /> {stanceLabel}
+              {systemId ? ` · ${getSystemName(systemId)}` : ""}
+              {" · карта сверху → слот в центре → модуль со склада"}
+            </p>
+          ) : (
+            <p className="hint forces-dive__rule">
+              Нет своей силы в зоне видимости — верфь и казармы справа.
+            </p>
+          )}
+        </div>
+        <div className="forces-dive__sum-side">
           <button
             type="button"
-            className="btn ghost forces-back"
-            onClick={() => closeDeck()}
+            className="forces-list-upkeep"
+            title="Содержание всех сил / ход"
+            onClick={() => onOpenEconomy?.()}
           >
-            <ArrowLeft size={16} aria-hidden /> Назад
+            {formatUpkeepShort(empire.upkeep)}
           </button>
-          <div className="forces-deck-title">
-            <h2>{title}</h2>
-            <span className="forces-deck-stance">
-              <StanceIcon size={14} aria-hidden /> {stanceLabel}
-            </span>
-            <span className="hint">{getSystemName(systemId)}</span>
-          </div>
-          <div className="forces-deck-actions">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => onFocusOnMap?.(systemId)}
-            >
-              <MapPin size={14} aria-hidden /> На карту
-            </button>
-            {deckKind === "fleet" && onOrderWithFleet && activeFleet && (
+          {deckOpen && systemId ? (
+            <div className="forces-dive__sum-actions">
               <button
                 type="button"
-                className="btn ghost"
-                onClick={() => onOrderWithFleet(activeFleet.id)}
+                className="btn"
+                onClick={() => onFocusOnMap?.(systemId)}
               >
-                <Crosshair size={14} aria-hidden /> Приказы
+                <MapPin size={14} aria-hidden /> На карту
               </button>
-            )}
-            {deckKind === "legion" && onOrderWithLegion && activeLegion && (
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => onOrderWithLegion(activeLegion.id)}
-              >
-                <Crosshair size={14} aria-hidden /> Приказы
-              </button>
-            )}
-          </div>
-        </header>
-
-        <p className="hint forces-drag-hint">
-          Перетащите карту вниз: ремонт, лом, резерв, оснащение. Или кнопки под
-          выбранной картой.
-        </p>
-
-        <ForceReadinessBar
-          preview={deckBattlePreview(composition)}
-          upkeep={compositionUpkeep(
-            composition,
-            deckKind === "fleet" ? "fleet" : "legion",
-          )}
-          engagements={
-            deckKind === "fleet" && activeFleet
-              ? engagementsForForce(engagements, {
-                  forceId: activeFleet.id,
-                  kind: "fleet",
-                  systemId: activeFleet.systemId,
-                  factionId: fid,
-                })
-              : deckKind === "legion" && activeLegion
-                ? engagementsForForce(engagements, {
-                    forceId: activeLegion.id,
-                    kind: "legion",
-                    systemId: activeLegion.systemId,
-                    factionId: fid,
-                  })
-                : []
-          }
-          onOpenEngagement={onOpenEngagement}
-          onOpenCardBattle={onOpenCardBattle}
-        />
-
-        {password &&
-          onForceRecruitSession &&
-          ((deckKind === "fleet" && activeFleet?.homePlanetId) ||
-            (deckKind === "legion" && activeLegion?.homePlanetId)) && (
-            <ForceDisbandRaised
-              factionId={fid}
-              password={password}
-              kind={deckKind === "fleet" ? "fleet" : "legion"}
-              id={deckKind === "fleet" ? activeFleet!.id : activeLegion!.id}
-              maxCount={composition.reduce((s, g) => s + (g.count || 0), 0)}
-              busy={mutateBusy}
-              onSession={onForceRecruitSession}
-              onToast={notify}
-            />
-          )}
-
-        <div className="forces-fan" role="list">
-          {composition.length === 0 ? (
-            <div className="hq-empty">
-              <span className="hq-empty-reveal" aria-hidden />
-              <p className="hint">
-                Колода пуста
-                {reserve.length > 0
-                  ? " — можно принять юниты из резерва ниже."
-                  : " — состав не указан."}
-              </p>
+              {deckKind === "fleet" && onOrderWithFleet && activeFleet ? (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => onOrderWithFleet(activeFleet.id)}
+                >
+                  <Crosshair size={14} aria-hidden /> Приказы
+                </button>
+              ) : null}
+              {deckKind === "legion" && onOrderWithLegion && activeLegion ? (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => onOrderWithLegion(activeLegion.id)}
+                >
+                  <Crosshair size={14} aria-hidden /> Приказы
+                </button>
+              ) : null}
             </div>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="forces-dive__queue">
+        {deckOpen ? (
+          <ForceReadinessBar
+            preview={deckBattlePreview(composition)}
+            upkeep={compositionUpkeep(
+              composition,
+              deckKind === "fleet" ? "fleet" : "legion",
+            )}
+            engagements={deckEngagements}
+            onOpenEngagement={onOpenEngagement}
+            onOpenCardBattle={onOpenCardBattle}
+          />
+        ) : null}
+        <div className="forces-fan forces-fan--strip" role="list">
+          {deckOpen && composition.length === 0 ? (
+            <p className="hint">
+              Состав пуст
+              {reserve.length > 0
+                ? " — примите юниты из резерва справа."
+                : " — спустите со стапелей на верфи."}
+            </p>
           ) : (
             composition.map((group, index) => (
               <div key={`${group.defId ?? group.type}-${index}`} role="listitem">
@@ -743,7 +755,7 @@ export function ForcesDeck({
                   }
                   index={index}
                   showSlots={canOutfitUnit(catalogFor(group), deckKind)}
-                  onTap={() => toggleCard(index)}
+                  onTap={() => selectCard(index)}
                   onDragStart={() => startDrag(index)}
                   onDragMove={(point) => {
                     hoverPointRef.current = point;
@@ -757,46 +769,117 @@ export function ForcesDeck({
                   }}
                   onDragEnd={(result) => handleDragEnd(index, result)}
                   onLongPress={() => {
-                    // Stay in the deck — never navigate mid-gesture (was freezing the tab).
                     openEquip(index);
-                    notify("Оснащение · долгий тап");
+                    notify("Конструктор · слоты в центре");
                   }}
                 />
               </div>
             ))
           )}
         </div>
+      </div>
 
-        <AnimatePresence>
-          {selectedGroup && selectedCardIndex != null && !isDragging && (
-            <CardDetailStrip
-              key={`strip-${selectedCardIndex}-${stripMode}`}
-              group={selectedGroup}
-              catalogItem={selectedCatalog}
-              mode={stripMode}
-              deckKind={deckKind}
-              mapResources={mapResources}
-              stocks={stocks}
-              unlockedProperties={payload.economy?.unlockedProperties}
-              metalStock={metalStock}
-              onClose={() => {
-                selectCard(null);
-                setStripMode("summary");
+      <nav className="forces-dive__tasks" aria-label="Колоды">
+        <div className="forces-tab-switch" role="tablist" aria-label="Тип сил">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "fleets"}
+            className={tab === "fleets" ? "on" : ""}
+            onClick={() => setTab("fleets")}
+          >
+            Флоты · {fleets.length}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "legions"}
+            className={tab === "legions" ? "on" : ""}
+            onClick={() => setTab("legions")}
+          >
+            Легионы · {legions.length}
+          </button>
+        </div>
+        {onBeginRecruit ? (
+          <button
+            type="button"
+            className="forces-dive__new"
+            onClick={() =>
+              onBeginRecruit(tab === "fleets" ? "ships" : "units")
+            }
+          >
+            <Plus size={14} strokeWidth={2} aria-hidden />
+            {tab === "fleets" ? "Новый флот" : "Новый легион"}
+          </button>
+        ) : null}
+        {tab === "fleets" && fleets.length === 0 ? (
+          <p className="hint">Нет своих флотов.</p>
+        ) : null}
+        {tab === "fleets" &&
+          fleets.map((fleet) => (
+            <button
+              key={fleet.id}
+              type="button"
+              className={activeFleetId === fleet.id ? "is-on" : ""}
+              onClick={() => {
+                onSelectFleet?.(fleet.id);
+                openFleetDeck(fleet.id);
               }}
-              onRepair={() => doRepair(selectedCardIndex)}
-              onRequestDisband={() => openDisbandConfirm(selectedCardIndex)}
-              onConfirmDisband={() => doDisband(selectedCardIndex)}
-              onCancelDisband={() => setStripMode("summary")}
-              onOpenEquip={() => openEquip(selectedCardIndex)}
-              onFillSlot={(role, resourceId) =>
-                doFillSlot(selectedCardIndex, role, resourceId)
-              }
-              onClearSlot={(role) => doClearSlot(selectedCardIndex, role)}
-              onToReserve={() => doReserve(selectedCardIndex)}
-            />
-          )}
-        </AnimatePresence>
+            >
+              <span className="forces-dive__dir-dot" aria-hidden />
+              {fleet.name}
+              <span className="tabular forces-dive__dir-n">
+                {(fleet.composition ?? []).reduce(
+                  (s, g) => s + (g.count ?? 0),
+                  0,
+                )}
+              </span>
+            </button>
+          ))}
+        {tab === "legions" && legions.length === 0 ? (
+          <p className="hint">Нет своих легионов.</p>
+        ) : null}
+        {tab === "legions" &&
+          legions.map((legion) => (
+            <button
+              key={legion.id}
+              type="button"
+              className={activeLegionId === legion.id ? "is-on" : ""}
+              onClick={() => {
+                onSelectLegion?.(legion.id);
+                openLegionDeck(legion.id);
+              }}
+            >
+              <span className="forces-dive__dir-dot" aria-hidden />
+              {legion.name}
+              <span className="tabular forces-dive__dir-n">
+                {(legion.composition ?? []).reduce(
+                  (s, g) => s + (g.count ?? 0),
+                  0,
+                )}
+              </span>
+            </button>
+          ))}
+      </nav>
 
+      <div className="forces-dive__canvas">
+        <ForceOutfitConstructor
+          key={`${activeFleetId ?? activeLegionId ?? "none"}-${selectedCardIndex ?? "x"}-${selectedGroup?.defId ?? selectedGroup?.type ?? ""}`}
+          group={selectedGroup}
+          catalogItem={selectedCatalog}
+          deckKind={deckKind}
+          mapResources={mapResources}
+          stocks={stocks}
+          unlockedProperties={payload.economy?.unlockedProperties}
+          onFillSlot={(role, resourceId) => {
+            if (selectedCardIndex == null) return;
+            doFillSlot(selectedCardIndex, role, resourceId);
+          }}
+          onClearSlot={(role) => {
+            if (selectedCardIndex == null) return;
+            doClearSlot(selectedCardIndex, role);
+          }}
+        />
         <DropZones
           active={isDragging}
           deckKind={deckKind}
@@ -809,7 +892,52 @@ export function ForcesDeck({
             canDropZone(zone, card, metalStock, catalogFor(card), deckKind)
           }
         />
+      </div>
 
+      <aside className="forces-dive__deck" aria-live="polite">
+        <AnimatePresence>
+          {selectedGroup && selectedCardIndex != null && !isDragging ? (
+            <CardDetailStrip
+              key={`strip-${selectedCardIndex}-${stripMode}`}
+              group={selectedGroup}
+              catalogItem={selectedCatalog}
+              mode={stripMode === "equip" ? "summary" : stripMode}
+              deckKind={deckKind}
+              mapResources={mapResources}
+              stocks={stocks}
+              unlockedProperties={payload.economy?.unlockedProperties}
+              metalStock={metalStock}
+              onClose={() => selectCard(0)}
+              onRepair={() => doRepair(selectedCardIndex)}
+              onRequestDisband={() => openDisbandConfirm(selectedCardIndex)}
+              onConfirmDisband={() => doDisband(selectedCardIndex)}
+              onCancelDisband={() => setStripMode("summary")}
+              onOpenEquip={() => openEquip(selectedCardIndex)}
+              onFillSlot={(role, resourceId) =>
+                doFillSlot(selectedCardIndex, role, resourceId)
+              }
+              onClearSlot={(role) => doClearSlot(selectedCardIndex, role)}
+              onToReserve={() => doReserve(selectedCardIndex)}
+            />
+          ) : (
+            <p className="hint">Выберите карту в составе.</p>
+          )}
+        </AnimatePresence>
+        {password &&
+          onForceRecruitSession &&
+          ((deckKind === "fleet" && activeFleet?.homePlanetId) ||
+            (deckKind === "legion" && activeLegion?.homePlanetId)) && (
+            <ForceDisbandRaised
+              factionId={fid}
+              password={password}
+              kind={deckKind === "fleet" ? "fleet" : "legion"}
+              id={deckKind === "fleet" ? activeFleet!.id : activeLegion!.id}
+              maxCount={composition.reduce((s, g) => s + (g.count || 0), 0)}
+              busy={mutateBusy}
+              onSession={onForceRecruitSession}
+              onToast={notify}
+            />
+          )}
         <section className="forces-reserve-rail" aria-label="Резерв и производство">
           <header className="forces-reserve-head">
             <Package size={14} aria-hidden />{" "}
@@ -836,155 +964,7 @@ export function ForcesDeck({
           )}
           {produceActions}
         </section>
-
-        {toast && (
-          <div className="forces-toast" role="status">
-            {toast}
-          </div>
-        )}
-      </motion.div>
-    );
-  }
-
-  const deckCount = tab === "fleets" ? fleets.length : legions.length;
-  const empire = empireForceTotals(payload);
-  const listProduceActions = buildProduceActions();
-
-  return (
-    <div
-      className={`forces-deck forces-deck--list${
-        compact ? " forces-deck--compact" : ""
-      }`}
-    >
-      <header className="forces-list-head">
-        <div>
-          <h2>Колоды</h2>
-          <p className="hint forces-list-tagline">
-            Состав к бою · порядок карт = рука · ранг из боёв · приказы на карте
-          </p>
-        </div>
-        <div className="forces-list-side">
-          <span className="forces-list-count">{deckCount} колод</span>
-          <button
-            type="button"
-            className="forces-list-upkeep"
-            title="Содержание всех сил / ход"
-            onClick={() => onOpenEconomy?.()}
-          >
-            {formatUpkeepShort(empire.upkeep)}
-          </button>
-        </div>
-      </header>
-
-      <div className="forces-tab-switch" role="tablist" aria-label="Тип сил">
-        <button
-          type="button"
-          role="tab"
-          id="forces-tab-fleets"
-          aria-controls="forces-panel-fleets"
-          aria-selected={tab === "fleets"}
-          className={tab === "fleets" ? "on" : ""}
-          onClick={() => setTab("fleets")}
-        >
-          Флоты · {fleets.length}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="forces-tab-legions"
-          aria-controls="forces-panel-legions"
-          aria-selected={tab === "legions"}
-          className={tab === "legions" ? "on" : ""}
-          onClick={() => setTab("legions")}
-        >
-          Легионы · {legions.length}
-        </button>
-      </div>
-
-      <div
-        className="forces-covers-grid"
-        id={tab === "fleets" ? "forces-panel-fleets" : "forces-panel-legions"}
-        role="tabpanel"
-        aria-labelledby={
-          tab === "fleets" ? "forces-tab-fleets" : "forces-tab-legions"
-        }
-      >
-        {tab === "fleets" && fleets.length === 0 && (
-          <div className="hq-empty">
-            <span className="hq-empty-reveal" aria-hidden />
-            <p className="hint">Нет своих флотов в зоне видимости.</p>
-          </div>
-        )}
-        {tab === "fleets" &&
-          fleets.map((fleet) => (
-            <FleetCover
-              key={fleet.id}
-              fleet={fleet}
-              systemName={getSystemName(fleet.systemId)}
-              engagements={engagementsForForce(engagements, {
-                forceId: fleet.id,
-                kind: "fleet",
-                systemId: fleet.systemId,
-                factionId: fid,
-              })}
-              onOpen={() => {
-                onSelectFleet?.(fleet.id);
-                openFleetDeck(fleet.id);
-              }}
-            />
-          ))}
-        {tab === "legions" && legions.length === 0 && (
-          <div className="hq-empty">
-            <span className="hq-empty-reveal" aria-hidden />
-            <p className="hint">Нет своих легионов в зоне видимости.</p>
-          </div>
-        )}
-        {tab === "legions" &&
-          legions.map((legion) => (
-            <LegionCover
-              key={legion.id}
-              legion={legion}
-              systemName={getSystemName(legion.systemId)}
-              engagements={engagementsForForce(engagements, {
-                forceId: legion.id,
-                kind: "legion",
-                systemId: legion.systemId,
-                factionId: fid,
-              })}
-              onOpen={() => {
-                onSelectLegion?.(legion.id);
-                openLegionDeck(legion.id);
-              }}
-            />
-          ))}
-      </div>
-
-      <section className="forces-reserve-rail" aria-label="Резерв и производство">
-        <header className="forces-reserve-head">
-          <Package size={14} aria-hidden />{" "}
-          {reserve.length > 0 ? `Резерв · ${reserve.length}` : "Пополнение"}
-          {reserve.length > 0 && (
-            <span className="hint"> — откройте колоду, чтобы вернуть</span>
-          )}
-        </header>
-        {reserve.length > 0 && (
-          <div className="forces-reserve-list">
-            {reserve.map((card, i) => {
-              const cat = catalogFor(card);
-              return (
-                <div
-                  key={`res-list-${card.defId ?? card.type}-${i}`}
-                  className="forces-reserve-chip is-static"
-                >
-                  <strong>{cat?.name ?? card.type}</strong>
-                  <span>×{card.count}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {listProduceActions}
-      </section>
+      </aside>
 
       {toast && (
         <div className="forces-toast" role="status">

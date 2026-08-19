@@ -95,6 +95,27 @@ const DEFAULTS: Required<OrbitLayoutOptions> = {
   startAngle: -Math.PI / 2,
 };
 
+/** One direction fills the stage like a planet ring — not six petals. */
+export const FOCUSED_ORBIT_DEFAULTS: OrbitLayoutOptions = {
+  clusterArcDeg: 360,
+  hubGapPx: 0,
+  nodePitchPx: 28,
+  minRingRadiusPx: 52,
+  ringGapPx: 26,
+};
+
+export function computeFocusedOrbitLayout(
+  direction: string,
+  techs: OrbitLayoutTech[],
+  options: OrbitLayoutOptions = {},
+): OrbitLayout {
+  const scoped = techs.filter((t) => t.direction === direction);
+  return computeOrbitLayout([direction], scoped, {
+    ...FOCUSED_ORBIT_DEFAULTS,
+    ...options,
+  });
+}
+
 type PackedRing = { radius: number; count: number };
 
 /**

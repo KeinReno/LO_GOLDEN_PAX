@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   diveCloseWorldPatch,
+  diveLayerHiddenByRoom,
   diveOpenWorldPatch,
   divePlanetWorldPatch,
 } from "./diveNav.ts";
@@ -29,6 +30,14 @@ describe("diveNav patches", () => {
       dossierSystemId: null,
       mapFocus: { level: "galaxy" },
     });
+  });
+
+  it("hides dive under rooms, keeps economy split", () => {
+    assert.equal(diveLayerHiddenByRoom("map", false), false);
+    assert.equal(diveLayerHiddenByRoom("hq", false), true);
+    assert.equal(diveLayerHiddenByRoom("research", false), true);
+    assert.equal(diveLayerHiddenByRoom("economy", false), true);
+    assert.equal(diveLayerHiddenByRoom("economy", true), false);
   });
 });
 

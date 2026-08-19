@@ -70,6 +70,15 @@ export function formatOrderEtaChip(order: PlayerOrder, currentTurn: number): str
   return `${head} · ${turns} ход${turns === 1 ? "" : turns < 5 ? "а" : "ов"} (≈${hours}ч)`;
 }
 
+export function formatOrderEtaShort(
+  order: PlayerOrder,
+  currentTurn: number,
+): string {
+  const turns = turnsUntilOrder(order, currentTurn);
+  if (turns <= 0) return "этот ход";
+  return `${turns} ${turns === 1 ? "ход" : turns < 5 ? "хода" : "ходов"}`;
+}
+
 export function isActiveProcessOrder(order: PlayerOrder): boolean {
   return (
     (order.status === "active" || order.status === "pending") &&

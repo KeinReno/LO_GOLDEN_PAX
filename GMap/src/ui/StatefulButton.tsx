@@ -44,11 +44,12 @@ export function StatefulButton({
 
   return (
     <button
+      {...rest}
       type="button"
       className={`stateful-btn ${phase !== "idle" ? `is-${phase}` : ""} ${className}`.trim()}
-      disabled={rest.disabled || phase === "loading"}
+      disabled={Boolean(rest.disabled) || phase === "loading"}
       aria-busy={phase === "loading"}
-      {...rest}
+      onClick={rest.onClick}
     >
       <span className="stateful-btn-label">{label}</span>
     </button>

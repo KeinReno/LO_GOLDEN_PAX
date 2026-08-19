@@ -17,6 +17,11 @@ import type {
   QuestStatus,
 } from "./types";
 import { QUEST_ART_BY_KIND } from "./types.ts";
+import {
+  formatChoiceCostLabel,
+  formatWorldEffectsLabel,
+  uiEffectsFromWorld,
+} from "./questChoiceUi.ts";
 
 export function visiblePlayerQuests(
   world: WorldState,
@@ -100,13 +105,7 @@ export function stockCostsFromEffects(
   return need;
 }
 
-export function formatChoiceCostLabel(costs: Record<string, number>): string | undefined {
-  const parts = Object.entries(costs).map(([id, amt]) => {
-    const short = id.replace(/^currency\./, "");
-    return `−${amt} ${short}`;
-  });
-  return parts.length ? parts.join(" · ") : undefined;
-}
+export { formatChoiceCostLabel };
 
 export function canAffordCosts(
   costs: Record<string, number> | undefined,
@@ -134,9 +133,19 @@ function activeChoices(q: WorldQuest): QuestChoice[] {
     const riskLabel = formatChoiceCostLabel(risk);
     const costLabel = isDice
       ? riskLabel
-        ? `🎲 риск ${riskLabel}`
-        : "🎲 проверка"
+        ? `риск ${riskLabel}`
+        : "проверка"
       : formatChoiceCostLabel(costs);
+    const successLabel = formatWorldEffectsLabel(c.onSuccess);
+    const failLabel = formatWorldEffectsLabel(c.onFail);
+    const resultText = isDice
+      ? [
+          successLabel && `успех: ${successLabel}`,
+          failLabel && `провал: ${failLabel}`,
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined
+      : undefined;
     return {
       id: c.id,
       label: c.label,
@@ -144,7 +153,8 @@ function activeChoices(q: WorldQuest): QuestChoice[] {
       needsDice: isDice,
       costs: Object.keys(costs).length ? costs : undefined,
       costLabel,
-      resultText: undefined,
+      effects: uiEffectsFromWorld(isDice ? c.onSuccess : c.effects),
+      resultText: resultText || undefined,
     };
   });
 }

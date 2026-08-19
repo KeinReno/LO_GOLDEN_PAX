@@ -9,6 +9,7 @@ import {
   buildFactionComparison,
   buildSessionBrief,
   listGmInterventions,
+  appendGmIntervention,
   listCockpitBackups,
   runDryRunTick,
   listGmPegMultipliers,
@@ -30,7 +31,7 @@ import { spawnStoryQuestFromCatalog } from "../storyQuestSpawn.mjs";
 import { readLiveBoard, writeLiveBoard, writeJson, PUBLISHED_PATH, bumpTableRevision } from "../tableStore.mjs";
 import { restoreCockpitBackup } from "../opsHealth.mjs";
 import { getContent, loadContent } from "../contentLoader.mjs";
-import { ensureFactionEco, readLedger, writeLedger, getFactionPublicEco } from "../ledger.mjs";
+import { ensureFactionEco, readLedger, writeLedger, getFactionPublicEco, adjustStock } from "../ledger.mjs";
 import {
   readGateCampaigns,
   patchGateCampaign,
@@ -161,6 +162,43 @@ export async function tryHandleGmRoutes(req, res, url, ctx) {
     }
     const result = grantPowerTouch(factionId, powerPath, world);
     sendJson(res, result.ok ? 200 : 400, result);
+    return true;
+  }
+
+  if (url.pathname === "/api/gm/ledger/stock" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = (await readBody(req)) || {};
+    const factionId = String(body.factionId || "");
+    const currencyId = String(body.currencyId || "");
+    const amount = Math.max(0, Math.floor(Number(body.amount) || 0));
+    if (!factionId || !currencyId) {
+      sendJson(res, 400, { error: "Нужны держава и ресурс" });
+      return true;
+    }
+    const ledger = readLedger();
+    const eco = ensureFactionEco(ledger, factionId);
+    const before = Number(eco.stocks[currencyId] ?? 0);
+    const world = readLiveBoard();
+    adjustStock(ledger, factionId, currencyId, amount - before, {
+      reason: "gm_set_stock",
+      turn: world?.meta?.turn ?? null,
+    });
+    writeLedger(ledger);
+    appendGmIntervention({
+      action: "set_stock",
+      actor: "gm",
+      before: { factionId, currencyId, amount: before },
+      after: { factionId, currencyId, amount },
+    });
+    sendJson(res, 200, {
+      ok: true,
+      factionId,
+      currencyId,
+      amount: Number(ensureFactionEco(ledger, factionId).stocks[currencyId] ?? 0),
+    });
     return true;
   }
 

@@ -43,6 +43,7 @@ import {
 } from "./history";
 import { advanceCaravans, clampRep, driftAnomalies } from "./mapFeatures";
 import { toggleSpaceObject, withSpaceObjects } from "./spaceObjects";
+import { buildGmMapJumpState, type GmMapJumpOpts } from "./gmMapJump";
 import {
   readStoredEditorGraphics,
   writeStoredEditorGraphics,
@@ -205,14 +206,17 @@ interface WorldStore extends UiState {
   applyBrushStroke: (stroke: Point[]) => void;
   updateSelectedSystem: (patch: Partial<StarSystem>) => void;
   updatePlanet: (planetId: string, patch: Partial<Planet>) => void;
-  addPlanet: () => void;
+  addPlanet: (systemId?: string) => void;
   removePlanet: (planetId: string) => void;
   addFaction: (faction: Omit<Faction, "id"> & { id?: string }) => void;
   updateFaction: (id: string, patch: Partial<Faction>) => void;
   removeFaction: (id: string) => void;
   setFactionCapital: (factionId: string, systemId: string) => void;
+  assignSystemOwner: (systemId: string, factionId: string | null) => void;
   clearFactionOwnership: (factionId: string) => void;
   beginAssignCapital: (factionId: string) => void;
+  /** Leave studio shells and land on the GM map in one store update. */
+  jumpToGmMap: (opts?: GmMapJumpOpts) => void;
   focusCameraOnSystem: (systemId: string) => void;
   openPolityEditor: (factionId?: string | null) => void;
   closePolityEditor: () => void;
@@ -649,6 +653,14 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
         : {}),
     });
   },
+  jumpToGmMap: (opts = {}) => {
+    try {
+      localStorage.setItem(GM_SHELL_KEY, "gm");
+    } catch {
+      /* ignore */
+    }
+    set(buildGmMapJumpState(opts));
+  },
   setGmLiveDomain: (domain) => set({ gmLiveDomain: domain }),
   toggleGmLiveDomain: (domain) =>
     set((s) => ({
@@ -796,12 +808,11 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     }),
 
   beginAssignCapital: (factionId) => {
-    set({
-      dossierFactionId: null,
+    get().jumpToGmMap({
+      factionId,
       pendingCapitalFactionId: factionId,
-      activeFactionId: factionId,
+      dive: "galaxy",
       tool: "select",
-      contextMenu: null,
     });
   },
 
@@ -1557,14 +1568,16 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   },
 
   updatePlanet: (planetId, patch) => {
-    const { world, selectedSystemId, dossierSystemId } = get();
-    const sysId = selectedSystemId ?? dossierSystemId;
-    if (!sysId) return;
+    const { world } = get();
+    const sys = world.systems.find((s) =>
+      s.planets.some((p) => p.id === planetId),
+    );
+    if (!sys) return;
     set({
       world: touch({
         ...world,
         systems: world.systems.map((s) => {
-          if (s.id !== sysId) return s;
+          if (s.id !== sys.id) return s;
           return {
             ...s,
             planets: s.planets.map((p) =>
@@ -1577,10 +1590,11 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     } as HistoryPatch);
   },
 
-  addPlanet: () => {
+  addPlanet: (systemId) => {
     const { world, selectedSystemId } = get();
-    if (!selectedSystemId) return;
-    const sys = world.systems.find((s) => s.id === selectedSystemId);
+    const sid = systemId ?? selectedSystemId;
+    if (!sid) return;
+    const sys = world.systems.find((s) => s.id === sid);
     const nextOrbit =
       (sys?.planets.reduce((m, p) => Math.max(m, p.orbitIndex ?? 0), 0) ?? 0) +
       1;
@@ -1607,14 +1621,14 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
       world: touch({
         ...world,
         systems: world.systems.map((s) =>
-          s.id === selectedSystemId
+          s.id === sid
             ? { ...s, planets: [...s.planets, planet] }
             : s,
         ),
       }),
       mapFocus: {
         level: "planet",
-        systemId: selectedSystemId,
+        systemId: sid,
         planetId: planet.id,
       },
     });
@@ -1732,6 +1746,24 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
       pendingCapitalFactionId: null,
       selectedSystemId: systemId,
       selectedSystemIds: systemId ? [systemId] : [],
+    });
+  },
+
+  assignSystemOwner: (systemId, factionId) => {
+    const { world } = get();
+    set({
+      world: touch({
+        ...world,
+        systems: world.systems.map((s) =>
+          s.id === systemId
+            ? {
+                ...s,
+                ownerFactionId: factionId,
+                isCapital: factionId ? s.isCapital : false,
+              }
+            : s,
+        ),
+      }),
     });
   },
 

@@ -139,5 +139,13 @@ describe("diplo deal cards", () => {
     );
     assert.equal(giveHeavy?.tone, "give");
     assert.equal(dealFairness([], []), null);
+    const draftGive = dealFairness(
+      [
+        { kind: "resource", currencyId: "currency.metal", amount: 40 },
+        { kind: "resource", currencyId: "currency.metal", amount: 200 },
+      ],
+      [{ kind: "resource", currencyId: "currency.extracta", amount: 40 }],
+    );
+    assert.equal(draftGive?.tone, "give");
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { FlaskConical, Sparkles } from "lucide-react";
 import type { ViewerPayload } from "../state/types";
 import type {
   TechnologyDef,
@@ -8,6 +9,7 @@ import type {
 import { getCachedContent } from "../state/contentCatalog";
 import {
   effectiveCognitioCost,
+  isOfferedCandidate,
   missingRequireProperties,
 } from "../state/researchCosts";
 import {
@@ -23,6 +25,8 @@ import {
   listDirectionIds,
   resolveTechDirection,
   RESEARCH_DIRECTION_BY_DIGIT,
+  directionColor,
+  directionLabel,
 } from "../state/techDirections";
 import {
   ResearchQueue,
@@ -46,6 +50,7 @@ import { ResearchOffers } from "./research/ResearchOffers";
 import { isCatalogStubTech } from "./research/graph/visibleGraphTechs";
 import { OrbitGraph } from "./research/orbit/OrbitGraph";
 import { SpecializationStrip } from "./research/orbit/SpecializationStrip";
+import { computeDirectionProgress } from "./research/orbit/computeDirectionProgress";
 import { useTouchDrag } from "./shared/useTouchDrag";
 import {
   clearTechDragIdDeferred,
@@ -84,7 +89,10 @@ function prereqNames(
   return ids.map((id) => byId.get(id)?.name ?? id).join(", ");
 }
 
-function lockLabel(tech: TechnologyDef): string | null {
+function lockLabel(
+  tech: TechnologyDef,
+  eco?: ViewerPayload["economy"],
+): string | null {
   const content = getCachedContent();
   const hybrid = hybridLockLabel(tech);
   if (hybrid) return hybrid;
@@ -98,6 +106,8 @@ function lockLabel(tech: TechnologyDef): string | null {
       tech.factionTraitLock;
     return `Только с чертой «${name}»`;
   }
+  const missing = missingRequireProperties(tech, eco);
+  if (missing.length) return `Нужны свойства: ${missing.join(", ")}`;
   return null;
 }
 
@@ -236,7 +246,7 @@ export function ResearchPanel({
   onTechMapDrag?: (techId: string) => void;
   onEffectNavigate?: (target: import("./research/EffectsList").EffectNavigateTarget) => void;
 }) {
-  const [scienceMode, setScienceMode] = useState<"tree" | "lab">("tree");
+  const [scienceMode, setScienceMode] = useState<"tree" | "lab" | "offers">("tree");
   const [labSeed, setLabSeed] = useState<{
     a: string | null;
     b: string | null;
@@ -257,6 +267,7 @@ export function ResearchPanel({
   };
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
   const [pendingUpgradeId, setPendingUpgradeId] = useState<string | null>(null);
@@ -370,6 +381,22 @@ export function ResearchPanel({
     }
   }, [highlightTechId, byId]);
 
+  // Nearest unresearched on the chosen axis (green nodes on the ring).
+  useEffect(() => {
+    if (highlightTechId) return;
+    if (!focusBranch) return;
+    if (scienceMode !== "tree") return;
+    const pool = byDir.get(focusBranch) ?? [];
+    const next = pool.find(
+      (t) =>
+        !unlocked.has(t.id) &&
+        (t.prerequisites || []).every((p) => unlocked.has(p)),
+    );
+    if (next) setSelectedId(next.id);
+    // Only when the player switches direction on the ring.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusBranch, scienceMode]);
+
   // Auto-select first affordable / next in focus branch
   useEffect(() => {
     if (selectedId && byId.has(selectedId)) return;
@@ -405,6 +432,7 @@ export function ResearchPanel({
   }, [unlocked, cognitio, world, factionId, eco]);
 
   const selected = selectedId ? byId.get(selectedId) : undefined;
+  const offeredPick = selected ? isOfferedCandidate(selected, eco) : false;
 
   const selectedState = useMemo(() => {
     if (!selected) return null;
@@ -413,13 +441,21 @@ export function ResearchPanel({
       unlocked.has(p),
     );
     const cost = cognitioCost(selected, eco, selected.category);
-    const lock = lockLabel(selected);
+    const lock = lockLabel(selected, eco);
     const lockBlocked = lockBlocksResearch(selected, world, factionId, eco);
     const canBuy =
       !done && prereqOk && !lockBlocked && cognitio >= cost && !busy;
+    let buyBlock: string | null = null;
+    if (!done) {
+      if (!prereqOk) buyBlock = `Сначала изучите: ${prereqNames(selected, byId)}`;
+      else if (lockBlocked) buyBlock = lock || "Недоступно для этой державы";
+      else if (cognitio < cost) {
+        buyBlock = `Нужно ${cost} знания, есть ${cognitio}`;
+      }
+    }
     let status = "доступно";
     if (done) status = "исследовано";
-    else if (!prereqOk) status = "закрыто";
+    else if (!prereqOk) status = "нужны предыдущие";
     else if (lockBlocked) status = "эксклюзив";
     else if (cognitio < cost) status = "мало Знания";
     const buildings = buildingsUnlockedByTech(selected, eco);
@@ -446,6 +482,7 @@ export function ResearchPanel({
       prereqOk,
       cost,
       canBuy,
+      buyBlock,
       status,
       buildings,
       upgrades,
@@ -465,6 +502,7 @@ export function ResearchPanel({
     world,
     factionId,
     eco,
+    byId,
     queueSet,
     queue.length,
     onSetQueue,
@@ -600,37 +638,22 @@ export function ResearchPanel({
   }, [selected, byId, unlocked]);
 
   const buildingNames = selectedState?.buildings.map((b) => b.name) ?? [];
+  const directionIds = listDirectionIds();
+  const activeDir =
+    focusBranch && directionIds.includes(focusBranch)
+      ? focusBranch
+      : (directionIds[0] ?? null);
+  const dirProgress = computeDirectionProgress(byDir, unlocked);
+  const dirProgressById = new Map(dirProgress.map((p) => [p.direction, p]));
 
   const body = (
-    <>
-      <header className="research-panel-head">
-        <h3>Исследования</h3>
-        <div className="research-mode-tabs" role="tablist" aria-label="Режим науки">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={scienceMode === "tree"}
-            className={scienceMode === "tree" ? "on" : undefined}
-            onClick={() => setScienceMode("tree")}
-          >
-            Дерево
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={scienceMode === "lab"}
-            className={scienceMode === "lab" ? "on" : undefined}
-            onClick={() => setScienceMode("lab")}
-            disabled={!onAlchemyExperiment}
-          >
-            Лаборатория
-          </button>
-        </div>
+    <div className="science-dive">
+      <header className="science-dive__sum">
         <div className="research-stock-row">
           <p className="hint research-stock">
             Знание:{" "}
             <AnimatedTooltip
-              content="Перетащите на ноду дерева — изучить сейчас или ускорить слот очереди"
+              content="Перетащите на ноду — изучить сейчас или ускорить слот очереди"
             >
               <strong
                 className="tabular research-cognitio-chip"
@@ -652,121 +675,155 @@ export function ResearchPanel({
               </span>
             ) : null}
           </p>
-          <ul className="research-tier-pills" aria-label="Тиры категорий">
-            {CAT_ORDER.map((c) => (
-              <li
-                key={c}
-                style={{ color: CAT_COLOR[c], borderColor: CAT_COLOR[c] }}
-                title={`${CAT_NAME[c]} · T${tiers[c] ?? 1}`}
-              >
-                <span>{c}</span>
-                <strong className="tabular">{tiers[c] ?? 1}</strong>
-              </li>
-            ))}
-          </ul>
+          <p className="hint science-dive__rule">
+            За ход берётся только 1-я в очереди. Параллельно изучать нельзя.
+          </p>
         </div>
       </header>
-
-      {scienceMode === "lab" && onAlchemyExperiment ? (
-        <AlchemyLab
-          compact={compact}
-          unlockedIds={[...(unlocked)]}
-          cognitio={cognitio}
-          alchemy={eco?.alchemy}
-          busy={busy}
-          onExperiment={onAlchemyExperiment}
-          msg={msg}
-          initialSlots={
-            labSeed ? { a: labSeed.a, b: labSeed.b } : null
-          }
-          seedKey={labSeed?.key ?? null}
-        />
+      {onSetQueue && queue.length > 0 ? (
+        <div className="science-dive__queue">
+          <ResearchQueue
+            eco={eco}
+            compact
+            queue={queue}
+            byId={byId}
+            cognitio={cognitio}
+            income={income}
+            selectedId={selectedId}
+            busy={busy}
+            forecasts={forecasts}
+            onSelect={setSelectedId}
+            onChangeQueue={changeQueue}
+            onAccelerate={onAccelerate}
+          />
+        </div>
       ) : null}
-
-      {scienceMode === "tree" ? (
-        <div className="orbit-science-body">
-          <div className="orbit-topbar">
-            {onSetQueue ? (
-              <div className="orbit-topbar-block orbit-topbar-queue">
-                <ResearchQueue
-                  eco={eco}
-                  queue={queue}
-                  byId={byId}
-                  cognitio={cognitio}
-                  income={income}
-                  selectedId={selectedId}
-                  busy={busy}
-                  forecasts={forecasts}
-                  onSelect={setSelectedId}
-                  onChangeQueue={changeQueue}
-                  onAccelerate={onAccelerate}
-                />
-              </div>
-            ) : null}
-            <div className="orbit-topbar-block orbit-topbar-offers">
-              <ResearchOffers
-                eco={eco}
-                cognitio={cognitio}
-                busy={busy}
-                focus={null}
-                onResearch={onResearch}
-                onReroll={onRerollOffer}
-                onOpenBranch={openBranch}
-              />
-            </div>
-          </div>
-
-      <div
-        className="research-workbench"
-        id="research-panel-main"
-        role="tabpanel"
-      >
-        <div className="research-map">
+      <nav className="science-dive__tasks" aria-label="Направления науки">
+        {directionIds.map((d) => {
+          const p = dirProgressById.get(d);
+          const on =
+            (scienceMode === "tree" || scienceMode === "offers") &&
+            activeDir === d;
+          return (
+            <button
+              key={d}
+              type="button"
+              className={on ? "is-on" : ""}
+              style={{ "--dot-c": directionColor(d) } as React.CSSProperties}
+              onClick={() => {
+                setScienceMode((m) => (m === "offers" ? "offers" : "tree"));
+                setFocusBranch(d);
+              }}
+            >
+              <span className="science-dive__dir-dot" aria-hidden />
+              {directionLabel(d)}
+              {p ? (
+                <span className="tabular science-dive__dir-n">
+                  {p.researched}/{p.total}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+        {onAlchemyExperiment ? (
+          <button
+            type="button"
+            className={scienceMode === "lab" ? "is-on" : ""}
+            onClick={() => setScienceMode("lab")}
+          >
+            <FlaskConical size={16} strokeWidth={1.75} aria-hidden />
+            Лаб
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={scienceMode === "offers" ? "is-on" : ""}
+          onClick={() => setScienceMode("offers")}
+        >
+          <Sparkles size={16} strokeWidth={1.75} aria-hidden />
+          Предложения
+        </button>
+        {scienceMode === "tree" && activeDir ? (
+          <SpecializationStrip
+            compact
+            economy={eco}
+            directions={[activeDir]}
+          />
+        ) : null}
+      </nav>
+      <div className="science-dive__canvas">
+        {scienceMode === "lab" && onAlchemyExperiment ? (
+          <AlchemyLab
+            compact={compact}
+            unlockedIds={[...unlocked]}
+            cognitio={cognitio}
+            alchemy={eco?.alchemy}
+            busy={busy}
+            onExperiment={onAlchemyExperiment}
+            msg={msg}
+            initialSlots={
+              labSeed ? { a: labSeed.a, b: labSeed.b } : null
+            }
+            seedKey={labSeed?.key ?? null}
+          />
+        ) : scienceMode === "offers" ? (
+          <ResearchOffers
+            layout="stage"
+            eco={eco}
+            cognitio={cognitio}
+            busy={busy}
+            focus={activeDir}
+            selectedId={selectedId}
+            onResearch={onResearch}
+            onReroll={onRerollOffer}
+            onOpenBranch={setFocusBranch}
+            onSelectTech={setSelectedId}
+          />
+        ) : (
           <OrbitGraph
-            directions={listDirectionIds()}
+            directions={directionIds}
             techsByDirection={byDir}
             unlocked={unlocked}
             queue={queue}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            focusDirection={focusBranch}
-            onFocusDirectionChange={setFocusBranch}
+            focusDirection={activeDir}
+            onFocusDirectionChange={(d) => {
+              if (d) setFocusBranch(d);
+            }}
             onCognitioDrop={dropCognitioOnTech}
+            hideDirectionTabs
+            categoryFilter={categoryFilter}
+            onCategoryFilterChange={setCategoryFilter}
+            categoryChips={CAT_ORDER.map((c) => ({
+              id: c,
+              name: CAT_NAME[c],
+              color: CAT_COLOR[c],
+              tier: tiers[c] ?? 1,
+            }))}
           />
-        </div>
-
-        <SpecializationStrip economy={eco} directions={listDirectionIds()} />
-
-        <aside
-          className={`research-detail fx-spotlight ${selected?.isBreakthrough ? "fx-glow" : ""}`}
-          style={
-            selected
-              ? ({
-                  "--fx-spot-color": CAT_COLOR[selected.category],
-                  "--fx-glow-color": CAT_COLOR[selected.category],
-                } as React.CSSProperties)
-              : undefined
-          }
-          aria-live="polite"
-          {...detailSpot.bind}
-        >
+        )}
+      </div>
+      <aside
+        className={`science-dive__deck research-detail fx-spotlight ${selected?.isBreakthrough ? "fx-glow" : ""}`}
+        style={
+          selected
+            ? ({
+                "--fx-spot-color": CAT_COLOR[selected.category],
+                "--fx-glow-color": CAT_COLOR[selected.category],
+              } as React.CSSProperties)
+            : undefined
+        }
+        aria-live="polite"
+        {...detailSpot.bind}
+      >
           {!selected || !selectedState ? (
             <p className="hint">
-              {focusBranch == null
-                ? "Выберите технологию на графе или направление."
-                : "Выберите технологию на графе."}
+              Зелёные узлы — ближайшие неизученные. Выберите один.
             </p>
           ) : (
             <>
               <header className="research-detail-head">
-                <span
-                  className="research-cat"
-                  style={{ color: CAT_COLOR[selected.category] }}
-                >
-                  {CAT_NAME[selected.category]} · эра{" "}
-                  {selected.era}
-                  {selected.isBreakthrough ? " · брейкро" : ""}
-                </span>
                 <h3>
                   {selected.name}
                   {selectedState.lock ? (
@@ -786,36 +843,25 @@ export function ResearchPanel({
                     : ""}
                   {selectedState.inQueue ? " · в очереди" : ""}
                 </span>
+                <span
+                  className="research-cat"
+                  style={{ color: CAT_COLOR[selected.category] }}
+                >
+                  {CAT_NAME[selected.category]} · эра {selected.era}
+                  {selected.isBreakthrough ? " · прорыв" : ""}
+                </span>
               </header>
 
               {selectedState.lock ? (
                 <p className="hint research-lock-hint">{selectedState.lock}</p>
               ) : null}
 
-              {selectedPath && selectedPath.steps.length > 1 && !selectedState.done ? (
-                <div className="research-path-planner" aria-label="Путь исследования">
-                  <strong>Путь</strong>
-                  <ol>
-                    {selectedPath.steps.map((s) => (
-                      <li key={s.techId}>
-                        <button
-                          type="button"
-                          className="linkish"
-                          onClick={() => setSelectedId(s.techId)}
-                        >
-                          {s.name}
-                        </button>
-                        <span className="tabular hint"> · {s.cost}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <p className="hint">
-                    Итого {selectedPath.totalCognitio} cognitio ·{" "}
-                    {selectedPath.steps.length} шагов
-                  </p>
-                </div>
+              {selected.flavor ? (
+                <p className="science-dive__flavor">{selected.flavor}</p>
               ) : null}
 
+              <div className="science-dive__gives-box">
+              <h4 className="science-dive__gives">Что даёт</h4>
               <EffectsList
                 effects={selected.effects}
                 buildings={buildingNames}
@@ -831,6 +877,7 @@ export function ResearchPanel({
                 }
                 onEffectNavigate={onEffectNavigate}
               />
+              </div>
 
               <dl className="research-detail-meta">
                 <div>
@@ -845,47 +892,44 @@ export function ResearchPanel({
                 <div>
                   <dt>Требования</dt>
                   <dd>
-                    {selectedState.prereqOk || selectedState.done
+                    {selectedState.done ||
+                    (selectedState.prereqOk && !selectedState.lockBlocked)
                       ? "выполнены"
-                      : prereqNames(selected, byId)}
+                      : selectedState.buyBlock || prereqNames(selected, byId)}
                   </dd>
                 </div>
               </dl>
 
-              {!selectedState.done ? (
-                <div
-                  className="research-cognitio-bar research-cognitio-bar--detail"
-                  role="progressbar"
-                  aria-valuenow={Math.min(cognitio, selectedState.cost)}
-                  aria-valuemin={0}
-                  aria-valuemax={Math.max(1, selectedState.cost)}
-                >
-                  <span
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (cognitio / Math.max(1, selectedState.cost)) * 100,
-                      )}%`,
-                    }}
-                  />
-                </div>
-              ) : null}
-
               <div className="research-detail-cta">
-                <StatefulButton
-                  className={`btn ${selectedState.canBuy ? "primary fx-moving-border" : ""}`}
-                  disabled={!selectedState.canBuy}
-                  busy={busy && pendingId === selected.id}
-                  success={successId === selected.id}
-                  successLabel="Исследовано"
-                  onClick={() => {
-                    if (!selectedState.canBuy) return;
-                    requestResearch(selected.id);
-                  }}
+                <div
+                  className={
+                    selectedState.canBuy
+                      ? "research-cta-wrap fx-moving-border"
+                      : "research-cta-wrap"
+                  }
                 >
-                  {selectedState.done ? "Исследовано" : "Исследовать"}
-                </StatefulButton>
-                {!selectedState.done && onSetQueue ? (
+                  <StatefulButton
+                    className={`btn ${selectedState.canBuy ? "primary" : ""}`}
+                    disabled={selectedState.done}
+                    aria-disabled={!selectedState.canBuy}
+                    title={selectedState.buyBlock ?? undefined}
+                    busy={busy && pendingId === selected.id}
+                    success={successId === selected.id}
+                    successLabel="Исследовано"
+                    onClick={() => {
+                      if (selectedState.done) return;
+                      if (!selectedState.canBuy) return;
+                      requestResearch(selected.id);
+                    }}
+                  >
+                    {selectedState.done
+                      ? "Исследовано"
+                      : offeredPick
+                        ? "Выбрать эту"
+                        : "Исследовать"}
+                  </StatefulButton>
+                </div>
+                {!selectedState.done && onSetQueue && !(scienceMode === "offers" && offeredPick) ? (
                   <button
                     type="button"
                     className="btn"
@@ -916,9 +960,29 @@ export function ResearchPanel({
                   </button>
                 ) : null}
               </div>
+              {selectedState.buyBlock ? (
+                <p className="hint research-buy-block" role="status">
+                  {selectedState.buyBlock}
+                </p>
+              ) : null}
+              {offeredPick && !selectedState.done ? (
+                <p className="hint" role="note">
+                  Из трёх карт направления берётся только одна. После выбора
+                  предложение обновится.
+                </p>
+              ) : null}
+              {msg ? (
+                <p
+                  className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") || msg.startsWith("Очередь") || msg.startsWith("Ускорено") ? "is-ok" : "is-err"}`}
+                  role="status"
+                >
+                  {msg}
+                </p>
+              ) : null}
 
               {selectedState.done ? (
-                <>
+                <details className="science-dive__fold">
+                  <summary>Улучшения</summary>
                   <UpgradesComparison
                     tech={selected}
                     unlockedUpgrades={unlockedUpgrades}
@@ -947,25 +1011,42 @@ export function ResearchPanel({
                     onUpgradeGrade={requestGrade}
                     onFillSocket={requestSocket}
                   />
-                </>
+                </details>
+              ) : null}
+
+              {selectedPath && selectedPath.steps.length > 1 && !selectedState.done ? (
+                <details className="science-dive__fold">
+                  <summary>Путь ({selectedPath.steps.length} шагов)</summary>
+                  <div className="research-path-planner" aria-label="Путь исследования">
+                    <ol>
+                      {selectedPath.steps.map((s) => (
+                        <li key={s.techId}>
+                          <button
+                            type="button"
+                            className="linkish"
+                            onClick={() => setSelectedId(s.techId)}
+                          >
+                            {s.name}
+                          </button>
+                          <span className="tabular hint"> · {s.cost}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="hint">
+                      Итого {selectedPath.totalCognitio} знания
+                    </p>
+                  </div>
+                </details>
               ) : null}
             </>
           )}
-          {msg && (
-            <p
-              className={`hint research-msg ${msg.startsWith("Исследовано") || msg.startsWith("Улучшено") || msg.startsWith("Очередь") || msg.startsWith("Ускорено") ? "is-ok" : "is-err"}`}
-              role="status"
-            >
-              {msg}
-            </p>
-          )}
 
-          <ResearchTimeline recent={eco?.recent} />
+          <details className="science-dive__fold">
+            <summary>История</summary>
+            <ResearchTimeline recent={eco?.recent} />
+          </details>
         </aside>
-      </div>
-        </div>
-      ) : null}
-    </>
+    </div>
   );
 
   return (

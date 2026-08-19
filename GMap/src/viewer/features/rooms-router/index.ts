@@ -6,6 +6,7 @@ export {
 } from "./navigateViewerRoom";
 export {
   isDesktopWorkbenchView,
+  isPlayerDockCompact,
   isMobileImmersiveView,
   pickRoomKey,
 } from "./roomViewFlags";
@@ -23,3 +24,4 @@ export { ViewerForcesRoom } from "./ViewerForcesRoom";
 export { ViewerEconomyRoom } from "./ViewerEconomyRoom";
 export { ViewerCourtRoom } from "./ViewerCourtRoom";
 export { ViewerChronicleRoom } from "./ViewerChronicleRoom";
+export { ViewerPlanetRoom } from "./ViewerPlanetRoom";

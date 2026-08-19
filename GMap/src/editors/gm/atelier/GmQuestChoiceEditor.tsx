@@ -68,15 +68,7 @@ export function GmQuestChoiceEditor({ choices, onChange }: Props) {
         return (
           <article key={choice.id || i} className="gm-quest-choice-card">
             <header className="gm-quest-choice-head">
-              <input
-                type="text"
-                className="gm-form-input"
-                placeholder="id выбора"
-                value={choice.id}
-                onChange={(e) =>
-                  onChange(patchChoice(choices, i, { id: e.target.value }))
-                }
-              />
+              <strong>{choice.label || `Выбор ${i + 1}`}</strong>
               <button
                 type="button"
                 className="btn ghost"

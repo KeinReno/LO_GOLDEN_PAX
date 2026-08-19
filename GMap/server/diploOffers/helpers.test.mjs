@@ -10,6 +10,8 @@ import {
   resourceNeedByCurrency,
   transferAssets,
   validateAssets,
+  UNILATERAL_STANCES,
+  MUTUAL_TREATIES,
 } from "./helpers.mjs";
 
 describe("affordResources", () => {
@@ -110,5 +112,13 @@ describe("transferAssets", () => {
     assert.equal(s.planets[1].ownerFactionId, "other");
     assert.equal(s.stations[0].factionId, "b");
     assert.equal(s.stations[1].factionId, "other");
+  });
+});
+
+describe("unilateral vs mutual", () => {
+  it("insult is a stance, not a treaty card", () => {
+    assert.equal(UNILATERAL_STANCES.has("insult"), true);
+    assert.equal(MUTUAL_TREATIES.has("insult"), false);
+    assert.equal(MUTUAL_TREATIES.has("war"), false);
   });
 });

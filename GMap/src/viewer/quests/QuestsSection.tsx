@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronLeft, ScrollText, Users } from "lucide-react";
+import { ChevronLeft, Users } from "lucide-react";
 import type { ViewerPayload } from "../../state/types";
+import { countCourtAttention } from "../court/courtAttention";
 import {
   adaptNpcTasks,
   adaptQuests,
@@ -125,9 +126,7 @@ export function QuestsSection({
     () => collectAttention(quests, turn).length + (rolled ? 0 : 1),
     [quests, turn, rolled],
   );
-  const courtBadge = npcTasks.filter(
-    (t) => t.status === "working" || t.status === "done",
-  ).length;
+  const courtBadge = countCourtAttention(payload);
 
   useEffect(() => {
     if (droppingIds.length === 0) return;
@@ -285,15 +284,7 @@ export function QuestsSection({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && chatOpen) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        closeChat();
-        return;
-      }
-      if (!selected || selected.status !== "active") return;
-      const choices = selected.choices ?? [];
-      if (!choices.length) return;
+      if (e.key !== "Escape" || !chatOpen) return;
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -303,16 +294,13 @@ export function QuestsSection({
       ) {
         return;
       }
-      const n = Number(e.key);
-      if (n >= 1 && n <= choices.length) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        void choose(choices[n - 1]!.id);
-      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeChat();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [selected, choose, chatOpen, closeChat]);
+  }, [chatOpen, closeChat]);
 
   const sendChat = async (text: string) => {
     if (!selected) return;
@@ -464,6 +452,9 @@ export function QuestsSection({
               onDiceSettled={() =>
                 setStageDice((d) => (d ? { ...d, rolling: false } : d))
               }
+              onNeedHold={() =>
+                setActionMsg("Удержите карточку. Это трата, отменить нельзя.")
+              }
             />
           ) : null}
           {screen === "chat" && selected ? (
@@ -540,34 +531,7 @@ export function QuestsSection({
               </button>
             )}
           </header>
-        ) : (
-          <nav className="quests-table__modes" aria-label="Режим квестов">
-            <button
-              type="button"
-              className="quests-table__mode is-active"
-              aria-current="page"
-            >
-              <ScrollText size={14} aria-hidden />
-              Квесты
-              {attentionCount > 0 ? (
-                <span className="quest-group-count">{attentionCount}</span>
-              ) : null}
-            </button>
-            {onOpenCourt ? (
-              <button
-                type="button"
-                className="quests-table__mode"
-                onClick={onOpenCourt}
-              >
-                <Users size={14} aria-hidden />
-                Двор
-                {courtBadge > 0 ? (
-                  <span className="quest-group-count">{courtBadge}</span>
-                ) : null}
-              </button>
-            ) : null}
-          </nav>
-        )}
+        ) : null}
 
         {actionMsg ? (
           <p className="quest-action-msg" role="status">
@@ -603,6 +567,9 @@ export function QuestsSection({
                 onDiceSettled={() =>
                   setStageDice((d) => (d ? { ...d, rolling: false } : d))
                 }
+                onNeedHold={() =>
+                  setActionMsg("Удержите карточку. Это трата, отменить нельзя.")
+                }
               />
             </div>
           ) : (
@@ -618,6 +585,7 @@ export function QuestsSection({
               onOpenJournal={openJournal}
               onFocusSystem={onFocusSystem}
               showCourtLink={false}
+              showWorkingList={false}
             />
           ))}
       </div>

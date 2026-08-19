@@ -1,6 +1,7 @@
 import type { TechnologyDef, TechUpgrade } from "../../state/contentCatalog";
 import { effectiveCognitioCost } from "../../state/researchCosts";
 import type { ViewerPayload } from "../../state/types";
+import { renderEffect } from "../../state/EffectRenderers";
 import { StatefulButton } from "../../ui/StatefulButton";
 
 function cognitioCost(u: TechUpgrade, eco?: ViewerPayload["economy"], category?: string): number {
@@ -8,22 +9,7 @@ function cognitioCost(u: TechUpgrade, eco?: ViewerPayload["economy"], category?:
 }
 
 function effectSummary(u: TechUpgrade): string {
-  const parts: string[] = [];
-  for (const e of u.effects || []) {
-    if (e.effect === "production_mult") {
-      parts.push(`+${Math.round((Number(e.args.mult) - 1) * 100)}% добыча`);
-    } else if (e.effect === "upkeep_mult") {
-      parts.push(`${Math.round(Number(e.args.mult) * 100)}% апкип`);
-    } else if (e.effect === "unlock_property") {
-      parts.push(`свойство «${e.args.property}»`);
-    } else if (e.effect === "stat_mult") {
-      parts.push(`${e.args.stat} ×${e.args.mult}`);
-    } else if (e.effect === "unit_upgrade") {
-      parts.push(`${e.args.from} → ${e.args.to}`);
-    } else {
-      parts.push(e.effect);
-    }
-  }
+  const parts = (u.effects || []).map((e) => renderEffect(e).short);
   return parts.join(" · ") || "—";
 }
 

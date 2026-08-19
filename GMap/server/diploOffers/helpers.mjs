@@ -29,7 +29,7 @@ const TREATIES = new Set([
 
 /**
  * Mutual treaties — only via pending offer (other player must accept).
- * Unilateral stances (war / embargo / break) apply immediately — never as a deal.
+ * Unilateral stances (war / embargo / break / insult) apply immediately — never as a deal.
  */
 export const MUTUAL_TREATIES = new Set([
   "trade",
@@ -42,7 +42,7 @@ export const MUTUAL_TREATIES = new Set([
 ]);
 
 /** Hostile / withdrawing actions — fait accompli, no counterparty consent. */
-export const UNILATERAL_STANCES = new Set(["war", "embargo", "break"]);
+export const UNILATERAL_STANCES = new Set(["war", "embargo", "break", "insult"]);
 
 export function getEdgeRelation(world, aId, bId) {
   return getRelation(world, aId, bId);

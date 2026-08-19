@@ -14,6 +14,7 @@ import { useViewerBattleSessionStore } from "../../../state/viewerBattleSessionS
 import { useViewerMapOverlayStore } from "../../../state/viewerMapOverlayStore";
 import { useViewerOrderSessionStore } from "../../../state/viewerOrderSessionStore";
 import { useViewerPanelFocusStore } from "../../../state/viewerPanelFocusStore";
+import { listProductionHubSystemIds } from "../../../state/forceReadiness";
 import { useViewerSessionStore } from "../../../state/viewerSessionStore";
 import { useViewerSystemDiveStore } from "../../../state/viewerSystemDiveStore";
 import { CodexPanel } from "../../codex";
@@ -32,7 +33,10 @@ import {
   type ViewerActionSource,
 } from "../order-orchestrator/viewerSessionPatch";
 import type { RecruitSessionPatch } from "../system-dive/systemActionCopy";
+import type { PlanetActionRequest } from "../../PlayerPlanetManage";
+import type { BuildPreviewResult, BuildQueueItem } from "../../system/types";
 import { planForceUnitOrder, produceDeckNote } from "./forceOrderFocus";
+import { recruitPickNote } from "../../forces/recruitMapPick";
 import { navigateViewerRoom } from "./navigateViewerRoom";
 import { ViewerChronicleRoom } from "./ViewerChronicleRoom";
 import { ViewerCourtRoom } from "./ViewerCourtRoom";
@@ -43,6 +47,7 @@ import { ViewerHqRoom } from "./ViewerHqRoom";
 import { ViewerMarketRoom } from "./ViewerMarketRoom";
 import { ViewerQuestsRoom } from "./ViewerQuestsRoom";
 import { ViewerResearchRoom } from "./ViewerResearchRoom";
+import { ViewerPlanetRoom } from "./ViewerPlanetRoom";
 import { ViewerRoomHost } from "./ViewerRoomHost";
 
 export type ViewerPlayRoomActions = ViewerPlayEngagementActions & {
@@ -100,6 +105,15 @@ export type ViewerPlayRoomActions = ViewerPlayEngagementActions & {
     toSystemId: string,
     amount: number,
   ) => void;
+  runPlanetAction: (req: PlanetActionRequest) => void | Promise<unknown>;
+  setBuildQueue: (next: BuildQueueItem[]) => void | Promise<unknown>;
+  previewBuild: (opts: {
+    systemId: string;
+    planetId: string;
+    buildingId: string;
+  }) => Promise<BuildPreviewResult | null>;
+  openResearchWithTech: (techId: string) => void;
+  runFoundHybridLineage: (raceA: string, raceB: string) => void | Promise<unknown>;
 };
 
 type Props = {
@@ -154,6 +168,9 @@ export function ViewerPlayRooms({
   const economyLinkedSystemId = useViewerPanelFocusStore(
     (s) => s.economyLinkedSystemId,
   );
+  const setEconomyFocusCategory = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusCategory,
+  );
   const forcesHighlightDefIds = useViewerPanelFocusStore(
     (s) => s.forcesHighlightDefIds,
   );
@@ -168,6 +185,12 @@ export function ViewerPlayRooms({
   );
   const setSystemProduceLegionId = useViewerSystemDiveStore(
     (s) => s.setSystemProduceLegionId,
+  );
+  const setTechMapHighlightIds = useViewerPanelFocusStore(
+    (s) => s.setTechMapHighlightIds,
+  );
+  const setRecruitMapPick = useViewerPanelFocusStore(
+    (s) => s.setRecruitMapPick,
   );
   const setViewerCtx = useViewerMapOverlayStore((s) => s.setViewerCtx);
   const setOrderRing = useViewerMapOverlayStore((s) => s.setOrderRing);
@@ -297,6 +320,23 @@ export function ViewerPlayRooms({
             openPlayerSystem={actions.openPlayerSystem}
           />
         ),
+        planet: (
+          <ViewerPlanetRoom
+            payload={payload}
+            password={password}
+            onPlanetAction={actions.runPlanetAction}
+            onChangeBuildQueue={actions.setBuildQueue}
+            onPreviewBuild={actions.previewBuild}
+            onOpenResearch={actions.openResearchWithTech}
+            onOpenSystem={actions.openPlayerSystem}
+            onFoundHybrid={actions.runFoundHybridLineage}
+            onRecruitSession={actions.applyRecruitSession}
+            onShowInEconomy={(letter) => {
+              setEconomyFocusCategory(letter);
+              navigateViewerRoom("economy");
+            }}
+          />
+        ),
         research: (
           <ViewerResearchRoom
             payload={payload}
@@ -391,6 +431,8 @@ export function ViewerPlayRooms({
             onOrderWithLegion={(id) => orderWithUnit("legion", id)}
             onOpenCardBattle={(engId) => actions.openCardBattle(engId)}
             onOpenProduce={({ systemId, tab, fleetId, legionId }) => {
+              setRecruitMapPick(null);
+              setTechMapHighlightIds([]);
               setSystemPreferDeck("produce");
               setSystemProduceTab(tab);
               setSystemProduceFleetId(fleetId ?? null);
@@ -398,6 +440,23 @@ export function ViewerPlayRooms({
               navigateViewerRoom("map");
               actions.openPlayerSystem(systemId);
               setOrderMsg(produceDeckNote(tab));
+            }}
+            onBeginRecruit={(tab) => {
+              const hub = tab === "ships" ? "shipyard" : "barracks";
+              const ids = listProductionHubSystemIds(
+                payload.world,
+                payload.factionId,
+                hub,
+              );
+              if (ids.length === 0) {
+                setOrderMsg(recruitPickNote(tab, 0));
+                return;
+              }
+              setRecruitMapPick({ tab, hubIds: ids });
+              setTechMapHighlightIds(ids);
+              navigateViewerRoom("map");
+              actions.focusSystemOnMap(ids[0]);
+              setOrderMsg(recruitPickNote(tab, ids.length));
             }}
             onRecruitSession={actions.applyRecruitSession}
             onSessionPatch={(data) => {

@@ -80,6 +80,8 @@ export type BuildViewerAlertsInput = {
   rpUnread: number;
   /** Decisions this turn — counted by the caller so this module stays Node-testable. */
   questAttention?: number;
+  /** First quest that needs a pick this turn (alert copy). */
+  questFocusTitle?: string;
   economyWarning?: string | null;
   systemSignals?: EconomySystemSignal[];
   callbacks: {
@@ -259,6 +261,7 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
     pendingOrderCount,
     rpUnread,
     questAttention = 0,
+    questFocusTitle,
     economyWarning,
     systemSignals,
     callbacks,
@@ -306,14 +309,15 @@ export function buildViewerAlerts(input: BuildViewerAlertsInput): AlertItem[] {
       kind: "quest",
       verb: "Открыть квесты",
       title:
-        questN === 1
+        questFocusTitle ||
+        (questN === 1
           ? "Есть решение по квесту"
           : ruCount(
               questN,
               "решение по квестам",
               "решения по квестам",
               "решений по квестам",
-            ),
+            )),
       subtitle: "Кубик хода или выбор",
       onFocus: callbacks.onFocusQuests,
     });

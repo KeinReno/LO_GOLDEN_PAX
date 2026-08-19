@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Hammer, Landmark, Shield, Users } from "lucide-react";
 import { formatOdMeter } from "../state/playerUiTerms";
 import { createPortal } from "react-dom";
 import type {
@@ -7,6 +8,7 @@ import type {
   PlanetBuildingZone,
   StarSystem,
 } from "../state/types";
+import { GmPlanetLiveStats } from "./GmPlanetLiveStats";
 import { useWorldStore } from "../state/worldStore";
 import { COLONY_TYPE_LABELS } from "../state/defaults";
 import { HABIT_LABELS, classifyPlanet } from "../state/planets";
@@ -42,6 +44,11 @@ import { BuildingKindIcon } from "./BuildingKindIcon";
 import { BuildingLaborPanel } from "./BuildingLaborPanel";
 import { PlanetLaborTray, type LaborDragFrom } from "./PlanetLaborTray";
 import { planetLaborSummary } from "../state/planetLabor";
+import { buildPlanetNowItems } from "./planetNow";
+import {
+  planetDiveTasks,
+  type PlanetDiveTask,
+} from "./features/system-dive/diveChrome";
 import { FloatingPanel } from "../ui/FloatingPanel";
 import { HoldRevealButton } from "../ui/HoldRevealButton";
 import type { MapResourceDef } from "../state/contentCatalog";
@@ -181,6 +188,8 @@ export function PlayerPlanetManage({
   onFoundHybrid,
   password,
   onForceRecruitSession,
+  chrome = "dive",
+  godMode = false,
 }: {
   system: StarSystem;
   planet: Planet;
@@ -208,18 +217,21 @@ export function PlayerPlanetManage({
   primaryFaith?: string;
   unlockedLineages?: string[];
   onFoundHybrid?: (raceA: string, raceB: string) => void;
+  chrome?: "dive" | "workbench" | "lcr";
+  godMode?: boolean;
 }) {
   const habit = classifyPlanet(planet);
   const ownerId = planet.ownerFactionId || system.ownerFactionId || null;
-  const managed = ownerId === factionId;
+  const managed = godMode || ownerId === factionId;
   const empty =
     (planet.population ?? 0) <= 0 &&
     normalizeColonyType(planet.colonyType) === "none";
   const canColonize =
-    system.ownerFactionId === factionId &&
     empty &&
     planet.colonizable !== false &&
-    (!planet.ownerFactionId || planet.ownerFactionId === factionId);
+    (godMode ||
+      (system.ownerFactionId === factionId &&
+        (!planet.ownerFactionId || planet.ownerFactionId === factionId)));
 
   const surface = planet.surfaceBuildings ?? [];
   const orbital = planet.orbitalBuildings ?? [];
@@ -281,6 +293,7 @@ export function PlayerPlanetManage({
   const [listDeckZone, setListDeckZone] = useState<"surface" | "orbital" | null>(
     null,
   );
+  const [diveTask, setDiveTask] = useState<PlanetDiveTask>("build");
   const [laborPick, setLaborPick] = useState<{
     from: LaborDragFrom;
     amount: number;
@@ -298,6 +311,7 @@ export function PlayerPlanetManage({
     setListDeckZone(null);
     setLaborPick(null);
     setLaborDrag(null);
+    setDiveTask("build");
   }, [planet.id]);
 
   const highlightBuildingIds = useMemo(() => {
@@ -323,6 +337,32 @@ export function PlayerPlanetManage({
   const laborSum = useMemo(
     () => planetLaborSummary(planet, buildings),
     [planet, buildings],
+  );
+  const nowItems = useMemo(
+    () =>
+      buildPlanetNowItems({
+        emptySurface: Math.max(0, surfaceMax - surface.length),
+        emptyOrbital: Math.max(0, orbitalMax - orbital.length),
+        laborFree: laborSum.free,
+        laborOpen: laborSum.open,
+        idleBuildingName:
+          [...surface, ...orbital].find((b) => {
+            const def = b.buildingId ? buildings[b.buildingId] : undefined;
+            const need = Number(def?.laborSlots) || 0;
+            return need > 0 && Number(b.assignedLabor ?? 0) < need;
+          })?.name ?? null,
+        canUpgradeSurface: Boolean(surfaceUpgradeCost),
+      }),
+    [
+      surfaceMax,
+      surface,
+      orbitalMax,
+      orbital,
+      laborSum.free,
+      laborSum.open,
+      buildings,
+      surfaceUpgradeCost,
+    ],
   );
 
   const clearLaborUi = () => {
@@ -418,8 +458,281 @@ export function PlayerPlanetManage({
     }
   };
 
+  if (chrome === "lcr") {
+    const tasks = planetDiveTasks(planet, managed);
+    const task = tasks.includes(diveTask) ? diveTask : tasks[0]!;
+    const radial = (
+      <PlanetRadialSlots
+        planet={planet}
+        systemId={system.id}
+        planetId={planet.id}
+        factionId={factionId}
+        raceIds={raceIdsFromComposition(planet.raceComposition)}
+        buildings={buildings}
+        stocks={stocks}
+        reservedAp={reservedAp}
+        apMax={apMax}
+        techEco={techEco}
+        busy={busy}
+        gmFree={godMode}
+        onAction={onAction}
+        onInspect={setInspect}
+        onOpenResearch={onOpenResearch}
+        highlightCategory={highlightCategory}
+        highlightBuildingIds={highlightBuildingIds}
+        onSelectBuilding={(id) => void requestPreview(id)}
+        laborPickFrom={laborPick?.from ?? null}
+        laborDragging={!!laborDrag}
+        onLaborPickBuilding={(id, amount) =>
+          setLaborPick({ from: id, amount })
+        }
+        onLaborDragBuilding={(id, x, y, amount) =>
+          setLaborDrag({ from: id, amount, x, y })
+        }
+        onLaborTapBuilding={(id) => {
+          if (laborPick) transferLabor(laborPick.from, id, laborPick.amount);
+        }}
+        deckMode={task === "build" && managed ? "dock" : "none"}
+      />
+    );
+    const taskLabel: Record<PlanetDiveTask, string> = {
+      build: "Стройка",
+      people: "Люди",
+      forces: "Силы",
+      policy: "Меры",
+    };
+    const taskIcon = {
+      build: Hammer,
+      people: Users,
+      forces: Shield,
+      policy: Landmark,
+    } as const;
+    return (
+      <div className="planet-dive">
+        <header className="planet-dive__sum">
+          <button
+            type="button"
+            className="btn viewer-system-back"
+            onClick={onBack}
+          >
+            К системе
+            <kbd className="viewer-system-back-kbd">Esc</kbd>
+          </button>
+          <h3 className="planet-dive__name">
+            {managed ? (
+              <InlineRename
+                value={planet.name}
+                title="Переименовать планету"
+                onCommit={(name) =>
+                  onAction({
+                    action: "rename",
+                    systemId: system.id,
+                    planetId: planet.id,
+                    name,
+                  })
+                }
+              />
+            ) : (
+              planet.name
+            )}
+          </h3>
+          <dl className="planet-dive__metrics">
+            {godMode ? (
+              <GmPlanetLiveStats
+                planet={planet}
+                laborUsed={laborSum.used}
+                laborSlots={laborSum.slots}
+                surfaceUsed={surface.length}
+                surfaceMax={surfaceMax}
+                orbitalUsed={orbital.length}
+                orbitalMax={orbitalMax}
+              />
+            ) : (
+              <>
+            <div>
+              <dt>Население</dt>
+              <dd>{planet.population ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Труд</dt>
+              <dd>
+                {Math.round(laborSum.used)}/{Math.round(laborSum.slots)}
+              </dd>
+            </div>
+            <div>
+              <dt>Колония</dt>
+              <dd>
+                {COLONY_TYPE_LABELS[normalizeColonyType(planet.colonyType)] ??
+                  "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>Слоты</dt>
+              <dd>
+                пов. {surface.length}/{surfaceMax} · орб. {orbital.length}/
+                {orbitalMax}
+              </dd>
+            </div>
+              </>
+            )}
+          </dl>
+        </header>
+        {onChangeBuildQueue && (buildQueue?.length ?? 0) > 0 ? (
+          <div className="planet-dive__queue">
+            <BuildQueue
+              queue={buildQueue ?? []}
+              buildings={buildings}
+              systemId={system.id}
+              planetId={planet.id}
+              stocks={stocks}
+              busy={busy}
+              onChangeQueue={onChangeBuildQueue}
+            />
+          </div>
+        ) : null}
+        <nav className="planet-dive__tasks" aria-label="Задачи мира">
+          {tasks.map((id) => {
+            const Icon = taskIcon[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                className={task === id ? "is-on" : ""}
+                onClick={() => setDiveTask(id)}
+              >
+                <Icon size={16} strokeWidth={1.75} aria-hidden />
+                {taskLabel[id]}
+              </button>
+            );
+          })}
+        </nav>
+        <div
+          className={
+            task === "build" && managed
+              ? "planet-dive__canvas is-contents"
+              : "planet-dive__canvas"
+          }
+        >
+          {radial}
+        </div>
+        {!(task === "build" && managed) && (
+          <aside className="planet-dive-deck" aria-label="Действия">
+            {task === "people" && (
+              <PlanetLaborTray
+                planet={planet}
+                catalog={buildings}
+                busy={busy}
+                pickFrom={laborPick?.from ?? null}
+                dragging={!!laborDrag}
+                onPickIdle={() => setLaborPick({ from: "idle", amount: 1 })}
+                onDragIdle={(x, y, amount) =>
+                  setLaborDrag({ from: "idle", amount, x, y })
+                }
+              />
+            )}
+            {task === "forces" && password && onForceRecruitSession && (
+              <PlanetRaisePanel
+                system={system}
+                planet={planet}
+                factionId={factionId}
+                password={password}
+                stocks={stocks}
+                busy={busy}
+                techEco={techEco}
+                onSession={onForceRecruitSession}
+              />
+            )}
+            {task === "policy" && (
+              <div className="planet-dive-policy">
+                <p className="hint">
+                  Грейд слотов — плюс на кольце (поверхность / орбита отдельно).
+                  Имя не грейдит.
+                </p>
+                <PlanetRevoltReadout
+                  planet={planet}
+                  currentTurn={currentTurn}
+                />
+                {canColonize ? (
+                  <p className="hint">Колонизация — зажми тип ниже.</p>
+                ) : (
+                  <div className="order-type-chips">
+                    {colonyOptions.map((c) => {
+                      const on =
+                        normalizeColonyType(planet.colonyType) === c.colonyType;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`order-type-chip ${on ? "on" : ""}`}
+                          disabled={
+                            busy ||
+                            !managed ||
+                            on ||
+                            (!godMode && apLeft < (c.setTypeAp ?? 1))
+                          }
+                          onClick={() =>
+                            onAction({
+                              action: "set_colony_type",
+                              systemId: system.id,
+                              planetId: planet.id,
+                              colonyType: c.colonyType,
+                            })
+                          }
+                        >
+                          {c.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {!managed && (
+                  <p className="hint">Чужой мир — только осмотр.</p>
+                )}
+              </div>
+            )}
+          </aside>
+        )}
+        {laborDrag &&
+          createPortal(
+            <div
+              className="labor-token-ghost"
+              style={{ left: laborDrag.x, top: laborDrag.y }}
+            >
+              <i className="labor-pip is-on" />
+              {laborDrag.amount > 1 ? <span>×{laborDrag.amount}</span> : null}
+            </div>,
+            document.body,
+          )}
+      </div>
+    );
+  }
+
   return (
-    <div className="planet-detail planet-detail--manage">
+    <div
+      className={`planet-detail planet-detail--manage${
+        chrome === "workbench" ? " planet-detail--command" : ""
+      }`}
+    >
+      {chrome === "workbench" && (
+        <aside className="planet-command__now" aria-label="Сейчас этот ход">
+          <div className="hq-command__section-label">Сейчас этот ход</div>
+          {nowItems.length === 0 ? (
+            <p className="hint hq-command__calm">Ничего не горит</p>
+          ) : (
+            <ul className="hq-attention-list">
+              {nowItems.map((it) => (
+                <li key={it.id}>
+                  <div className="hq-attention-item">
+                    <strong>{it.verb}</strong>
+                    <span className="hint">{it.detail}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      )}
+      <div className={chrome === "workbench" ? "planet-command__work" : undefined}>
       <div className="planet-detail-head">
         <button type="button" className="btn ghost" onClick={onBack}>
           ← К системе
@@ -492,10 +805,11 @@ export function PlayerPlanetManage({
         <section className="planet-manage-block">
           <h4>Колонизация</h4>
           <p className="hint">
-            Переселенцы уходят с выбранной планеты (расовый состав колонии —
-            с источника). Зажми карту: ресурсы и ОД списываются сразу.
+            {godMode
+              ? "Ведущий: колония без переселения — население появится на месте. Источник не обязателен."
+              : "Переселенцы уходят с выбранной планеты (расовый состав колонии — с источника). Зажми карту: ресурсы и ОД списываются сразу."}
           </p>
-          {colonizeSources.length === 0 ? (
+          {colonizeSources.length === 0 && !godMode ? (
             <p className="hint">
               Нет своей населённой планеты — переселять некого.
             </p>
@@ -524,8 +838,8 @@ export function PlayerPlanetManage({
                 className="btn ghost planet-manage-card"
                 disabled={
                   busy ||
-                  !colonizeSourceId ||
-                  apLeft < (c.colonizeAp ?? 1)
+                  (!godMode &&
+                    (!colonizeSourceId || apLeft < (c.colonizeAp ?? 1)))
                 }
                 holdMs={800}
                 title={`${c.name} — зажми, чтобы колонизировать`}
@@ -559,6 +873,8 @@ export function PlayerPlanetManage({
 
       {managed && !empty && (
         <>
+          <details className="planet-command__more" open={chrome !== "workbench"}>
+            <summary>Грейд, колония, двор, набор</summary>
           <section className="planet-manage-block">
             <h4>Грейд слотов</h4>
             <p className="hint">
@@ -637,7 +953,11 @@ export function PlayerPlanetManage({
                     key={c.id}
                     type="button"
                     className={`order-type-chip ${on ? "on" : ""}`}
-                    disabled={busy || on || apLeft < (c.setTypeAp ?? 1)}
+                    disabled={
+                      busy ||
+                      on ||
+                      (!godMode && apLeft < (c.setTypeAp ?? 1))
+                    }
                     title={`${formatPlayerCost(c.setTypeCost)} · ${c.setTypeAp ?? 1} ОД`}
                     onClick={() =>
                       onAction({
@@ -679,7 +999,8 @@ export function PlayerPlanetManage({
             />
           )}
 
-          <section className="planet-manage-block">
+          </details>
+          <section className="planet-manage-block planet-command__stage">
             <div className="planet-detail-head" style={{ marginBottom: 8 }}>
               <h4 style={{ margin: 0 }}>Строительство</h4>
               <div className="planet-radial-stats">
@@ -964,6 +1285,7 @@ export function PlayerPlanetManage({
           )}
         </>
       )}
+      </div>
       {laborDrag &&
         createPortal(
           <div

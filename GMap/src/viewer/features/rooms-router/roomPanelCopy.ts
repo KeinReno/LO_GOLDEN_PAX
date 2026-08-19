@@ -50,5 +50,6 @@ export function researchEffectNav(
 export function diploStanceOkMsg(stance: string): string {
   if (stance === "war") return "Война объявлена";
   if (stance === "embargo") return "Эмбарго введено";
+  if (stance === "insult") return "Оскорбление нанесено";
   return "Договор разорван";
 }

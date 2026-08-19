@@ -13,6 +13,8 @@ type Props = {
    * Uses --app-vh (px) when set, else dvh — never bare vh (Android Chrome URL bar).
    */
   maxHeightVh?: number;
+  /** Leave the phone dock tappable — overlay/content stop above it. */
+  aboveDock?: boolean;
 };
 
 /**
@@ -26,8 +28,11 @@ export function BottomSheet({
   children,
   className = "",
   maxHeightVh = 88,
+  aboveDock = false,
 }: Props) {
   const fraction = Math.min(100, Math.max(40, maxHeightVh)) / 100;
+  const dockClass = aboveDock ? " gmap-sheet-overlay--above-dock" : "";
+  const contentDockClass = aboveDock ? " gmap-sheet-content--above-dock" : "";
   return (
     <Drawer.Root
       open={open}
@@ -35,14 +40,20 @@ export function BottomSheet({
       shouldScaleBackground={false}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className="gmap-sheet-overlay" />
+        <Drawer.Overlay className={`gmap-sheet-overlay${dockClass}`} />
         <Drawer.Content
-          className={`gmap-sheet-content ${className}`.trim()}
-          style={{
-            maxHeight: `min(${maxHeightVh}dvh, calc(var(--app-vh, 100dvh) * ${fraction}))`,
-          }}
+          className={`gmap-sheet-content${contentDockClass} ${className}`.trim()}
+          style={
+            aboveDock
+              ? undefined
+              : {
+                  maxHeight: `min(${maxHeightVh}dvh, calc(var(--app-vh, 100dvh) * ${fraction}))`,
+                }
+          }
         >
-          <div className="gmap-sheet-handle" aria-hidden />
+          <div className="gmap-sheet-handle-hit" aria-hidden>
+            <div className="gmap-sheet-handle" />
+          </div>
           {title ? (
             <Drawer.Title className="gmap-sheet-title">{title}</Drawer.Title>
           ) : (

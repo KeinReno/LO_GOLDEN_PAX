@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useWorldStore } from "../state/worldStore";
 import type { DiplomacyRelation, Faction, FactionTrait } from "../state/types";
 import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS } from "../state/defaults";
@@ -13,19 +12,33 @@ import {
 import { IDEOLOGY_LABELS, ideologyLabel } from "../state/displayLabels";
 import { listCultures, listFaiths } from "../state/societyRegistry";
 import { traitLabel } from "../viewer/codex/codexResolve";
+import { PolitySystemsTab } from "./PolityHoldings";
 import {
-  MAP_MODE_PRESETS,
-  applyLayerPreset,
-  type MapLayerFlags,
-} from "../ui/mapLayers";
+  PolityEconomyTab,
+  PolityForcesTab,
+  PolityScienceTab,
+} from "./PolityPlayerRooms";
+import { PolityQuestsTab } from "./PolityMasterTools";
 
-type PolityTab = "profile" | "territory" | "diplomacy" | "map";
+type PolityTab =
+  | "profile"
+  | "systems"
+  | "science"
+  | "forces"
+  | "economy"
+  | "quests"
+  | "diplomacy"
+  | "map";
 
 const RELATIONS: DiplomacyRelation[] = [...DIPLOMACY_RELATIONS];
 
 const TABS: { id: PolityTab; label: string }[] = [
   { id: "profile", label: "Профиль" },
-  { id: "territory", label: "Территория" },
+  { id: "systems", label: "Системы" },
+  { id: "science", label: "Наука" },
+  { id: "forces", label: "Силы" },
+  { id: "economy", label: "Экономика" },
+  { id: "quests", label: "Квесты" },
   { id: "diplomacy", label: "Дипломатия" },
   { id: "map", label: "На карте" },
 ];
@@ -41,6 +54,7 @@ export function PolityEditor() {
   const openPolityEditor = useWorldStore((s) => s.openPolityEditor);
   const addFaction = useWorldStore((s) => s.addFaction);
   const removeFaction = useWorldStore((s) => s.removeFaction);
+  const jumpToGmMap = useWorldStore((s) => s.jumpToGmMap);
   const [tab, setTab] = useState<PolityTab>("profile");
 
   const states = world.factions.filter((f) => resolvePolityKind(f) === "state");
@@ -56,7 +70,13 @@ export function PolityEditor() {
   };
 
   return (
-    <div className="polity-layout">
+    <div
+      className={
+        tab === "science" || tab === "forces" || tab === "economy"
+          ? "polity-layout is-player-room"
+          : "polity-layout"
+      }
+    >
       <aside className="polity-list">
         <div className="polity-list-section">
           <h4>Государства</h4>
@@ -167,7 +187,21 @@ export function PolityEditor() {
                   key={t.id}
                   type="button"
                   className={tab === t.id ? "polity-tab active" : "polity-tab"}
-                  onClick={() => setTab(t.id)}
+                  onClick={() => {
+                    if (t.id === "map") {
+                      const owned = world.systems.filter(
+                        (s) => s.ownerFactionId === selected.id,
+                      );
+                      const capital = owned.find((s) => s.isCapital);
+                      jumpToGmMap({
+                        factionId: selected.id,
+                        systemId: capital?.id ?? owned[0]?.id ?? null,
+                        dive: "galaxy",
+                      });
+                      return;
+                    }
+                    setTab(t.id);
+                  }}
                 >
                   {t.label}
                 </button>
@@ -176,9 +210,23 @@ export function PolityEditor() {
 
             <div className="polity-tab-body">
               {tab === "profile" && <ProfileTab faction={selected} />}
-              {tab === "territory" && <TerritoryTab faction={selected} />}
+              {tab === "systems" && <PolitySystemsTab faction={selected} />}
+              {tab === "science" && (
+                <PolityScienceTab
+                  faction={selected}
+                  onOpenForces={() => setTab("forces")}
+                  onOpenEconomy={() => setTab("economy")}
+                />
+              )}
+              {tab === "forces" && <PolityForcesTab faction={selected} />}
+              {tab === "economy" && (
+                <PolityEconomyTab
+                  faction={selected}
+                  onOpenScience={() => setTab("science")}
+                />
+              )}
+              {tab === "quests" && <PolityQuestsTab faction={selected} />}
               {tab === "diplomacy" && <DiplomacyTab faction={selected} />}
-              {tab === "map" && <MapTab faction={selected} />}
             </div>
           </>
         )}
@@ -314,7 +362,7 @@ function ProfileTab({ faction }: { faction: Faction }) {
         </p>
         {budgetOutOfRange ? (
           <p className="hint polity-budget-warn" role="alert">
-            Сумма balanceBudget вне диапазона — комбинация несбалансирована.
+            Сумма бюджета вне диапазона — комбинация несбалансирована.
           </p>
         ) : null}
         {traitDefs.length === 0 ? (
@@ -674,113 +722,11 @@ function ProfileTab({ faction }: { faction: Faction }) {
   );
 }
 
-function TerritoryTab({ faction }: { faction: Faction }) {
-  const world = useWorldStore((s) => s.world);
-  const setTool = useWorldStore((s) => s.setTool);
-  const setActiveFaction = useWorldStore((s) => s.setActiveFaction);
-  const closePolityEditor = useWorldStore((s) => s.closePolityEditor);
-  const beginAssignCapital = useWorldStore((s) => s.beginAssignCapital);
-  const clearFactionOwnership = useWorldStore((s) => s.clearFactionOwnership);
-  const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
-  const openSystemView = useWorldStore((s) => s.openSystemView);
-
-  const owned = world.systems.filter((s) => s.ownerFactionId === faction.id);
-  const capital = owned.find((s) => s.isCapital) ?? null;
-
-  return (
-    <div className="polity-territory">
-      <p className="meta-line">
-        Систем во владении: <strong>{owned.length}</strong>
-      </p>
-      <div className="sys-meta-row">
-        <span>Столица</span>
-        <strong>{capital ? capital.name : "не назначена"}</strong>
-      </div>
-      <div className="btn-col">
-        {capital && (
-          <>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => focusCameraOnSystem(capital.id)}
-            >
-              На карте к столице
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => openSystemView(capital.id)}
-            >
-              Открыть систему столицы
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className="btn"
-          onClick={() => beginAssignCapital(faction.id)}
-        >
-          Назначить столицу кликом по системе
-        </button>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setActiveFaction(faction.id);
-            setTool("paint_faction");
-            closePolityEditor();
-          }}
-        >
-          Кисть владения на карте
-        </button>
-        <button
-          type="button"
-          className="btn danger"
-          disabled={owned.length === 0}
-          onClick={() => {
-            if (
-              confirm(
-                `Снять владение со всех систем «${faction.name}» (${owned.length})?`,
-              )
-            ) {
-              clearFactionOwnership(faction.id);
-            }
-          }}
-        >
-          Снять всё владение
-        </button>
-      </div>
-      {owned.length > 0 && (
-        <div className="polity-owned-list">
-          <h4>Системы</h4>
-          <ul>
-            {owned
-              .slice()
-              .sort((a, b) => a.name.localeCompare(b.name, "ru"))
-              .map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    className="linkish"
-                    onClick={() => focusCameraOnSystem(s.id)}
-                  >
-                    {s.isCapital ? "★ " : ""}
-                    {s.name}
-                  </button>
-                </li>
-              ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DiplomacyTab({ faction }: { faction: Faction }) {
   const world = useWorldStore((s) => s.world);
   const setDiplomacy = useWorldStore((s) => s.setDiplomacy);
   const setDiplomacyPanelOpen = useWorldStore((s) => s.setDiplomacyPanelOpen);
-  const closePolityEditor = useWorldStore((s) => s.closePolityEditor);
+  const jumpToGmMap = useWorldStore((s) => s.jumpToGmMap);
   const others = world.factions.filter((f) => f.id !== faction.id);
 
   const getRelation = (otherId: string): DiplomacyRelation => {
@@ -833,126 +779,12 @@ function DiplomacyTab({ faction }: { faction: Faction }) {
         type="button"
         className="btn block"
         onClick={() => {
-          closePolityEditor();
+          jumpToGmMap({ factionId: faction.id, dive: "galaxy" });
           setDiplomacyPanelOpen(true);
         }}
       >
         Полная матрица дипломатии…
       </button>
-    </div>
-  );
-}
-
-function MapTab({ faction }: { faction: Faction }) {
-  const world = useWorldStore((s) => s.world);
-  const applyMapLayerFlags = useWorldStore((s) => s.applyMapLayerFlags);
-  const layerFlags = useWorldStore(
-    useShallow(
-      (s): MapLayerFlags => ({
-        showLinks: s.showLinks,
-        showOwnership: s.showOwnership,
-        showTerritory: s.showTerritory,
-        showSectors: s.showSectors,
-        showFactionLabels: s.showFactionLabels,
-        showLabels: s.showLabels,
-        showFleets: s.showFleets,
-        showLegions: s.showLegions,
-        showOrders: s.showOrders,
-        showDiplomacy: s.showDiplomacy,
-        showFogPreview: s.showFogPreview,
-        gmOmniscientView: s.gmOmniscientView,
-        showJumpRange: s.showJumpRange,
-        showSupply: s.showSupply,
-        showCaravans: s.showCaravans,
-        showBlockades: s.showBlockades,
-        showDeadZones: s.showDeadZones,
-        showTraffic: s.showTraffic,
-        showQuests: s.showQuests,
-        showLoyalty: s.showLoyalty,
-      }),
-    ),
-  );
-  const showFactionLabels = useWorldStore((s) => s.showFactionLabels);
-  const toggleShowFactionLabels = useWorldStore(
-    (s) => s.toggleShowFactionLabels,
-  );
-  const showTerritory = useWorldStore((s) => s.showTerritory);
-  const toggleShowTerritory = useWorldStore((s) => s.toggleShowTerritory);
-  const showDiplomacy = useWorldStore((s) => s.showDiplomacy);
-  const toggleShowDiplomacy = useWorldStore((s) => s.toggleShowDiplomacy);
-  const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
-  const setActiveFaction = useWorldStore((s) => s.setActiveFaction);
-  const closePolityEditor = useWorldStore((s) => s.closePolityEditor);
-
-  const capital = world.systems.find(
-    (s) => s.ownerFactionId === faction.id && s.isCapital,
-  );
-
-  return (
-    <div className="polity-map-tab">
-      <h4>Пресеты слоёв</h4>
-      <div className="layer-preset-row">
-        {MAP_MODE_PRESETS.map((mode) => (
-          <button
-            key={mode.id}
-            type="button"
-            className="btn ghost"
-            title={`${mode.hint} · ${mode.hotkey}`}
-            onClick={() =>
-              applyMapLayerFlags(applyLayerPreset(layerFlags, mode.id))
-            }
-          >
-            {mode.label}
-          </button>
-        ))}
-      </div>
-      <div className="btn-col" style={{ marginTop: 12 }}>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={showTerritory}
-            onChange={toggleShowTerritory}
-          />
-          Территории
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={showFactionLabels}
-            onChange={toggleShowFactionLabels}
-          />
-          Имена / гербы
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={showDiplomacy}
-            onChange={toggleShowDiplomacy}
-          />
-          Линии дипломатии
-        </label>
-      </div>
-      <div className="btn-col" style={{ marginTop: 12 }}>
-        {capital && (
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => focusCameraOnSystem(capital.id)}
-          >
-            Фокус камеры на столицу
-          </button>
-        )}
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            setActiveFaction(faction.id);
-            closePolityEditor();
-          }}
-        >
-          Закрыть и сделать активной для инструментов
-        </button>
-      </div>
     </div>
   );
 }

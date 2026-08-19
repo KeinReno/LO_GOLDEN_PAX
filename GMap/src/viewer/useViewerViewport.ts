@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import type { ViewerGraphicsPrefs } from "../ui/viewerGraphics";
+import { isPhoneViewport } from "./phone/isPhoneViewport";
 
 /** Shared mobile detection for layout + graphics clamps. */
 export function isLikelyMobile(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    // Prefer layout viewport; fall back to visualViewport (iOS quirks /
-    // in-app browsers sometimes report a wide layout width).
+    // Layout mq catches a narrow window; isPhoneViewport also keeps
+    // landscape phones (915×412) in phone chrome.
     const mq = window.matchMedia("(max-width: 900px)").matches;
     const vw = window.visualViewport?.width ?? window.innerWidth;
     const vh = window.visualViewport?.height ?? window.innerHeight;
-    const portraitPhone = vw <= 900 || (vw < vh && vw <= 980);
-    return mq || portraitPhone;
+    return mq || isPhoneViewport(vw, vh);
   } catch {
     return false;
   }
@@ -24,6 +24,13 @@ function writeViewportVars(): void {
     if (Number.isFinite(h) && h > 0) {
       document.documentElement.style.setProperty("--app-vh", `${h}px`);
     }
+    const phone = isLikelyMobile();
+    document.documentElement.style.setProperty(
+      "--phone-dock-clearance",
+      phone
+        ? "calc(56px + env(safe-area-inset-bottom, 0px))"
+        : "0px",
+    );
     if (vv) {
       const keyboardInset = Math.max(
         0,
@@ -86,7 +93,8 @@ export type MobileRoomView =
   | "quests"
   | "court"
   | "codex"
-  | "rp";
+  | "rp"
+  | "planet";
 
 const MOBILE_ROOM_VIEWS = new Set<string>([
   "hq",
@@ -99,6 +107,7 @@ const MOBILE_ROOM_VIEWS = new Set<string>([
   "court",
   "codex",
   "rp",
+  "planet",
 ]);
 
 export function isMobileRoomView(

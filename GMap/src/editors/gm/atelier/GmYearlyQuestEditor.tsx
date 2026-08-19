@@ -1,5 +1,8 @@
 import { GmQuestChoiceEditor } from "./GmQuestChoiceEditor";
 import { GmQuestCatalogShell } from "./GmQuestCatalogShell";
+import { CatalogIdSelect } from "../CatalogIdSelect";
+import { getCachedContent } from "../../../state/contentCatalog";
+import { yearlyCategoryLabel } from "../../../state/displayLabels";
 import {
   FILTER_FIELDS,
   YEARLY_CATEGORIES,
@@ -14,9 +17,18 @@ function FilterEditor({
   filterBy: Record<string, unknown>;
   onChange: (v: Record<string, unknown>) => void;
 }) {
+  const content = getCachedContent();
+  const races = Object.values(content?.races ?? {})
+    .filter((r) => r?.id)
+    .map((r) => ({ id: r.id, name: r.name ?? r.id }));
+  const buildings = Object.values(content?.buildings ?? {}).map((b) => ({
+    id: b.id,
+    name: b.name ?? b.id,
+  }));
+
   return (
     <div className="gm-form-section">
-      <p className="gm-form-section-label">Условия появления (filterBy)</p>
+      <p className="gm-form-section-label">Условия появления</p>
       <div className="gm-form-grid">
         {FILTER_FIELDS.map((f) => {
           const val = filterBy[f.key];
@@ -34,6 +46,24 @@ function FilterEditor({
                   }}
                 />
                 <span>{f.label}</span>
+              </label>
+            );
+          }
+          if (f.type === "race" || f.type === "building") {
+            return (
+              <label key={f.key} className="gm-form-field">
+                <span>{f.label}</span>
+                <CatalogIdSelect
+                  value={val != null ? String(val) : ""}
+                  onChange={(id) => {
+                    const next = { ...filterBy };
+                    if (!id) delete next[f.key];
+                    else next[f.key] = id;
+                    onChange(next);
+                  }}
+                  options={f.type === "race" ? races : buildings}
+                  emptyLabel="— не задано —"
+                />
               </label>
             );
           }
@@ -91,7 +121,7 @@ function YearlyQuestForm({
           >
             {YEARLY_CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {yearlyCategoryLabel(c)}
               </option>
             ))}
           </select>
@@ -107,7 +137,7 @@ function YearlyQuestForm({
       </div>
 
       <label className="gm-form-field">
-        <span>Hook (summary)</span>
+          <span>Кратко</span>
         <textarea
           className="gm-form-input"
           rows={2}
@@ -116,7 +146,7 @@ function YearlyQuestForm({
         />
       </label>
       <label className="gm-form-field">
-        <span>Детали (detail)</span>
+          <span>Подробности</span>
         <textarea
           className="gm-form-input"
           rows={4}

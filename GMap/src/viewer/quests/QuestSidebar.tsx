@@ -37,7 +37,7 @@ function groupByKind(quests: Quest[]): { kind: QuestKind; items: Quest[] }[] {
   return KIND_ORDER.map((kind) => ({
     kind,
     items: live.filter((q) => q.kind === kind),
-  })).filter((g) => g.items.length > 0 || g.kind === "perturn");
+  })).filter((g) => g.items.length > 0);
 }
 
 function nestArcs(items: Quest[]): { loose: Quest[]; arcs: ArcBucket[] } {
@@ -175,7 +175,8 @@ export function QuestSidebar({
             className="quest-rail__expand quest-rail__expand--dice"
             onClick={onRollPerTurn}
             disabled={perTurnBusy}
-            title="Ежеходный кубик"
+            title="Кубик хода"
+            aria-label="Бросить кубик хода"
           >
             <Dices size={14} />
           </button>
@@ -187,7 +188,7 @@ export function QuestSidebar({
   return (
     <aside className="quest-rail" aria-label="Квесты">
       <header className="quest-rail__head">
-        <h3>Квесты</h3>
+        <h3>Журнал</h3>
         {onToggleCollapse ? (
           <button
             type="button"
@@ -225,7 +226,8 @@ export function QuestSidebar({
             className="btn ghost sm quest-rail__dice-mini"
             busy={perTurnBusy}
             onClick={onRollPerTurn}
-            title="Ежеходный кубик"
+            title="Кубик хода"
+            aria-label="Бросить кубик хода"
           >
             <Dices size={14} aria-hidden />
           </StatefulButton>
@@ -238,7 +240,7 @@ export function QuestSidebar({
           const open = openKinds[kind] !== false;
           const { loose, arcs } = nestArcs(items);
           return (
-            <section key={kind} className="quest-rail__group">
+            <section key={kind} className={`quest-rail__group quest-rail__group--${kind}`}>
               <div className="quest-rail__group-head">
                 <button
                   type="button"
@@ -248,8 +250,10 @@ export function QuestSidebar({
                     setOpenKinds((s) => ({ ...s, [kind]: !open }))
                   }
                 >
-                  <span aria-hidden>{meta.icon}</span>
-                  <span>{meta.label}</span>
+                  <span className="quest-rail__kind-mark" aria-hidden>
+                    {meta.icon}
+                  </span>
+                  <span className="quest-rail__kind-label">{meta.label}</span>
                   <span className="quest-group-count">{items.length}</span>
                 </button>
               </div>
@@ -307,7 +311,7 @@ export function QuestSidebar({
           );
         })}
         {done.length > 0 ? (
-          <section className="quest-rail__group">
+          <section className="quest-rail__group quest-rail__group--done">
             <details className="quest-rail__done">
               <summary>
                 Завершённые

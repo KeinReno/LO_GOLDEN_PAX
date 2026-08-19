@@ -16,7 +16,9 @@ export interface QuestEffect {
     | "population"
     | "army"
     | "fleet"
-    | "loyalty";
+    | "loyalty"
+    | "stability"
+    | "ap";
   target?: string;
   value: number;
   durationTurns?: number;
@@ -32,7 +34,7 @@ export interface QuestChoice {
   needsDice?: boolean;
   /** Stock spends required (currencyId → amount). */
   costs?: Record<string, number>;
-  /** Short cost label for the choice card, e.g. "−6 bios". */
+  /** Short cost label for the choice card, e.g. "−6 металл". */
   costLabel?: string;
 }
 

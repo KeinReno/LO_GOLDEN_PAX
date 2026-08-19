@@ -141,9 +141,11 @@ export function FactionEmblem({
 export function DiploLeaderCard({
   faction,
   align = "start",
+  compact = false,
 }: {
   faction: Faction;
   align?: "start" | "end";
+  compact?: boolean;
 }) {
   const kind =
     faction.kind === "faction"
@@ -153,11 +155,11 @@ export function DiploLeaderCard({
         : null;
   return (
     <div
-      className={`gc-leader-card gc-leader-card--${align}`}
+      className={`gc-leader-card gc-leader-card--${align}${compact ? " gc-leader-card--compact" : ""}`}
       style={{ "--gc-leader-accent": faction.color } as CSSProperties}
     >
       <div className="gc-leader-card__frame">
-        <FactionEmblem faction={faction} size="xl" />
+        <FactionEmblem faction={faction} size={compact ? "md" : "xl"} />
       </div>
       <div className="gc-leader-card__meta">
         <strong className="gc-leader-card__name" title={faction.name}>

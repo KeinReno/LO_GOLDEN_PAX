@@ -99,9 +99,11 @@ function buildGauge(
 export function SpecializationStrip({
   economy,
   directions,
+  compact = false,
 }: {
   economy: ViewerPayload["economy"] | undefined;
   directions: TechDirectionId[];
+  compact?: boolean;
 }) {
   const content = getCachedContent();
 
@@ -113,11 +115,16 @@ export function SpecializationStrip({
     .filter((g) => g.roleIds.length > 0);
 
   return (
-    <aside className="orbit-spec-strip" aria-label="Специализация державы">
+    <aside
+      className={`orbit-spec-strip${compact ? " orbit-spec-strip--rail" : ""}`}
+      aria-label="Специализация державы"
+    >
+      {!compact ? (
       <div className="orbit-spec-strip__head">
         <h4>Специализация державы</h4>
         <p className="hint">Порог прорыва — когда шкала загорается</p>
       </div>
+      ) : null}
       <div className="orbit-spec-strip__list">
         {groups.map(({ direction, roleIds }) => (
           <div className="orbit-spec-group" key={direction}>

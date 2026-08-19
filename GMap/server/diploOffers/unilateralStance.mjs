@@ -1,5 +1,5 @@
 /**
- * applyUnilateralStance: war / embargo / break — applies immediately.
+ * applyUnilateralStance: war / embargo / break / insult — applies immediately.
  * Extracted from ../diploOffers.mjs.
  */
 import { bumpTableRevision, readLiveBoard, writeLiveBoard } from "../tableStore.mjs";
@@ -15,7 +15,7 @@ import {
 
 /**
  * Unilateral diplomatic act — applies immediately (no accept/reject).
- * stance: "war" | "embargo" | "break" (→ neutral, tears current treaty)
+ * stance: "war" | "embargo" | "break" (→ neutral) | "insult" (opinion only)
  *
  * @returns {{ ok: true, relation, previous } | { ok: false, error: string }}
  */
@@ -44,6 +44,27 @@ export function applyUnilateralStance({
   let nextRelation = null;
   let opinionDelta = 0;
   let historyLabel = "";
+
+  if (action === "insult") {
+    const fromFac = world.factions?.find((f) => f.id === fromFactionId);
+    const toFac = world.factions?.find((f) => f.id === toFactionId);
+    if (!fromFac || !toFac) {
+      return { ok: false, error: "держава не найдена" };
+    }
+    ensureFactionDiplomacy(fromFac);
+    ensureFactionDiplomacy(toFac);
+    const historyLabel = "Публичное оскорбление";
+    bumpOpinion(toFac, fromFactionId, -8, turn, historyLabel);
+    bumpOpinion(fromFac, toFactionId, -4, turn, historyLabel);
+    writeLiveBoard(world, { backup: false, reason: "diplo_insult" });
+    bumpTableRevision();
+    return {
+      ok: true,
+      relation: previous,
+      previous,
+      message: historyLabel,
+    };
+  }
 
   if (action === "war") {
     if (previous === "war") {
