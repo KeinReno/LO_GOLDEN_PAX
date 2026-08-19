@@ -1,5 +1,6 @@
 import type { TechnologyDef } from "../../state/contentCatalog";
 import { effectiveCognitioCost } from "../../state/researchCosts";
+import { fmtSigned } from "../../state/numberFormat";
 import type { ViewerPayload } from "../../state/types";
 import type { QueueForecastItem } from "./ResearchQueue";
 
@@ -123,8 +124,7 @@ export function CognitioForecast({
           {income !== 0 ? (
             <span className="tabular">
               {" "}
-              ({income > 0 ? "+" : ""}
-              {income}/ход)
+                ({fmtSigned(income)}/ход)
             </span>
           ) : null}
           <Sparkline values={spark} />
@@ -141,8 +141,7 @@ export function CognitioForecast({
         {income !== 0 ? (
           <span className="tabular">
             {" "}
-            ({income > 0 ? "+" : ""}
-            {income}/ход)
+                ({fmtSigned(income)}/ход)
           </span>
         ) : null}
         <Sparkline values={spark} />

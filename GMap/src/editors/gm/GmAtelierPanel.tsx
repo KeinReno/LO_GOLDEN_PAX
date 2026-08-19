@@ -1,38 +1,70 @@
 import { useState } from "react";
 import { getCachedContent } from "../../state/contentCatalog";
+import { useWorldStore } from "../../state/worldStore";
+import type { GmShellMode } from "../../state/types";
 import { GmBalancePanel } from "./GmBalancePanel";
 import { GmYearlyQuestEditor } from "./atelier/GmYearlyQuestEditor";
 import { GmStoryQuestEditor } from "./atelier/GmStoryQuestEditor";
 import { GmRulesKnobEditor } from "./GmRulesKnobEditor";
 import { GmCatalogEditor, type AtelierCatalogId } from "./GmCatalogEditor";
+import { GmGateCampaignsEditor } from "./GmGateCampaignsEditor";
+import {
+  rememberBuildingStudioCatalog,
+  type BuildingStudioCatalog,
+} from "../studios/BuildingStudio";
 
-const CATALOGS: { id: AtelierCatalogId; label: string; hint: string }[] = [
-  { id: "technologies", label: "Технологии", hint: "technologies.json" },
+type AtelierNavId = AtelierCatalogId | "gate_campaigns";
+
+const STUDIO_JUMPS: {
+  mode: Exclude<GmShellMode, "gm" | "rp" | "simulator" | "atelier">;
+  catalog?: BuildingStudioCatalog;
+  label: string;
+  hint: string;
+}[] = [
+  { mode: "tech", label: "Технологии", hint: "Конструктор + вкладка JSON" },
+  { mode: "units", label: "Юниты и корабли", hint: "Конструктор карт + JSON" },
+  {
+    mode: "buildings",
+    catalog: "buildings",
+    label: "Здания",
+    hint: "Конструктор планетарных зданий",
+  },
+  {
+    mode: "buildings",
+    catalog: "stations",
+    label: "Станции",
+    hint: "Конструктор орбитальных станций",
+  },
+  {
+    mode: "buildings",
+    catalog: "space_objects",
+    label: "Космо-объекты",
+    hint: "Аномалии, туманности, поля",
+  },
+  { mode: "races", label: "Расы", hint: "Конструктор + JSON" },
+  { mode: "polities", label: "Державы", hint: "Редактор государств" },
+  { mode: "rules", label: "Темп", hint: "Пресеты кампании" },
+];
+
+const CATALOGS: { id: AtelierNavId; label: string; hint: string }[] = [
+  { id: "gate_campaigns", label: "Карточки входа", hint: "постеры и описания на /view" },
   { id: "tech_recipes", label: "Рецепты алхимии", hint: "tech_recipes.json" },
   { id: "tech_combos", label: "Combo-tech", hint: "tech_combos.json" },
   { id: "economy_balance", label: "Баланс экономики", hint: "economy_balance.json" },
   { id: "council_seats", label: "Места совета", hint: "council_seats.json" },
   { id: "court_tasks", label: "Поручения двора", hint: "court_tasks.json" },
   { id: "npc_traits", label: "Трейты NPC", hint: "npc_traits.json" },
-  { id: "yearly_quests", label: "Ежходные квесты", hint: "yearly_quests.json · форма" },
+  { id: "yearly_quests", label: "Ежеходные квесты", hint: "yearly_quests.json · форма" },
   { id: "story_quests", label: "Сюжетные квесты", hint: "story_quests.json · выдача игрокам" },
-  { id: "buildings", label: "Здания", hint: "buildings.json" },
-  { id: "ships", label: "Корабли", hint: "ships.json" },
-  { id: "units", label: "Легионы & Юниты", hint: "units.json" },
-  { id: "races", label: "Расы", hint: "races.json" },
-  { id: "space_objects", label: "Космо-объекты", hint: "space_objects.json" },
-  { id: "stations", label: "Станции", hint: "stations.json" },
   { id: "faction_traits", label: "Трейты фракций", hint: "faction_traits.json" },
   { id: "faiths", label: "Верования", hint: "faiths.json" },
   { id: "cultures", label: "Культуры", hint: "cultures.json" },
-  { id: "rules", label: "Правила", hint: "rules.json · alchemy/intel" },
+  { id: "rules", label: "Правила (JSON)", hint: "rules.json · alchemy/intel" },
 ];
 
 function pickCatalog(content: ReturnType<typeof getCachedContent>, id: AtelierCatalogId): unknown {
   if (!content) return null;
   switch (id) {
-    case "technologies":
-      return content.technologies;
     case "tech_recipes":
       return content.tech_recipes;
     case "tech_combos":
@@ -49,18 +81,6 @@ function pickCatalog(content: ReturnType<typeof getCachedContent>, id: AtelierCa
       return content.yearly_quests;
     case "story_quests":
       return content.story_quests?.quests;
-    case "buildings":
-      return content.buildings;
-    case "ships":
-      return content.ships;
-    case "units":
-      return content.units;
-    case "races":
-      return content.races;
-    case "space_objects":
-      return content.space_objects;
-    case "stations":
-      return content.stations;
     case "faction_traits":
       return content.faction_traits;
     case "faiths":
@@ -97,25 +117,46 @@ function countEntries(bag: unknown): number {
  */
 export function GmAtelierPanel() {
   const content = getCachedContent();
-  const [cat, setCat] = useState<AtelierCatalogId>("yearly_quests");
+  const setGmShellMode = useWorldStore((s) => s.setGmShellMode);
+  const [cat, setCat] = useState<AtelierNavId>("gate_campaigns");
 
-  const n = countEntries(pickCatalog(content, cat));
+  const n =
+    cat === "gate_campaigns"
+      ? 3
+      : countEntries(pickCatalog(content, cat));
 
   return (
     <div className="gm-atelier">
       <header className="gm-atelier-head">
         <div>
-          <p className="panel-kicker">GM · Atelier</p>
+          <p className="panel-kicker">GM · Каталоги</p>
           <h3>Контент и баланс</h3>
         </div>
         <p className="hint">
-          Редактирование через формы или JSON. Ежходные и сюжетные квесты — с
-          конструктором выборов и последствий.
+          Здесь только то, чему нет конструктора. Здания, станции и космо-объекты
+          — кнопки «открыть» слева.
         </p>
       </header>
 
       <div className="gm-atelier-layout gm-atelier-layout--wide">
         <nav className="gm-atelier-nav" aria-label="Каталоги">
+          <p className="gm-atelier-nav-label">Конструкторы</p>
+          {STUDIO_JUMPS.map((j) => (
+            <button
+              key={j.catalog ?? j.mode}
+              type="button"
+              className="btn ghost gm-atelier-nav-btn"
+              title={j.hint}
+              onClick={() => {
+                if (j.catalog) rememberBuildingStudioCatalog(j.catalog);
+                setGmShellMode(j.mode);
+              }}
+            >
+              <span>{j.label}</span>
+              <span className="gm-atelier-count">открыть</span>
+            </button>
+          ))}
+          <p className="gm-atelier-nav-label">Каталоги</p>
           {CATALOGS.map((c) => (
             <button
               key={c.id}
@@ -126,7 +167,11 @@ export function GmAtelierPanel() {
             >
               <span>{c.label}</span>
               <span className="gm-atelier-count tabular">
-                {content ? countEntries(pickCatalog(content, c.id)) : "—"}
+                {c.id === "gate_campaigns"
+                  ? 3
+                  : content
+                    ? countEntries(pickCatalog(content, c.id))
+                    : "—"}
               </span>
             </button>
           ))}
@@ -138,13 +183,15 @@ export function GmAtelierPanel() {
           </h4>
           <p className="hint">{CATALOGS.find((c) => c.id === cat)?.hint}</p>
 
+          {cat === "gate_campaigns" && <GmGateCampaignsEditor />}
           {cat === "economy_balance" && <GmBalancePanel />}
           {cat === "rules" && <GmRulesKnobEditor />}
           {cat === "yearly_quests" && <GmYearlyQuestEditor />}
           {cat === "story_quests" && <GmStoryQuestEditor />}
 
           {cat !== "yearly_quests" &&
-            cat !== "story_quests" && (
+            cat !== "story_quests" &&
+            cat !== "gate_campaigns" && (
               <GmCatalogEditor
                 key={cat}
                 catalog={cat}

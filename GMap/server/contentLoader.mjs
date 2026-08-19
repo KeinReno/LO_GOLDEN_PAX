@@ -187,7 +187,6 @@ function loadContentPacks(packIds = ["core"]) {
     units = mergeDicts(units, pack.units);
     map_resources = mergeDicts(map_resources, pack.map_resources);
     modules = mergeDicts(modules, pack.modules);
-    map_resources = mergeDicts(map_resources, modules);
     races = mergeDicts(races, pack.races);
     taxes = mergeDicts(taxes, pack.taxes);
     if (pack.loyalty_tiers && typeof pack.loyalty_tiers === "object") {
@@ -446,6 +445,7 @@ function loadContentPacks(packIds = ["core"]) {
     ships,
     units,
     map_resources,
+    modules,
     races,
     taxes,
     loyalty_tiers,
@@ -524,6 +524,7 @@ export function getPublicContent() {
     ships: c.ships,
     units: c.units,
     map_resources: c.map_resources,
+    modules: c.modules,
     races: c.races,
     taxes: c.taxes,
     loyalty_tiers: c.loyalty_tiers,
@@ -574,7 +575,9 @@ export function getShipTypeLabels() {
 
 export function getResourcePoolLabels() {
   const m = getContent().map_resources;
-  return Object.values(m).map((r) => r.name);
+  return Object.values(m)
+    .filter((r) => r && r.notDeposit !== true && r.stub !== true && r.kind !== "module" && !String(r.id || "").startsWith("module.") && r.category != null && !["map.energy", "map.buildplex", "map.trade_value", "map.alloys"].includes(r.id))
+    .map((r) => r.name);
 }
 
 export function getPoiLabels() {

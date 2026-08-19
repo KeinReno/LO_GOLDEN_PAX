@@ -4,9 +4,11 @@ import { PolityEditor } from "./PolityEditor";
 /** Wide dossier for state / faction editing. */
 export function PolityDossier() {
   const dossierFactionId = useWorldStore((s) => s.dossierFactionId);
+  const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const closePolityEditor = useWorldStore((s) => s.closePolityEditor);
 
   if (dossierFactionId == null) return null;
+  if (gmShellMode !== "gm") return null;
 
   return (
     <div

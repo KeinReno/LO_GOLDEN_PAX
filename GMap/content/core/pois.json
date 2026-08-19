@@ -14,6 +14,7 @@
   "wormhole": { "id": "poi.wormhole", "name": "Червоточина", "label": "Червоточина" },
   "black_hole": { "id": "poi.black_hole", "name": "Чёрная дыра", "label": "Чёрная дыра" },
   "comet": { "id": "poi.comet", "name": "Комета", "label": "Комета / рой комет" },
+  "star": { "id": "poi.star", "name": "Звезда", "label": "Звезда / светило" },
   "pulsar": { "id": "poi.pulsar", "name": "Пульсар", "label": "Пульсар" },
   "shipyard": { "id": "poi.shipyard", "name": "Верфь", "label": "Верфь" },
   "outpost": { "id": "poi.outpost", "name": "Форпост", "label": "Форпост" },

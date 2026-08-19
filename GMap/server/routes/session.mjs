@@ -26,15 +26,16 @@ import {
   checkMasterToken,
   writeMasterTokenFile,
 } from "../auth.mjs";
-import { loginWithPassword, issueSessionToken } from "../playerAuth.mjs";
+import { loginWithPassword, issueSessionToken, publicLoginFactions } from "../playerAuth.mjs";
 import { readIntents } from "../intents.mjs";
 import { getContent } from "../contentLoader.mjs";
+import { readGateCampaigns } from "../gateCampaigns.mjs";
 
 /**
  * @returns {Promise<boolean>}
  */
 export async function tryHandleSessionRoutes(req, res, url, ctx) {
-  if (!(url.pathname === "/api/table" || url.pathname.startsWith("/api/table/") || url.pathname === "/api/ledger" || url.pathname.startsWith("/api/ledger/") || url.pathname.startsWith("/api/auth/") || url.pathname === "/api/factions" || url.pathname === "/api/publish" || url.pathname === "/api/map-version" || url.pathname === "/api/view-refresh" || url.pathname === "/api/login" || url.pathname === "/api/save-campaign")) return false;
+  if (!(url.pathname === "/api/table" || url.pathname.startsWith("/api/table/") || url.pathname === "/api/ledger" || url.pathname.startsWith("/api/ledger/") || url.pathname.startsWith("/api/auth/") || url.pathname === "/api/factions" || url.pathname === "/api/publish" || url.pathname === "/api/map-version" || url.pathname === "/api/view-refresh" || url.pathname === "/api/login" || url.pathname === "/api/save-campaign" || url.pathname === "/api/gate-campaigns")) return false;
 
   const {
     sendJson,
@@ -137,21 +138,18 @@ export async function tryHandleSessionRoutes(req, res, url, ctx) {
   }
 
 
+  if (url.pathname === "/api/gate-campaigns" && req.method === "GET") {
+    sendJson(res, 200, readGateCampaigns());
+    return true;
+  }
+
   if (url.pathname === "/api/factions" && req.method === "GET") {
     const world = readLiveBoard();
     if (!world) {
       sendJson(res, 404, { error: "Карта ещё не опубликована" });
       return true;
     }
-    sendJson(
-      res,
-      200,
-      (world.factions ?? []).map((f) => ({
-        id: f.id,
-        name: f.name,
-        color: f.color,
-      })),
-    );
+    sendJson(res, 200, publicLoginFactions(world));
     return true;
   }
 

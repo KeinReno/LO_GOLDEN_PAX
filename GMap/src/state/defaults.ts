@@ -158,21 +158,21 @@ export const DEFAULT_FACTIONS: Faction[] = [
     id: "faction_a",
     name: "Государство А",
     color: "#3d8bfd",
-    password: "2142",
+    password: "",
     kind: "state",
   },
   {
     id: "faction_b",
     name: "Государство Б",
     color: "#e85d4c",
-    password: "5831",
+    password: "",
     kind: "state",
   },
   {
     id: "faction_c",
     name: "Государство В",
     color: "#5cdb95",
-    password: "9074",
+    password: "",
     kind: "state",
   },
 ];
@@ -238,11 +238,22 @@ export const COLONY_TYPE_LABELS: Record<string, string> = {
   outpost: "Форпост",
   colony: "Колония",
   core: "Мир-ядро",
-  capital: "Мир-ядро",
   fortress: "Крепость",
   mining: "Добыча",
   research: "Исследовательский",
 };
+
+/** Legacy `capital` stored as core. */
+export function canonicalColonyType(t?: string | null): string {
+  if (!t || t === "none") return "none";
+  if (t === "capital") return "core";
+  return t;
+}
+
+export function colonyTypeLabel(t?: string | null): string {
+  const k = canonicalColonyType(t);
+  return COLONY_TYPE_LABELS[k] ?? k;
+}
 
 export const PLANET_BUILDING_KIND_LABELS: Record<string, string> = {
   residential: "Жилой район",

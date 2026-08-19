@@ -14,7 +14,10 @@ import {
   readLedger,
   writeLedger,
   ensureFactionEco,
+  ensureAllFactions,
+  adjustStock,
 } from "../ledger.mjs";
+import { setKnowledgeLevel, updateIntelFromDiplomacy } from "../intel.mjs";
 
 export function applyPlanetIntent(action) {
   return (world, intent, journal) => {

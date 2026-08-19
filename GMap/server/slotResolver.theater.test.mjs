@@ -4,7 +4,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resourceMatchesRequire } from "./slotResolver.mjs";
+import { resourceMatchesRequire, buildResourceIndex } from "./slotResolver.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { canBuildWithTech } from "./techActions.mjs";
 import { canRaiseUnit } from "./forceRecruit.mjs";
@@ -70,9 +70,10 @@ describe("resourceMatchesRequire theater", () => {
 describe("content bind", () => {
   const c = getContent();
 
-  it("loads crafted modules into map_resources", () => {
-    assert.equal(c.map_resources["module.space.kinetic_cannon"]?.theater, "space");
-    assert.equal(c.map_resources["module.ground.rifle"]?.theater, "ground");
+  it("loads crafted modules in modules catalog, not deposits", () => {
+    assert.equal(c.map_resources["module.space.kinetic_cannon"], undefined);
+    assert.equal(c.modules["module.space.kinetic_cannon"]?.theater, "space");
+    assert.equal(c.modules["module.ground.rifle"]?.theater, "ground");
     assert.equal(c.buildings["building.kinetic_forge"]?.requireProperties?.[0], "kinetic");
     assert.equal(c.buildings["building.armory"]?.requireProperties?.[0], "small_arms");
   });
@@ -150,5 +151,20 @@ describe("content bind", () => {
       true,
     );
     assert.equal(canBuildWithTech({ unlockedProperties: [] }, c.stations.mining).ok, true);
+  });
+});
+
+describe("buildResourceIndex deposits vs modules", () => {
+  it("keeps modules in all but omits them from byCategoryDeposits", () => {
+    const idx = buildResourceIndex(getContent());
+    const moduleHit = idx.all.find((r) =>
+      String(r.id || r.resourceId || "").startsWith("module."),
+    );
+    assert.ok(moduleHit, "outfit index still includes modules in all");
+    const deposits = Object.values(idx.byCategoryDeposits || {}).flat();
+    assert.equal(
+      deposits.some((r) => String(r.id || r.resourceId || "").startsWith("module.")),
+      false,
+    );
   });
 });

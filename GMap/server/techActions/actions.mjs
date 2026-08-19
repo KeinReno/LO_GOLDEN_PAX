@@ -60,6 +60,14 @@ export function researchTech(factionId, techId, meta = {}) {
     return { ok: false, error: "Уже исследовано" };
   }
 
+  if (def.catalogPending) {
+    return { ok: false, error: "Технология ещё не в столе" };
+  }
+
+  if (def.alchemyOnly || (def.tags || []).includes("alchemy") || (def.tags || []).includes("combo")) {
+    return { ok: false, error: "Только через лабораторию (алхимия)" };
+  }
+
   for (const pre of def.prerequisites || []) {
     if (!(eco.unlockedTechs || []).includes(pre)) {
       const preName = content.technologies?.[pre]?.name || pre;
@@ -204,6 +212,10 @@ export function gmGrantTech(factionId, techId, meta = {}) {
 
   if ((eco.unlockedTechs || []).includes(techId)) {
     return { ok: false, error: "Уже исследовано" };
+  }
+
+  if (def.catalogPending) {
+    return { ok: false, error: "Технология ещё не в столе" };
   }
 
   if (!Array.isArray(eco.unlockedTechs)) eco.unlockedTechs = [];

@@ -56,6 +56,7 @@ const OFFER_TREATIES: DiplomacyRelation[] = [
 export function DiplomacyPanel() {
   const world = useWorldStore((s) => s.world);
   const open = useWorldStore((s) => s.diplomacyPanelOpen);
+  const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const setOpen = useWorldStore((s) => s.setDiplomacyPanelOpen);
   const showDiplomacy = useWorldStore((s) => s.showDiplomacy);
   const toggleShowDiplomacy = useWorldStore((s) => s.toggleShowDiplomacy);
@@ -114,7 +115,7 @@ export function DiplomacyPanel() {
     };
   }, [focus, world.fleets, world.systems, world.diplomacy]);
 
-  if (!open) return null;
+  if (!open || gmShellMode !== "gm") return null;
 
   const relation =
     focus && compare

@@ -66,4 +66,22 @@ describe("collectTechModifierEffects — grades", () => {
     const effects = collectTechModifierEffects({ unlockedTechs: ["tech.flat"] }, content);
     assert.equal(effects[0].args.mult, 1.2);
   });
+
+  it("skips catalogPending stubs even if they sit in unlockedTechs", () => {
+    const effects = collectTechModifierEffects(
+      { unlockedTechs: ["tech.stub", "tech.flat"] },
+      {
+        technologies: {
+          ...content.technologies,
+          "tech.stub": {
+            id: "tech.stub",
+            catalogPending: true,
+            effects: [{ effect: "production_mult", args: { resource: "currency.extracta", mult: 9 } }],
+          },
+        },
+      },
+    );
+    assert.equal(effects.length, 1);
+    assert.equal(effects[0].source.id, "tech.flat");
+  });
 });

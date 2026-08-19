@@ -104,6 +104,7 @@ export function GmSeedPanel() {
           disabled
           title="Меняется в блоке «Фокус» слева"
         >
+          <option value="">— держава —</option>
           {world.factions.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}

@@ -20,8 +20,9 @@ export function CourtNavTabs({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      if (isInputFocused(e.target)) return;
+      if (isInputFocused(e.target) || e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
       const digit =
         /^Digit([1-4])$/.exec(e.code)?.[1] ??
         (/^[1-4]$/.test(e.key) ? e.key : null);
@@ -29,10 +30,11 @@ export function CourtNavTabs({
       const tab = COURT_TABS[Number(digit) - 1];
       if (!tab) return;
       e.preventDefault();
+      e.stopPropagation();
       onChangeRef.current(tab.id);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
   return (
@@ -47,6 +49,7 @@ export function CourtNavTabs({
               type="button"
               role="tab"
               aria-selected={active}
+              aria-controls={`court-panel-${tab.id}`}
               id={`court-tab-${tab.id}`}
               className={`court-nav-tab${active ? " is-active" : ""}`}
               title={`${tab.hint} · ${tab.hotkey}`}
@@ -60,9 +63,14 @@ export function CourtNavTabs({
                 />
               ) : null}
               <span className="court-nav-tab__label">{tab.label}</span>
-              <kbd className="ex-tab-kbd">{tab.hotkey}</kbd>
+              <kbd className="ex-tab-kbd" aria-hidden>
+                {tab.hotkey}
+              </kbd>
               {badge != null && badge > 0 ? (
-                <span className="court-nav-tab__badge" aria-label={`${badge}`}>
+                <span
+                  className="court-nav-tab__badge"
+                  aria-label={`${badge} требуют внимания`}
+                >
                   {badge}
                 </span>
               ) : null}

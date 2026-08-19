@@ -147,7 +147,6 @@ export function useCampaignSession() {
     ) {
       setShareLinkChanged(true);
       setShareCopied(false);
-      setShareOpen(true);
       if (data.urlRotated || (nextUrl && nextUrl !== shareViewUrlRef.current)) {
         setSyncMsg(
           `Ссылка для игроков обновилась — скопируй и раздай снова${
@@ -194,9 +193,7 @@ export function useCampaignSession() {
             loadWorld(data.world);
             markSaved(data.world.meta?.updatedAt ?? new Date().toISOString());
             setDraftMeta(getDraftMeta());
-            setSyncMsg(
-              `Live-стол · ход ${data.world.meta?.turn ?? "?"} · rev ${data.version?.tableRevision ?? data.world.meta?.tableRevision ?? "?"}`,
-            );
+            setSyncMsg(null);
             return;
           }
         }
@@ -210,9 +207,7 @@ export function useCampaignSession() {
       loadWorld(draft);
       markSaved(meta.savedAt);
       setDraftMeta(meta);
-      setSyncMsg(
-        `Черновик (local) · ${meta.systems} систем · ${fmtTime(meta.savedAt)}`,
-      );
+      setSyncMsg(null);
     })();
     return () => {
       cancelled = true;
@@ -265,7 +260,9 @@ export function useCampaignSession() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch("/api/players/share");
+        const res = await fetch("/api/players/share", {
+          headers: { "X-Master-Token": masterToken },
+        });
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as ShareApi;
         if (!cancelled) applyShareStatus(data);
@@ -276,7 +273,7 @@ export function useCampaignSession() {
     return () => {
       cancelled = true;
     };
-  }, [applyShareStatus]);
+  }, [applyShareStatus, masterToken]);
 
   // Poll tunnel health while share session is known (online / reconnecting / down).
   useEffect(() => {
@@ -292,7 +289,9 @@ export function useCampaignSession() {
     let cancelled = false;
     const tick = async () => {
       try {
-        const res = await fetch("/api/players/share");
+        const res = await fetch("/api/players/share", {
+          headers: { "X-Master-Token": masterToken },
+        });
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as ShareApi;
         if (!cancelled) applyShareStatus(data);
@@ -311,18 +310,22 @@ export function useCampaignSession() {
     shareStatus,
     shareViewUrl,
     shareLastViewUrl,
+    masterToken,
   ]);
 
-  // Auto-open popover when tunnel drops.
+  // Toast on tunnel drop; do not steal the map with the share popover.
   useEffect(() => {
     const prev = prevShareStatusRef.current;
     prevShareStatusRef.current = shareStatus;
+    if (shareStatus === "online" && (prev === "down" || prev === "degraded")) {
+      setSyncMsg(null);
+      return;
+    }
     if (
       (shareStatus === "down" || shareStatus === "degraded") &&
       prev !== shareStatus &&
       prev !== "idle"
     ) {
-      setShareOpen(true);
       setSyncMsg(
         shareStatus === "degraded"
           ? "Туннель переподключается…"
@@ -337,7 +340,7 @@ export function useCampaignSession() {
     setDirtyTick((n) => n + 1);
   }, [world]);
 
-  const openForPlayers = async () => {
+  const openForPlayers = async (opts?: { reveal?: boolean }) => {
     if (shareBusy) return;
     shareAbortRef.current?.abort();
     const ac = new AbortController();
@@ -346,7 +349,7 @@ export function useCampaignSession() {
     setShareError(null);
     setShareCopied(false);
     setShareLinkChanged(false);
-    setShareOpen(true);
+    if (opts?.reveal !== false) setShareOpen(true);
     setShareStatus("starting");
     const killTimer = window.setTimeout(() => ac.abort(), 100_000);
     try {
@@ -400,7 +403,7 @@ export function useCampaignSession() {
 
   const restartShare = async () => {
     setShareLinkChanged(false);
-    await openForPlayers();
+    await openForPlayers({ reveal: false });
   };
 
   /** Soft→hard auto refresh when tunnel stays down (503 / agent offline). */

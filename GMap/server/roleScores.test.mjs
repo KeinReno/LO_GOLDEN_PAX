@@ -17,6 +17,7 @@ import {
   checkPathGate,
   isPathOpen,
   applyOpenPathEffect,
+  pathStatusPayload,
 } from "./techPaths.mjs";
 import { computeFlowBreakdown } from "./economyTick.mjs";
 
@@ -364,5 +365,58 @@ describe("tick extraction — bulk + strategic (B2 T2.4)", () => {
     applyRoleScores({ roleScores: scores }, getContent(), flow.roleExtraction);
     assert.ok(scores.structural > 0, "B2 structural still grows from iron");
     assert.ok(scores.energy > 0, "B2 energy still grows from solari");
+  });
+});
+
+describe("pathStatusPayload — ready only with a live breakthrough", () => {
+  it("fixture: only energy is ready because only energy has a tech file", () => {
+    const scores = emptyRoleScores();
+    for (const id of EIGHT) scores[id] = 5000;
+    const rows = pathStatusPayload({ roleScores: scores, openPaths: [] }, content);
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+    assert.equal(byId.energy.ready, true);
+    assert.equal(byId.energy.breakthroughTechId, "tech.path.energy_breakthrough");
+    for (const id of EIGHT.filter((x) => x !== "energy")) {
+      assert.equal(byId[id].ready, false, id);
+      assert.equal(byId[id].breakthroughTechId, null, id);
+    }
+  });
+
+  it("treats catalogPending breakthrough as not live", () => {
+    const scores = { ...emptyRoleScores(), energy: 5000 };
+    const pending = {
+      ...content,
+      technologies: {
+        "tech.path.energy_breakthrough": {
+          id: "tech.path.energy_breakthrough",
+          catalogPending: true,
+        },
+      },
+    };
+    const row = pathStatusPayload(
+      { roleScores: scores, openPaths: [] },
+      pending,
+    ).find((r) => r.id === "energy");
+    assert.equal(row.ready, false);
+    assert.equal(row.breakthroughTechId, null);
+  });
+
+  it("live catalog: offensive/defensive/mobility ready; five empty paths not ready", () => {
+    const c = getContent();
+    const scores = emptyRoleScores();
+    for (const id of EIGHT) scores[id] = 99999;
+    const byId = Object.fromEntries(
+      pathStatusPayload({ roleScores: scores, openPaths: [] }, c).map((r) => [
+        r.id,
+        r,
+      ]),
+    );
+    assert.equal(byId.offensive.ready, true);
+    assert.equal(byId.defensive.ready, true);
+    assert.equal(byId.mobility.breakthroughTechId, "tech.path.mobility_breakthrough");
+    for (const id of ["structural", "energy", "cognitive", "biological", "exotic"]) {
+      assert.equal(byId[id].ready, false, id);
+      assert.equal(byId[id].breakthroughTechId, null, id);
+    }
   });
 });

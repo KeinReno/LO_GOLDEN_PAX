@@ -14,17 +14,6 @@ export function categoryNameOnly(letter: string): string {
   return categoryByLetter(letter)?.name ?? categoryDisplayName(letter);
 }
 
-export const TAX_TIER_LABELS: Record<string, string> = {
-  none: "0%",
-  low: "10%",
-  mid: "20%",
-  high: "35%",
-};
-
-export function taxTierLabel(tierId: string): string {
-  return TAX_TIER_LABELS[tierId] ?? tierId;
-}
-
 export const DOCTRINE_LABELS: Record<string, string> = {
   military: "Военная экономика",
   trade: "Торговая экспансия",

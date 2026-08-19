@@ -203,8 +203,7 @@ export function RacesStudio() {
       <aside className="studio-sidebar">
         <div className="studio-sidebar-header">
           <div>
-            <p className="panel-kicker">GM · Genesis</p>
-            <h3>Редактор рас</h3>
+            <h3>Расы</h3>
           </div>
           <button
             type="button"

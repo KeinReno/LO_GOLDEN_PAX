@@ -486,7 +486,7 @@ export const LAYER_PRESETS: {
   },
 ];
 
-/** Primary map modes — toolbar chips + on-map strip (F5–F9). */
+/** Primary map modes — toolbar chips + on-map strip (Shift+F4–F9, F10). */
 export const MAP_MODE_PRESETS: {
   id: LayerPresetId;
   label: string;

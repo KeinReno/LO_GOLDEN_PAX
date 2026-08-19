@@ -31,9 +31,12 @@ type ArcBucket = {
 };
 
 function groupByKind(quests: Quest[]): { kind: QuestKind; items: Quest[] }[] {
+  const live = quests.filter(
+    (q) => q.status !== "completed" && q.status !== "failed",
+  );
   return KIND_ORDER.map((kind) => ({
     kind,
-    items: quests.filter((q) => q.kind === kind),
+    items: live.filter((q) => q.kind === kind),
   })).filter((g) => g.items.length > 0 || g.kind === "perturn");
 }
 
@@ -133,6 +136,13 @@ export function QuestSidebar({
   attentionCount = 0,
 }: QuestSidebarProps) {
   const groups = useMemo(() => groupByKind(quests), [quests]);
+  const done = useMemo(
+    () =>
+      quests.filter(
+        (q) => q.status === "completed" || q.status === "failed",
+      ),
+    [quests],
+  );
   const [openKinds, setOpenKinds] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(KIND_ORDER.map((k) => [k, true])),
   );
@@ -140,21 +150,23 @@ export function QuestSidebar({
   if (collapsed) {
     return (
       <aside className="quest-rail quest-rail--collapsed" aria-label="Квесты">
-        <button
-          type="button"
-          className="quest-rail__expand"
-          onClick={onToggleCollapse}
-          aria-expanded={false}
-          title="Список квестов"
-        >
+          <button
+            type="button"
+            className="quest-rail__expand"
+            onClick={onToggleCollapse}
+            aria-expanded={false}
+            aria-label="Развернуть список квестов"
+            title="Список квестов"
+          >
           ▸
         </button>
-        <button
-          type="button"
-          className="quest-rail__expand"
-          onClick={onShowInbox}
-          title="Обзор"
-        >
+          <button
+            type="button"
+            className="quest-rail__expand"
+            onClick={onShowInbox}
+            title="Обзор"
+            aria-label="Обзор хода"
+          >
           <LayoutList size={14} />
         </button>
         {!perTurnRolled ? (
@@ -182,6 +194,7 @@ export function QuestSidebar({
             className="btn ghost sm"
             onClick={onToggleCollapse}
             aria-expanded
+            aria-label="Свернуть список квестов"
           >
             ◂
           </button>
@@ -293,6 +306,26 @@ export function QuestSidebar({
             </section>
           );
         })}
+        {done.length > 0 ? (
+          <section className="quest-rail__group">
+            <details className="quest-rail__done">
+              <summary>
+                Завершённые
+                <span className="quest-group-count">{done.length}</span>
+              </summary>
+              <ul className="quest-rail__list">
+                {done.map((q) => (
+                  <QuestRow
+                    key={q.id}
+                    quest={q}
+                    active={q.id === activeQuestId}
+                    onSelect={onSelect}
+                  />
+                ))}
+              </ul>
+            </details>
+          </section>
+        ) : null}
       </div>
     </aside>
   );

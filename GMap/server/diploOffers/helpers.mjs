@@ -105,13 +105,62 @@ export function cancelPendingOffersBetween(aId, bId, turn, reason) {
 /** Techs with race/trait locks or non-transferable acquired records stay private. */
 function isShareableTechId(techId, eco, content) {
   const def = content?.technologies?.[techId];
-  if (!def) return false;
+  if (!def || def.catalogPending) return false;
   if (def.raceLock || def.factionTraitLock) return false;
   const acq = (eco?.acquiredTechs || []).find((a) => a.techId === techId);
   if (acq && (acq.transferable === false || acq.source === "historical")) {
     return false;
   }
   return true;
+}
+
+export function resourceNeedByCurrency(items) {
+  const need = {};
+  for (const item of items || []) {
+    if (item.kind !== "resource") continue;
+    const id = String(item.currencyId || "");
+    const amt = Number(item.amount) || 0;
+    if (!id || amt <= 0) continue;
+    need[id] = (need[id] || 0) + amt;
+  }
+  return need;
+}
+
+export function affordResources(stocks, items) {
+  const need = resourceNeedByCurrency(items);
+  for (const [currencyId, amt] of Object.entries(need)) {
+    const have = Number(stocks?.[currencyId] ?? 0);
+    if (have < amt) {
+      return {
+        ok: false,
+        error: `недостаточно ${currencyId} (есть ${have}, в сделке ${amt})`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
+function assetKey(item) {
+  if (!item || typeof item !== "object") return null;
+  if (item.kind === "fleet") return item.fleetId ? `fleet:${item.fleetId}` : null;
+  if (item.kind === "legion") return item.legionId ? `legion:${item.legionId}` : null;
+  if (item.kind === "system") return item.systemId ? `system:${item.systemId}` : null;
+  if (item.kind === "tech") return item.techId ? `tech:${item.techId}` : null;
+  if (item.kind === "treaty") return item.treaty ? `treaty:${item.treaty}` : null;
+  return null;
+}
+
+export function duplicateAssetError(items) {
+  const seen = new Set();
+  for (const item of items || []) {
+    const key = assetKey(item);
+    if (!key) continue;
+    if (seen.has(key)) {
+      return { ok: false, error: `повтор в сделке: ${key}` };
+    }
+    seen.add(key);
+  }
+  return { ok: true };
 }
 
 export function shareableTechIds(eco, content) {
@@ -171,6 +220,9 @@ export function normalizeItems(items) {
 export function validateAssets(world, factionId, items, ledger) {
   const content = getContent();
   const eco = ledger ? ensureFactionEco(ledger, factionId) : null;
+  const dup = duplicateAssetError(items);
+  if (!dup.ok) return dup;
+  const faction = (world.factions || []).find((f) => f.id === factionId);
   for (const item of items || []) {
     if (item.kind === "fleet") {
       const f = (world.fleets || []).find((x) => x.id === item.fleetId);
@@ -186,6 +238,12 @@ export function validateAssets(world, factionId, items, ledger) {
       const s = (world.systems || []).find((x) => x.id === item.systemId);
       if (!s || s.ownerFactionId !== factionId) {
         return { ok: false, error: `система недоступна: ${item.systemId}` };
+      }
+      if (
+        s.isCapital ||
+        faction?.capitalSystemId === s.id
+      ) {
+        return { ok: false, error: "столицу нельзя передать сделкой" };
       }
     } else if (item.kind === "tech") {
       if (!eco || !isShareableTechId(item.techId, eco, content)) {
@@ -220,7 +278,17 @@ export function transferAssets(world, fromId, toId, items, ledger) {
       if (l && l.factionId === fromId) l.factionId = toId;
     } else if (item.kind === "system") {
       const s = (world.systems || []).find((x) => x.id === item.systemId);
-      if (s && s.ownerFactionId === fromId) s.ownerFactionId = toId;
+      if (s && s.ownerFactionId === fromId) {
+        s.ownerFactionId = toId;
+        for (const p of s.planets || []) {
+          if (!p.ownerFactionId || p.ownerFactionId === fromId) {
+            p.ownerFactionId = toId;
+          }
+        }
+        for (const st of s.stations || []) {
+          if (!st.factionId || st.factionId === fromId) st.factionId = toId;
+        }
+      }
     } else if (item.kind === "tech" && ledger) {
       const fromEco = ensureFactionEco(ledger, fromId);
       const toEco = ensureFactionEco(ledger, toId);

@@ -1,12 +1,11 @@
 import type { ViewerPayload } from "../state/types";
-import type { RpChatProps } from "../editors/RpChat";
-import { RpStage } from "./RpStage";
+import { RpStage, type RpStageProps } from "./RpStage";
 
 export type ChronicleRoomProps = {
   payload: ViewerPayload;
   password: string;
   onMsg?: (m: string | null) => void;
-  onMessagesLoaded?: RpChatProps["onMessagesLoaded"];
+  onMessagesLoaded?: RpStageProps["onMessagesLoaded"];
   factionColor?: string;
   avatarUrl?: string | null;
   layout?: "panel" | "fill";

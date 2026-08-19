@@ -147,6 +147,19 @@ describe("canExtractDeposit", () => {
     );
     assert.equal(r.allowed, false);
   });
+
+  it("skips biome-restricted extractors on the wrong planet", () => {
+    const content = getContent();
+    const well = content.buildings["extract.gas_well"];
+    assert.ok(well?.biome_restrictions?.length);
+    const blocked = canExtractDeposit({
+      buildings: [{ buildingId: "extract.gas_well" }],
+      depositType: "map.methane",
+      content,
+      planet: { type: "rocky", climate: "cold" },
+    });
+    assert.equal(blocked.allowed, false);
+  });
 });
 
 describe("extractableDepositIds", () => {
@@ -200,6 +213,29 @@ describe("buildingUnlocksDeposit", () => {
 });
 
 describe("addPlanetExtraction gate", () => {
+  it("does not mine crafted outfit modules as deposits", () => {
+    const content = getContent();
+    const laser =
+      content.modules?.["module.space.light_laser"] ||
+      content.map_resources["module.space.light_laser"];
+    assert.ok(laser, "module.space.light_laser missing from modules catalog");
+    const blocked = canExtractDeposit({
+      buildings: [{ buildingId: "extract.gas_well" }],
+      depositType: "module.space.light_laser",
+      content,
+    });
+    assert.equal(blocked.allowed, false);
+    const flows = emptyFlows();
+    addPlanetExtraction(flows, ["module.space.light_laser"], content, {
+      skipExtractGate: true,
+    });
+    const dRate = Object.values(flows.D || {}).reduce(
+      (s, cell) => s + (cell.rate || 0),
+      0,
+    );
+    assert.equal(dRate, 0);
+  });
+
   it("credits 0 named resource with a deposit and no matching building", () => {
     const flows = emptyFlows();
     const strategicExtraction = {};
@@ -221,6 +257,34 @@ describe("addPlanetExtraction gate", () => {
     const flows = emptyFlows();
     addPlanetExtraction(flows, ["map.iron"], fixture, { skipExtractGate: true });
     assert.equal(flows.A[1].rate, 2);
+  });
+
+  it("T2 deposit extracts at tech T1 because freeBuildTier is 3", () => {
+    const flows = emptyFlows();
+    addPlanetExtraction(flows, ["map.crystals"], fixture, {
+      buildings: [{ buildingId: "extract.asteroid_harvester" }],
+      maxTiers: { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1 },
+    });
+    assert.equal(flows.B[2].rate, 1);
+  });
+
+  it("T5 non-peg deposit stays gated at tech T1", () => {
+    const flows = emptyFlows();
+    addPlanetExtraction(flows, ["map.solari"], fixture, {
+      buildings: [{ buildingId: "extract.gas_well" }],
+      maxTiers: { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1 },
+    });
+    assert.equal(flows.D[5].rate, 0);
+  });
+
+  it("own treasury peg skips the tech ceiling", () => {
+    const flows = emptyFlows();
+    addPlanetExtraction(flows, ["map.solari"], fixture, {
+      buildings: [{ buildingId: "extract.gas_well" }],
+      maxTiers: { A: 1, B: 1, C: 1, D: 1, E: 1, F: 1 },
+      treasuryPeg: "map.solari",
+    });
+    assert.equal(flows.D[5].rate, 2);
   });
 });
 

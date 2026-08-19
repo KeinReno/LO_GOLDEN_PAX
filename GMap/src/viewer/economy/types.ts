@@ -10,11 +10,11 @@ export const ECONOMY_SECTIONS: {
   label: string;
   hotkey: string;
 }[] = [
-  { id: "overview", label: "Обзор", hotkey: "1" },
-  { id: "production", label: "Производство", hotkey: "2" },
-  { id: "budget", label: "Бюджет", hotkey: "3" },
-  { id: "stockpile", label: "Склад", hotkey: "4" },
-  { id: "policies", label: "Политики", hotkey: "5" },
+  { id: "overview", label: "Обзор", hotkey: "Alt+1" },
+  { id: "production", label: "Производство", hotkey: "Alt+2" },
+  { id: "budget", label: "Бюджет", hotkey: "Alt+3" },
+  { id: "stockpile", label: "Склад", hotkey: "Alt+4" },
+  { id: "policies", label: "Политики", hotkey: "Alt+5" },
 ];
 
 export const ECONOMY_SECTION_BY_DIGIT: Record<string, EconomySectionId> = {
@@ -26,3 +26,5 @@ export const ECONOMY_SECTION_BY_DIGIT: Record<string, EconomySectionId> = {
 };
 
 export type CategoryStatus = "ok" | "warn" | "deficit";
+
+export const ECO_SECTION_STORAGE = "gmap-eco-section";

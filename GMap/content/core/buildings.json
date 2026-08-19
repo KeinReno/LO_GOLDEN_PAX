@@ -907,6 +907,9 @@
     "laborSlots": 10,
     "faction": "generic",
     "maxPerSystem": 1,
+    "requireProperties": [
+      "anomaly_tap"
+    ],
     "cost": {
       "currency.metal": 65,
       "currency.supply": 27,
@@ -2757,6 +2760,8 @@
     "zone": "deep",
     "name": "Дамильские врата",
     "faction": "damyl",
+    "category": "F",
+    "tier": 8,
     "maxPerSystem": 1,
     "cost_mult": 1.3,
     "upkeep_effects": [
@@ -2802,6 +2807,8 @@
     "zone": "deep",
     "name": "Архив Дая-Чины",
     "faction": "belator",
+    "category": "F",
+    "tier": 9,
     "maxPerSystem": 1,
     "cost_mult": 1.3,
     "upkeep_effects": [
@@ -3474,6 +3481,7 @@
     "slots": [
       {
         "role": "relic",
+        "fillOnly": true,
         "require": {
           "properties": [
             "anomaly"
@@ -4320,6 +4328,31 @@
     ],
     "signature": "Ёмкость склада под печатью",
     "tradeoff": "не добыча"
+  },
+  "logistics.depot": {
+    "id": "logistics.depot",
+    "kind": "depot",
+    "zone": "surface",
+    "name": "Склад снабжения",
+    "ap": 1,
+    "category": "C",
+    "tier": 1,
+    "faction": "generic",
+    "maxPerPlanet": 1,
+    "cost": {
+      "currency.metal": 8,
+      "currency.supply": 3
+    },
+    "effects": [
+      {
+        "effect": "stability_add",
+        "args": {
+          "amount": 1
+        }
+      }
+    ],
+    "signature": "Узел снабжения: стабильность, не добыча",
+    "tradeoff": "не расширяет логистический граф (депо на карте — space object)"
   },
   "building.bazaar": {
     "id": "building.bazaar",

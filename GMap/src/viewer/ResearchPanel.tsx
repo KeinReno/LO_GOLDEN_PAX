@@ -14,14 +14,12 @@ import {
   postFillTechSocket,
   postUpgradeTechGrade,
 } from "../state/researchClient";
-import { canBuildWithTech } from "../state/techGate";
+import { fmtSigned } from "../state/numberFormat";
 import { StatefulButton } from "../ui/StatefulButton";
 import { AnimatedTooltip } from "../ui/AnimatedTooltip";
 import { useSpotlight } from "../ui/aceternityFx";
 import { ECO_CATEGORY_NAMES } from "./economyFlowTypes";
 import {
-  directionColor,
-  directionLabel,
   listDirectionIds,
   resolveTechDirection,
   RESEARCH_DIRECTION_BY_DIGIT,
@@ -29,7 +27,6 @@ import {
 import {
   ResearchQueue,
   EffectsList,
-  CognitioForecast,
   buildQueueForecasts,
   cognitioSparkFromRecent,
   ResearchTimeline,
@@ -37,7 +34,7 @@ import {
   UpgradesComparison,
   QUEUE_MAX,
   TECH_DND_MIME,
-  type ResearchFilter,
+  buildingsUnlockedByTech,
 } from "./research";
 import {
   hybridLockLabel,
@@ -45,9 +42,10 @@ import {
 } from "../state/hybridClient";
 import { buildResearchPath } from "./research/researchPath";
 import { AlchemyLab } from "./research/AlchemyLab";
-import { ResearchPathsPanel } from "./research/ResearchPathsPanel";
 import { ResearchOffers } from "./research/ResearchOffers";
-import { TechGraphCanvas } from "./research/graph/TechGraphCanvas";
+import { isCatalogStubTech } from "./research/graph/visibleGraphTechs";
+import { OrbitGraph } from "./research/orbit/OrbitGraph";
+import { SpecializationStrip } from "./research/orbit/SpecializationStrip";
 import { useTouchDrag } from "./shared/useTouchDrag";
 import {
   clearTechDragIdDeferred,
@@ -181,37 +179,6 @@ function lockBlocksResearch(
   return false;
 }
 
-function buildingsUnlockedByTech(
-  tech: TechnologyDef,
-  tiers: Record<string, number>,
-  unlockedProperties: string[],
-): { name: string; id: string }[] {
-  const buildings = Object.values(getCachedContent()?.buildings || {});
-  if (!buildings.length) return [];
-
-  const nextTiers = { ...tiers };
-  const nextProps = [...unlockedProperties];
-  for (const e of tech.effects || []) {
-    if (e.effect === "unlock_tech_tier") {
-      const cat = String(e.args.category ?? "");
-      const to = Number(e.args.to);
-      if (cat) nextTiers[cat] = Math.max(Number(nextTiers[cat] ?? 1), to);
-    } else if (e.effect === "unlock_property" && e.args.property) {
-      const p = String(e.args.property);
-      if (!nextProps.includes(p)) nextProps.push(p);
-    }
-  }
-
-  const before = { techTiers: tiers, unlockedProperties };
-  const after = { techTiers: nextTiers, unlockedProperties: nextProps };
-  const out: { name: string; id: string }[] = [];
-  for (const b of buildings) {
-    if (canBuildWithTech(before, b).ok) continue;
-    if (canBuildWithTech(after, b).ok) out.push({ name: b.name, id: b.id });
-  }
-  return out;
-}
-
 type NextBuy = { tech: TechnologyDef; cost: number };
 
 /**
@@ -276,9 +243,6 @@ export function ResearchPanel({
     key: number;
   } | null>(null);
   const [branchLocal, setBranchLocal] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const filter: ResearchFilter = "all";
-  const [railOpen, setRailOpen] = useState(!compact);
 
   const openLabWith = (a: string | null, b: string | null = null) => {
     if (!onAlchemyExperiment) return;
@@ -302,7 +266,6 @@ export function ResearchPanel({
     techGrades?: Record<string, number>;
     techSockets?: Record<string, string>;
   } | null>(null);
-  const branchSpot = useSpotlight();
   const detailSpot = useSpotlight();
 
   const bindCognitioDrag = useTouchDrag(
@@ -316,7 +279,7 @@ export function ResearchPanel({
 
   const { byId, byDir } = useMemo(() => {
     const dict = getCachedContent()?.technologies || {};
-    const list = Object.values(dict);
+    const list = Object.values(dict).filter((t) => !isCatalogStubTech(t));
     const idMap = new Map(list.map((t) => [t.id, t]));
     const dirMap = new Map<string, TechnologyDef[]>();
     for (const d of listDirectionIds()) dirMap.set(d, []);
@@ -332,15 +295,6 @@ export function ResearchPanel({
     }
     return { byId: idMap, byDir: dirMap };
   }, []);
-
-  const allTechs = useMemo(() => {
-    const out: TechnologyDef[] = [];
-    for (const d of listDirectionIds()) {
-      const arr = byDir.get(d);
-      if (arr) out.push(...arr);
-    }
-    return out;
-  }, [byDir]);
 
   const unlocked = useMemo(
     () => new Set(eco?.unlockedTechs || []),
@@ -358,10 +312,6 @@ export function ResearchPanel({
     );
     if (next) setSelectedId(next.id);
   };
-  const openDirectionFromNode = (techId: string) => {
-    const dir = resolveTechDirection(byId.get(techId));
-    if (dir) openBranch(dir);
-  };
   const unlockedUpgrades = useMemo(
     () => new Set(eco?.unlockedUpgrades || []),
     [eco?.unlockedUpgrades],
@@ -378,7 +328,6 @@ export function ResearchPanel({
     : eco;
   const cognitio = liveEco?.stocks?.["currency.cognitio"] ?? 0;
   const tiers = eco?.techTiers || {};
-  const unlockedProps = eco?.unlockedProperties || [];
 
   const income =
     cognitioIncome != null
@@ -392,11 +341,6 @@ export function ResearchPanel({
     () => buildQueueForecasts(queue, byId, cognitio, income, eco),
     [queue, byId, cognitio, income, eco],
   );
-  const spark = useMemo(
-    () => cognitioSparkFromRecent(eco?.recent, 10),
-    [eco?.recent],
-  );
-
   useEffect(() => {
     if (busy) return;
     if (pendingId) {
@@ -444,6 +388,7 @@ export function ResearchPanel({
   const affordable = useMemo(() => {
     const list: NextBuy[] = [];
     for (const t of Object.values(getCachedContent()?.technologies || {})) {
+      if (isCatalogStubTech(t)) continue;
       if (unlocked.has(t.id)) continue;
       if (!(t.prerequisites || []).every((p) => unlocked.has(p))) continue;
       if (lockBlocksResearch(t, world, factionId, eco)) continue;
@@ -477,11 +422,7 @@ export function ResearchPanel({
     else if (!prereqOk) status = "закрыто";
     else if (lockBlocked) status = "эксклюзив";
     else if (cognitio < cost) status = "мало Знания";
-    const buildings = buildingsUnlockedByTech(
-      selected,
-      tiers,
-      unlockedProps,
-    );
+    const buildings = buildingsUnlockedByTech(selected, eco);
     const upgrades = selected.upgrades || [];
     const upgradeDone = upgrades.filter((u) => unlockedUpgrades.has(u.id)).length;
     const inQueue = queueSet.has(selected.id);
@@ -521,10 +462,9 @@ export function ResearchPanel({
     unlockedUpgrades,
     cognitio,
     busy,
-    tiers,
-    unlockedProps,
     world,
     factionId,
+    eco,
     queueSet,
     queue.length,
     onSetQueue,
@@ -648,7 +588,7 @@ export function ResearchPanel({
     if (queue.includes(techId)) return;
     if (queue.length >= QUEUE_MAX) return;
     const tech = byId.get(techId);
-    if (!tech) return;
+    if (!tech || isCatalogStubTech(tech)) return;
     if (!(tech.prerequisites || []).every((p) => unlocked.has(p))) return;
     if (lockBlocksResearch(tech, world, factionId, eco)) return;
     changeQueue([...queue, techId]);
@@ -702,8 +642,7 @@ export function ResearchPanel({
             {income !== 0 ? (
               <span className="tabular">
                 {" "}
-                ({income > 0 ? "+" : ""}
-                {income}/ход)
+                ({fmtSigned(income)}/ход)
               </span>
             ) : null}
             {affordable.length > 0 ? (
@@ -745,177 +684,58 @@ export function ResearchPanel({
       ) : null}
 
       {scienceMode === "tree" ? (
-        <div className="research-tree-body">
-      <details
-        className="research-rail"
-        open={railOpen}
-        onToggle={(e) =>
-          setRailOpen((e.currentTarget as HTMLDetailsElement).open)
-        }
-      >
-        <summary>Очередь и прогноз</summary>
-        <div className="research-rail-body">
-      {onSetQueue ? (
-        <ResearchQueue
-          eco={eco}
-          queue={queue}
-          byId={byId}
-          cognitio={cognitio}
-          income={income}
-          selectedId={selectedId}
-          busy={busy}
-          forecasts={forecasts}
-          onSelect={setSelectedId}
-          onChangeQueue={changeQueue}
-          onAccelerate={onAccelerate}
-        />
-      ) : null}
-
-      <CognitioForecast
-        eco={eco}
-        cognitio={cognitio}
-        income={income}
-        forecasts={forecasts}
-        byId={byId}
-        spark={spark}
-      />
-
-        </div>
-      </details>
-
-      <div className="research-tree-main">
-      <div className="research-desk-bar">
-      <div
-        className="research-branch-tabs anim-tabs"
-        role="tablist"
-        aria-label="Направления науки"
-      >
-        <button
-          type="button"
-          role="tab"
-          id="research-tab-all"
-          aria-controls="research-panel-main"
-          aria-selected={focusBranch == null}
-          className={`research-branch-tab research-branch-tab--all fx-spotlight ${focusBranch == null ? "on" : ""}`}
-          onClick={() => setFocusBranch(null)}
-          title="Все направления"
-          {...branchSpot.bind}
-        >
-          <strong>Все</strong>
-          <span className="hint">обзор</span>
-        </button>
-        {listDirectionIds().map((d, i) => {
-          const techs = byDir.get(d) ?? [];
-          const done = techs.filter((t) => unlocked.has(t.id)).length;
-          const color = directionColor(d);
-          const branchAffordable = techs.some(
-            (t) =>
-              !unlocked.has(t.id) &&
-              (t.prerequisites || []).every((p) => unlocked.has(p)) &&
-              !lockBlocksResearch(t, world, factionId, eco) &&
-              cognitio >= cognitioCost(t, eco, t.category),
-          );
-          return (
-            <button
-              key={d}
-              type="button"
-              role="tab"
-              id={`research-tab-${d}`}
-              aria-controls="research-panel-main"
-              aria-selected={focusBranch === d}
-              className={`research-branch-tab fx-spotlight ${focusBranch === d ? "on" : ""} ${branchAffordable ? "is-hot" : ""}`}
-              style={
-                {
-                  borderColor: color,
-                  "--fx-spot-color": color,
-                } as React.CSSProperties
-              }
-              onClick={() => openBranch(d)}
-              title={`${directionLabel(d)} · Alt+${i + 1}`}
-              {...branchSpot.bind}
-            >
-              {!compact ? (
-                <span className="research-tab-hotkey">Alt+{i + 1}</span>
-              ) : null}
-              <strong style={{ color }}>{directionLabel(d)}</strong>
-              <span className="hint">
-                {done}/{techs.length || 0}
-                {done === techs.length && techs.length ? " · ✓" : ""}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-        <label className="research-search">
-          <span className="sr-only">Поиск</span>
-          <input
-            type="search"
-            placeholder="геол…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
-      </div>
+        <div className="orbit-science-body">
+          <div className="orbit-topbar">
+            {onSetQueue ? (
+              <div className="orbit-topbar-block orbit-topbar-queue">
+                <ResearchQueue
+                  eco={eco}
+                  queue={queue}
+                  byId={byId}
+                  cognitio={cognitio}
+                  income={income}
+                  selectedId={selectedId}
+                  busy={busy}
+                  forecasts={forecasts}
+                  onSelect={setSelectedId}
+                  onChangeQueue={changeQueue}
+                  onAccelerate={onAccelerate}
+                />
+              </div>
+            ) : null}
+            <div className="orbit-topbar-block orbit-topbar-offers">
+              <ResearchOffers
+                eco={eco}
+                cognitio={cognitio}
+                busy={busy}
+                focus={null}
+                onResearch={onResearch}
+                onReroll={onRerollOffer}
+                onOpenBranch={openBranch}
+              />
+            </div>
+          </div>
 
       <div
         className="research-workbench"
         id="research-panel-main"
         role="tabpanel"
-        aria-labelledby={
-          focusBranch == null
-            ? "research-tab-all"
-            : `research-tab-${focusBranch}`
-        }
       >
         <div className="research-map">
-          {focusBranch == null ? (
-            <details className="research-fold">
-              <summary>Пути развития</summary>
-              <ResearchPathsPanel
-                eco={eco}
-                cognitio={cognitio}
-                busy={busy}
-                factionId={factionId}
-                world={world}
-                onResearch={onResearch}
-              />
-            </details>
-          ) : null}
-          <ResearchOffers
-            eco={eco}
-            cognitio={cognitio}
-            busy={busy}
-            focus={focusBranch}
-            onResearch={onResearch}
-            onReroll={onRerollOffer}
-            onOpenBranch={openBranch}
-          />
-          <TechGraphCanvas
-            techs={focusBranch ? (byDir.get(focusBranch) ?? []) : allTechs}
-            directionOf={
-              focusBranch
-                ? undefined
-                : (id) => resolveTechDirection(byId.get(id))
-            }
-            onOpenDirection={
-              focusBranch ? undefined : openDirectionFromNode
-            }
+          <OrbitGraph
+            directions={listDirectionIds()}
+            techsByDirection={byDir}
             unlocked={unlocked}
-            cognitio={cognitio}
+            queue={queue}
             selectedId={selectedId}
-            busy={busy}
-            filter={filter}
-            search={search}
-            queueIds={queueSet}
-            eco={eco}
-            isTechBlocked={(tech) =>
-              lockBlocksResearch(tech, world, factionId, eco)
-            }
             onSelect={setSelectedId}
-            onTechDragStart={onTechMapDrag}
+            focusDirection={focusBranch}
+            onFocusDirectionChange={setFocusBranch}
             onCognitioDrop={dropCognitioOnTech}
           />
         </div>
+
+        <SpecializationStrip economy={eco} directions={listDirectionIds()} />
 
         <aside
           className={`research-detail fx-spotlight ${selected?.isBreakthrough ? "fx-glow" : ""}`}
@@ -1143,7 +963,6 @@ export function ResearchPanel({
           <ResearchTimeline recent={eco?.recent} />
         </aside>
       </div>
-      </div>
         </div>
       ) : null}
     </>
@@ -1169,6 +988,7 @@ export function countAffordableResearch(
   const cognitio = eco.stocks?.["currency.cognitio"] ?? 0;
   let n = 0;
   for (const t of Object.values(getCachedContent()?.technologies || {})) {
+    if (isCatalogStubTech(t)) continue;
     if (unlocked.has(t.id)) continue;
     if (!(t.prerequisites || []).every((p) => unlocked.has(p))) continue;
     if (lockBlocksResearch(t, world, factionId, eco)) continue;

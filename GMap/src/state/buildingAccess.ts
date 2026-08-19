@@ -10,7 +10,7 @@ export function factionContentTag(factionId: string): string {
 
 /**
  * Whether a faction may build this def in the UI / server.
- * Race prereq is enforced only when raceIds is non-empty.
+ * Race prereq fails closed: empty mix cannot satisfy a required race.
  * `prerequisites.races` requires all listed races in the colony mix.
  */
 export function canFactionBuildDef(
@@ -23,9 +23,7 @@ export function canFactionBuildDef(
     !def.faction || def.faction === "generic" || def.faction === tag;
   if (!factionOk) return false;
 
-  const raceIds = opts?.raceIds;
-  if (!raceIds || raceIds.length === 0) return true;
-
+  const raceIds = opts?.raceIds || [];
   const reqRace = def.prerequisites?.race;
   if (reqRace && !raceIds.includes(reqRace)) return false;
 

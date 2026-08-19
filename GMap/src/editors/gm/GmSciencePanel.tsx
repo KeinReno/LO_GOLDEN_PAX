@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWorldStore } from "../../state/worldStore";
 import { useCampaignSessionCtx } from "../CampaignSessionContext";
 import { getCachedContent } from "../../state/contentCatalog";
-import { GM_LIVE_DOMAINS } from "./gmDomains";
-import type { GmLiveDomainId } from "../../state/types";
 import { GmPlayerVision } from "./GmPlayerVision";
 
 type EcoSlice = {
@@ -123,8 +121,8 @@ export function GmSciencePanel() {
   return (
     <div className="gm-domain-body">
       <p className="hint">
-        Держава: <strong>{faction?.name ?? "—"}</strong>. Выдача через research
-        API (мастер). Каталог/баланс — Atelier позже.
+        Держава: <strong>{faction?.name ?? "—"}</strong>. Выдача техов и рецептов
+        этой державе. Правка техов — Мастерская → Технологии. Рецепты — Каталоги.
       </p>
       <button type="button" className="btn ghost" onClick={() => void refresh()}>
         Обновить пул
@@ -258,6 +256,13 @@ export function GmIntelPanel() {
         .map((b) => ({ id: b.id, name: b.name ?? b.id }))
         .slice(0, 200);
     }
+    if (entityType === "unit") {
+      const units = content?.units ?? {};
+      return Object.values(units)
+        .map((u) => ({ id: u.id ?? "", name: u.name ?? u.id ?? "" }))
+        .filter((u) => u.id)
+        .slice(0, 200);
+    }
     return [];
   }, [entityType, world.factions, facId, content]);
 
@@ -351,36 +356,6 @@ export function GmIntelPanel() {
           Применить
         </button>
       </div>
-      </div>
-    </div>
-  );
-}
-
-export function GmDomainLauncher({
-  onOpen,
-  activeId,
-}: {
-  onOpen: (id: GmLiveDomainId) => void;
-  activeId: GmLiveDomainId | null;
-}) {
-  return (
-    <div className="gm-domain-launcher">
-      <p className="hint">
-        На карте: глаголы снизу → цель. Здесь — быстрый F-ключ / клик.
-      </p>
-      <div className="gm-domain-launcher-grid">
-        {GM_LIVE_DOMAINS.map((d) => (
-          <button
-            key={d.id}
-            type="button"
-            className={`btn ghost gm-domain-launch ${activeId === d.id ? "active" : ""}`}
-            title={d.hint}
-            onClick={() => onOpen(d.id)}
-          >
-            <kbd>F{d.hotkey}</kbd>
-            <span>{d.label}</span>
-          </button>
-        ))}
       </div>
     </div>
   );

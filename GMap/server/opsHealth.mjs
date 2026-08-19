@@ -10,6 +10,7 @@ import {
   getTableMeta,
   setTableMeta,
   backupTurnSnapshot,
+  restoreTurnSnapshot,
   readLiveBoard,
 } from "./tableStore.mjs";
 
@@ -32,6 +33,26 @@ export function listBackupDirs() {
       return { name: d.name, path: full, mtime };
     })
     .sort((a, b) => b.mtime - a.mtime);
+}
+
+/** Named snapshot under data/turns — rejects path traversal. */
+export function resolveBackupDir(name) {
+  const clean = String(name || "");
+  if (!/^[A-Za-z0-9._-]+$/.test(clean)) return null;
+  return listBackupDirs().find((d) => d.name === clean)?.path ?? null;
+}
+
+export function restoreCockpitBackup(name) {
+  const dir = resolveBackupDir(name);
+  if (!dir) return { ok: false, error: "Бэкап не найден" };
+  restoreTurnSnapshot(dir);
+  const world = readLiveBoard();
+  return {
+    ok: true,
+    restored: name,
+    tableRevision: world?.meta?.tableRevision ?? null,
+    turn: world?.meta?.turn ?? null,
+  };
 }
 
 export function pruneBackups(keep = DEFAULT_KEEP) {

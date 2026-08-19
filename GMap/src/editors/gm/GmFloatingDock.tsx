@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { GM_LIVE_DOMAINS } from "./gmDomains";
+import { GM_LIVE_DOMAINS, domainHotkeyLabel } from "./gmDomains";
 import { useWorldStore } from "../../state/worldStore";
 import type { GmLiveDomainId } from "../../state/types";
 
@@ -59,12 +59,14 @@ export function GmFloatingDock({
         {collapsed && <span>Домены</span>}
       </button>
       <div className="gm-floating-dock__inner">
-        {GM_LIVE_DOMAINS.map((d) => (
+        {GM_LIVE_DOMAINS.map((d) => {
+          const hk = domainHotkeyLabel(d.hotkey);
+          return (
           <button
             key={d.id}
             type="button"
             className={`gm-floating-dock__item ${activeId === d.id ? "on" : ""}`}
-            title={`${d.hint} · F${d.hotkey}`}
+            title={hk ? `${d.hint} · ${hk}` : d.hint}
             onClick={() => {
               if (d.id === "inbox") {
                 onOpenRightDock?.();
@@ -74,10 +76,11 @@ export function GmFloatingDock({
               onOpenDomain(d.id);
             }}
           >
-            <kbd>F{d.hotkey}</kbd>
+            {hk ? <kbd>{hk}</kbd> : <span className="gm-floating-dock__item-key">клик</span>}
             <span>{d.label}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </nav>
   );

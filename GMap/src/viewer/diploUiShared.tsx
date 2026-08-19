@@ -6,7 +6,6 @@ import type {
   ViewerPayload,
 } from "../state/types";
 import { DIPLOMACY_LABELS } from "../state/defaults";
-import { FlipWords } from "../ui/FlipWords";
 
 export function getRelation(
   payload: ViewerPayload,
@@ -68,12 +67,12 @@ export function RelationBadge({ relation }: { relation: DiplomacyRelation }) {
   );
 }
 
-/** Animated attitude line (Flip Words) for diplomacy faceoff. */
+/** Attitude line for diplomacy faceoff. */
 export function DiploAttitudeLabel({ opinion }: { opinion: number }) {
   const tone = opinionTone(opinion);
   return (
-    <p className="gc-diplo-faceoff__attitude">
-      <FlipWords word={opinionLabel(opinion)} tone={tone} />
+    <p className={`gc-diplo-faceoff__attitude gc-diplo-faceoff__attitude--${tone}`}>
+      {opinionLabel(opinion)}
     </p>
   );
 }

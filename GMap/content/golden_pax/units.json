@@ -67,7 +67,10 @@
         },
         "name": "Гвардия Белатора · элита"
       }
-    }
+    },
+    "requireProperties": [
+      "line_infantry"
+    ]
   },
   "unit.swarm_skitter": {
     "id": "unit.swarm_skitter",
@@ -137,7 +140,10 @@
         },
         "name": "Скиттеры Роя · элита"
       }
-    }
+    },
+    "requireProperties": [
+      "line_infantry"
+    ]
   },
   "unit.psi_cadre": {
     "id": "unit.psi_cadre",
@@ -207,6 +213,9 @@
         },
         "name": "Пси-кадр · элита"
       }
-    }
+    },
+    "requireProperties": [
+      "psion_emit"
+    ]
   }
 }

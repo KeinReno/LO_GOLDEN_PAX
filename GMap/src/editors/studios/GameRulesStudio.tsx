@@ -71,11 +71,9 @@ export function GameRulesStudio() {
           "X-Master-Token": masterToken,
         },
         body: JSON.stringify({
-          patch: {
-            apPerTurn: p.apPerTurn,
-            forceAp: { base: p.forceApBase, max: p.forceApMax },
-            alchemy: { attemptsPerTurn: p.alchemyAttempts },
-          },
+          apPerTurn: p.apPerTurn,
+          forceAp: { base: p.forceApBase, max: p.forceApMax },
+          alchemy: { attemptsPerTurn: p.alchemyAttempts },
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -91,18 +89,6 @@ export function GameRulesStudio() {
   return (
     <div className="studio-layout studio-layout--full">
       <div className="studio-full-container">
-        <header className="studio-workspace-header">
-          <div className="studio-title-group">
-            <span className="studio-hero-icon">⚙</span>
-            <div>
-              <h3 style={{ margin: 0 }}>Настройки и Баланс правил игры</h3>
-              <p className="hint">
-                Глобальные константы сессии, пресеты темпа партии, механики алхимии и лимиты ОД
-              </p>
-            </div>
-          </div>
-        </header>
-
         <div className="studio-scroll-body" style={{ padding: "16px 20px" }}>
           {/* Section 1: Presets */}
           <section className="studio-section-card">
@@ -111,10 +97,9 @@ export function GameRulesStudio() {
               {PRESETS.map((p) => {
                 const isSelected = selectedPreset === p.id;
                 return (
-                  <div
+                  <article
                     key={p.id}
                     className={`studio-preset-card ${isSelected ? "is-selected" : ""}`}
-                    onClick={() => void applyPreset(p)}
                   >
                     <div className="studio-preset-head">
                       <span className="studio-preset-icon">{p.icon}</span>
@@ -133,10 +118,21 @@ export function GameRulesStudio() {
                       className={`btn tiny ${isSelected ? "primary" : "ghost"}`}
                       style={{ marginTop: 10, width: "100%" }}
                       disabled={busy}
+                      onClick={() => {
+                        if (isSelected) return;
+                        if (
+                          !confirm(
+                            `Применить темп «${p.label}»? Перепишутся ОД за ход и лимит алхимии.`,
+                          )
+                        ) {
+                          return;
+                        }
+                        void applyPreset(p);
+                      }}
                     >
                       {isSelected ? "Активен ✓" : "Активировать"}
                     </button>
-                  </div>
+                  </article>
                 );
               })}
             </div>

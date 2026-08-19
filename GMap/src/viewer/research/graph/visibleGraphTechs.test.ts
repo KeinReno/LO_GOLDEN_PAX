@@ -4,6 +4,7 @@ import type { TechnologyDef } from "../../../state/contentCatalog.ts";
 import {
   collectOfferCandidateIds,
   isBypassFrontierTech,
+  isCatalogStubTech,
   visibleGraphTechs,
 } from "./visibleGraphTechs.ts";
 
@@ -16,6 +17,12 @@ function tech(
 
 describe("visibleGraphTechs", () => {
   const catalog = [tech("done"), tech("offer"), tech("queued"), tech("hidden")];
+
+  it("treats catalogPending and alchemyOnly as hidden stubs", () => {
+    assert.equal(isCatalogStubTech(tech("live")), false);
+    assert.equal(isCatalogStubTech(tech("stub", { catalogPending: true })), true);
+    assert.equal(isCatalogStubTech(tech("lab", { alchemyOnly: true })), true);
+  });
 
   it("collects candidate ids from every offer bag", () => {
     const ids = collectOfferCandidateIds({

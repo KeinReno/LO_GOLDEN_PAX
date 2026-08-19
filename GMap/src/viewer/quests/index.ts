@@ -7,7 +7,11 @@ export {
   stockCostsFromEffects,
   mapStatus,
 } from "./adaptQuest";
-export { AttentionInbox, collectAttention } from "./AttentionInbox";
+export { AttentionInbox } from "./AttentionInbox";
+export {
+  collectAttention,
+  questAttentionCount,
+} from "./questAttention";
 export type {
   Quest,
   QuestKind,

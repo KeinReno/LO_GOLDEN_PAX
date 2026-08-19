@@ -190,14 +190,6 @@ export function ResearchQueue({
                 onClick={() => {
                   if (techId) onSelect(techId);
                 }}
-                onKeyDown={(e) => {
-                  if ((e.key === "Enter" || e.key === " ") && techId) {
-                    e.preventDefault();
-                    onSelect(techId);
-                  }
-                }}
-                role="button"
-                tabIndex={busy ? -1 : 0}
                 {...(tech && !busy ? bindSlotDrag(i) : {})}
                 aria-label={
                   tech

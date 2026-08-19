@@ -65,7 +65,22 @@ const SHAPES = [
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.mkdirSync(DIST_DIR, { recursive: true });
 
-const names = Object.values(RESOURCES).map((r) => r.name);
+function isPaintDef(def) {
+  if (!def?.id) return false;
+  if (def.stub || def.notDeposit || def.kind === "module") return false;
+  if (def.category == null || def.tier == null) return false;
+  if (
+    def.id === "map.energy" ||
+    def.id === "map.buildplex" ||
+    def.id === "map.trade_value" ||
+    def.id === "map.alloys"
+  ) {
+    return false;
+  }
+  return true;
+}
+
+const names = Object.values(RESOURCES).filter(isPaintDef).map((r) => r.name);
 const mapping = {};
 
 for (const name of names) {

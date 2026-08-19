@@ -28,6 +28,8 @@ export function DiploCompareStrip({
     return { systems, fleets, legions, pop: Math.round(pop) };
   };
 
+  const intelLevel = Number(payload.intel?.knownFactions?.[other.id] ?? 1);
+
   const a = count(me.id);
   const b = count(other.id);
 
@@ -39,7 +41,10 @@ export function DiploCompareStrip({
   ];
 
   return (
-    <div className="gc-compare" aria-label="Сравнение сил">
+    <div className="gc-compare" aria-label={`Сравнение сил по разведке ${intelLevel}/4`}>
+      <p className="hint gc-compare__intel">
+        По разведке {intelLevel}/4 · только видимые системы и силы
+      </p>
       {cells.map((c) => {
         const total = c.left + c.right || 1;
         const pctL = Math.round((c.left / total) * 100);

@@ -15,7 +15,7 @@ export type PlayerView =
   | "rp"
   | "codex";
 
-/** Sub-tabs when биржа room is open (1–4): стакан / котировки / валюты / державы. */
+/** Sub-tabs when биржа room is open (1–4): лоты / котировки / валюты / державы. */
 export const MARKET_TAB_BY_DIGIT: Record<string, MarketTab> = {
   "1": "trade",
   "2": "quotes",
@@ -36,10 +36,11 @@ export const MARKET_TAB_BY_DIGIT: Record<string, MarketTab> = {
  * | 7   | quests    | secondary |                                |
  * | 8   | court     | secondary | keyboard reachability (T6.4)   |
  * | 9   | codex     | non-room  | reference                      |
+ * | R   | rp        | chrome    | scene with GM                   |
  * | H   | hq        | non-room  | hub / attention router         |
  * | Q   | —         | chrome    | order queue toggle             |
  * | B   | —         | chrome    | dock collapse toggle           |
- * RP is float on desk (no digit); mobile primary = 1–5 + «Ещё». */
+ * RP on desk = R (not a digit; F5–F9 are map layers). Mobile primary = 1–5 + «Ещё» (5 = diplomacy). */
 export function dockViewFromDigit(
   key: string,
   isMobile: boolean,
@@ -50,7 +51,7 @@ export function dockViewFromDigit(
       "2": "forces",
       "3": "economy",
       "4": "research",
-      "5": "rp",
+      "5": "diplomacy",
     };
     return mobileMap[key] ?? null;
   }

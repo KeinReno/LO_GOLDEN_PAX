@@ -189,13 +189,17 @@ export function bindMapInput(ctx: MapInputBindCtx): () => void {
                   startScreenX: e.global.x,
                   startScreenY: e.global.y,
                   pointerId,
+                  wasSelected: model.selectedFleetId === fleetId,
                 };
                 lastPointerWorldRef.current = worldPos;
                 onUnitDragStartRef.current?.("fleet", fleetId);
                 armLongPress(e, worldPos);
                 dirtyRef.current = true;
               } else {
-                onFleetClickRef.current?.(fleetId);
+                onFleetClickRef.current?.(fleetId, {
+                  x: e.global.x,
+                  y: e.global.y,
+                });
                 armLongPress(e, worldPos);
               }
               return;
@@ -214,13 +218,17 @@ export function bindMapInput(ctx: MapInputBindCtx): () => void {
                   startScreenX: e.global.x,
                   startScreenY: e.global.y,
                   pointerId,
+                  wasSelected: model.selectedLegionId === legionId,
                 };
                 lastPointerWorldRef.current = worldPos;
                 onUnitDragStartRef.current?.("legion", legionId);
                 armLongPress(e, worldPos);
                 dirtyRef.current = true;
               } else {
-                onLegionClickRef.current?.(legionId);
+                onLegionClickRef.current?.(legionId, {
+                  x: e.global.x,
+                  y: e.global.y,
+                });
                 armLongPress(e, worldPos);
               }
               return;
@@ -956,8 +964,13 @@ export function bindMapInput(ctx: MapInputBindCtx): () => void {
               }
             } else if (mode === "viewer" && !longFired) {
               // Tap without drag → select
-              if (drag.kind === "fleet") onFleetClickRef.current?.(drag.id);
-              else onLegionClickRef.current?.(drag.id);
+              const screen = {
+                x: drag.startScreenX,
+                y: drag.startScreenY,
+              };
+              const retain = !drag.wasSelected;
+              if (drag.kind === "fleet") onFleetClickRef.current?.(drag.id, screen, retain);
+              else onLegionClickRef.current?.(drag.id, screen, retain);
             }
             dirtyRef.current = true;
           } else if (

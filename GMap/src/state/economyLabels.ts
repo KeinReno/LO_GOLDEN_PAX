@@ -1,6 +1,7 @@
 import type { EconomySchema, MapResourceDef } from "./contentCatalog";
 import { getCachedContent } from "./contentCatalog";
 import { fmtInt } from "./numberFormat";
+import { isMapDeposit, lookupContentResource } from "./resourceIndex";
 
 /** Legacy build currencies — spent on construction, colonization, fleets. */
 export const BUILD_METAL = {
@@ -46,7 +47,7 @@ export const CATEGORY_CURRENCIES = [
     letter: "D",
     short: "D",
     name: "Энергия",
-    role: "Энергия, топливо, орудийные компоненты",
+    role: "Энергия и топливо",
     cssVar: "var(--eco-cat-d)",
   },
   {
@@ -88,7 +89,7 @@ export function listStrategicResourceIds(
   const ids = new Set<string>(schemaIds.filter(Boolean));
   const resources = mapResources ?? c?.map_resources ?? {};
   for (const def of Object.values(resources)) {
-    if (def?.rank === "strategic" && def.id) ids.add(def.id);
+    if (def?.rank === "strategic" && def.id && isMapDeposit(def)) ids.add(def.id);
   }
   return [...ids];
 }
@@ -100,7 +101,7 @@ export function resourceDisplayName(resourceId: string): string {
   if (cat) return cat.name;
   if (resourceId === BUILD_METAL.id) return BUILD_METAL.label;
   if (resourceId === BUILD_SUPPLY.id) return BUILD_SUPPLY.label;
-  const def = getCachedContent()?.map_resources?.[resourceId];
+  const def = lookupContentResource(getCachedContent(), resourceId);
   if (def?.name) return def.name;
   return resourceId.replace(/^map\./, "").replace(/^currency\./, "");
 }

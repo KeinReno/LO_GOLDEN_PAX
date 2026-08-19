@@ -5,14 +5,15 @@ import { HoldButton } from "./shared/HoldButton";
 import { useRipple } from "../ui/aceternityFx";
 
 /**
- * Aceternity-ish swipeable inbox card:
- * swipe right → accept, left → reject. Buttons remain for a11y / touch fallback.
+ * Swipeable inbox card: swipe right → accept (routine deals), left → reject.
+ * Irreversible packages require hold on Accept; swipe-accept is disabled then.
  */
 export function DiploSwipeOffer({
   title,
   subtitle,
   busy,
   focused,
+  needsHold,
   onAccept,
   onReject,
 }: {
@@ -20,6 +21,7 @@ export function DiploSwipeOffer({
   subtitle: string;
   busy?: boolean;
   focused?: boolean;
+  needsHold?: boolean;
   onAccept: () => void;
   onReject: () => void;
 }) {
@@ -30,6 +32,7 @@ export function DiploSwipeOffer({
   const [locked, setLocked] = useState(false);
   const triggered = useRef(false);
   const ripple = useRipple();
+  const holdAccept = !!needsHold;
 
   useEffect(() => {
     if (!busy) {
@@ -47,6 +50,10 @@ export function DiploSwipeOffer({
     ({ down, movement: [mx], last, cancel }) => {
       if (busy || locked || reduce) return;
       if (Math.abs(mx) > 140 && !down && !triggered.current) {
+        if (mx > 0 && holdAccept) {
+          x.set(0);
+          return;
+        }
         triggered.current = true;
         setLocked(true);
         if (mx > 0) onAccept();
@@ -71,12 +78,11 @@ export function DiploSwipeOffer({
       </motion.div>
       <motion.div
         className="gc-swipe-offer__rail gc-swipe-offer__rail--accept"
-        style={{ opacity: acceptOpacity }}
+        style={{ opacity: holdAccept ? 0 : acceptOpacity }}
         aria-hidden
       >
         Принять
       </motion.div>
-      {/* Plain hit host for use-gesture — avoids onDrag clash with motion */}
       <div
         className="gc-swipe-offer__hit"
         style={{ touchAction: reduce || busy ? "auto" : "pan-y" }}
@@ -88,35 +94,53 @@ export function DiploSwipeOffer({
             <p className="hint">{subtitle}</p>
             {!reduce && (
               <p className="gc-swipe-offer__gesture hint">
-                ← свайп отклонить · принять свайп →
+                {holdAccept
+                  ? "← свайп отклонить · принять — удержать"
+                  : "← свайп отклонить · принять свайп →"}
               </p>
             )}
           </div>
-          <div className="deal-inbox-actions">
+          <div className="deal-inbox-actions gc-swipe-offer__actions">
+            {holdAccept ? (
+              <HoldButton
+                className="btn sm primary hold-btn--danger"
+                ms={700}
+                disabled={busy || locked}
+                holdHint="Удерживайте: принять сделку"
+                onConfirm={() => {
+                  setLocked(true);
+                  onAccept();
+                }}
+              >
+                Удержать · принять
+              </HoldButton>
+            ) : (
+              <button
+                type="button"
+                className="btn sm primary fx-magnetic fx-ripple-host"
+                disabled={busy || locked}
+                {...ripple.bind}
+                onClick={() => {
+                  if (locked || busy) return;
+                  setLocked(true);
+                  onAccept();
+                }}
+              >
+                Принять
+              </button>
+            )}
             <button
               type="button"
-              className="btn sm primary fx-magnetic fx-ripple-host"
+              className="btn sm ghost"
               disabled={busy || locked}
-              {...ripple.bind}
               onClick={() => {
                 if (locked || busy) return;
-                setLocked(true);
-                onAccept();
-              }}
-            >
-              Принять
-            </button>
-            <HoldButton
-              className="btn sm ghost"
-              ms={500}
-              disabled={busy || locked}
-              onConfirm={() => {
                 setLocked(true);
                 onReject();
               }}
             >
               Отклонить
-            </HoldButton>
+            </button>
           </div>
         </motion.div>
       </div>

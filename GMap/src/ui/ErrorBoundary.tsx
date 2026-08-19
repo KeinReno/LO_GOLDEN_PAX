@@ -40,6 +40,14 @@ export class ErrorBoundary extends Component<Props, State> {
           <details style={{ whiteSpace: "pre-wrap", fontSize: 12, marginTop: 10 }}>
             {this.state.error?.toString()}
           </details>
+          <button
+            type="button"
+            className="btn primary"
+            style={{ marginTop: 12 }}
+            onClick={() => window.location.reload()}
+          >
+            Перезагрузить
+          </button>
         </div>
       );
     }

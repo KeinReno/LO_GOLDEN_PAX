@@ -1,4 +1,9 @@
-export { GM_LIVE_DOMAINS, domainByHotkey, domainById } from "./gmDomains";
+export {
+  GM_LIVE_DOMAINS,
+  domainByHotkey,
+  domainById,
+  domainHotkeyLabel,
+} from "./gmDomains";
 export type { GmDomainDef } from "./gmDomains";
 export type { GmLiveDomainId } from "../../state/types";
 export { GmAttentionStrip } from "./GmAttentionStrip";

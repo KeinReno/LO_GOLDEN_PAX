@@ -3,12 +3,13 @@
  * Табы: Квесты · NPC · Дипломатия · Кубики · Обзор.
  * Все мутации идут через worldStore (client-side SoT в editor mode).
  */
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useWorldStore } from "../state/worldStore";
 import { npcRoleLabel } from "../state/displayLabels";
 import { getCachedContent } from "../state/contentCatalog";
 import { DIPLOMACY_LABELS, DIPLOMACY_RELATIONS } from "../state/defaults";
 import { useSpotlight } from "../ui/aceternityFx";
+import { CampaignSessionCtx } from "./CampaignSessionContext";
 import type {
   DiplomacyRelation,
   Faction,
@@ -22,7 +23,7 @@ import type {
 type Tab = "quests" | "npc" | "diplo" | "dice" | "overview";
 
 const TABS: { id: Tab; label: string; hint: string }[] = [
-  { id: "quests", label: "Квесты", hint: "Создание, статусы, ежходные" },
+  { id: "quests", label: "Доска", hint: "Все квесты стола. На системе — инспектор" },
   { id: "npc", label: "NPC", hint: "Поручения двора" },
   { id: "diplo", label: "Дипло", hint: "Отношения, договоры" },
   { id: "dice", label: "Кубики", hint: "Ad-hoc броски" },
@@ -41,7 +42,7 @@ const QUEST_TYPE_LABELS: Record<QuestType, string> = {
   side: "Сайд",
   faction: "Фракционный",
   foreign: "От державы",
-  yearly: "Ежходный",
+  yearly: "Ежеходный",
 };
 
 const DICE_PRESETS = [
@@ -120,9 +121,11 @@ export function GmSystemsPanel({
 
 function QuestsTab() {
   const world = useWorldStore((s) => s.world);
+  const loadWorld = useWorldStore((s) => s.loadWorld);
   const upsertQuest = useWorldStore((s) => s.upsertQuest);
   const removeQuest = useWorldStore((s) => s.removeQuest);
   const focusCameraOnSystem = useWorldStore((s) => s.focusCameraOnSystem);
+  const session = useContext(CampaignSessionCtx);
   const content = getCachedContent();
   const yearlyCatalog = content?.yearly_quests ?? {};
   const [filter, setFilter] = useState<QuestType | "all">("all");
@@ -135,6 +138,7 @@ function QuestsTab() {
   });
   const [rollTarget, setRollTarget] = useState<string>(world.factions[0]?.id ?? "");
   const [rollResult, setRollResult] = useState<string | null>(null);
+  const [rollBusy, setRollBusy] = useState(false);
 
   const quests = useMemo(() => {
     const list = [...(world.quests ?? [])];
@@ -168,50 +172,60 @@ function QuestsTab() {
     setCreating(false);
   }
 
-  function rollYearlyFor(factionId: string) {
+  async function rollYearlyFor(factionId: string) {
     const fac = world.factions.find((f) => f.id === factionId);
     if (!fac) return;
-    const catalog = Object.values(yearlyCatalog);
-    if (!catalog.length) {
-      setRollResult("Каталог ежходных квестов пуст");
+    const token = session?.masterToken;
+    if (!token) {
+      setRollResult("Нет мастер-токена — ежеходный кубик только через сервер");
       return;
     }
-    const count = rollDie(6);
-    const picked: Quest[] = [];
-    const pool = [...catalog];
-    for (let i = 0; i < count && pool.length; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      const def = pool.splice(idx, 1)[0];
-      picked.push({
-        id: uid("yquest"),
-        name: def.name,
-        summary: def.summary || "",
-        detail: def.detail || "",
-        systemId: null,
-        status: "active",
-        type: "yearly",
-        sourceFactionId: factionId,
-        catalogId: def.id,
-        expiresTurn: world.meta.turn + 3,
-        choices: def.choices,
-        history: [
-          {
-            at: nowIso(),
-            turn: world.meta.turn,
-            kind: "message",
-            body: `Брошен кубик ежходных: ${count}. Создано для ${fac.name}.`,
-          },
-        ],
+    setRollBusy(true);
+    setRollResult(null);
+    try {
+      const res = await fetch("/api/quest/action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Token": token,
+        },
+        body: JSON.stringify({
+          factionId,
+          action: "throw_quest_dice",
+        }),
       });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        message?: string;
+        roll?: number;
+        count?: number;
+      };
+      if (!res.ok || data.ok === false) {
+        setRollResult(data.error || "Не удалось бросить кубик");
+        return;
+      }
+      const table = await fetch("/api/table", {
+        headers: { "X-Master-Token": token },
+      });
+      const payload = (await table.json()) as { world?: typeof world };
+      if (payload.world) loadWorld(payload.world);
+      setRollResult(
+        data.message ||
+          `Кубик = ${data.roll} → ${data.count ?? 0} ежеходных для «${fac.name}»`,
+      );
+    } catch (e) {
+      setRollResult(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRollBusy(false);
     }
-    picked.forEach(upsertQuest);
-    setRollResult(
-      `Кубик = ${count} → создано ${picked.length} ежходных квестов для «${fac.name}»`,
-    );
   }
 
   return (
     <div className="gmsys-quests">
+      <p className="hint">
+        Доска всего стола. Квест на выбранную систему — инспектор «На системе».
+      </p>
       <div className="gmsys-toolbar">
         <select
           value={filter}
@@ -291,7 +305,7 @@ function QuestsTab() {
       )}
 
       <div className="gmsys-yearly">
-        <p className="gmsys-subhead">Ежходные квесты (кубик)</p>
+        <p className="gmsys-subhead">Ежеходные квесты (кубик)</p>
         <div className="gmsys-row">
           <select
             className="gmsys-select"
@@ -307,10 +321,10 @@ function QuestsTab() {
           <button
             type="button"
             className="btn ghost fx-moving-border"
-            onClick={() => rollYearlyFor(rollTarget)}
-            disabled={!Object.keys(yearlyCatalog).length}
+            onClick={() => void rollYearlyFor(rollTarget)}
+            disabled={rollBusy || !Object.keys(yearlyCatalog).length}
           >
-            Бросить 1d6
+            {rollBusy ? "Бросок…" : "Бросить 1d6"}
           </button>
         </div>
         {rollResult && <p className="gmsys-roll-result">{rollResult}</p>}

@@ -75,9 +75,24 @@ export const useViewerChromeStore = create<ViewerChromeState>((set) => ({
     set((s) => ({ queueOpen: applyBool(s.queueOpen, v) })),
   toggleQueueOpen: () => set((s) => ({ queueOpen: !s.queueOpen })),
 
-  setMenuOpen: (v) => set({ menuOpen: v }),
-  setSettingsOpen: (v) => set({ settingsOpen: v }),
-  setMapFiltersOpen: (v) => set({ mapFiltersOpen: v }),
+  setMenuOpen: (v) =>
+    set(
+      v
+        ? { menuOpen: true, settingsOpen: false, mapFiltersOpen: false }
+        : { menuOpen: false },
+    ),
+  setSettingsOpen: (v) =>
+    set(
+      v
+        ? { menuOpen: false, settingsOpen: true, mapFiltersOpen: false }
+        : { settingsOpen: false },
+    ),
+  setMapFiltersOpen: (v) =>
+    set(
+      v
+        ? { menuOpen: false, settingsOpen: false, mapFiltersOpen: true }
+        : { mapFiltersOpen: false },
+    ),
   setSheetOpen: (v) => set({ sheetOpen: v }),
   setRpFloatOpen: (v) => set({ rpFloatOpen: v }),
   setRpUnread: (n) => set({ rpUnread: n }),

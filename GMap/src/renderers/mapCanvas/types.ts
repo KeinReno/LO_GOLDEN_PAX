@@ -120,8 +120,16 @@ export interface MapCanvasProps {
   readModel?: () => MapViewModel;
   onModelSubscribe?: (cb: () => void) => () => void;
   onSystemClick?: (systemId: string | null) => void;
-  onFleetClick?: (fleetId: string) => void;
-  onLegionClick?: (legionId: string) => void;
+  onFleetClick?: (
+    fleetId: string,
+    screen?: { x: number; y: number },
+    retain?: boolean,
+  ) => void;
+  onLegionClick?: (
+    legionId: string,
+    screen?: { x: number; y: number },
+    retain?: boolean,
+  ) => void;
   /** Viewer: only these faction's units can be dragged to order a move. */
   playerFactionId?: string | null;
   /** Viewer: drop after drag → submit move order (editor relocates in-store). */

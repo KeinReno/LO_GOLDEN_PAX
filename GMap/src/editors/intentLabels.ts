@@ -37,3 +37,6 @@ export function intentLabel(defId: string): string {
   const bare = defId.replace(/^intent\./, "");
   return LABELS[`intent.${bare}`] ?? bare.replace(/_/g, " ");
 }
+
+/** Full defId → label map, for UIs that need the whole option list (not just one lookup). */
+export const INTENT_LABELS_MAP: Record<string, string> = LABELS;

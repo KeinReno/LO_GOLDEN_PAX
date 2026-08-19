@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { resolveEditorViewWorld } from "../state/fog";
 import { useWorldStore } from "../state/worldStore";
@@ -23,6 +23,26 @@ export function MapSearch() {
   const openPlanetView = useWorldStore((s) => s.openPlanetView);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      if (
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLTextAreaElement ||
+        t instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      e.preventDefault();
+      inputRef.current?.focus();
+      setOpen(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const viewSystems = useMemo(
     () =>
@@ -78,8 +98,11 @@ export function MapSearch() {
       <label className="map-search-field">
         <Search size={14} strokeWidth={2.25} aria-hidden />
         <input
+          ref={inputRef}
           type="search"
-          placeholder="Поиск системы / планеты…"
+          autoFocus={false}
+          autoComplete="off"
+          placeholder="Поиск системы / планеты…  ( / )"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);

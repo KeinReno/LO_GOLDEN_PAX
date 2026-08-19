@@ -20,6 +20,7 @@ import {
   isEconomyInteractionTarget,
 } from "./ecoCopy";
 import {
+  ECO_SECTION_STORAGE,
   ECONOMY_SECTION_BY_DIGIT,
   ECONOMY_SECTIONS,
   type EconomySectionId,
@@ -78,6 +79,9 @@ type Props = {
   focusProductionCategory?: string | null;
   /** Clear external focus after it was applied (avoids sticky remount filter). */
   onFocusProductionConsumed?: () => void;
+  /** External open: jump to a named section (metal/supply strip → stockpile). */
+  focusSection?: string | null;
+  onFocusSectionConsumed?: () => void;
   /**
    * Body-only for WorkbenchShell / BottomSheet host (no FloatingPanel chrome).
    * Desktop workbench + mobile sheet both use this.
@@ -86,8 +90,6 @@ type Props = {
   /** Horizontal section chips (mobile sheet). Desktop workbench uses sidebar. */
   compactNav?: boolean;
 };
-
-const ECO_SECTION_STORAGE = "gmap-eco-section";
 
 function readStoredEcoSection(): EconomySectionId | null {
   try {
@@ -123,6 +125,8 @@ export function EconomyPanel({
   onOpenResearch,
   focusProductionCategory,
   onFocusProductionConsumed,
+  focusSection,
+  onFocusSectionConsumed,
   embedded = false,
   compactNav = false,
 }: Props) {
@@ -147,6 +151,14 @@ export function EconomyPanel({
   };
 
   useEffect(() => {
+    if (!focusSection) return;
+    if (ECONOMY_SECTIONS.some((s) => s.id === focusSection)) {
+      goSection(focusSection as EconomySectionId);
+    }
+    onFocusSectionConsumed?.();
+  }, [focusSection, onFocusSectionConsumed]);
+
+  useEffect(() => {
     if (!focusProductionCategory) return;
     setProductionFilter(focusProductionCategory);
     goSection("production");
@@ -162,7 +174,7 @@ export function EconomyPanel({
         e.target instanceof HTMLSelectElement ||
         e.ctrlKey ||
         e.metaKey ||
-        e.altKey
+        !e.altKey
       ) {
         return;
       }
@@ -210,6 +222,7 @@ export function EconomyPanel({
         type="button"
         className="eco-sidebar__toggle"
         title={sidebarExpanded ? "Свернуть" : "Развернуть"}
+        aria-label={sidebarExpanded ? "Свернуть разделы" : "Развернуть разделы"}
         onClick={() => setSidebarExpanded((v) => !v)}
       >
         {sidebarExpanded ? (
@@ -263,13 +276,13 @@ export function EconomyPanel({
           <div className="eco-workbench-banner">
             <span className="eco-workbench-banner__mark">ЭКО</span>
             <span className="eco-workbench-banner__line">
-              {section === "overview" && "сводка · дефициты · путь к действию"}
-              {section === "production" && "клик — превью · drag — приоритет потока"}
+              {section === "overview" && "дефициты · категории · казна"}
+              {section === "production" && "перетащите букву на соседнюю — приоритет"}
               {section === "budget" && "журнал казны · нулевой ход"}
-              {section === "stockpile" && "long-press кольцо · drag продажа · биржа"}
-              {section === "policies" && "полосы налогов · доктрины · давление"}
+              {section === "stockpile" && "купить / продать здесь · биржа отдельно"}
+              {section === "policies" && "ставки налогов кнопками · доктрины"}
             </span>
-            <kbd className="eco-workbench-banner__kbd">1–5</kbd>
+            <kbd className="eco-workbench-banner__kbd">Alt+1–5</kbd>
           </div>
         ) : null}
         <header className="eco-content__head">

@@ -7,6 +7,7 @@ import { countAffordableResearch } from "../../ResearchPanel";
 import type { AlertItem } from "../../ViewerAlertFab";
 import { ViewerDock } from "../../ViewerDock";
 import { navigateViewerRoom } from "../rooms-router/navigateViewerRoom";
+import { isDesktopWorkbenchView } from "../rooms-router/roomViewFlags";
 import { viewerPlayHudStats } from "./viewerPlayHudStats";
 
 type Props = {
@@ -45,6 +46,7 @@ export function ViewerPlayDock({
     warCount,
     diploIncoming,
     tradePartnerCount,
+    courtAttentionCount,
   } = viewerPlayHudStats(payload);
   const affordableResearch = countAffordableResearch(
     payload.economy,
@@ -57,6 +59,7 @@ export function ViewerPlayDock({
       mobile={mobile}
       viewMode={viewMode}
       desktopGlass={false}
+      roomCompact={isDesktopWorkbenchView(mobile, viewMode)}
       dockCollapsed={dockCollapsed}
       dockMoreOpen={dockMoreOpen}
       cardBattleId={cardBattleId}
@@ -73,6 +76,7 @@ export function ViewerPlayDock({
       warCount={warCount}
       tradePartnerCount={tradePartnerCount}
       activeQuestCount={activeQuestCount}
+      courtAttentionCount={courtAttentionCount}
       viewerAlertItems={viewerAlertItems}
       onGoView={navigateViewerRoom}
       onToggleDockCollapsed={() => setDockCollapsedPersisted(!dockCollapsed)}

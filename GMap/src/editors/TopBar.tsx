@@ -1,17 +1,110 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dna,
   Factory,
   FlaskConical,
   FolderOpen,
   Globe2,
+  Hammer,
   Landmark,
+  Play,
   Rocket,
+  Save,
   Scale,
   ScrollText,
   Swords,
 } from "lucide-react";
+import type { GmShellMode } from "../state/types";
+
+const TABLE_MODES: {
+  id: Extract<GmShellMode, "gm" | "rp" | "simulator">;
+  label: string;
+  hint: string;
+  Icon: typeof Globe2;
+}[] = [
+  {
+    id: "gm",
+    label: "Карта",
+    hint: "Карта галактики, кисти, домены F1–F4/F6–F9, тик",
+    Icon: Globe2,
+  },
+  {
+    id: "rp",
+    label: "RP Стол",
+    hint: "Ролевой стол: Хроники, каналы, маски NPC, дайсы",
+    Icon: ScrollText,
+  },
+  {
+    id: "simulator",
+    label: "Симулятор",
+    hint: "Боевой полигон (флот, легион, осада, бенчмарк)",
+    Icon: Swords,
+  },
+];
+
+const WORKSHOP_MODES: {
+  id: Exclude<GmShellMode, "gm" | "rp" | "simulator">;
+  label: string;
+  hint: string;
+  Icon: typeof Globe2;
+  group: "build" | "data";
+}[] = [
+  {
+    id: "tech",
+    label: "Технологии",
+    hint: "Конструктор техов, грейдов I–V, сокетов · вкладка JSON",
+    Icon: FlaskConical,
+    group: "build",
+  },
+  {
+    id: "units",
+    label: "Карты & Юниты",
+    hint: "Конструктор кораблей и легионов с живой ККИ-карточкой",
+    Icon: Rocket,
+    group: "build",
+  },
+  {
+    id: "buildings",
+    label: "Сооружения",
+    hint: "Конструктор: здания, станции, космо-объекты · вкладка JSON",
+    Icon: Factory,
+    group: "build",
+  },
+  {
+    id: "races",
+    label: "Расы",
+    hint: "Конструктор рас и видовых признаков",
+    Icon: Dna,
+    group: "build",
+  },
+  {
+    id: "polities",
+    label: "Державы",
+    hint: "Редактор государств и фракций",
+    Icon: Landmark,
+    group: "build",
+  },
+  {
+    id: "rules",
+    label: "Темп",
+    hint: "Темп кампании (Блиц, Стандарт, Хардкор) и регуляторы",
+    Icon: Scale,
+    group: "build",
+  },
+  {
+    id: "atelier",
+    label: "Каталоги",
+    hint: "Квесты, рецепты, совет — то, чему нет конструктора",
+    Icon: FolderOpen,
+    group: "data",
+  },
+];
+
+const WORKSHOP_GROUPS: { id: "build" | "data"; label: string }[] = [
+  { id: "build", label: "Конструкторы" },
+  { id: "data", label: "Без конструктора" },
+];
 import { useWorldStore } from "../state/worldStore";
 import { resolvePolityKind } from "../state/territory";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
@@ -23,6 +116,7 @@ import {
   RpFloatLauncher,
 } from "./FloatingRpWindow";
 import { RpGmDesk } from "../viewer/RpGmDesk";
+import { useGmRpUnread } from "../viewer/useGmRpUnread";
 import { exportMapPosterPng, exportMapPlayerPosterPng } from "../io/exportExtras";
 import type { WorldState } from "../state/types";
 import { GmLocalPlayerPreview } from "./gm";
@@ -63,8 +157,6 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const {
     world,
     dirty,
-    draftMeta,
-    lastSaved,
     syncMsg,
     onSaveToServer,
     onApplyBuild,
@@ -121,8 +213,21 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
   const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const setGmShellMode = useWorldStore((s) => s.setGmShellMode);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [workshopOpen, setWorkshopOpen] = useState(false);
+  const workshopRef = useRef<HTMLDivElement>(null);
   const [applyBusy, setApplyBusy] = useState(false);
   const [rpUnread, setRpUnread] = useState(0);
+  useGmRpUnread(masterToken, setRpUnread);
+
+  useEffect(() => {
+    if (!workshopOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      const node = workshopRef.current;
+      if (node && !node.contains(e.target as Node)) setWorkshopOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [workshopOpen]);
   const activeFaction =
     world.factions.find((f) => f.id === activeFactionId) ?? null;
 
@@ -155,118 +260,84 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             ? "btn primary"
             : "btn ghost";
 
+  const workshopCurrent =
+    WORKSHOP_MODES.find((m) => m.id === gmShellMode) ?? null;
+
   const modeSwitch = (
-    <div className="gm-mode-switch gm-mode-switch--studios" role="group" aria-label="Режимы и студии GM">
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "gm" ? "on" : ""}`}
-        onClick={() => setGmShellMode("gm")}
-        title="Карта галактики, кисти, домены F1–F9, тик"
+    <div className="gm-chrome-modes">
+      <div
+        className="gm-mode-switch gm-mode-switch--studios"
+        role="group"
+        aria-label="Стол GM"
       >
-        <span className="gm-mode-icon">
-          <Globe2 size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Карта</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "rp" ? "on" : ""}`}
-        onClick={() => setGmShellMode("rp")}
-        title="Ролевой стол: Хроники, каналы, маски NPC, дайсы"
-      >
-        <span className="gm-mode-icon">
-          <ScrollText size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>RP Стол</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "simulator" ? "on" : ""}`}
-        onClick={() => setGmShellMode("simulator")}
-        title="Боевой полигон & Тир (флот, легион, осада, бенчмарк)"
-      >
-        <span className="gm-mode-icon">
-          <Swords size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Симулятор</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "tech" ? "on" : ""}`}
-        onClick={() => setGmShellMode("tech")}
-        title="Конструктор технологий, грейдов I–V, сокетов"
-      >
-        <span className="gm-mode-icon">
-          <FlaskConical size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Наука</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "units" ? "on" : ""}`}
-        onClick={() => setGmShellMode("units")}
-        title="Конструктор кораблей и легионов с живой ККИ-карточкой"
-      >
-        <span className="gm-mode-icon">
-          <Rocket size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Карты & Юниты</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "buildings" ? "on" : ""}`}
-        onClick={() => setGmShellMode("buildings")}
-        title="Конструктор зданий, станций и космо-объектов"
-      >
-        <span className="gm-mode-icon">
-          <Factory size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Сооружения</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "races" ? "on" : ""}`}
-        onClick={() => setGmShellMode("races")}
-        title="Конструктор рас и видовых признаков"
-      >
-        <span className="gm-mode-icon">
-          <Dna size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Расы</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "polities" ? "on" : ""}`}
-        onClick={() => setGmShellMode("polities")}
-        title="Редактор государств и фракций"
-      >
-        <span className="gm-mode-icon">
-          <Landmark size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Державы</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "rules" ? "on" : ""}`}
-        onClick={() => setGmShellMode("rules")}
-        title="Настройки темпа игры (Блиц, Стандарт, Хардкор) и правил"
-      >
-        <span className="gm-mode-icon">
-          <Scale size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Баланс</span>
-      </button>
-      <button
-        type="button"
-        className={`gm-mode-btn ${gmShellMode === "atelier" ? "on" : ""}`}
-        onClick={() => setGmShellMode("atelier")}
-        title="Сырые каталоги контента (JSON)"
-      >
-        <span className="gm-mode-icon">
-          <FolderOpen size={13} strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <span>Ателье</span>
-      </button>
+        {TABLE_MODES.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className={`gm-mode-btn ${gmShellMode === m.id ? "on" : ""}`}
+            onClick={() => {
+              setWorkshopOpen(false);
+              setGmShellMode(m.id);
+            }}
+            title={m.hint}
+          >
+            <span className="gm-mode-icon">
+              <m.Icon size={13} strokeWidth={2.25} aria-hidden="true" />
+            </span>
+            <span>{m.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="gm-workshop" ref={workshopRef}>
+        <button
+          type="button"
+          className={`gm-mode-btn ${workshopCurrent ? "on" : ""}`}
+          aria-haspopup="menu"
+          aria-expanded={workshopOpen}
+          title="Конструкторы и каталоги без конструктора"
+          onClick={() => {
+            setMenuOpen(false);
+            setWorkshopOpen((o) => !o);
+          }}
+        >
+          <span className="gm-mode-icon">
+            <FolderOpen size={13} strokeWidth={2.25} aria-hidden="true" />
+          </span>
+          <span>{workshopCurrent?.label ?? "Мастерская"}</span>
+        </button>
+        {workshopOpen && (
+          <div className="gm-workshop-menu" role="menu" aria-label="Мастерская">
+            {WORKSHOP_GROUPS.map((g) => (
+              <div
+                key={g.id}
+                className="gm-workshop-cluster"
+                role="group"
+                aria-label={g.label}
+              >
+                <p className="gm-workshop-group">{g.label}</p>
+                {WORKSHOP_MODES.filter((m) => m.group === g.id).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    role="menuitem"
+                    className={`gm-mode-btn ${gmShellMode === m.id ? "on" : ""}`}
+                    title={m.hint}
+                    onClick={() => {
+                      setGmShellMode(m.id);
+                      setWorkshopOpen(false);
+                    }}
+                  >
+                    <span className="gm-mode-icon">
+                      <m.Icon size={13} strokeWidth={2.25} aria-hidden="true" />
+                    </span>
+                    <span>{m.label}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -476,15 +547,12 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
 
   const rpWindow = (
     <FloatingRpWindow
-      open={rpFloatOpen}
+      open={rpFloatOpen && gmShellMode !== "rp"}
       onOpenChange={setRpFloatOpen}
-      mode="master"
-      masterToken={masterToken}
-      onMsg={setSyncMsg}
       storageKey="gmap-rp-float-geom-gm"
-      title="RP · мастер"
-      focusFactionId={rpFocusFactionId}
+      title="RP-чат поверх карты"
       unread={rpUnread}
+      zIndex={520}
     >
       <RpGmDesk
         masterToken={masterToken}
@@ -494,6 +562,8 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
       />
     </FloatingRpWindow>
   );
+
+  const onMap = gmShellMode === "gm";
 
   return (
     <header className={`top-bar top-bar--${gmShellMode}`}>
@@ -514,37 +584,51 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
         )}
       </div>
 
-      <MapSearch />
+      {onMap && <MapSearch />}
 
-      <div className="top-bar-actions">
+      <div
+        className="gm-mode-switch gm-mode-switch--ops"
+        role="group"
+        aria-label="Стол"
+      >
+        {onMap && (
+          <>
+            <button
+              type="button"
+              className="gm-mode-btn"
+              disabled={undoPastLen === 0}
+              title="Отмена (Ctrl+Z)"
+              aria-label="Отмена"
+              onClick={() => undo()}
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              className="gm-mode-btn"
+              disabled={undoFutureLen === 0}
+              title="Повтор (Ctrl+Y)"
+              aria-label="Повтор"
+              onClick={() => redo()}
+            >
+              ↷
+            </button>
+          </>
+        )}
         <button
           type="button"
-          className="btn ghost top-icon-btn"
-          disabled={undoPastLen === 0}
-          title="Отмена (Ctrl+Z)"
-          onClick={() => undo()}
-        >
-          ↶
-        </button>
-        <button
-          type="button"
-          className="btn ghost top-icon-btn"
-          disabled={undoFutureLen === 0}
-          title="Повтор (Ctrl+Y)"
-          onClick={() => redo()}
-        >
-          ↷
-        </button>
-        <button
-          type="button"
-          className="btn primary"
+          className="gm-mode-btn"
+          title="Сохранить черновик"
           onClick={() => void onSaveToServer()}
         >
-          Сохранить
+          <span className="gm-mode-icon">
+            <Save size={13} strokeWidth={2.25} aria-hidden="true" />
+          </span>
+          <span>Сохранить</span>
         </button>
         <button
           type="button"
-          className="btn ghost"
+          className="gm-mode-btn"
           disabled={applyBusy}
           title="Сохранить стол + перечитать content + обновить игроков"
           onClick={() => {
@@ -552,104 +636,70 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
             void onApplyBuild().finally(() => setApplyBusy(false));
           }}
         >
-          {applyBusy ? "Билд…" : "Применить билд"}
+          <span className="gm-mode-icon">
+            <Hammer size={13} strokeWidth={2.25} aria-hidden="true" />
+          </span>
+          <span>{applyBusy ? "Билд…" : "Билд"}</span>
         </button>
         <button
           type="button"
-          className="btn ghost"
+          className="gm-mode-btn"
           title="Закрыть ход на сервере"
           onClick={onRequestTick}
         >
-          Тик
-        </button>
-        <button
-          type="button"
-          className="btn ghost"
-          title="PNG-плакат с названием кампании и ходом"
-          onClick={() => void downloadPoster(world)}
-        >
-          Плакат PNG
-        </button>
-        <button
-          type="button"
-          className="btn ghost"
-          title="Плакат только по видимой игроку области"
-          onClick={() =>
-            void downloadPlayerPoster(
-              world,
-              activeFactionId,
-              activeFaction?.name,
-            )
-          }
-        >
-          Плакат · игрок
+          <span className="gm-mode-icon">
+            <Play size={13} strokeWidth={2.25} aria-hidden="true" />
+          </span>
+          <span>Тик</span>
         </button>
       </div>
 
-      <div className="top-bar-polity">
-        {activeFaction?.emblemPath ? (
-          <img
-            className="faction-emblem-thumb"
-            src={activeFaction.emblemPath}
-            alt=""
+      {onMap && (
+        <div className="top-bar-polity">
+          {activeFaction?.emblemPath ? (
+            <img
+              className="faction-emblem-thumb"
+              src={activeFaction.emblemPath}
+              alt=""
+            />
+          ) : (
+            <span
+              className="swatch"
+              style={{ background: activeFaction?.color ?? "#666" }}
+            />
+          )}
+          <select
+            value={activeFactionId ?? ""}
+            onChange={(e) => setActiveFaction(e.target.value || null)}
+            title="Активная держава для кистей / превью тумана"
+          >
+            <option value="">— держава —</option>
+            {world.factions.map((f) => (
+              <option key={f.id} value={f.id}>
+                {resolvePolityKind(f) === "state" ? "◆ " : "◇ "}
+                {f.name}
+              </option>
+            ))}
+          </select>
+          <label
+            className="check top-bar-gm-vision"
+            title="Вкл — вся карта. Выкл — как у выбранной державы"
+          >
+            <input
+              type="checkbox"
+              checked={gmOmniscientView}
+              onChange={(e) => setGmOmniscientView(e.target.checked)}
+            />
+            Видимость ГМа
+          </label>
+          <RpFloatLauncher
+            open={rpFloatOpen}
+            onToggle={() => setRpFloatOpen(!rpFloatOpen)}
+            label="Чат"
+            unread={rpUnread}
           />
-        ) : (
-          <span
-            className="swatch"
-            style={{ background: activeFaction?.color ?? "#666" }}
-          />
-        )}
-        <select
-          value={activeFactionId ?? ""}
-          onChange={(e) => setActiveFaction(e.target.value || null)}
-          title="Активная держава для кистей / превью тумана"
-        >
-          {world.factions.map((f) => (
-            <option key={f.id} value={f.id}>
-              {resolvePolityKind(f) === "state" ? "◆ " : "◇ "}
-              {f.name}
-            </option>
-          ))}
-        </select>
-        <label
-          className="check top-bar-gm-vision"
-          title="Вкл — вся карта. Выкл — как у выбранной державы"
-        >
-          <input
-            type="checkbox"
-            checked={gmOmniscientView}
-            onChange={(e) => setGmOmniscientView(e.target.checked)}
-          />
-          Видимость ГМа
-        </label>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => openPolityEditor(activeFactionId)}
-        >
-          Державы
-        </button>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => setDiplomacyPanelOpen(true)}
-        >
-          Дипломатия
-        </button>
-        <RpFloatLauncher
-          open={rpFloatOpen}
-          onToggle={() => setRpFloatOpen(!rpFloatOpen)}
-          label="RP"
-          unread={rpUnread}
-        />
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => setMenuOpen((o) => !o)}
-        >
-          Стол…
-        </button>
-      </div>
+        </div>
+      )}
 
       <div className="top-bar-share">
         <button
@@ -674,7 +724,17 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
           />
           {shareBtnLabel}
         </button>
-        <GmLocalPlayerPreview compact />
+        <button
+          type="button"
+          className="gm-mode-btn"
+          onClick={() => {
+            setWorkshopOpen(false);
+            setMenuOpen((o) => !o);
+          }}
+          title="Плакаты, JSON, досье, дипло"
+        >
+          Стол…
+        </button>
       </div>
 
       {menuOpen && (
@@ -693,24 +753,17 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
           <p className="hint">
             Мастер-токен настраивается в Toolbar → Сессия.
           </p>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={gmOmniscientView}
-              onChange={(e) => setGmOmniscientView(e.target.checked)}
-            />
-            Видимость ГМа (вся карта)
-          </label>
           <div className="btn-col">
             <button
               type="button"
               className="btn ghost block"
               onClick={() => {
                 openPolityEditor(activeFactionId);
+                setGmShellMode("polities");
                 setMenuOpen(false);
               }}
             >
-              Державы…
+              Державы
             </button>
             <button
               type="button"
@@ -720,7 +773,7 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
                 setMenuOpen(false);
               }}
             >
-              Дипломатия…
+              Дипломатия
             </button>
             <button
               type="button"
@@ -766,7 +819,6 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
               /view (без входа)
             </Link>
           </div>
-          <GmLocalPlayerPreview />
           <p className="hint">
             Ресурсы и кисти — вкладка «Инструменты» слева (оба режима).
           </p>
@@ -775,14 +827,11 @@ export function TopBar({ onRequestTick }: { onRequestTick: () => void }) {
 
       {sharePopover}
 
-      {(syncMsg || draftMeta || lastSaved) && (
-        <p className="top-bar-status" title={syncMsg ?? undefined}>
-          {syncMsg ??
-            `черновик ${draftMeta ? fmtTime(draftMeta.savedAt) : "—"}${
-              lastSaved ? ` · ок ${fmtTime(lastSaved)}` : ""
-            }`}
+      {syncMsg ? (
+        <p className="top-bar-status" title={syncMsg}>
+          {syncMsg}
         </p>
-      )}
+      ) : null}
 
       {rpWindow}
     </header>

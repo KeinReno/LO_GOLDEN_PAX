@@ -6,6 +6,7 @@ import {
   engagementPollMs,
   mapVersionStamp,
   pickRpHomeEpisode,
+  rpSceneIsOpen,
 } from "./viewerLivePolls.ts";
 
 describe("viewerLivePolls", () => {
@@ -22,6 +23,12 @@ describe("viewerLivePolls", () => {
   it("faster poll while card table open", () => {
     assert.equal(engagementPollMs(true), 1600);
     assert.equal(engagementPollMs(false), 8000);
+  });
+
+  it("RP scene is open via room or float", () => {
+    assert.equal(rpSceneIsOpen("rp", false), true);
+    assert.equal(rpSceneIsOpen("map", true), true);
+    assert.equal(rpSceneIsOpen("map", false), false);
   });
 
   it("unread vs seen watermark", () => {

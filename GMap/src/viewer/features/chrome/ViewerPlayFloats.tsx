@@ -54,7 +54,7 @@ export function ViewerPlayFloats({
   const setOpenQuestId = useWorldStore((s) => s.setOpenQuestId);
   const [eraBanner, setEraBanner] = useState<number | null>(null);
 
-  const playerQuests = visiblePlayerQuests(payload.world);
+  const playerQuests = visiblePlayerQuests(payload.world, payload.factionId);
   const openQuest =
     openQuestId != null
       ? playerQuests.find((q) => q.id === openQuestId) ?? null
@@ -109,6 +109,7 @@ export function ViewerPlayFloats({
             }
           }}
           unread={rpUnread}
+          zIndex={520}
           storageKey={`gmap-rp-float-geom-player-${payload.factionId}`}
           title="RP"
         >

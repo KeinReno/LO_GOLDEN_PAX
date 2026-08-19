@@ -51,10 +51,7 @@ export function canDropZone(
       if (!canOutfitUnit(catalogItem, deckKind)) {
         return {
           ok: false,
-          reason:
-            deckKind === "legion"
-              ? "Пехоте оснащение не нужно"
-              : "Нет модульных слотов",
+          reason: "Нет слотов оснащения",
         };
       }
       const slots = catalogItem?.slots ?? [];

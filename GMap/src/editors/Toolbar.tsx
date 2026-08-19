@@ -44,19 +44,13 @@ import {
 } from "../ui/mapLayers";
 import { LAYER_LUCIDE } from "../ui/layerIcons";
 import { useCampaignSessionCtx } from "./CampaignSessionContext";
-import { IntentsInbox } from "./IntentsInbox";
-import { GmLedgerPanel } from "./GmLedgerPanel";
-import { CombatPanel } from "./CombatPanel";
-import { GmOpsPanel } from "./GmOpsPanel";
-import { GmSystemsPanel } from "./GmSystemsPanel";
-import { OpsHealthPanel } from "./OpsHealthPanel";
 import { GmLiveConductor } from "./gm";
 import type { GmLiveDomainId } from "../state/types";
-import { RESOURCE_POOL } from "../state/defaults";
+import { depositPaintPool } from "../state/depositPaint";
 import { RESOURCE_ICON_SLUGS } from "../state/resourcePool.generated";
 import { MAP_STYLE_OPTIONS } from "../ui/mapStylePrefs";
 
-type TabId = "tools" | "layers" | "file" | "session" | "campaign";
+type TabId = "tools" | "layers" | "file" | "session";
 
 const TOOL_GROUPS: {
   title: string;
@@ -323,7 +317,16 @@ const TOOL_GROUPS: {
   },
 ];
 
-const ALL_TOOLS = TOOL_GROUPS.flatMap((g) => g.tools);
+const SPACE_FREQUENT = new Set<EditorTool>([
+  "mark_anomaly",
+  "mark_nebula",
+  "mark_wormhole",
+  "mark_pirate",
+  "mark_hub",
+  "mark_dead_zone",
+  "clear_poi",
+  "consequence_paint",
+]);
 
 const FACTION_TOOLS: EditorTool[] = [
   "paint_faction",
@@ -340,15 +343,13 @@ const TABS_PREP: { id: TabId; label: string; Icon: typeof Wrench }[] = [
   { id: "tools", label: "Инструменты", Icon: Wrench },
   { id: "layers", label: "Слои", Icon: Layers },
   { id: "file", label: "Файл", Icon: FolderOpen },
-  { id: "session", label: "Сессия", Icon: Radio },
+  { id: "session", label: "Ведущий", Icon: Radio },
 ];
 
 export function Toolbar({
   onOpenDomain,
-  onRequestTick,
 }: {
   onOpenDomain?: (id: GmLiveDomainId) => void;
-  onRequestTick?: () => void;
 } = {}) {
   const {
     world,
@@ -412,7 +413,6 @@ export function Toolbar({
   const revealAllVisible = useWorldStore((s) => s.revealAllVisible);
   const clearFactionReveals = useWorldStore((s) => s.clearFactionReveals);
   const advanceTurn = useWorldStore((s) => s.advanceTurn);
-  const setCampaignTurn = useWorldStore((s) => s.setCampaignTurn);
   const restoreTurnSnapshot = useWorldStore((s) => s.restoreTurnSnapshot);
   const loadWorld = useWorldStore((s) => s.loadWorld);
   const resetWorld = useWorldStore((s) => s.resetWorld);
@@ -426,8 +426,12 @@ export function Toolbar({
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<TabId>("tools");
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  const resourceNames = RESOURCE_POOL as readonly string[];
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    Карта: true,
+  });
+  const [spaceQuery, setSpaceQuery] = useState("");
+  const [spaceAll, setSpaceAll] = useState(false);
+  const resourceNames = depositPaintPool();
 
   const activeMapMode = activeMapModePreset(layerFlags);
 
@@ -446,6 +450,11 @@ export function Toolbar({
       }
       const id = mapModePresetFromHotkey(e.key);
       if (!id) return;
+      /* F1–F4, F6–F9 = GM domains (F5 = browser refresh). Layers: Shift+F4–F9, F10 = logistics. */
+      const layerHotkey =
+        (e.key === "F10" && !e.shiftKey) ||
+        (e.shiftKey && /^F[4-9]$/.test(e.key));
+      if (!layerHotkey) return;
       e.preventDefault();
       const flags = useWorldStore.getState();
       applyMapLayerFlags(
@@ -557,41 +566,63 @@ export function Toolbar({
   };
 
   return (
-    <aside className="panel panel-left">
-      <nav className="tab-bar" aria-label="Разделы панели">
+    <aside className="panel panel-left rail">
+      <nav
+        className="gm-mode-switch gm-mode-switch--studios rail-tabs"
+        role="tablist"
+        aria-label="Разделы панели"
+      >
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
-            className={tab === t.id ? "tab active" : "tab"}
-            onClick={() => {
-              setTab(t.id);
-              if (t.id === "campaign") {
-                useWorldStore.getState().setRpFloatOpen(true);
-              }
-            }}
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`gm-mode-btn ${tab === t.id ? "on" : ""}`}
+            onClick={() => setTab(t.id)}
           >
-            <t.Icon size={14} strokeWidth={2.25} aria-hidden />
+            <span className="gm-mode-icon">
+              <t.Icon size={13} strokeWidth={2.25} aria-hidden />
+            </span>
             <span>{t.label}</span>
           </button>
         ))}
       </nav>
 
-      <div className="map-mode-bar" role="toolbar" aria-label="Режимы карты">
-        {MAP_MODE_PRESETS.map((mode) => (
-          <button
-            key={mode.id}
-            type="button"
-            className={`layer-chip map-mode-chip ${activeMapMode === mode.id ? "on" : ""}`}
-            aria-pressed={activeMapMode === mode.id}
-            title={`${mode.hint} · ${mode.hotkey}`}
-            onClick={() => applyMapMode(mode.id)}
-          >
-            <span>{mode.label}</span>
-            <kbd className="map-mode-kbd">{mode.hotkey}</kbd>
-          </button>
-        ))}
-      </div>
+      {tab === "layers" && (
+        <div className="map-mode-bar" role="toolbar" aria-label="Режимы карты">
+          {MAP_MODE_PRESETS.map((mode) => (
+            <button
+              key={mode.id}
+              type="button"
+              className={`layer-chip map-mode-chip ${activeMapMode === mode.id ? "on" : ""}`}
+              aria-pressed={activeMapMode === mode.id}
+              title={
+                mode.hotkey === "F10"
+                  ? `${mode.hint} · F10`
+                  : `${mode.hint} · ⇧${mode.hotkey}`
+              }
+              onClick={() => applyMapMode(mode.id)}
+            >
+              <span>{mode.label}</span>
+              <kbd className="map-mode-kbd">
+                {mode.hotkey === "F10" ? "F10" : `⇧${mode.hotkey}`}
+              </kbd>
+            </button>
+          ))}
+          {LAYER_PRESET_BUTTONS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="layer-chip map-mode-chip"
+              title={p.hint}
+              onClick={() => applyMapMode(p.id)}
+            >
+              <span>{p.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="tab-body">
         {tab === "tools" && (
@@ -610,6 +641,9 @@ export function Toolbar({
                   onChange={(e) => setActiveFaction(e.target.value || null)}
                   disabled={!!pendingCapitalFactionId}
                 >
+                  {!pendingCapitalFactionId && (
+                    <option value="">— держава —</option>
+                  )}
                   {world.factions.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name}
@@ -634,6 +668,19 @@ export function Toolbar({
             {TOOL_GROUPS.map((group) => {
               const open = !!openSections[group.title];
               const isResources = group.title === "Ресурсы";
+              const isSpace = group.title === "Космос";
+              const spaceQ = spaceQuery.trim().toLowerCase();
+              const spaceTools = isSpace
+                ? spaceQ
+                  ? group.tools.filter(
+                      (t) =>
+                        t.label.toLowerCase().includes(spaceQ) ||
+                        t.hint.toLowerCase().includes(spaceQ),
+                    )
+                  : spaceAll
+                    ? group.tools
+                    : group.tools.filter((t) => SPACE_FREQUENT.has(t.id))
+                : group.tools;
               return (
                 <section key={group.title} className="tool-section">
                   <button
@@ -648,17 +695,36 @@ export function Toolbar({
                       <ChevronRight size={14} aria-hidden />
                     )}
                     <h3>{group.title}</h3>
-                    {isResources && (
+                    {(isResources || isSpace) && (
                       <span className="tool-section-count">
-                        {resourceNames.length}
+                        {isResources ? resourceNames.length : group.tools.length}
                       </span>
                     )}
                   </button>
                   {open && (
                     <div className="tool-section-body">
+                      {isSpace && (
+                        <>
+                          <input
+                            type="search"
+                            className="tool-space-search"
+                            placeholder="Найти метку…"
+                            value={spaceQuery}
+                            aria-label="Поиск космических меток"
+                            onChange={(e) => {
+                              setSpaceQuery(e.target.value);
+                            }}
+                          />
+                          {!spaceQ && !spaceAll && (
+                            <p className="hint">
+                              Частые метки. Поиск или «все» — полный список.
+                            </p>
+                          )}
+                        </>
+                      )}
                       {!isResources && (
-                        <div className="tool-grid">
-                          {group.tools.map((t) => (
+                        <div className={`tool-grid${isSpace ? " tool-grid--space" : ""}`}>
+                          {(isSpace ? spaceTools : group.tools).map((t) => (
                             <button
                               key={t.id}
                               type="button"
@@ -679,6 +745,27 @@ export function Toolbar({
                             </button>
                           ))}
                         </div>
+                      )}
+                      {isSpace && !spaceQ && !spaceAll && (
+                        <button
+                          type="button"
+                          className="btn ghost block"
+                          onClick={() => setSpaceAll(true)}
+                        >
+                          Все метки · {group.tools.length}
+                        </button>
+                      )}
+                      {isSpace && spaceAll && !spaceQ && (
+                        <button
+                          type="button"
+                          className="btn ghost block"
+                          onClick={() => setSpaceAll(false)}
+                        >
+                          Только частые
+                        </button>
+                      )}
+                      {isSpace && spaceQ && spaceTools.length === 0 && (
+                        <p className="hint">Нет меток по запросу.</p>
                       )}
                       {isResources && (
                         <>
@@ -728,8 +815,6 @@ export function Toolbar({
                 </section>
               );
             })}
-            <p className="hint">{ALL_TOOLS.find((t) => t.id === tool)?.hint}</p>
-
             {tool.startsWith("mark_") && (
               <p className="hint">
                 Метки{" "}
@@ -858,24 +943,6 @@ export function Toolbar({
 
         {tab === "layers" && (
           <section>
-            <h3>Режимы обзора</h3>
-            <p className="hint">
-              F5–F10 — быстрые пресеты. Ниже — точечные слои.
-            </p>
-            <div className="layer-preset-row">
-              {LAYER_PRESET_BUTTONS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className="btn ghost"
-                  title={p.hint}
-                  onClick={() => applyMapMode(p.id)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
             {EDITOR_LAYER_GROUPS.map((group) => (
               <div key={group.title} className="layer-group">
                 <h4 className="layer-group-title">{group.title}</h4>
@@ -980,23 +1047,9 @@ export function Toolbar({
                 Ход {world.meta.turn} · систем {world.systems.length} · флотов{" "}
                 {world.fleets.length} · секторов {world.sectors.length}
               </p>
-              <label className="field">
-                <span>Номер хода</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  value={world.meta.turn}
-                  title="Календарный ход без симуляции тика"
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    if (Number.isFinite(n)) setCampaignTurn(n);
-                  }}
-                />
-              </label>
               <p className="hint">
-                Сохранение — кнопкой сверху. Здесь загрузка, экспорт и ход.
+                Номер хода — клик по «ход N» в полоске сверху (без тика).
+                Сохранение — кнопкой сверху. Здесь загрузка и экспорт.
               </p>
               <div className="btn-col">
                 <button type="button" className="btn ghost" onClick={restoreLocalDraft}>
@@ -1055,6 +1108,10 @@ export function Toolbar({
                 >
                   Экспорт Markdown
                 </button>
+              </div>
+              <details className="insp-fold">
+                <summary>Плакаты и PNG</summary>
+                <div className="btn-col">
                 <button
                   type="button"
                   className="btn ghost"
@@ -1145,6 +1202,9 @@ export function Toolbar({
                 >
                   PNG · вид игрока
                 </button>
+                </div>
+              </details>
+              <div className="btn-col">
                 <button
                   type="button"
                   className="btn danger"
@@ -1208,14 +1268,12 @@ export function Toolbar({
 
         {tab === "session" && (
           <>
-            <GmLiveConductor
-              onOpenDomain={onOpenDomain}
-              onRequestTick={onRequestTick}
-            />
-            <section>
-                  <h3>Сессия мастера</h3>
+            <GmLiveConductor onOpenDomain={onOpenDomain} />
+            <section className="insp-sheet">
+                  <h3>Публикация и токен</h3>
                   <p className="hint">
-                    Ссылка для игроков — сверху. Здесь токен, публикация и ops.
+                    Ссылка для игроков — сверху. Сценарий хода — чип «сценарий»
+                    в нотче. F7 — квесты, NPC, кубики.
                   </p>
                   <label className="field">
                     <span>Мастер-токен</span>
@@ -1242,13 +1300,6 @@ export function Toolbar({
                   </div>
                   {publishStatus && <p className="hint">{publishStatus}</p>}
                 </section>
-
-                <IntentsInbox variant="panel" />
-                <GmLedgerPanel />
-                <CombatPanel />
-                <GmOpsPanel />
-                <GmSystemsPanel />
-                <OpsHealthPanel />
 
                 {world.orders.length > 0 && (
                   <section>

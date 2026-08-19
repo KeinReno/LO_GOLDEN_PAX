@@ -60,6 +60,7 @@ export function ViewerRoomHost({
   return (
     <>
       <WorkbenchShell
+        key={desktopWorkbench ? viewMode : "closed"}
         open={Boolean(desktopWorkbench && roomPanel)}
         title={roomTitle}
         subtitle={

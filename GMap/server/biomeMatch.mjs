@@ -10,7 +10,8 @@
 export function planetMatchesBiome(planet, restriction) {
   const r = String(restriction || "").toLowerCase();
   if (!r) return true;
-  const type = String(planet?.type || "").toLowerCase();
+  const typeRaw = String(planet?.type || "").toLowerCase();
+  const type = typeRaw === "terrestrial" ? "rocky" : typeRaw;
   const climate = String(planet?.climate || "").toLowerCase();
   if (type === r || climate === r) return true;
   if (r === "gas_giant" && (type === "gas" || type === "gas_giant")) return true;

@@ -5,7 +5,9 @@
 - **Данные:** `GMap/content/core/*.json` (канон баланса); runtime `GMap/data/` (sqlite/journals) — не исходники.
 - **CBM:** `C-Users-Reno-Desktop-LO_GOLDEN_PAX`. Git: feature-ветки; коммит/push только по просьбе.
 - **HTTP routes:** `GMap/server/api.mjs` — thin middleware (auth helpers + dispatch). Domain handlers in `GMap/server/routes/*.mjs` via `tryHandle*Routes(req,res,url,ctx)`.
+- **Аудит данных стола (2026-08-18):** реестр AUD-01…33 + план W0–W6 — `agent-tasks/GAME_DATA_AUDIT_2026-08-18.md`. Не дублировать охоту в чат.
 - **Секреты:** `.env`, tokens, certs — никогда в чат/MEMORY/STATUS.
+- **Lint:** `npm run lint` (eslint, installed 2026-08-17) — `server/**/*.mjs` only, `no-undef`+`no-use-before-define`. Run before calling any `server/` change done. Client (TS/React) not covered yet.
 
 ## GMap — shipped this session (не называть unbuilt)
 

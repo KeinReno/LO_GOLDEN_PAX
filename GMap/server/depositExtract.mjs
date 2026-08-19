@@ -15,6 +15,8 @@ import {
   planetBuildingList,
   resolveBuildingDef,
 } from "./flowEngine.mjs";
+import { isMapDeposit } from "./slotResolver.mjs";
+import { planetAllowsBuildingBiome } from "./biomeMatch.mjs";
 
 function asList(value) {
   if (value == null || value === "") return [];
@@ -48,15 +50,28 @@ export function canExtractDeposit({
   buildings = [],
   depositType,
   content,
+  planet = null,
 } = {}) {
   const depositDef = lookupMapResource(content, depositType);
   const resourceId = depositDef?.id ?? null;
-  if (!depositDef || depositDef.category == null || depositDef.tier == null) {
+  if (
+    !depositDef ||
+    !isMapDeposit(depositDef) ||
+    depositDef.category == null ||
+    depositDef.tier == null
+  ) {
     return { allowed: false, resourceId };
   }
   for (const inst of buildings) {
     if (inst?.disabled) continue;
     const def = resolveBuildingDef(content, inst);
+    if (
+      planet &&
+      def?.biome_restrictions?.length &&
+      !planetAllowsBuildingBiome(planet, def.biome_restrictions)
+    ) {
+      continue;
+    }
     if (buildingUnlocksDeposit(def, depositDef)) {
       return { allowed: true, resourceId };
     }
@@ -73,6 +88,7 @@ export function extractableDepositIds(planet, content) {
       buildings,
       depositType: name,
       content,
+      planet,
     });
     if (allowed) out.push(name);
   }

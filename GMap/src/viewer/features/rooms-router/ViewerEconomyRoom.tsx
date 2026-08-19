@@ -4,6 +4,7 @@ import { useViewerPanelFocusStore } from "../../../state/viewerPanelFocusStore";
 import { currencyShortLabel } from "../../economy/chartData";
 import { EconomyPanel } from "../../economy";
 import { toggleStockAlert } from "../../economy/stockAlerts";
+import { pickFocusBuildSystemId } from "../../economy/productionData";
 import { navigateViewerRoom } from "./navigateViewerRoom";
 import { stockAlertMsg } from "./courtWorldPatch";
 
@@ -71,6 +72,12 @@ export function ViewerEconomyRoom({
   const setEconomyFocusCategory = useViewerPanelFocusStore(
     (s) => s.setEconomyFocusCategory,
   );
+  const economyFocusSection = useViewerPanelFocusStore(
+    (s) => s.economyFocusSection,
+  );
+  const setEconomyFocusSection = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusSection,
+  );
   const openMarketTradeWithCurrency = useViewerPanelFocusStore(
     (s) => s.openMarketTradeWithCurrency,
   );
@@ -133,15 +140,19 @@ export function ViewerEconomyRoom({
       policyBusy={policyBusy}
       focusProductionCategory={economyFocusCategory}
       onFocusProductionConsumed={() => setEconomyFocusCategory(null)}
+      focusSection={economyFocusSection}
+      onFocusSectionConsumed={() => setEconomyFocusSection(null)}
       onOpenResearch={() => {
         navigateViewerRoom("research");
         setOrderMsg("Наука — нарастите cognitio / изучите добычу F");
       }}
       onFocusBuild={() => {
-        const owned = payload.world.systems.find(
-          (s) => s.ownerFactionId === payload.factionId,
+        const owned = pickFocusBuildSystemId(
+          payload.factionId,
+          payload.world.systems,
+          economySystemSignals,
         );
-        if (owned) onFocusSystem(owned.id);
+        if (owned) onFocusSystem(owned);
         else navigateViewerRoom("map");
       }}
     />

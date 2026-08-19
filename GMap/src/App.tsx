@@ -1,15 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapCanvas } from "./renderers/MapCanvas";
-import { TurnStampHud } from "./ui/TurnStampHud";
-import { StatusStrip } from "./ui/StatusStrip";
 import { EditorShellLayout } from "./ui/EditorShellLayout";
 import { Toolbar } from "./editors/Toolbar";
 import { Inspector } from "./editors/Inspector";
 import { TopBar } from "./editors/TopBar";
 import {
   CampaignSessionProvider,
-  useCampaignSessionCtx,
 } from "./editors/CampaignSessionContext";
 import { DiplomacyPanel } from "./editors/DiplomacyPanel";
 import { SystemDossier } from "./editors/SystemDossier";
@@ -81,24 +78,60 @@ function EditorHotkeys({
   onToggleRight,
   onOpenRightDock,
   onOpenSpotter,
+  onCloseTick,
+  onToggleMapOnly,
 }: {
   onToggleLeft: () => void;
   onToggleRight: () => void;
   onOpenRightDock?: () => void;
   onOpenSpotter?: () => void;
+  onCloseTick?: () => void;
+  onToggleMapOnly?: () => void;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       const tag = t?.tagName;
-      if (
+      const typing =
         tag === "INPUT" ||
         tag === "TEXTAREA" ||
         tag === "SELECT" ||
-        t?.isContentEditable
-      ) {
+        !!t?.isContentEditable;
+      if (e.key === "Escape") {
+        const st = useWorldStore.getState();
+        if (onCloseTick) {
+          e.preventDefault();
+          onCloseTick();
+          return;
+        }
+        if (st.gmLiveDomain) {
+          e.preventDefault();
+          st.setGmLiveDomain(null);
+          return;
+        }
+        if (st.diplomacyPanelOpen) {
+          e.preventDefault();
+          st.setDiplomacyPanelOpen(false);
+          return;
+        }
+        if (st.dossierFactionId != null) {
+          e.preventDefault();
+          st.closePolityEditor();
+          return;
+        }
+        if (st.dossierSystemId != null) {
+          e.preventDefault();
+          st.setDossierSystem(null);
+          return;
+        }
+        if (typing) return;
+        st.clearPendingUnitOrder();
+        st.clearPendingFleetClone();
+        st.clearSystemSelection();
+        st.setContextMenu(null);
         return;
       }
+      if (typing) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod) {
         const key = e.key.toLowerCase();
@@ -126,63 +159,67 @@ function EditorHotkeys({
         e.preventDefault();
         onToggleRight();
       }
-      /* Domains F1–F9 — always in GM session */
-      if (/^F[1-9]$/.test(e.key) && !mod && !e.altKey) {
+      if (e.code === "Backslash" || e.code === "IntlBackslash") {
+        e.preventDefault();
+        onToggleMapOnly?.();
+        return;
+      }
+      /* F1–F4 / F6–F9 open GM domains. Bare F5 is browser refresh. */
+      if (/^F[1-46-9]$/.test(e.key) && !mod && !e.altKey && !e.shiftKey) {
         const st = useWorldStore.getState();
-        if (st.gmShellMode === "gm") {
-          const n = Number(e.key.slice(1));
-          const def = domainByHotkey(n);
-          if (def) {
-            e.preventDefault();
-            if (def.id === "inbox") {
-              st.setGmLiveDomain(null);
-              onOpenRightDock?.();
-            } else {
-              st.toggleGmLiveDomain(def.id);
-            }
-          }
+        if (st.gmShellMode !== "gm") return;
+        const n = Number(e.key.slice(1));
+        const def = domainByHotkey(n);
+        if (!def) return;
+        e.preventDefault();
+        if (def.id === "inbox") {
+          st.setGmLiveDomain(null);
+          onOpenRightDock?.();
+        } else {
+          st.toggleGmLiveDomain(def.id);
         }
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         const st = useWorldStore.getState();
+        if (st.gmShellMode !== "gm") return;
         if (st.selectedSystemIds.length > 0) {
           e.preventDefault();
-          st.deleteSystems(st.selectedSystemIds);
+          const ids = st.selectedSystemIds;
+          const ok =
+            ids.length > 1
+              ? confirm(`Удалить ${ids.length} систем?`)
+              : confirm(
+                  `Удалить «${st.world.systems.find((s) => s.id === ids[0])?.name ?? ids[0]}»?`,
+                );
+          if (ok) st.deleteSystems(ids);
         } else if (st.selectedFleetId) {
           e.preventDefault();
-          st.deleteFleet(st.selectedFleetId);
+          const fleet = st.world.fleets.find((f) => f.id === st.selectedFleetId);
+          if (confirm(`Удалить флот «${fleet?.name ?? st.selectedFleetId}»?`)) {
+            st.deleteFleet(st.selectedFleetId);
+          }
         } else if (st.selectedLegionId) {
           e.preventDefault();
-          st.deleteLegion(st.selectedLegionId);
+          const legion = st.world.legions.find(
+            (l) => l.id === st.selectedLegionId,
+          );
+          if (confirm(`Удалить легион «${legion?.name ?? st.selectedLegionId}»?`)) {
+            st.deleteLegion(st.selectedLegionId);
+          }
         }
-      }
-      if (e.key === "Escape") {
-        const st = useWorldStore.getState();
-        if (st.gmLiveDomain) {
-          e.preventDefault();
-          st.setGmLiveDomain(null);
-          return;
-        }
-        st.clearPendingUnitOrder();
-        st.clearPendingFleetClone();
-        st.clearSystemSelection();
-        st.setContextMenu(null);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onToggleLeft, onToggleRight, onOpenRightDock]);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [
+    onToggleLeft,
+    onToggleRight,
+    onOpenRightDock,
+    onOpenSpotter,
+    onCloseTick,
+    onToggleMapOnly,
+  ]);
   return null;
-}
-
-function EditorChrome() {
-  const { syncMsg, setSyncMsg } = useCampaignSessionCtx();
-  return (
-    <StatusStrip
-      message={syncMsg}
-      onDismiss={() => setSyncMsg(null)}
-    />
-  );
 }
 
 function EditorPage() {
@@ -194,11 +231,28 @@ function EditorPage() {
   const [rightPanel, setRightPanel] = useState<"inspector" | "inbox">(
     "inspector",
   );
+  const [mapOnly, setMapOnly] = useState(false);
+  const chromeBackup = useRef({ left: true, right: true });
   const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const setGmLiveDomain = useWorldStore((s) => s.setGmLiveDomain);
   const gmGesturesEnabled = useWorldStore((s) => s.gmGesturesEnabled);
   const atelier = gmShellMode === "atelier";
   const gm = gmShellMode === "gm";
+
+  const toggleMapOnly = () => {
+    if (gmShellMode !== "gm") return;
+    if (!mapOnly) {
+      chromeBackup.current = { left: leftOpen, right: rightOpen };
+      setLeftOpen(false);
+      setRightOpen(false);
+      setGmLiveDomain(null);
+      setMapOnly(true);
+      return;
+    }
+    setLeftOpen(chromeBackup.current.left);
+    setRightOpen(chromeBackup.current.right);
+    setMapOnly(false);
+  };
 
   const openDomain = (id: GmLiveDomainId) => {
     if (id === "inbox") {
@@ -225,10 +279,16 @@ function EditorPage() {
     }
   }, [atelier, setGmLiveDomain]);
 
+  useEffect(() => {
+    if (!gm) setMapOnly(false);
+  }, [gm]);
+
   return (
     <CampaignSessionProvider>
       <div
-        className={`app-shell app-shell--panels app-shell--${gmShellMode}`}
+        className={`app-shell app-shell--panels app-shell--${gmShellMode}${
+          mapOnly ? " app-shell--map-only" : ""
+        }`}
       >
       <EditorHotkeys
         onToggleLeft={() => setLeftOpen((v) => !v)}
@@ -238,6 +298,8 @@ function EditorPage() {
           setRightOpen(true);
         }}
         onOpenSpotter={() => setSpotterOpen(true)}
+        onCloseTick={tickOpen ? () => setTickOpen(false) : undefined}
+        onToggleMapOnly={toggleMapOnly}
       />
         <TopBar onRequestTick={() => setTickOpen(true)} />
         {gm && (
@@ -247,9 +309,9 @@ function EditorPage() {
               setRightOpen(true);
             }}
             onOpenSpotter={() => setSpotterOpen(true)}
+            onRequestTick={() => setTickOpen(true)}
           />
         )}
-        <EditorChrome />
         {gmShellMode === "rp" && (
           <div className="app-shell-body gm-studio-shell">
             <RpStudio />
@@ -312,21 +374,24 @@ function EditorPage() {
               left={
                 <Toolbar
                   onOpenDomain={openDomain}
-                  onRequestTick={() => setTickOpen(true)}
                 />
               }
               right={
                 rightPanel === "inbox" ? (
                   <div className="gm-right-stack">
-                    <div className="gm-right-stack__tabs">
+                    <div
+                      className="gm-right-stack__tabs gm-mode-switch gm-mode-switch--studios"
+                      role="tablist"
+                      aria-label="Правая панель"
+                    >
                       <button
                         type="button"
-                        className="btn ghost"
+                        className="gm-mode-btn"
                         onClick={() => setRightPanel("inspector")}
                       >
                         Инспектор
                       </button>
-                      <button type="button" className="btn ghost active">
+                      <button type="button" className="gm-mode-btn on">
                         Очередь
                       </button>
                     </div>
@@ -334,13 +399,17 @@ function EditorPage() {
                   </div>
                 ) : (
                   <div className="gm-right-stack">
-                    <div className="gm-right-stack__tabs">
-                      <button type="button" className="btn ghost active">
+                    <div
+                      className="gm-right-stack__tabs gm-mode-switch gm-mode-switch--studios"
+                      role="tablist"
+                      aria-label="Правая панель"
+                    >
+                      <button type="button" className="gm-mode-btn on">
                         Инспектор
                       </button>
                       <button
                         type="button"
-                        className="btn ghost"
+                        className="gm-mode-btn"
                         onClick={() => setRightPanel("inbox")}
                       >
                         Очередь
@@ -354,7 +423,17 @@ function EditorPage() {
                 <main className="viewport">
                   <div className="viewport-glow" />
                   <MapCanvas mode="editor" />
-                  <TurnStampHud />
+                  {mapOnly && (
+                    <button
+                      type="button"
+                      className="gm-map-only-restore"
+                      onClick={toggleMapOnly}
+                      aria-label="Показать интерфейс ГМа"
+                      title="Показать интерфейс (\)"
+                    >
+                      UI · \
+                    </button>
+                  )}
                   <OrderTargetHint />
                   {gmGesturesEnabled ? (
                     <GmLiveStage
@@ -382,36 +461,32 @@ function EditorPage() {
                           }}
                         />
                       </div>
-                      <p className="viewport-hint gm-live-hint">
-                        F1–F9 домены · Attention снизу · Сессия слева · жесты —
-                        опция в Сессии
-                      </p>
                     </>
                   )}
-                  <div className="viewport-panel-toggles">
-                    <button
-                      type="button"
-                      className="btn ghost"
-                      onClick={() => setLeftOpen((v) => !v)}
-                      title="Левая панель ([)"
-                    >
-                      {leftOpen ? "⟨ Инстр." : "Инстр. ⟩"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn ghost"
-                      onClick={() => setRightOpen((v) => !v)}
-                      title="Правая панель (])"
-                    >
-                      {rightOpen
-                        ? rightPanel === "inbox"
-                          ? "Очередь ⟩"
-                          : "Инсп. ⟩"
-                        : rightPanel === "inbox"
-                          ? "⟨ Очередь"
-                          : "⟨ Инсп."}
-                    </button>
-                  </div>
+                  {(!leftOpen || !rightOpen) && (
+                    <div className="viewport-panel-toggles">
+                      {!leftOpen && (
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          onClick={() => setLeftOpen(true)}
+                          title="Левая панель ([)"
+                        >
+                          Инстр. ⟩
+                        </button>
+                      )}
+                      {!rightOpen && (
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          onClick={() => setRightOpen(true)}
+                          title="Правая панель (])"
+                        >
+                          {rightPanel === "inbox" ? "⟨ Очередь" : "⟨ Инсп."}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </main>
               }
             />
@@ -444,7 +519,7 @@ export default function App() {
           <Route path="/" element={<EditorPage />} />
           <Route path="/view" element={<ViewerPage />} />
           <Route path="/demo/cards" element={<DragCardDemo />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/view" replace />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

@@ -156,9 +156,20 @@ export function ViewerSystemDive({
     if (!systemFocusId) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (isInputFocused(e.target)) return;
+        if (document.querySelector(".gmap-float-panel")) return;
+        if (document.querySelector(".action-ring, .eco-doctrine-modal")) return;
         const dossierOpen = useWorldStore.getState().dossierSystemId;
         if (dossierOpen) {
           useWorldStore.setState({ dossierSystemId: null });
+          return;
+        }
+        const focus = useWorldStore.getState().mapFocus;
+        if (focus.level === "planet" && focus.systemId === systemFocusId) {
+          e.preventDefault();
+          useWorldStore.setState({
+            mapFocus: { level: "system" as const, systemId: systemFocusId },
+          });
           return;
         }
         onClose();
@@ -204,9 +215,20 @@ export function ViewerSystemDive({
             <button
               type="button"
               className="btn viewer-system-back"
-              onClick={onClose}
+              onClick={() => {
+                const atPlanet =
+                  mapFocus.level === "planet" &&
+                  mapFocus.systemId === systemFocusId;
+                if (atPlanet) {
+                  playerSystemNav?.onOpenSystem(systemFocusId);
+                  return;
+                }
+                onClose();
+              }}
             >
-              {systemDiveBackLabel(economyLinked)}
+              {mapFocus.level === "planet" && mapFocus.systemId === systemFocusId
+                ? "К системе"
+                : systemDiveBackLabel(economyLinked)}
               <span className="viewer-system-back-kbd">Esc</span>
             </button>
             <h2 className="viewer-system-title">
@@ -266,6 +288,7 @@ export function ViewerSystemDive({
                   techTiers: payload.economy?.techTiers,
                   unlockedProperties: payload.economy?.unlockedProperties,
                   unlockedLineages: payload.economy?.unlockedLineages,
+                  roleScores: payload.economy?.roleScores,
                 },
                 defaultCultureId: faction?.defaultCultureId ?? "culture.baseline",
                 primaryFaith: faction?.primaryFaith ?? "faith.secular",
@@ -319,6 +342,10 @@ export function ViewerSystemDive({
                 preferProduceTab: systemProduceTab,
                 produceFleetId: systemProduceFleetId,
                 produceLegionId: systemProduceLegionId,
+                onSetProduceTab: (tab) => {
+                  useViewerSystemDiveStore.getState().setSystemProduceTab(tab);
+                  useViewerSystemDiveStore.getState().setSystemPreferDeck("produce");
+                },
               }}
             />
           </div>

@@ -349,7 +349,20 @@ const maskedFac = maskFactionForIntel(
   1,
   smokeViewer,
 );
-check("intel: maskFaction L1 hides notes/password", maskedFac && maskedFac.notes == null && maskedFac.password === "••••");
+check("intel: maskFaction L1 hides notes/password", maskedFac && maskedFac.notes == null && maskedFac.password == null);
+const maskedOwn = maskFactionForIntel(
+  { id: smokeTarget, name: "Beta", color: "#0ff", password: "secret", passwordHash: "h", gmNotes: "gm" },
+  4,
+  smokeTarget,
+);
+check(
+  "intel: own faction drops password/hash/gmNotes",
+  maskedOwn &&
+    maskedOwn.password == null &&
+    maskedOwn.passwordHash == null &&
+    maskedOwn.gmNotes == null &&
+    maskedOwn.name === "Beta",
+);
 updateIntelFromDiplomacy(world, smokeViewer, smokeTarget, "alliance", { turn: 5 });
 check("intel: alliance bumps faction ≥3", getLevel(smokeViewer, "faction", smokeTarget) >= 3);
 const pub = publicIntelPayload(smokeViewer);

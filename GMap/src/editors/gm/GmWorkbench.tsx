@@ -1,5 +1,4 @@
 import { FloatingPanel } from "../../ui/FloatingPanel";
-import { useEffect } from "react";
 import { useWorldStore } from "../../state/worldStore";
 import { GmLedgerPanel } from "../GmLedgerPanel";
 import { CombatPanel } from "../CombatPanel";
@@ -11,29 +10,23 @@ import {
   GmSciencePanel,
 } from "./GmSciencePanel";
 import { GmCourtPanel } from "./GmCourtPanel";
-import { GmCommandCard } from "./GmCommandCard";
-import { domainById } from "./gmDomains";
+import { domainById, domainHotkeyLabel } from "./gmDomains";
 import type { GmLiveDomainId } from "../../state/types";
 
 function DiploWorkbench() {
   const setDiplomacyPanelOpen = useWorldStore((s) => s.setDiplomacyPanelOpen);
-  // Open full diplo overlay when domain activates — DealDesk lives there.
-  useEffect(() => {
-    setDiplomacyPanelOpen(true);
-    return () => setDiplomacyPanelOpen(false);
-  }, [setDiplomacyPanelOpen]);
   return (
     <div className="gm-domain-body">
       <p className="hint">
-        Дипло-верстак открыт поверх карты. Ниже — столкновения.
+        Столкновения на карте. Дипломатия — отдельный стол (меню «Стол…»).
       </p>
       <div className="gmsys-row" style={{ marginBottom: 8 }}>
         <button
           type="button"
-          className="btn primary"
+          className="btn ghost"
           onClick={() => setDiplomacyPanelOpen(true)}
         >
-          Снова открыть дипло
+          Открыть дипло-стол
         </button>
       </div>
       <CombatPanel />
@@ -54,7 +47,7 @@ function DomainBody({ id }: { id: GmLiveDomainId }) {
     case "intel":
       return <GmIntelPanel />;
     case "quests":
-      return <GmSystemsPanel forcedTab="quests" hideChrome />;
+      return <GmSystemsPanel hideChrome />;
     case "ops":
       return <GmOpsPanel />;
     case "health":
@@ -68,27 +61,8 @@ export function GmWorkbench() {
   const domain = useWorldStore((s) => s.gmLiveDomain);
   const setGmLiveDomain = useWorldStore((s) => s.setGmLiveDomain);
   const def = domain && domain !== "inbox" ? domainById(domain) : null;
-  const card = (
-    <GmCommandCard onOpenDomain={(id) => setGmLiveDomain(id)} />
-  );
-
-  if (!def?.workbench) {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          left: 56,
-          top: 88,
-          zIndex: 370,
-          width: 360,
-          maxHeight: "46vh",
-          overflow: "auto",
-        }}
-      >
-        {card}
-      </div>
-    );
-  }
+  if (!def?.workbench) return null;
+  const hk = domainHotkeyLabel(def.hotkey);
 
   return (
     <FloatingPanel
@@ -102,9 +76,10 @@ export function GmWorkbench() {
       resizable
       zIndex={380}
       className="gm-workbench-panel"
-      headerExtra={<kbd className="gm-workbench-hotkey">F{def.hotkey}</kbd>}
+      headerExtra={
+        hk ? <kbd className="gm-workbench-hotkey">{hk}</kbd> : undefined
+      }
     >
-      {card}
       <DomainBody id={def.id} />
     </FloatingPanel>
   );

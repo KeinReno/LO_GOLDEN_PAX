@@ -26,6 +26,7 @@ export function isTechInOffer(
   tech: TechnologyDef,
   eco: EcoSlice | undefined,
 ): boolean {
+  if (tech.catalogPending || tech.alchemyOnly) return false;
   if (!isOfferEligibleTech(tech)) return true;
   const axis = resolveTechDirection(tech);
   const grouped = groupOffersByDirection(eco?.currentOffers);

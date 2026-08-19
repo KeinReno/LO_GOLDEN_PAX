@@ -162,6 +162,7 @@ export function useViewerSystemActions({
         {
           techTiers: payload.economy?.techTiers,
           unlockedProperties: payload.economy?.unlockedProperties,
+          roleScores: payload.economy?.roleScores,
         },
       );
       setTechMapHighlightIds(ids);

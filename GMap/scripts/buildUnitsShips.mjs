@@ -216,6 +216,7 @@ const UNITS_RAW = {
       slot("tactic", { category: "F", tier: ">=3" }, 1),
     ],
     upkeep_slots: [upkeep({ category: "E", tier: ">=4" }, 2)],
+    requireProperties: ["heavy_legion"],
   },
 };
 
@@ -366,6 +367,7 @@ const SHIPS_RAW = {
       upkeep({ properties: ["fuel"], tier: ">=5" }, 2),
       upkeep({ category: "E", tier: ">=4" }, 3),
     ],
+    requireProperties: ["battleship_keel"],
   },
   "ship.carrier": {
     id: "ship.carrier",
@@ -463,6 +465,7 @@ const SHIPS_RAW = {
     ],
     signature: "T9 флагман",
     tradeoff: "требует late tech / экзотику",
+    requireProperties: ["black_iron_keel"],
   },
 };
 

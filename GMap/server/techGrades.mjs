@@ -158,7 +158,7 @@ export function collectTechModifierEffects(eco, content) {
   const effects = [];
   for (const id of eco?.unlockedTechs || []) {
     const def = resolveDef(content, id);
-    if (!def) continue;
+    if (!def || def.catalogPending) continue;
     const grade = factionTechGrade(eco, id);
     const mag = gradeEffectMagnitude(def, grade);
     for (const e of def.effects || []) {

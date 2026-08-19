@@ -15,6 +15,7 @@ export {
   scoutRevealButtonLabel,
   systemSheetColonyHint,
   systemSheetMetaLine,
+  systemSheetOpenButtonLabel,
 } from "./sheetCopy";
 export {
   decideEraAdvance,

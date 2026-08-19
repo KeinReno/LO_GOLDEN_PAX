@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorldStore } from "../../state/worldStore";
 import { useCampaignSessionCtx } from "../CampaignSessionContext";
 
@@ -50,12 +50,15 @@ function saveItems(items: BeatItem[]) {
 export function GmBeatSheet({
   onRequestTick,
   onOpenInbox,
+  variant = "block",
 }: {
   onRequestTick?: () => void;
   onOpenInbox?: () => void;
+  variant?: "block" | "notch";
 }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BeatItem[]>(() => loadItems());
+  const rootRef = useRef<HTMLDivElement>(null);
   const turn = useWorldStore((s) => s.world.meta.turn);
   const {
     dirty,
@@ -69,6 +72,16 @@ export function GmBeatSheet({
   useEffect(() => {
     saveItems(items);
   }, [items]);
+
+  useEffect(() => {
+    if (variant !== "notch" || !open) return;
+    const onDoc = (e: MouseEvent) => {
+      const node = rootRef.current;
+      if (node && !node.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open, variant]);
 
   const toggle = useCallback((id: string) => {
     setItems((prev) =>
@@ -115,16 +128,29 @@ export function GmBeatSheet({
   };
 
   const doneCount = items.filter((x) => x.done).length;
+  const notch = variant === "notch";
 
   return (
-    <div className="gm-beat-sheet">
+    <div
+      ref={rootRef}
+      className={`gm-beat-sheet${notch ? " gm-beat-sheet--notch" : ""}`}
+    >
       <button
         type="button"
-        className="btn ghost block gm-beat-sheet__toggle"
+        className={
+          notch
+            ? `gm-session-notch__chip gm-session-notch__chip--btn${
+                doneCount < items.length ? " warn" : ""
+              }`
+            : "btn ghost block gm-beat-sheet__toggle"
+        }
+        aria-expanded={open}
+        title="Чеклист хода: билд, линза, очередь, тик"
         onClick={() => setOpen((v) => !v)}
       >
-        Сценарий хода {doneCount}/{items.length}
-        {dirty ? " · черновик" : ""}
+        {notch
+          ? `сценарий ${doneCount}/${items.length}`
+          : `Сценарий хода ${doneCount}/${items.length}${dirty ? " · черновик" : ""}`}
       </button>
       {open && (
         <div className="gm-beat-sheet__body">

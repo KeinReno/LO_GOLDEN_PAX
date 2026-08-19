@@ -25,8 +25,13 @@ export function collectOfferCandidateIds(
   return ids;
 }
 
+/** Stubs and lab-only techs stay out of player research lists / badges. */
+export function isCatalogStubTech(tech: TechnologyDef): boolean {
+  return Boolean(tech.catalogPending || tech.alchemyOnly);
+}
+
 function isOfferChannelTech(tech: TechnologyDef): boolean {
-  if (tech.catalogPending || tech.alchemyOnly) return false;
+  if (isCatalogStubTech(tech)) return false;
   const tags = tech.tags || [];
   if (tags.includes("alchemy") || tags.includes("combo")) return false;
   if (tech.opensPath) return false;

@@ -40,6 +40,16 @@ export function resolvePathDef(pathId, content) {
   };
 }
 
+/** Breakthrough id only if the technology exists and is not a catalog stub. */
+export function liveBreakthroughTechId(pathDef, content) {
+  const id = pathDef?.breakthroughTechId;
+  if (!id) return null;
+  const c = content || getContent();
+  const def = c?.technologies?.[id];
+  if (!def || def.catalogPending) return null;
+  return id;
+}
+
 export function roleScoreForPath(eco, pathDef, content) {
   const key =
     pathDef?.roleScoreKey ||
@@ -190,17 +200,18 @@ export function pathStatusPayload(eco, content) {
     const score = roleScoreForPath(eco, p, c);
     const threshold = roleThresholdForPath(p, c);
     const open = isPathOpen(eco, p.id);
+    const breakthroughTechId = liveBreakthroughTechId(p, c);
     return {
       id: p.id,
       label: p.label,
       description: p.description || "",
       iconTag: p.iconTag || null,
       roleScoreKey: p.roleScoreKey || p.id,
-      breakthroughTechId: p.breakthroughTechId || null,
+      breakthroughTechId,
       score,
       threshold,
       open,
-      ready: !open && threshold > 0 && score >= threshold,
+      ready: !open && Boolean(breakthroughTechId) && threshold > 0 && score >= threshold,
       progress:
         threshold > 0 ? Math.min(1, score / threshold) : open ? 1 : 0,
     };

@@ -427,6 +427,52 @@ export function readMessages(
   return out;
 }
 
+function isHqEpisode(ep) {
+  return ep?.kind === "hq" || (typeof ep?.id === "string" && ep.id.startsWith("hq_"));
+}
+
+/** Compact rail payload — no message bodies except last preview. */
+export function summarizeMessagesForRail(msgs) {
+  const list = Array.isArray(msgs) ? msgs : [];
+  const last = list[list.length - 1] || null;
+  return {
+    lastAt: last?.at ?? null,
+    lastPreview: last?.body
+      ? String(last.body).replace(/\s+/g, " ").slice(0, 48)
+      : null,
+    openPrompts: list.filter(
+      (m) => m.type === "prompt" && m.prompt?.status === "open",
+    ).length,
+    marks: list.map((m) => ({
+      id: m.id,
+      at: m.at,
+      authorFactionId: m.authorFactionId ?? null,
+      type: m.type,
+      fromMaster: !!m.fromMaster,
+      visibility: m.visibility,
+    })),
+  };
+}
+
+/** Attach `rail` on HQ episodes so GM desk skips N+1 GET /api/rp/messages. */
+export function attachHqRails(index, viewer, campaignId = DEFAULT_CAMPAIGN) {
+  return {
+    ...index,
+    chapters: (index.chapters || []).map((ch) => ({
+      ...ch,
+      episodes: (ch.episodes || []).map((ep) => {
+        if (!isHqEpisode(ep)) return ep;
+        return {
+          ...ep,
+          rail: summarizeMessagesForRail(
+            readMessages(ch.id, ep.id, viewer, campaignId),
+          ),
+        };
+      }),
+    })),
+  };
+}
+
 /**
  * Append message. Does not mutate board/ledger.
  * @returns {{ ok: true, message } | { ok: false, error: string }}
@@ -546,6 +592,38 @@ export function patchMessageFields(
     "utf8",
   );
   return { ok: true, message: found };
+}
+
+export function deleteMessage(
+  chapterId,
+  episodeId,
+  messageId,
+  campaignId = DEFAULT_CAMPAIGN,
+) {
+  const file = messagesPath(campaignId, chapterId, episodeId);
+  if (!fs.existsSync(file)) return { ok: false, error: "no messages" };
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean);
+  let found = false;
+  const msgs = [];
+  for (const line of lines) {
+    try {
+      const m = JSON.parse(line);
+      if (m.id === messageId) {
+        found = true;
+        continue;
+      }
+      msgs.push(m);
+    } catch {
+      /* skip bad line */
+    }
+  }
+  if (!found) return { ok: false, error: "message missing" };
+  fs.writeFileSync(
+    file,
+    msgs.length ? msgs.map((m) => JSON.stringify(m)).join("\n") + "\n" : "",
+    "utf8",
+  );
+  return { ok: true, deletedId: messageId };
 }
 
 export function patchMessageIntentId(

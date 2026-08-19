@@ -13,20 +13,29 @@ type BuildingLike = {
   zone?: string;
   category?: string;
   tier?: number;
+  requireProperties?: string[];
+  requireRoleMilestone?: string;
   biome_restrictions?: string[];
-  slots?: Array<{ require?: { properties?: string[] } }>;
+  slots?: Array<{ fillOnly?: boolean; require?: { properties?: string[] } }>;
   effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
 };
 
-/** Buildings that become buildable only after researching this tech. */
-export function buildingsUnlockedByTech(
+type UnlockCatalog = {
+  buildings?: Record<string, BuildingLike>;
+  stations?: Record<string, BuildingLike>;
+};
+
+/** Buildings and stations that become buildable only after researching this tech. */
+export function catalogUnlockedByTech(
   tech: TechnologyDef,
   eco: TechEcoSlice | undefined,
+  catalog: UnlockCatalog,
 ): BuildingLike[] {
-  const buildings = Object.values(
-    (getCachedContent()?.buildings || {}) as Record<string, BuildingLike>,
-  );
-  if (!buildings.length) return [];
+  const items = [
+    ...Object.values(catalog.buildings || {}),
+    ...Object.values(catalog.stations || {}),
+  ];
+  if (!items.length) return [];
 
   const tiers = { ...(eco?.techTiers || {}) };
   const props = [...(eco?.unlockedProperties || [])];
@@ -44,11 +53,30 @@ export function buildingsUnlockedByTech(
     }
   }
 
-  const before = { techTiers: tiers, unlockedProperties: props };
-  const after = { techTiers: nextTiers, unlockedProperties: nextProps };
-  return buildings.filter(
+  const before = {
+    techTiers: tiers,
+    unlockedProperties: props,
+    roleScores: eco?.roleScores,
+  };
+  const after = {
+    techTiers: nextTiers,
+    unlockedProperties: nextProps,
+    roleScores: eco?.roleScores,
+  };
+  return items.filter(
     (b) => !canBuildWithTech(before, b).ok && canBuildWithTech(after, b).ok,
   );
+}
+
+export function buildingsUnlockedByTech(
+  tech: TechnologyDef,
+  eco: TechEcoSlice | undefined,
+): BuildingLike[] {
+  const c = getCachedContent();
+  return catalogUnlockedByTech(tech, eco, {
+    buildings: c?.buildings as Record<string, BuildingLike> | undefined,
+    stations: c?.stations as Record<string, BuildingLike> | undefined,
+  });
 }
 
 function planetHasFreeSlot(planet: Planet, zone?: string): boolean {

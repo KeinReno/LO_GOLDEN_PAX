@@ -24,6 +24,7 @@ export {
 export type { ResearchPathStep } from "./researchPath";
 export {
   buildingsUnlockedByTech,
+  catalogUnlockedByTech,
   systemsForTechHighlight,
   findPlanetForBuilding,
 } from "./techMapTargets";

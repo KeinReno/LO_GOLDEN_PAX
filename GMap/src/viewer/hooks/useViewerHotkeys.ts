@@ -84,24 +84,29 @@ export function useViewerHotkeys({
       if (
         isInputFocused(e.target) ||
         e.ctrlKey ||
-        e.metaKey ||
-        e.altKey
+        e.metaKey
       ) {
         return;
       }
-      if (e.key === "q" || e.key === "Q" || e.key === "й" || e.key === "Й") {
+      if (e.code === "KeyQ") {
         e.preventDefault();
         setQueueOpen((v) => !v);
         return;
       }
-      if (e.key === "b" || e.key === "B" || e.key === "и" || e.key === "И") {
+      if (e.code === "KeyB") {
         e.preventDefault();
         setDockCollapsedPersisted(!dockCollapsed);
         return;
       }
-      if (e.key === "h" || e.key === "H" || e.key === "р" || e.key === "Р") {
+      if (e.code === "KeyH") {
         e.preventDefault();
         goView("hq");
+        return;
+      }
+      if (e.code === "KeyR") {
+        e.preventDefault();
+        goView("rp");
+        setRpUnread(0);
         return;
       }
       if (viewMode === "market" && e.altKey) {
@@ -121,6 +126,9 @@ export function useViewerHotkeys({
         }
       }
       if (e.altKey) return;
+      // Quest choices bind 1–N. Don't steal them for dock rooms.
+      if (viewMode === "quests" && /^[1-9]$/.test(e.key)) return;
+      if (viewMode === "court" && /^[1-4]$/.test(e.key)) return;
       const view = dockViewFromDigit(e.key, mobile);
       if (!view) return;
       e.preventDefault();

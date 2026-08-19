@@ -347,7 +347,7 @@
     "instant": true,
     "ops": ["throw_quest_dice"],
     "params": [],
-    "description": "Бросок 1d6 — число ежходных квестов на ход"
+    "description": "Бросок 1d6 — число ежеходных квестов на ход"
   },
   "intent.resolve_quest_choice": {
     "id": "intent.resolve_quest_choice",
@@ -385,5 +385,52 @@
     "ops": ["grant_power_touch"],
     "params": ["factionId", "powerPath"],
     "description": "GM: касание Хивера — выдать Путь Силы фракции (mind|will|chaos|shadow)"
+  },
+  "intent.produce_ship": {
+    "id": "intent.produce_ship",
+    "category": "eta",
+    "ap": 1,
+    "forceAp": 1,
+    "legacyOrderType": "produce_ship",
+    "ops": ["produce_ship"],
+    "params": ["systemId", "planetId", "shipId", "count", "fleetId"],
+    "description": "Найм корабля с планеты"
+  },
+  "intent.produce_unit": {
+    "id": "intent.produce_unit",
+    "category": "eta",
+    "ap": 1,
+    "forceAp": 1,
+    "legacyOrderType": "produce_unit",
+    "ops": ["produce_unit"],
+    "params": ["systemId", "planetId", "unitId", "count", "legionId"],
+    "description": "Найм отряда с планеты"
+  },
+  "intent.rename_system": {
+    "id": "intent.rename_system",
+    "category": "instant",
+    "ap": 0,
+    "instant": true,
+    "ops": ["rename_system"],
+    "params": ["systemId", "name"],
+    "description": "Переименовать систему"
+  },
+  "intent.rename_planet": {
+    "id": "intent.rename_planet",
+    "category": "instant",
+    "ap": 0,
+    "instant": true,
+    "ops": ["rename_planet"],
+    "params": ["systemId", "planetId", "name"],
+    "description": "Переименовать планету"
+  },
+  "intent.fill_slot": {
+    "id": "intent.fill_slot",
+    "category": "instant",
+    "ap": 0,
+    "instant": true,
+    "ops": ["fill_slot"],
+    "params": ["systemId", "planetId", "instanceId", "role", "resourceId"],
+    "description": "Заполнить слот постройки ресурсом"
   }
 }

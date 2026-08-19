@@ -33,6 +33,7 @@
     "test:labor": "node --test server/laborAllocation.test.mjs server/populationScale.test.mjs",
     "test:combat-role": "node --test server/combatRoleMult.test.mjs",
     "test:card-battle": "node --test server/cardBattleAuras.test.mjs server/cardBattleTrophies.test.mjs",
+    "test:engagements": "node --test server/engagements/abandon.test.mjs server/combatResolve/properties.test.mjs",
     "test:space-objects": "node --test server/spaceObjects.test.mjs",
     "test:tech-offers": "node --test server/techOffers.test.mjs server/techDirections.test.mjs",
     "test:tech-progress": "node --test server/techGrades.test.mjs server/techSockets.test.mjs server/techModifierEffects.test.mjs",
@@ -42,8 +43,9 @@
     "test:viewer-orders": "node --experimental-strip-types --test src/viewer/features/order-orchestrator/orderDropResolve.test.ts src/viewer/features/order-orchestrator/orderApMerge.test.ts",
     "test:viewer-rooms": "node --experimental-strip-types --test src/viewer/features/rooms-router/navigateViewerRoom.test.ts",
     "test:viewer-map": "node --experimental-strip-types --test src/viewer/features/map-viewport/useMapViewport.test.ts src/viewer/features/map-viewport/mapClickResolve.test.ts",
-    "test:viewer-auth": "node --experimental-strip-types --test src/viewer/hooks/useViewerAuth.test.ts",
-    "test:viewer-page": "node --experimental-strip-types --test src/viewer/features/order-orchestrator/orderDropResolve.test.ts src/viewer/features/order-orchestrator/orderApMerge.test.ts src/viewer/features/order-orchestrator/viewerActionCopy.test.ts src/viewer/features/order-orchestrator/economyIntentCopy.test.ts src/viewer/features/order-orchestrator/localMoveRoute.test.ts src/viewer/features/order-orchestrator/unitOrderCopy.test.ts src/viewer/features/combat-flow/contactStrike.test.ts src/viewer/features/combat-flow/engagementCopy.test.ts src/viewer/features/combat-flow/cardBattlePick.test.ts src/viewer/features/rooms-router/navigateViewerRoom.test.ts src/viewer/features/rooms-router/roomPanelCopy.test.ts src/viewer/features/rooms-router/courtWorldPatch.test.ts src/viewer/features/rooms-router/forceOrderFocus.test.ts src/viewer/features/map-viewport/useMapViewport.test.ts src/viewer/features/map-viewport/mapClickResolve.test.ts src/viewer/features/map-viewport/viewerPlayMapModel.test.ts src/viewer/features/chrome/pendingOrderCount.test.ts src/viewer/features/chrome/viewerPlayHudStats.test.ts src/viewer/features/chrome/sheetCopy.test.ts src/viewer/features/chrome/eraAdvance.test.ts src/viewer/features/chrome/questActionCopy.test.ts src/viewer/hooks/useViewerAuth.test.ts src/viewer/hooks/viewerLivePolls.test.ts src/viewer/hooks/viewerContentCatalogs.test.ts src/viewer/features/system-dive/systemDiveCopy.test.ts src/viewer/features/system-dive/systemActionCopy.test.ts src/viewer/features/system-dive/diveNav.test.ts",
+    "test:viewer-auth": "node --experimental-strip-types --test src/viewer/hooks/useViewerAuth.test.ts src/viewer/login/gateCatalog.test.ts",
+    "test:viewer-page": "node --experimental-strip-types --test src/viewer/features/order-orchestrator/orderDropResolve.test.ts src/viewer/features/order-orchestrator/orderApMerge.test.ts src/viewer/features/order-orchestrator/viewerActionCopy.test.ts src/viewer/features/order-orchestrator/economyIntentCopy.test.ts src/viewer/features/order-orchestrator/localMoveRoute.test.ts src/viewer/features/order-orchestrator/unitOrderCopy.test.ts src/viewer/features/combat-flow/contactStrike.test.ts src/viewer/features/combat-flow/engagementCopy.test.ts src/viewer/features/combat-flow/cardBattlePick.test.ts src/viewer/features/rooms-router/navigateViewerRoom.test.ts src/viewer/features/rooms-router/roomPanelCopy.test.ts src/viewer/features/rooms-router/courtWorldPatch.test.ts src/viewer/features/rooms-router/forceOrderFocus.test.ts src/viewer/features/map-viewport/useMapViewport.test.ts src/viewer/features/map-viewport/mapClickResolve.test.ts src/viewer/features/map-viewport/viewerPlayMapModel.test.ts src/viewer/features/chrome/pendingOrderCount.test.ts src/viewer/features/chrome/viewerPlayHudStats.test.ts src/viewer/features/chrome/sheetCopy.test.ts src/viewer/features/chrome/eraAdvance.test.ts src/viewer/features/chrome/questActionCopy.test.ts src/viewer/hooks/useViewerAuth.test.ts src/viewer/hooks/viewerLivePolls.test.ts src/viewer/hooks/viewerContentCatalogs.test.ts src/viewer/features/system-dive/systemDiveCopy.test.ts src/viewer/features/system-dive/systemActionCopy.test.ts src/viewer/features/system-dive/diveNav.test.ts src/viewer/court/courtSeatLayout.test.ts",
+    "lint": "eslint server",
     "lint:balance": "node scripts/lintBalance.mjs",
     "balance:buildings": "node scripts/buildBuildings.mjs",
     "balance:forces": "node scripts/buildUnitsShips.mjs",
@@ -71,6 +73,7 @@
     "@use-gesture/react": "^10.3.1",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",
+    "d3-hierarchy": "^3.1.2",
     "express": "^5.1.0",
     "jszip": "^3.10.1",
     "localtunnel": "^2.0.2",
@@ -89,6 +92,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
+    "@types/d3-hierarchy": "^3.1.7",
     "@types/express": "^5.0.3",
     "@types/jszip": "^3.4.1",
     "@types/react": "^19.2.14",
@@ -96,6 +100,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.1.4",
     "concurrently": "^9.2.0",
+    "eslint": "^10.8.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   }

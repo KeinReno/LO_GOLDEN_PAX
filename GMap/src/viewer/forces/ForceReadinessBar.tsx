@@ -38,8 +38,8 @@ export function ForceReadinessBar({
               role="listitem"
               title={
                 r.keywordLabel
-                  ? `${r.label} · ${r.keywordLabel} · energy ${r.energyCost}`
-                  : `${r.label} · energy ${r.energyCost}`
+                  ? `${r.label} · ${r.keywordLabel} · энергия ${r.energyCost}`
+                  : `${r.label} · энергия ${r.energyCost}`
               }
             >
               <strong>{r.label}</strong>

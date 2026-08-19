@@ -153,7 +153,7 @@ export function emptyChoice(index = 0): QuestChoice {
 export function emptyYearlyQuest(id = "yq.new_quest"): YearlyQuestDef {
   return {
     id,
-    name: "Новый ежходный квест",
+    name: "Новый ежеходный квест",
     summary: "Краткий hook для игрока.",
     detail: "Развёрнутое описание ситуации и контекста.",
     category: "neutral",

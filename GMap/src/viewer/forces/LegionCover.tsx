@@ -9,6 +9,7 @@ import {
   resolveLegionComposition,
   type ForceEngagementHit,
 } from "../../state/forceReadiness";
+import { CoverHpBar } from "./CoverHpBar";
 
 export function LegionCover({
   legion,
@@ -35,13 +36,13 @@ export function LegionCover({
   const inBattle = (engagements?.length ?? 0) > 0;
 
   return (
-    <CometCard className="forces-cover-comet" rotateDepth={10} disabled={!!reduce}>
+    <CometCard className="forces-cover-comet" rotateDepth={0} disabled>
       <motion.button
         type="button"
         className={`forces-cover forces-cover--legion${inBattle ? " is-battle" : ""}`}
         onClick={onOpen}
-        whileHover={reduce ? undefined : { y: -4, scale: 1.02 }}
-        whileTap={reduce ? undefined : { scale: 0.97 }}
+        whileHover={reduce ? undefined : { y: -3 }}
+        whileTap={reduce ? undefined : { scale: 0.98 }}
         initial={reduce ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 28 }}
@@ -57,15 +58,21 @@ export function LegionCover({
           <strong className="forces-cover-name">{legion.name}</strong>
           <span className="forces-cover-meta">{systemName}</span>
           <span className="forces-cover-count">
-            сила{" "}
-            <span className="forces-cover-count-num">
-              {legion.strength ?? units}
-            </span>
-            {units > 0 ? ` · ${units} отр.` : null}
-            {preview.cardCount > 0 ? (
-              <span className="forces-cover-deck"> · колода {preview.cardCount}</span>
-            ) : null}
+            {units > 0 ? (
+              <>
+                <span className="forces-cover-count-num">{units}</span> отр.
+                {preview.cardCount > 0 ? (
+                  <span className="forces-cover-deck">
+                    {" "}
+                    · карт {preview.cardCount}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <span className="forces-cover-empty">нет состава</span>
+            )}
           </span>
+          {!isSynthetic && <CoverHpBar composition={composition} />}
           <span className="forces-cover-roles">
             {preview.roles.slice(0, 4).map((r) => (
               <span key={r.role} className="forces-role-chip is-mini">

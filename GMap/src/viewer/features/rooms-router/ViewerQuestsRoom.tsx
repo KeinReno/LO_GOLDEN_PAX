@@ -54,7 +54,7 @@ export function ViewerQuestsRoom({
               error: res.error || "Не удалось бросить ежеходный кубик",
             };
           }
-          setOrderMsg(res.message || `Ежходные квесты: ${res.count ?? 0}`);
+          setOrderMsg(res.message || `Ежеходные квесты: ${res.count ?? 0}`);
           const spawned = Array.isArray(res.quests)
             ? res.quests
                 .map((q) => q?.id)

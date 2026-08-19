@@ -14,7 +14,7 @@ export type BuildingEntry = {
   zone?: "surface" | "orbit" | "deep_space";
   kind?: string;
   category?: string;
-  tier: number;
+  tier?: number;
   faction?: string;
   cost?: Record<string, number>;
   effects?: BuildingEffect[];
@@ -23,7 +23,39 @@ export type BuildingEntry = {
   laborSlots?: number;
   signature?: string;
   tradeoff?: string;
+  roles?: string[];
 };
+
+export type BuildingStudioCatalog = "buildings" | "stations" | "space_objects";
+
+const CATALOG_KEY = "gmap-building-studio-catalog";
+
+const STUDIO_CATALOGS: {
+  id: BuildingStudioCatalog;
+  label: string;
+}[] = [
+  { id: "buildings", label: "Здания" },
+  { id: "stations", label: "Станции" },
+  { id: "space_objects", label: "Космо-объекты" },
+];
+
+export function rememberBuildingStudioCatalog(id: BuildingStudioCatalog): void {
+  try {
+    sessionStorage.setItem(CATALOG_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readBuildingStudioCatalog(): BuildingStudioCatalog {
+  try {
+    const v = sessionStorage.getItem(CATALOG_KEY);
+    if (v === "stations" || v === "space_objects" || v === "buildings") return v;
+  } catch {
+    /* ignore */
+  }
+  return "buildings";
+}
 
 const ZONES = [
   { id: "surface", label: "Планетарная поверхность (Surface)" },
@@ -35,7 +67,9 @@ const CATEGORIES = ["A", "B", "C", "D", "E", "F"];
 
 export function BuildingStudio() {
   const { masterToken, setSyncMsg } = useCampaignSessionCtx();
-  const [activeCatalog, setActiveCatalog] = useState<"buildings" | "stations" | "space_objects">("buildings");
+  const [activeCatalog, setActiveCatalog] = useState<BuildingStudioCatalog>(
+    readBuildingStudioCatalog,
+  );
   const [entries, setEntries] = useState<Record<string, BuildingEntry>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -80,17 +114,25 @@ export function BuildingStudio() {
         }
       }
       if (raw && Object.keys(raw).length > 0) {
-        setEntries(raw);
-        if (!selectedId || !raw[selectedId]) {
-          setSelectedId(Object.keys(raw)[0] ?? null);
+        const cleaned: Record<string, BuildingEntry> = {};
+        for (const [key, val] of Object.entries(raw)) {
+          if (key === "meta" || !val || typeof val !== "object") continue;
+          const entry = val as BuildingEntry;
+          cleaned[key] = { ...entry, id: entry.id || key, name: entry.name || key };
         }
+        setEntries(cleaned);
+        const ids = Object.keys(cleaned);
+        setSelectedId((prev) => (prev && cleaned[prev] ? prev : ids[0] ?? null));
+      } else {
+        setEntries({});
+        setSelectedId(null);
       }
     } catch (e) {
       setSyncMsg(`Ошибка загрузки: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }
-  }, [activeCatalog, masterToken, selectedId, setSyncMsg]);
+  }, [activeCatalog, masterToken, setSyncMsg]);
 
   useEffect(() => {
     void loadEntries();
@@ -159,32 +201,49 @@ export function BuildingStudio() {
     }
   };
 
+  const selectCatalog = (id: BuildingStudioCatalog) => {
+    rememberBuildingStudioCatalog(id);
+    setSearch("");
+    setZoneFilter("all");
+    setActiveCatalog(id);
+  };
+
   const handleCreateNew = () => {
     const nextNum = Object.keys(entries).length + 1;
-    const prefix =
-      activeCatalog === "buildings"
-        ? "building.custom"
-        : activeCatalog === "stations"
-          ? "station.custom"
-          : "object.custom";
-    const newId = `${prefix}_${Date.now().toString(36)}`;
-    const newEntry: BuildingEntry = {
-      id: newId,
-      name: `Новое сооружение #${nextNum}`,
-      zone: activeCatalog === "stations" ? "orbit" : "surface",
-      tier: 1,
-      category: "B",
-      cost: { "currency.metal": 10, "currency.supply": 5 },
-      effects: [
-        {
-          effect: "production_mult",
-          args: { resource: "currency.extracta", mult: 1.1 },
-        },
-      ],
-      laborSlots: 2,
-    };
+    const newEntry: BuildingEntry =
+      activeCatalog === "stations"
+        ? {
+            id: `station.custom_${Date.now().toString(36)}`,
+            name: `Станция #${nextNum}`,
+            kind: "custom",
+            roles: ["extract"],
+            cost: { "currency.metal": 24, "currency.supply": 10 },
+            effects: [],
+          }
+        : activeCatalog === "space_objects"
+          ? {
+              id: `object.custom_${Date.now().toString(36)}`,
+              name: `Космо-объект #${nextNum}`,
+              kind: "anomaly",
+              effects: [],
+            }
+          : {
+              id: `building.custom_${Date.now().toString(36)}`,
+              name: `Новое сооружение #${nextNum}`,
+              zone: "surface",
+              tier: 1,
+              category: "B",
+              cost: { "currency.metal": 10, "currency.supply": 5 },
+              effects: [
+                {
+                  effect: "production_mult",
+                  args: { resource: "currency.extracta", mult: 1.1 },
+                },
+              ],
+              laborSlots: 2,
+            };
     void saveBuilding(newEntry).then(() => {
-      setSelectedId(newId);
+      setSelectedId(newEntry.id);
     });
   };
 
@@ -209,8 +268,10 @@ export function BuildingStudio() {
       <aside className="studio-sidebar">
         <div className="studio-sidebar-header">
           <div>
-            <p className="panel-kicker">GM · Foundry</p>
-            <h3>Конструктор зданий & объектов</h3>
+            <h3>
+              {STUDIO_CATALOGS.find((c) => c.id === activeCatalog)?.label ??
+                "Сооружения"}
+            </h3>
           </div>
           <button
             type="button"
@@ -218,33 +279,27 @@ export function BuildingStudio() {
             disabled={busy}
             onClick={handleCreateNew}
           >
-            + Создать объект
+            + Создать
           </button>
         </div>
 
-        {/* Catalog Selector */}
-        <div className="gm-mode-switch" style={{ margin: "6px 0" }}>
-          <button
-            type="button"
-            className={`gm-mode-btn ${activeCatalog === "buildings" ? "on" : ""}`}
-            onClick={() => setActiveCatalog("buildings")}
-          >
-            🏭 Здания
-          </button>
-          <button
-            type="button"
-            className={`gm-mode-btn ${activeCatalog === "stations" ? "on" : ""}`}
-            onClick={() => setActiveCatalog("stations")}
-          >
-            🛰 Станции
-          </button>
-          <button
-            type="button"
-            className={`gm-mode-btn ${activeCatalog === "space_objects" ? "on" : ""}`}
-            onClick={() => setActiveCatalog("space_objects")}
-          >
-            🪐 Космо-объекты
-          </button>
+        <div
+          className="gm-mode-switch studio-catalog-switch"
+          role="tablist"
+          aria-label="Каталог сооружений"
+        >
+          {STUDIO_CATALOGS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={activeCatalog === c.id}
+              className={`gm-mode-btn ${activeCatalog === c.id ? "on" : ""}`}
+              onClick={() => selectCatalog(c.id)}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
 
         <div className="studio-search-box">
@@ -257,48 +312,61 @@ export function BuildingStudio() {
           />
         </div>
 
-        {/* Zone Filter */}
-        <div className="studio-tag-filter">
-          <button
-            type="button"
-            className={`studio-filter-chip ${zoneFilter === "all" ? "active" : ""}`}
-            onClick={() => setZoneFilter("all")}
-          >
-            Все зоны
-          </button>
-          {ZONES.map((z) => (
+        {activeCatalog === "buildings" && (
+          <div className="studio-tag-filter">
             <button
-              key={z.id}
               type="button"
-              className={`studio-filter-chip ${zoneFilter === z.id ? "active" : ""}`}
-              onClick={() => setZoneFilter(z.id)}
+              className={`studio-filter-chip ${zoneFilter === "all" ? "active" : ""}`}
+              onClick={() => setZoneFilter("all")}
             >
-              {z.id === "surface" ? "Планета" : z.id === "orbit" ? "Орбита" : "Космос"}
+              Все зоны
             </button>
-          ))}
-        </div>
+            {ZONES.map((z) => (
+              <button
+                key={z.id}
+                type="button"
+                className={`studio-filter-chip ${zoneFilter === z.id ? "active" : ""}`}
+                onClick={() => setZoneFilter(z.id)}
+              >
+                {z.id === "surface" ? "Планета" : z.id === "orbit" ? "Орбита" : "Космос"}
+              </button>
+            ))}
+          </div>
+        )}
 
         <ul className="studio-items-list">
+          {filteredIds.length === 0 && (
+            <li className="hint">Нет записей в этом каталоге.</li>
+          )}
           {filteredIds.map((id) => {
             const b = entries[id];
             const isSelected = id === selectedId;
+            const meta =
+              activeCatalog === "stations"
+                ? [b.kind, ...(b.roles ?? [])].filter(Boolean).join(" · ")
+                : activeCatalog === "space_objects"
+                  ? b.kind || "объект"
+                  : `${b.zone === "orbit" ? "Орбита" : b.zone === "deep_space" ? "Космос" : "Поверхность"} · тир ${b.tier ?? "—"}`;
             return (
-              <li
-                key={id}
-                className={`studio-item-card ${isSelected ? "is-selected" : ""}`}
-                onClick={() => setSelectedId(id)}
-              >
-                <div className="studio-item-main">
-                  <strong>{b.name || id}</strong>
-                  <span className="studio-item-id">{id}</span>
-                </div>
-                <div className="studio-item-meta">
-                  <span className="studio-badge is-accent">
-                    {b.zone === "orbit" ? "🛰 Орбита" : "🪐 Поверхность"}
-                  </span>
-                  <span className="studio-badge">Тир {b.tier}</span>
-                  {b.laborSlots && <span className="studio-badge is-good">👥 {b.laborSlots} слота</span>}
-                </div>
+              <li key={id}>
+                <button
+                  type="button"
+                  className={`studio-item-card ${isSelected ? "is-selected" : ""}`}
+                  onClick={() => setSelectedId(id)}
+                >
+                  <div className="studio-item-main">
+                    <strong>{b.name || id}</strong>
+                    <span className="studio-item-id">{id}</span>
+                  </div>
+                  <div className="studio-item-meta">
+                    <span className="studio-badge">{meta}</span>
+                    {b.laborSlots ? (
+                      <span className="studio-badge is-good">
+                        слоты {b.laborSlots}
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
               </li>
             );
           })}

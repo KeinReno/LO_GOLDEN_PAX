@@ -102,8 +102,8 @@ export const DROP_ZONES: Array<{
   },
   {
     id: "disband",
-    label: "Утилизация",
-    hint: "списать · возврат",
+    label: "Лом",
+    hint: "списать в лом · часть металла назад",
     Icon: Recycle,
     revealColors: [
       [239, 68, 68],
@@ -123,7 +123,7 @@ export const DROP_ZONES: Array<{
   {
     id: "equip",
     label: "Оснащение",
-    hint: "модули корабля",
+    hint: "модули со склада",
     Icon: Settings2,
     revealColors: [
       [56, 189, 248],

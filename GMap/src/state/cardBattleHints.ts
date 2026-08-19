@@ -1,4 +1,5 @@
 import { getCachedContent } from "./contentCatalog";
+import { lookupContentResource } from "./resourceIndex";
 import { COMBAT_ROLE_LABELS } from "../viewer/forces/constants";
 import type { BattleCard, CardBattleState } from "./types";
 
@@ -154,8 +155,8 @@ function resolveClientSlot(
   content: ReturnType<typeof getCachedContent>,
 ) {
   const id = card?.filledSlots?.[role];
-  if (!id || !content?.map_resources) return null;
-  const res = content.map_resources[id];
+  if (!id) return null;
+  const res = lookupContentResource(content, id);
   if (!res) return null;
   const tier = Number(res.tier);
   return {

@@ -32,8 +32,14 @@ type CardBoardApi = {
 const CardBoardContext = createContext<CardBoardApi | null>(null);
 
 function zoneAccepts(zone: DropZoneHit, cardId: string): boolean {
-  if (!zone.accepts || zone.accepts.length === 0) return true;
-  return zone.accepts.includes(cardId) || zone.accepts.includes("*");
+  return zoneAcceptsCard(cardId, zone.accepts);
+}
+
+/** Exact id, `"*"`, or a prefix token ending in `":"` (`diplo:` → `diplo:res:…`). */
+export function zoneAcceptsCard(cardId: string, accepts?: string[]): boolean {
+  if (!accepts || accepts.length === 0) return true;
+  if (accepts.includes(cardId) || accepts.includes("*")) return true;
+  return accepts.some((token) => token.endsWith(":") && cardId.startsWith(token));
 }
 
 /** Shared registry so DragCard can hit-test DropZone rects during drag. */

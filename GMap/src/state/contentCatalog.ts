@@ -4,6 +4,7 @@ import {
   SHIP_TYPES as FALLBACK_SHIPS,
   SYSTEM_POI_LABELS as FALLBACK_POI,
 } from "./defaults";
+import { isPaintDeposit } from "./resourceIndex";
 
 export type EconomyCategory = "A" | "B" | "C" | "D" | "E" | "F";
 
@@ -59,6 +60,10 @@ export type MapResourceDef = {
   roles?: string[];
   biome_tags?: string[];
   kind?: string;
+  /** Crafted outfit/weapon — lives in content.modules, never a planet deposit. */
+  notDeposit?: boolean;
+  /** Abstract/placeholder tile — do not paint, generate, or list as a mineable resource. */
+  stub?: boolean;
   theater?: "space" | "ground" | string;
   spread?: { self_spreading?: boolean };
   toxic?: boolean;
@@ -184,6 +189,7 @@ export type PublicContent = {
     }
   >;
   map_resources?: Record<string, MapResourceDef>;
+  modules?: Record<string, MapResourceDef>;
   id_aliases?: {
     version?: number;
     resources?: Record<string, string>;
@@ -250,7 +256,7 @@ export type PublicContent = {
         id: string;
         label: string;
         roleScoreKey?: string;
-        breakthroughTechId?: string;
+        breakthroughTechId?: string | null;
         iconTag?: string;
         description?: string;
       }
@@ -675,7 +681,9 @@ export function shipTypeNames(): string[] {
 export function resourcePoolNames(): string[] {
   const m = cached?.map_resources;
   if (m && Object.keys(m).length > 0) {
-    return Object.values(m).map((r) => r.name);
+    return Object.values(m)
+      .filter((r) => isPaintDeposit(r))
+      .map((r) => r.name);
   }
   return [...FALLBACK_RESOURCES];
 }

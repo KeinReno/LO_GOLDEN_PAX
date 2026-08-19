@@ -8,7 +8,9 @@ import type {
   StarSystem,
   SystemKind,
 } from "../state/types";
-import { RESOURCE_POOL } from "../state/defaults";
+import { depositPaintPool } from "../state/depositPaint";
+
+const PAINT_POOL = [...depositPaintPool()];
 
 const STAR_WEIGHTS: { cls: StarClass; w: number; lum: number }[] = [
   { cls: "M", w: 40, lum: 0.3 },
@@ -91,8 +93,8 @@ function makePlanet(index: number, rnd: () => number): Planet {
         : pick(CLIMATES, rnd);
 
   const resources: string[] = [];
-  if (rnd() < 0.45) resources.push(pick(RESOURCE_POOL, rnd));
-  if (rnd() < 0.15) resources.push(pick(RESOURCE_POOL, rnd));
+  if (rnd() < 0.45) resources.push(pick(PAINT_POOL, rnd));
+  if (rnd() < 0.15) resources.push(pick(PAINT_POOL, rnd));
 
   const canSettle =
     (type === "rocky" || type === "ocean" || type === "desert") &&
@@ -139,7 +141,7 @@ export function createRandomSystem(
 ): StarSystem {
   if (kind === "corridor") {
     const resources: string[] = [];
-    if (rnd() < resourceChance * 0.5) resources.push(pick(RESOURCE_POOL, rnd));
+    if (rnd() < resourceChance * 0.5) resources.push(pick(PAINT_POOL, rnd));
     return {
       id: uuid(),
       name: `COR-${String(nameIndex).padStart(3, "0")}`,
@@ -166,8 +168,8 @@ export function createRandomSystem(
   );
 
   const resources: string[] = [];
-  if (rnd() < resourceChance) resources.push(pick(RESOURCE_POOL, rnd));
-  if (rnd() < resourceChance * 0.4) resources.push(pick(RESOURCE_POOL, rnd));
+  if (rnd() < resourceChance) resources.push(pick(PAINT_POOL, rnd));
+  if (rnd() < resourceChance * 0.4) resources.push(pick(PAINT_POOL, rnd));
 
   const stations =
     rnd() < 0.18

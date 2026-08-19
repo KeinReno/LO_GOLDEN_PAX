@@ -8,6 +8,7 @@ import {
   postForceRaise,
   raiseCurrencyCost,
   raisePopulationCost,
+  raisePropertyGate,
   type ForceRecruitSession,
   type RaiseDef,
 } from "../state/forceRaiseClient";
@@ -16,6 +17,7 @@ import {
   systemHasShipyardForFaction,
 } from "../state/forceReadiness";
 import { useWorldStore } from "../state/worldStore";
+import type { TechEcoSlice } from "../state/techGate";
 
 export function PlanetRaisePanel({
   system,
@@ -24,6 +26,7 @@ export function PlanetRaisePanel({
   password,
   stocks,
   busy,
+  techEco,
   onSession,
 }: {
   system: StarSystem;
@@ -32,6 +35,7 @@ export function PlanetRaisePanel({
   password: string;
   stocks: Record<string, number>;
   busy?: boolean;
+  techEco?: TechEcoSlice;
   onSession: (data: ForceRecruitSession) => void;
 }) {
   const fleets = useWorldStore((s) => s.world.fleets);
@@ -63,7 +67,8 @@ export function PlanetRaisePanel({
   const shortStock = Object.entries(currency).find(
     ([id, amount]) => (Number(stocks[id]) || 0) < amount,
   );
-  const locked = busy || pending || !password || !selected;
+  const propGate = selected ? raisePropertyGate(selected, techEco) : { ok: true };
+  const locked = busy || pending || !password || !selected || !propGate.ok;
 
   const raise = async () => {
     if (!selected || locked) return;
@@ -124,7 +129,7 @@ export function PlanetRaisePanel({
             key={d.id}
             type="button"
             className={`order-type-chip ${selected?.id === d.id ? "on" : ""}`}
-            disabled={pending}
+            disabled={pending || !raisePropertyGate(d, techEco).ok}
             onClick={() => {
               setDefId(d.id);
               setError(null);
@@ -158,6 +163,11 @@ export function PlanetRaisePanel({
         <p className="hint" role="status">
           На складе не хватает {shortStock[0].replace(/^currency\./, "")} (
           {shortStock[1]}).
+        </p>
+      )}
+      {!propGate.ok && propGate.error && (
+        <p className="hint" role="status">
+          {propGate.error}
         </p>
       )}
       <button

@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { TurnBriefing, TurnBriefingEvent, ViewerPayload, WorldState } from "../state/types";
 import { formatHopDistance, formatHopTurns, hopDistance } from "../state/pathfinding";
 import { isWithinMoveRange } from "../state/movementRange";
-import { intentApCost } from "../state/contentCatalog";
 import {
-  formatOdCost,
   formatOdMeter,
   formatForceOdMeter,
   OD,
@@ -12,19 +10,17 @@ import {
   FORCE_OD_TOOLTIP,
   QUEUE_UNTIL_TURN_LABEL,
   TURN_RESOLVE_HINT,
+  ruCount,
 } from "../state/playerUiTerms";
-import {
-  PlayerEngagementPanel,
-  type CombatStanceId,
-  type ViewerEngagement,
-} from "./PlayerEngagementPanel";
+import { orderTypeLabel } from "./orderEtaLabels";
 import type { AlertItem } from "./ViewerAlertFab";
+import { countCourtAttention } from "./court/courtAttention";
 import {
   computeMetrics,
   resolveFactionTreasuryCurrency,
 } from "./economy/economyMath";
 import { currencyShortLabel } from "./economy/chartData";
-import { orderTypeLabel } from "./orderEtaLabels";
+import { hqOwnedWorlds } from "./hqOwnedWorlds";
 
 function alertTone(kind: AlertItem["kind"]): "danger" | "warn" | "hot" | "info" {
   switch (kind) {
@@ -121,7 +117,7 @@ function formatBriefingEvent(
         ? `Бой начат: ${sys(e.systemId)} vs ${fac(e.defender)}`
         : `Бой начат: ${sys(e.systemId)} (защита)`;
     case "engagement_awaiting_stance":
-      return `Бой в системе ${sys(e.systemId)}, выберите stance`;
+      return `Бой в системе ${sys(e.systemId)}, зафиксируйте стойку`;
     case "engagement_phase":
       return `Фаза боя ${e.phase ?? "—"} в ${sys(e.systemId)}`;
     case "engagement_auto_resolve":
@@ -261,13 +257,17 @@ export function TurnBriefingCard({
   briefing,
   world,
   factionId,
+  compact = false,
 }: {
   briefing?: TurnBriefing | null;
   world: WorldState;
   factionId: string;
+  compact?: boolean;
 }) {
   if (!briefing) {
-    return (
+    return compact ? (
+      <p className="hint">Нет данных о последнем тике.</p>
+    ) : (
       <section className="hq-card turn-briefing-card">
         <h3>Сводка хода</h3>
         <p className="hint">Нет данных о последнем тике — дождитесь обработки хода.</p>
@@ -277,6 +277,19 @@ export function TurnBriefingCard({
 
   const bullets = buildTurnBriefingBullets(briefing, world, factionId);
 
+  const list =
+    bullets.length === 0 ? (
+      <p className="hint">За этот ход нет заметных изменений для вашей державы.</p>
+    ) : (
+      <ul className="turn-briefing-list" aria-label="Сводка последнего хода">
+        {bullets.map((b, i) => (
+          <li key={`${i}-${b.slice(0, 24)}`}>{b}</li>
+        ))}
+      </ul>
+    );
+
+  if (compact) return list;
+
   return (
     <section className="hq-card turn-briefing-card">
       <h3>
@@ -285,15 +298,7 @@ export function TurnBriefingCard({
           {briefing.turnFrom}→{briefing.turnTo}
         </span>
       </h3>
-      {bullets.length === 0 ? (
-        <p className="hint">За этот ход нет заметных изменений для вашей державы.</p>
-      ) : (
-        <ul className="turn-briefing-list" aria-label="Сводка последнего хода">
-          {bullets.map((b, i) => (
-            <li key={`${i}-${b.slice(0, 24)}`}>{b}</li>
-          ))}
-        </ul>
-      )}
+      {list}
     </section>
   );
 }
@@ -306,8 +311,6 @@ export function PlayerHqHome({
   forceApMax = 0,
   attentionItems = [],
   orderMsg,
-  onScoutReveal,
-  mapSelectedSystemId,
   onOpenForces,
   onOpenOrders,
   onOpenDiplomacy,
@@ -318,17 +321,11 @@ export function PlayerHqHome({
   onOpenResearch,
   onOpenMarket,
   onOpenEconomy,
+  onOpenWorld,
   affordableResearch,
-  tradePartnerCount,
   activeQuestCount,
   warCount,
   openEngagementCount,
-  engagements,
-  stanceBusy,
-  onSubmitCombatStance,
-  onOpenStanceRing,
-  onRequestCardBattle,
-  onOpenCardBattle,
 }: {
   payload: ViewerPayload;
   /** @deprecated Kept for call-site compat; HQ no longer embeds FlowPanel. */
@@ -340,8 +337,6 @@ export function PlayerHqHome({
   /** Shared with ViewerAlertFab — buildViewerAlerts(). */
   attentionItems?: AlertItem[];
   orderMsg?: string | null;
-  onScoutReveal?: (systemId: string) => void;
-  mapSelectedSystemId?: string | null;
   onOpenForces: () => void;
   onOpenOrders: () => void;
   onOpenDiplomacy: () => void;
@@ -352,39 +347,19 @@ export function PlayerHqHome({
   onOpenResearch?: () => void;
   onOpenMarket?: () => void;
   onOpenEconomy?: () => void;
+  onOpenWorld?: (systemId: string, planetId: string) => void;
   affordableResearch?: number;
-  tradePartnerCount?: number;
   activeQuestCount?: number;
   warCount?: number;
   openEngagementCount?: number;
-  engagements?: ViewerEngagement[];
-  stanceBusy?: boolean;
-  onSubmitCombatStance?: (engagementId: string, stance: CombatStanceId) => void;
-  onOpenStanceRing?: (
-    engagementId: string,
-    anchor: { clientX: number; clientY: number },
-  ) => void;
-  onRequestCardBattle?: (engagementId: string) => void;
-  onOpenCardBattle?: (engagementId: string) => void;
 }) {
   const eco = payload.economy;
   const fac = payload.world.factions.find((f) => f.id === payload.factionId);
-  const scoutAp = intentApCost("intent.scout_reveal");
-  const [scoutTargetId, setScoutTargetId] = useState(
-    () => mapSelectedSystemId ?? "",
-  );
-  useEffect(() => {
-    if (mapSelectedSystemId) setScoutTargetId(mapSelectedSystemId);
-  }, [mapSelectedSystemId]);
-  const scoutSystems = payload.world.systems;
-  const scoutCanSubmit =
-    !!scoutTargetId &&
-    !!onScoutReveal &&
-    (scoutAp <= 0 || reservedAp + scoutAp <= apMax);
-
-  const courtNpc =
-    fac?.npcs?.filter((n) => n.status !== "hidden" && n.status !== "dead")
-      .length ?? 0;
+  const visibleNpcs =
+    fac?.npcs?.filter((n) => n.status !== "hidden" && n.status !== "dead") ?? [];
+  const courtNpc = visibleNpcs.length;
+  const npcPreview = visibleNpcs.slice(0, 6);
+  const courtAttention = countCourtAttention(payload);
 
   const treasuryCurrencyId = resolveFactionTreasuryCurrency(payload);
   const treasuryHint = currencyShortLabel(treasuryCurrencyId);
@@ -398,8 +373,11 @@ export function PlayerHqHome({
     (l) => l.factionId === payload.factionId,
   ).length;
   const roleLeader = roleScoreLeader(eco?.roleScores);
-
   const attentionShown = attentionItems.slice(0, 5);
+  const worlds = hqOwnedWorlds(payload).slice(0, 8);
+  const briefingBullets = payload.briefing
+    ? buildTurnBriefingBullets(payload.briefing, payload.world, payload.factionId)
+    : [];
 
   return (
     <div className="hq-command">
@@ -414,10 +392,7 @@ export function PlayerHqHome({
             <strong className="hq-command__name">{fac?.name ?? "—"}</strong>
             <p className="hint">
               Ход {payload.world.meta.turn} · видно {payload.visibleSystemIds.length}{" "}
-              систем ·{" "}
-              <span title={OD_TOOLTIP}>
-                {OD} {reservedAp}/{apMax}
-              </span>
+              систем
             </p>
           </div>
         </div>
@@ -432,12 +407,16 @@ export function PlayerHqHome({
           </p>
         ) : (
           <ul className="hq-attention-list">
-            {attentionShown.map((item) => (
+            {attentionShown.map((item, idx) => (
               <li key={item.id}>
                 <button
                   type="button"
-                  className={`hq-attention-item hq-attention-item--${alertTone(item.kind)}`}
-                  onClick={() => item.onFocus()}
+                  className={`hq-attention-item hq-attention-item--${alertTone(item.kind)}${
+                    idx === 0 ? " hq-attention-item--lead" : ""
+                  }`}
+                  onClick={(e) =>
+                    item.onFocus({ clientX: e.clientX, clientY: e.clientY })
+                  }
                 >
                   <strong>{item.verb}</strong>
                   <span>
@@ -450,6 +429,48 @@ export function PlayerHqHome({
           </ul>
         )}
       </section>
+
+      {onOpenWorld && worlds.length > 0 ? (
+        <section className="hq-command__worlds" aria-label="Миры">
+          <div className="hq-command__section-label">Миры</div>
+          <ul className="hq-worlds-list">
+            {worlds.map((w) => (
+              <li key={`${w.systemId}:${w.planetId}`}>
+                <button
+                  type="button"
+                  className="hq-worlds-item"
+                  onClick={() => onOpenWorld(w.systemId, w.planetId)}
+                >
+                  <strong>{w.planetName}</strong>
+                  <span>
+                    {w.systemName}
+                    {w.population > 0
+                      ? ` · ${Math.round(w.population).toLocaleString("ru-RU")}`
+                      : ""}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {briefingBullets.length > 0 ? (
+        <section className="hq-command__briefing" aria-label="Сводка хода">
+          <div className="hq-command__section-label">
+            Сводка хода
+            {payload.briefing
+              ? ` ${payload.briefing.turnFrom}→${payload.briefing.turnTo}`
+              : ""}
+          </div>
+          <TurnBriefingCard
+            briefing={payload.briefing}
+            world={payload.world}
+            factionId={payload.factionId}
+            compact
+          />
+        </section>
+      ) : null}
 
       <section className="hq-command__summary" aria-label="Сводка державы">
         <div className="hq-command__section-label">Сводка</div>
@@ -475,98 +496,51 @@ export function PlayerHqHome({
           </div>
           {roleLeader ? (
             <div className="hq-summary-stat">
-              <dt>RoleScore</dt>
+              <dt>Путь</dt>
               <dd>{roleLeader}</dd>
             </div>
           ) : null}
         </dl>
       </section>
 
-      {(openEngagementCount ?? 0) > 0 &&
-        engagements &&
-        onSubmitCombatStance && (
-          <section className="hq-command__combat" aria-label="Активные сражения">
-            <div className="hq-command__section-label">Сражения</div>
-            <PlayerEngagementPanel
-              payload={payload}
-              engagements={engagements}
-              busy={stanceBusy}
-              msg={orderMsg}
-              showHistory={false}
-              onSubmitStance={onSubmitCombatStance}
-              onOpenStanceRing={onOpenStanceRing}
-              onRequestCardBattle={onRequestCardBattle}
-              onOpenCardBattle={onOpenCardBattle}
-            />
-          </section>
-        )}
-
-      <details className="hq-command__more">
-        <summary>Сводка хода</summary>
-        <TurnBriefingCard
-          briefing={payload.briefing}
-          world={payload.world}
-          factionId={payload.factionId}
-        />
-      </details>
-
-      <section className="hq-command__deep" aria-label="Основные комнаты">
+      <section className="hq-command__deep" aria-label="Перейти в комнату">
         <div className="hq-command__section-label">Комнаты</div>
-        <div className="hq-deep-primary">
+        <div className="hq-deep-secondary">
           {onOpenEconomy ? (
-            <button
-              type="button"
-              className="hq-deep-btn hq-deep-btn--primary"
-              onClick={onOpenEconomy}
-            >
-              <strong>Экономика</strong>
-              <span className="hint">казна · склад · налоги</span>
+            <button type="button" className="hq-deep-chip" onClick={onOpenEconomy}>
+              Экономика
             </button>
           ) : null}
           {onOpenResearch ? (
             <button
               type="button"
-              className={`hq-deep-btn hq-deep-btn--primary ${
+              className={`hq-deep-chip ${
                 (affordableResearch ?? 0) > 0 ? "is-hot" : ""
               }`}
               onClick={onOpenResearch}
             >
-              <strong>Наука</strong>
-              <span className="hint">
-                {(affordableResearch ?? 0) > 0
-                  ? `доступно ${affordableResearch}`
-                  : "колесо знаний"}
-              </span>
+              Наука
+              {(affordableResearch ?? 0) > 0 ? " · есть что изучить" : ""}
             </button>
           ) : null}
-          <button
-            type="button"
-            className="hq-deep-btn hq-deep-btn--primary"
-            onClick={onOpenMap}
-          >
-            <strong>Карта</strong>
-            <span className="hint">приказы · drag / ПКМ</span>
+          <button type="button" className="hq-deep-chip" onClick={onOpenMap}>
+            Карта
           </button>
-        </div>
-        <div className="hq-deep-secondary">
           <button type="button" className="hq-deep-chip" onClick={onOpenForces}>
             Силы
             {(openEngagementCount ?? 0) > 0
-              ? ` · ${openEngagementCount}`
+              ? ` · ${ruCount(openEngagementCount ?? 0, "бой", "боя", "боёв")}`
               : ""}
           </button>
-          <button
-            type="button"
-            className="hq-deep-chip"
-            onClick={onOpenDiplomacy}
-          >
-            Дипло
-            {(warCount ?? 0) > 0 ? ` · ${warCount}` : ""}
+          <button type="button" className="hq-deep-chip" onClick={onOpenDiplomacy}>
+            Дипломатия
+            {(warCount ?? 0) > 0
+              ? ` · ${ruCount(warCount ?? 0, "война", "войны", "войн")}`
+              : ""}
           </button>
           {onOpenMarket ? (
             <button type="button" className="hq-deep-chip" onClick={onOpenMarket}>
               Биржа
-              {tradePartnerCount ? ` · ${tradePartnerCount}` : ""}
             </button>
           ) : null}
           <button
@@ -575,15 +549,18 @@ export function PlayerHqHome({
             onClick={onOpenQuests}
           >
             Квесты
-            {activeQuestCount ? ` · ${activeQuestCount}` : ""}
+            {activeQuestCount
+              ? ` · ${ruCount(activeQuestCount, "квест", "квеста", "квестов")}`
+              : ""}
           </button>
           {onOpenCourt ? (
             <button type="button" className="hq-deep-chip" onClick={onOpenCourt}>
-              Двор{courtNpc > 0 ? ` · ${courtNpc}` : ""}
+              Двор
+              {courtAttention > 0 ? ` · ${courtAttention} ждут` : ""}
             </button>
           ) : null}
           <button type="button" className="hq-deep-chip" onClick={onOpenRp}>
-            Хроника
+            RP
           </button>
           <button type="button" className="hq-deep-chip" onClick={onOpenOrders}>
             Очередь
@@ -591,64 +568,36 @@ export function PlayerHqHome({
         </div>
       </section>
 
-      {(fac?.notes || courtNpc > 0 || (onScoutReveal && scoutSystems.length > 0)) && (
+      {courtNpc > 0 ? (
         <details className="hq-command__more">
-          <summary>Разведка и двор</summary>
-          {fac?.notes ? (
-            <p className="hint" style={{ whiteSpace: "pre-wrap" }}>
-              {fac.notes}
-            </p>
+          <summary>
+            Двор
+            {courtNpc > 6 ? ` · ${courtNpc}` : ""}
+          </summary>
+          <ul className="hq-npc-list">
+            {npcPreview.map((n) => {
+              const where = [n.locationPlanetName, n.locationSystemName]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <li key={n.id} className="hq-npc-item">
+                  <strong>{n.name}</strong>
+                  {n.title ? <span className="hint"> — {n.title}</span> : null}
+                  {where ? <span className="hint"> · {where}</span> : null}
+                </li>
+              );
+            })}
+          </ul>
+          {courtNpc > 6 ? (
+            <p className="hint">ещё {courtNpc - 6}</p>
           ) : null}
-          {fac?.npcs && courtNpc > 0 ? (
-            <ul className="hq-npc-list">
-              {fac.npcs
-                .filter((n) => n.status !== "hidden" && n.status !== "dead")
-                .slice(0, 6)
-                .map((n) => (
-                  <li key={n.id} className="hq-npc-item">
-                    <strong>{n.name}</strong>
-                    {n.title ? (
-                      <span className="hint"> — {n.title}</span>
-                    ) : null}
-                  </li>
-                ))}
-            </ul>
-          ) : null}
-          {onScoutReveal && scoutSystems.length > 0 ? (
-            <div className="hq-command__scout">
-              <p className="hint">
-                Постоянно открыть систему · на тике
-                {scoutAp > 0 ? ` · ${formatOdCost(scoutAp)}` : ""}
-              </p>
-              <label className="field">
-                <span>Система</span>
-                <select
-                  value={scoutTargetId}
-                  onChange={(e) => setScoutTargetId(e.target.value)}
-                >
-                  <option value="">— выберите —</option>
-                  {scoutSystems.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="btn sm"
-                disabled={!scoutCanSubmit}
-                onClick={() => {
-                  if (!scoutCanSubmit) return;
-                  onScoutReveal(scoutTargetId);
-                }}
-              >
-                Открыть разведкой
-              </button>
-            </div>
+          {onOpenCourt ? (
+            <button type="button" className="btn sm" onClick={onOpenCourt}>
+              Открыть двор
+            </button>
           ) : null}
         </details>
-      )}
+      ) : null}
     </div>
   );
 }

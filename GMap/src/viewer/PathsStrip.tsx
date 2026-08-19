@@ -65,7 +65,7 @@ function PathPopover({
           <strong>{row.label}</strong>
           <span className="hint">
             {row.state === "disabled"
-              ? "не в пилоте"
+              ? "нет порога"
               : row.state === "open"
                 ? "открыт"
                 : row.state === "ready"
@@ -219,7 +219,7 @@ function PathCell({
     ? `${row.label}: ${fmtInt(row.score)}${
         row.threshold > 0 ? ` / ${fmtInt(row.threshold)}` : ""
       }`
-    : `${row.label}: не в пилоте`;
+    : `${row.label}: нет порога`;
 
   return (
     <>

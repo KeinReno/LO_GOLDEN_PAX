@@ -272,7 +272,7 @@ export function SystemCommandPanel({
   if (!owned) {
     return (
       <p className="hint system-cmd-locked">
-        Системарные постройки и верфь доступны владельцу системы.
+        Системные постройки и верфь доступны владельцу системы.
       </p>
     );
   }
@@ -291,13 +291,10 @@ export function SystemCommandPanel({
           const Icon = STATION_ICON[def.kind];
           const metal = stocks["currency.metal"] ?? 0;
           const supply = stocks["currency.supply"] ?? 0;
-          const techOk =
-            unlockedProperties == null
-              ? true
-              : canBuildWithTech(
-                  { unlockedProperties },
-                  { requireProperties: def.requireProperties },
-                ).ok;
+          const techOk = canBuildWithTech(
+            { unlockedProperties: unlockedProperties ?? [] },
+            { requireProperties: def.requireProperties },
+          ).ok;
           const ok =
             !busy &&
             apLeft >= def.ap &&

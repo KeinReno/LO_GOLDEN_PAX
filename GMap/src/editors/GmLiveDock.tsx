@@ -6,7 +6,6 @@ import { useCampaignSessionCtx } from "./CampaignSessionContext";
 /** Right rail for Live table — inbox + close-turn, not a second TopBar. */
 export function GmLiveDock({ onRequestTick }: { onRequestTick: () => void }) {
   const world = useWorldStore((s) => s.world);
-  const openRpForFaction = useWorldStore((s) => s.openRpForFaction);
   const [pendingCount, setPendingCount] = useState(0);
   const { shareStatus, shareViewUrl, shareLastViewUrl } =
     useCampaignSessionCtx();
@@ -44,17 +43,6 @@ export function GmLiveDock({ onRequestTick }: { onRequestTick: () => void }) {
           ? ` · rev ${world.meta.tableRevision}`
           : ""}
       </p>
-
-      <div className="gm-live-quick">
-        <button
-          type="button"
-          className="btn ghost block"
-          onClick={() => openRpForFaction(null)}
-          title="Сцены с фракциями (не общий чат игроков)"
-        >
-          Сцена · мастер
-        </button>
-      </div>
 
       <div className="gm-live-inbox">
         <p className="gm-live-inbox-title">По державам</p>

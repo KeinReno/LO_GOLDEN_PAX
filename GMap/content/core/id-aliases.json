@@ -6,7 +6,18 @@
     "крейсер": "ship.cruiser",
     "линкор": "ship.battleship",
     "носитель": "ship.carrier",
-    "транспорт": "ship.transport"
+    "транспорт": "ship.transport",
+    "разведчик": "ship.scout",
+    "патруль": "ship.patrol",
+    "катер": "ship.patrol",
+    "рейдер": "ship.corvette",
+    "эскорт": "ship.frigate",
+    "торговец": "ship.transport",
+    "торговый": "ship.transport",
+    "рагнарек": "ship.battleship",
+    "пси-крейсер": "ship.psi_cruiser",
+    "носитель-спор": "ship.carrier",
+    "дрононосец": "ship.carrier"
   },
   "resources": {
     "железо": "map.iron",
@@ -141,10 +152,12 @@
     "споры": "map.biomass",
     "яйца-мат": "map.biomass",
     "мёртвый хитин": "map.biomass",
-    "рабы-чёрный рынок": "map.biomass"
+    "рабы-чёрный рынок": "map.biomass",
+    "транзит-пошлина": "map.trade_value"
   },
   "units": {
-    "unit.generic_line": "unit.generic_line"
+    "unit.generic_line": "unit.generic_line",
+    "unit.assault": "unit.breach_cadre"
   },
   "tech_upgrades": {
     "tech.fusion.overclock": "tech.fusion.feature",

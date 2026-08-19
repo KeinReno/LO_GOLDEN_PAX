@@ -17,7 +17,8 @@
     "dualAp": "empire vs force pools (rules.apPerTurn / rules.forceAp)",
     "roleCoverage": "one generic hull/unit per role×tier; raceVariants + packs for flavor",
     "stationsFromContent": "content/core/stations.json; prices from forces.stations",
-    "techGatesBuildings": "category tech tier ceiling, not hardcoded ship/building unlock ids"
+    "techGatesBuildings": "category tech tier ceiling, not hardcoded ship/building unlock ids",
+    "extractFreeTier": "deposits T1–T3 extract at start (same freeBuildTier); T4+ needs tech; own treasuryPeg skips the ceiling"
   },
   "ap": {
     "empirePerTurn": 9,

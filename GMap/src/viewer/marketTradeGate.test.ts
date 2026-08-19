@@ -6,6 +6,7 @@ import {
   isPhysicalGood,
   marketWarehouseCap,
   physicalStockUsed,
+  resolveMarketQuoteCurrency,
   validateMarketTrade,
 } from "./marketTradeGate.ts";
 
@@ -44,6 +45,24 @@ describe("buildStockpileStrip", () => {
   });
 });
 
+describe("resolveMarketQuoteCurrency", () => {
+  it("prefers УЕ when a rate exists", () => {
+    const quote = resolveMarketQuoteCurrency(
+      [{ pair: "currency.extracta → fx.universal_credit", sell: 2, buy: 2 }],
+      "currency.extracta",
+    );
+    assert.equal(quote, UC_ID);
+  });
+
+  it("falls back to metal when УЕ has no row", () => {
+    const quote = resolveMarketQuoteCurrency(
+      [{ pair: "currency.extracta → currency.metal", sell: 1, buy: 1 }],
+      "currency.extracta",
+    );
+    assert.equal(quote, METAL);
+  });
+});
+
 describe("validateMarketTrade", () => {
   const base = {
     reservedAp: 0,
@@ -73,27 +92,24 @@ describe("validateMarketTrade", () => {
     }
   });
 
-  it("fails storage when incoming goods exceed warehouse", () => {
+  it("does not hard-block on a fake warehouse basket", () => {
     const used = physicalStockUsed(base.stocks);
     const r = validateMarketTrade({
       ...base,
       warehouseCap: used + 4,
+      receiveStockCap: 1,
       payCurrency: SUPPLY,
       payAmount: 5,
       receiveCurrency: METAL,
       receiveAmount: 5,
     });
-    assert.equal(r.ok, false);
-    if (!r.ok) {
-      assert.equal(r.reason, "storage");
-      assert.equal(r.message, "Склад переполнен");
-    }
+    assert.equal(r.ok, true);
   });
 
-  it("fails storage against a per-good flow cap", () => {
+  it("fails when the quote row is missing", () => {
     const r = validateMarketTrade({
       ...base,
-      receiveStockCap: 82,
+      quoteOk: false,
       payCurrency: SUPPLY,
       payAmount: 5,
       receiveCurrency: METAL,
@@ -101,8 +117,8 @@ describe("validateMarketTrade", () => {
     });
     assert.equal(r.ok, false);
     if (!r.ok) {
-      assert.equal(r.reason, "storage");
-      assert.equal(r.message, "Склад переполнен");
+      assert.equal(r.reason, "rate");
+      assert.equal(r.message, "Нет курса");
     }
   });
 
@@ -149,7 +165,7 @@ describe("validateMarketTrade", () => {
     }
   });
 
-  it("passes when AP, warehouse, and funds are ok", () => {
+  it("passes when AP and funds are ok", () => {
     const r = validateMarketTrade({
       ...base,
       payCurrency: SUPPLY,

@@ -34,14 +34,30 @@ describe("viewerPlayHudStats", () => {
     assert.equal(warCountForFaction(p), 1);
   });
 
-  it("counts active quests and incoming diplo", () => {
+  it("counts quest attention (unrolled dice) not every active pin", () => {
+    const base = emptyViewerPlayWorld();
     const p = payload({
       world: {
-        ...emptyViewerPlayWorld(),
+        ...base,
         quests: [
-          { status: "active" },
-          { status: "done" },
-          { status: "hidden" },
+          {
+            id: "idle",
+            name: "В работе",
+            summary: "",
+            systemId: null,
+            status: "active",
+            sourceFactionId: "f1",
+          },
+          {
+            id: "theirs",
+            name: "Чужой",
+            summary: "",
+            systemId: null,
+            status: "active",
+            sourceFactionId: "f2",
+            type: "side",
+          },
+          { id: "done", name: "Готово", summary: "", systemId: null, status: "done" },
         ],
       } as ViewerPayload["world"],
       diploOffers: { incoming: [{ id: "o1" }, { id: "o2" }] } as ViewerPayload["diploOffers"],
@@ -57,5 +73,51 @@ describe("viewerPlayHudStats", () => {
     const css = factionThemeVars(undefined);
     assert.equal(css["--faction"], "#c9a227");
     assert.equal(factionThemeVars({ color: "#11", fillColor: "#22" })["--faction"], "#11");
+  });
+
+  it("counts court attention as ungoverned systems plus vacant houses", () => {
+    const p = payload({
+      world: {
+        ...emptyViewerPlayWorld(),
+        systems: [
+          {
+            id: "s1",
+            name: "A",
+            ownerFactionId: "f1",
+            planets: [{ population: 12 }],
+          },
+          {
+            id: "s2",
+            name: "B",
+            ownerFactionId: "f1",
+            planets: [{ population: 8 }],
+          },
+          {
+            id: "s3",
+            name: "Empty",
+            ownerFactionId: "f1",
+            planets: [{ population: 0 }],
+          },
+        ],
+        factions: [
+          {
+            id: "f1",
+            npcs: [],
+            internalBlocs: [
+              { id: "h1", name: "Vacant", kind: "house", stance: "neutral", influence: 0 },
+              {
+                id: "h2",
+                name: "Held",
+                kind: "house",
+                stance: "loyal",
+                influence: 10,
+                leaderNpcId: "n1",
+              },
+            ],
+          },
+        ],
+      } as unknown as ViewerPayload["world"],
+    });
+    assert.equal(viewerPlayHudStats(p).courtAttentionCount, 3);
   });
 });

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formatOdMeter } from "../state/playerUiTerms";
 import type { Faction, Planet, StarSystem } from "../state/types";
 import {
   Users,
@@ -77,7 +78,7 @@ type Props = {
   onDrillPlanet: (id: string) => void;
   onArmBelt: () => void;
   onQuickMine: () => void;
-  onOpenProduce: () => void;
+  onOpenProduce: (tab: "ships" | "units") => void;
   onRenameSystem?: (name: string) => void;
   onRenamePlanet?: (planetId: string, name: string) => void;
 };
@@ -203,7 +204,7 @@ export function SystemDiveDock({
         </button>
         <div className="sys-dive-bento__cell sys-dive-bento__cell--ap">
           <strong>
-            {reservedAp}/{apMax}
+            {formatOdMeter(reservedAp, apMax)}
           </strong>
           <span>
             ОД · мет.{metal} · снаб.{supply}
@@ -232,7 +233,7 @@ export function SystemDiveDock({
             <em>
               {busy
                 ? "Строим…"
-                : "Нажми — mining-станция · или ПКМ на депозите"}
+                : "Нажми — станция добычи · или ПКМ на депозите"}
             </em>
           </span>
           <ChevronRight size={16} />
@@ -289,19 +290,14 @@ export function SystemDiveDock({
             const mined = mine.status !== "none";
             const label = mapResourceNames?.[id] ?? id.replace(/^map\./, "");
             return (
-              <button
+              <span
                 key={id}
-                type="button"
                 className={`sys-dive-res-pill${mined ? " is-mined" : " is-idle"}`}
                 title={
                   mined
                     ? `${label} · добывается`
-                    : `${label} · нет добычи · клик → mining`
+                    : `${label} · нет добычи`
                 }
-                onClick={() => {
-                  if (!mined && canBuildBelt) onQuickMine();
-                  else onArmBelt();
-                }}
               >
                 <ResourceIcon resourceId={id} size={14} />
                 <span className="sys-dive-res-pill__mark" aria-hidden>
@@ -318,7 +314,7 @@ export function SystemDiveDock({
                     <CircleOff size={11} className="sys-mine-ico--idle" />
                   )}
                 </span>
-              </button>
+              </span>
             );
           })}
         </div>
@@ -338,7 +334,7 @@ export function SystemDiveDock({
           <button
             type="button"
             className="sys-dive-action"
-            onClick={onOpenProduce}
+            onClick={() => onOpenProduce("ships")}
           >
             <Rocket size={14} />
             Верфь
@@ -346,7 +342,7 @@ export function SystemDiveDock({
           <button
             type="button"
             className="sys-dive-action"
-            onClick={onOpenProduce}
+            onClick={() => onOpenProduce("units")}
           >
             <Swords size={14} />
             Войска
@@ -421,13 +417,14 @@ export function SystemDiveDock({
                     className="sys-dive-planet__main"
                     role="button"
                     tabIndex={0}
-                    onClick={() => onPreviewPlanet(p.id)}
-                    onDoubleClick={() => onDrillPlanet(p.id)}
+                    onClick={() =>
+                      own ? onDrillPlanet(p.id) : onPreviewPlanet(p.id)
+                    }
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onPreviewPlanet(p.id);
-                      }
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      if (own) onDrillPlanet(p.id);
+                      else onPreviewPlanet(p.id);
                     }}
                     title={`${p.name} · ${HABIT_LABELS[habit]}`}
                   >
@@ -437,11 +434,13 @@ export function SystemDiveDock({
                     <span className="sys-dive-planet__body">
                       <span className="sys-dive-planet__name">
                         {own && onRenamePlanet ? (
-                          <InlineRename
-                            value={p.name}
-                            title="Переименовать планету"
-                            onCommit={(name) => onRenamePlanet(p.id, name)}
-                          />
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <InlineRename
+                              value={p.name}
+                              title="Переименовать планету"
+                              onCommit={(name) => onRenamePlanet(p.id, name)}
+                            />
+                          </span>
                         ) : (
                           p.name
                         )}
@@ -496,6 +495,7 @@ export function SystemDiveDock({
                       type="button"
                       className="sys-dive-planet__act"
                       title="Осмотр"
+                      aria-label={`Осмотр: ${p.name}`}
                       onClick={() => onPreviewPlanet(p.id)}
                     >
                       <Eye size={13} />
@@ -504,6 +504,7 @@ export function SystemDiveDock({
                       type="button"
                       className="sys-dive-planet__act sys-dive-planet__act--primary"
                       title="Управлять"
+                      aria-label={`Управлять: ${p.name}`}
                       onClick={() => onDrillPlanet(p.id)}
                     >
                       <Wrench size={13} />

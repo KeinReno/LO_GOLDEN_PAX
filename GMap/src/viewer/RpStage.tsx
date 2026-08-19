@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ChevronLeft, SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import type { FactionNpc, ViewerPayload } from "../state/types";
+import { playerAuthHeaders, playerJsonBody } from "../state/playerAuth";
 import { BackgroundBeamsLite } from "../ui/BackgroundBeamsLite";
 import { FlipWords } from "../ui/FlipWords";
 import { DiceRoller } from "../ui/DiceRoller";
@@ -9,6 +17,14 @@ import { StatefulButton } from "../ui/StatefulButton";
 import { useMagnetic, useSpotlight } from "../ui/aceternityFx";
 import { ChroniclePanel } from "./ChroniclePanel";
 import { ConfirmModal } from "./shared/ConfirmModal";
+import {
+  buildReplyBody,
+  isAsideVisibility,
+  isRpSendHotkey,
+  parseReplyBody,
+  snippetOf,
+  type ReplyTarget,
+} from "./rpSpeakAs";
 
 type RpPrompt = {
   kind: "choice" | "dice";
@@ -51,15 +67,13 @@ type ChannelPick = {
   episodeId: string;
   readOnly: boolean;
   title?: string;
+  visibility?: string;
 };
 
 type Voice = "ic" | "action" | "context" | "ooc";
 type Persona =
   | { kind: "self" }
-  | { kind: "narrator" }
   | { kind: "npc"; npc: FactionNpc };
-
-type ReplyTarget = { id: string; author: string; snippet: string };
 
 type Gesture = {
   id: string;
@@ -158,6 +172,9 @@ const LINE_REACTS: { id: string; label: string; body: (a: string) => string }[] 
     },
   ];
 
+/** Initial rendered scrollback window — bounds animated-line cost on long scenes. */
+const RENDER_CAP = 60;
+
 const DICE = [4, 6, 8, 10, 12, 20] as const;
 const DICE_MACROS = [
   { id: "d20", label: "d20", count: 1, sides: 20 },
@@ -221,21 +238,6 @@ function fmtTime(iso: string): string {
   } catch {
     return "";
   }
-}
-
-function snippetOf(body: string, n = 72): string {
-  const one = body.replace(/\s+/g, " ").trim();
-  return one.length > n ? `${one.slice(0, n - 1)}…` : one;
-}
-
-function parseReplyBody(body: string): { quote: string | null; text: string } {
-  const m = body.match(/^»\s*(.+)\n\n([\s\S]*)$/);
-  if (!m) return { quote: null, text: body };
-  return { quote: m[1], text: m[2] };
-}
-
-function buildReplyBody(reply: ReplyTarget, text: string): string {
-  return `» ${reply.author} — «${reply.snippet}»\n\n${text.trim()}`;
 }
 
 /** Tap inserts; double-click / long-press (~400ms) sends immediately. */
@@ -340,13 +342,13 @@ export function RpStage({
     [fac?.npcs],
   );
 
-  const headers = useMemo(
-    (): Record<string, string> => ({
+  const headers = useMemo((): Record<string, string> => {
+    const h = playerAuthHeaders({
       "X-Faction-Id": payload.factionId,
-      "X-Faction-Password": password,
-    }),
-    [payload.factionId, password],
-  );
+    });
+    if (password) h["X-Faction-Password"] = password;
+    return h;
+  }, [payload.factionId, password]);
 
   const [channel, setChannel] = useState<ChannelPick | null>(null);
   const [bootDone, setBootDone] = useState(false);
@@ -372,6 +374,11 @@ export function RpStage({
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
+  const [newBelowCount, setNewBelowCount] = useState(0);
+  const [renderLimit, setRenderLimit] = useState(RENDER_CAP);
+  const olderScrollFix = useRef<{ el: HTMLDivElement; prevHeight: number } | null>(
+    null,
+  );
   const [pin, setPin] = useState<ScenePin>(null);
   const [whisper, setWhisper] = useState(false);
   const [tone, setTone] = useState("");
@@ -388,6 +395,7 @@ export function RpStage({
     intent?: { defId: string; note?: string };
   } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [desktopToolsCollapsed, setDesktopToolsCollapsed] = useState(false);
   const seenIds = useRef<Set<string>>(new Set());
   const firstLoad = useRef(true);
 
@@ -409,6 +417,7 @@ export function RpStage({
             title?: string;
             status?: string;
             kind?: string;
+            visibility?: string;
           }[];
         }[];
       };
@@ -422,6 +431,7 @@ export function RpStage({
             status: e.status,
             kind: e.kind,
             title: e.title,
+            visibility: e.visibility,
           })),
         ) ?? [];
       if (!chapterId || !episodeId) {
@@ -440,6 +450,7 @@ export function RpStage({
           episodeId,
           readOnly: ep?.status === "closed",
           title: ep?.title || `RP · ${factionName}`,
+          visibility: ep?.visibility,
         });
       } else {
         setChannel(null);
@@ -467,6 +478,7 @@ export function RpStage({
       const data = (await res.json()) as {
         messages?: RpMessage[];
         pin?: ScenePin;
+        visibility?: string;
       };
       const msgs = data.messages || [];
       if (firstLoad.current) {
@@ -478,10 +490,20 @@ export function RpStage({
           setFreshIds(new Set(neu.map((m) => m.id)));
           for (const m of neu) seenIds.current.add(m.id);
           window.setTimeout(() => setFreshIds(new Set()), 1600);
+          if (!stickBottom.current) {
+            setNewBelowCount((n) => n + neu.length);
+          }
         }
       }
       setMessages(msgs);
       setPin(data.pin || null);
+      if (data.visibility) {
+        setChannel((c) =>
+          c && c.visibility !== data.visibility
+            ? { ...c, visibility: data.visibility }
+            : c,
+        );
+      }
       const sys = [...msgs].reverse().find((m) => m.type === "system");
       if (sys?.body) {
         const rollMatch = sys.body.match(/(\d+d\d+):\s*([^=\n]+(?:=\d+)?)/i);
@@ -500,6 +522,8 @@ export function RpStage({
   useEffect(() => {
     firstLoad.current = true;
     seenIds.current = new Set();
+    setRenderLimit(RENDER_CAP);
+    setNewBelowCount(0);
     void loadMessages();
   }, [loadMessages]);
 
@@ -514,6 +538,19 @@ export function RpStage({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  useLayoutEffect(() => {
+    const fix = olderScrollFix.current;
+    if (!fix) return;
+    olderScrollFix.current = null;
+    fix.el.scrollTop += fix.el.scrollHeight - fix.prevHeight;
+  }, [renderLimit]);
+
+  const showOlderMessages = () => {
+    const el = listRef.current;
+    if (el) olderScrollFix.current = { el, prevHeight: el.scrollHeight };
+    setRenderLimit((n) => n + RENDER_CAP);
+  };
+
   useEffect(() => {
     setPhIndex(0);
     const list = PLACEHOLDERS[voice];
@@ -526,11 +563,7 @@ export function RpStage({
   }, [voice]);
 
   const personaLabel =
-    persona.kind === "narrator"
-      ? "Рассказчик"
-      : persona.kind === "npc"
-        ? persona.npc.name
-        : factionName;
+    persona.kind === "npc" ? persona.npc.name : factionName;
 
   const pack =
     GESTURE_PACKS.find((p) => p.id === gesturePack) || GESTURE_PACKS[0];
@@ -568,12 +601,7 @@ export function RpStage({
         body: text,
         factionId: payload.factionId,
         password,
-        persona:
-          persona.kind === "npc"
-            ? "npc"
-            : persona.kind === "narrator"
-              ? "narrator"
-              : "self",
+        persona: persona.kind === "npc" ? "npc" : "self",
         tone: (opts?.tone ?? tone) || undefined,
         visibility: useWhisper ? "whisper" : undefined,
       };
@@ -591,13 +619,14 @@ export function RpStage({
       }
       const res = await fetch("/api/rp/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadBody),
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify(playerJsonBody(payloadBody)),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       if (!opts?.text) setBody("");
       if (opts?.clearReply !== false) setReplyTo(null);
+      setWhisper(false);
       if (data.intent && !data.intent.ok) {
         onMsg?.(`Реплика ушла, приказ: ${data.intent.error}`);
       }
@@ -634,7 +663,8 @@ export function RpStage({
       const res = await fetch("/api/rp/prompt/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({
+        body: JSON.stringify(
+          playerJsonBody({
           chapterId: channel.chapterId,
           episodeId: channel.episodeId,
           messageId,
@@ -643,7 +673,8 @@ export function RpStage({
           factionId: payload.factionId,
           password,
           authorName: personaLabel,
-        }),
+          }),
+        ),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
@@ -686,7 +717,8 @@ export function RpStage({
       const res = await fetch("/api/rp/dice", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({
+        body: JSON.stringify(
+          playerJsonBody({
           chapterId: channel.chapterId,
           episodeId: channel.episodeId,
           count,
@@ -694,7 +726,8 @@ export function RpStage({
           authorName: personaLabel,
           factionId: payload.factionId,
           password,
-        }),
+          }),
+        ),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
@@ -779,6 +812,7 @@ export function RpStage({
           episodeId,
           readOnly,
           title: ep?.title || "Сцена",
+          visibility: (ep as { visibility?: string } | undefined)?.visibility,
         });
       } catch {
         /* ignore */
@@ -791,13 +825,24 @@ export function RpStage({
 
   const visibleMessages = messages.filter((m) => {
     if (feedFilter === "rolls") {
-      return m.type === "system" || m.prompt?.kind === "dice";
+      return m.prompt?.kind === "dice" || (m.type === "system" && m.authorName === "Кубик");
     }
     if (feedFilter === "scene") {
-      return m.type !== "ooc" && m.visibility !== "whisper";
+      return (
+        m.type !== "ooc" &&
+        !isAsideVisibility(m.visibility, channel?.visibility)
+      );
     }
     return true;
   });
+
+  const olderCount = Math.max(0, visibleMessages.length - renderLimit);
+  const renderedMessages =
+    olderCount > 0 ? visibleMessages.slice(olderCount) : visibleMessages;
+
+  const openPromptMsg = messages.find(
+    (m) => m.type === "prompt" && m.prompt?.status === "open",
+  );
 
   if (!bootDone) {
     return (
@@ -862,6 +907,26 @@ export function RpStage({
           </div>
         </div>
         <div className="rp-stage__notch-actions">
+          {!compact && !channel.readOnly && (
+            <button
+              type="button"
+              className={`rp-stage__icon-btn ${!desktopToolsCollapsed ? "on" : ""}`}
+              title={
+                desktopToolsCollapsed
+                  ? "Показать панель ввода"
+                  : "Свернуть панель ввода"
+              }
+              aria-label={
+                desktopToolsCollapsed
+                  ? "Показать панель ввода"
+                  : "Свернуть панель ввода"
+              }
+              aria-expanded={!desktopToolsCollapsed}
+              onClick={() => setDesktopToolsCollapsed((v) => !v)}
+            >
+              <SlidersHorizontal size={16} aria-hidden />
+            </button>
+          )}
           {!channel.readOnly &&
             !compact &&
             DICE_MACROS.map((m) => (
@@ -870,6 +935,7 @@ export function RpStage({
                 type="button"
                 className="rp-stage__icon-btn rp-stage__icon-btn--macro"
                 title={`Бросить ${m.label}`}
+                aria-label={`Бросить ${m.label}`}
                 disabled={busy}
                 onClick={() => void rollDice({ count: m.count, sides: m.sides })}
               >
@@ -880,18 +946,22 @@ export function RpStage({
             type="button"
             className={`rp-stage__icon-btn ${diceOpen ? "on" : ""}`}
             title="Кубики"
+            aria-label="Кубики"
+            aria-pressed={diceOpen}
             disabled={channel.readOnly}
             onClick={() => {
               setDiceOpen((v) => !v);
               setScenesOpen(false);
             }}
           >
-            ···
+            d6
           </button>
           <button
             type="button"
             className={`rp-stage__icon-btn ${scenesOpen ? "on" : ""}`}
             title="Сцены"
+            aria-label="Сцены"
+            aria-pressed={scenesOpen}
             onClick={() => {
               setScenesOpen((v) => !v);
               setDiceOpen(false);
@@ -984,6 +1054,20 @@ export function RpStage({
             {label}
           </button>
         ))}
+        {openPromptMsg && (
+          <button
+            type="button"
+            className="rp-stage__prompt-jump"
+            title="Перейти к открытому промпту"
+            onClick={() =>
+              document
+                .getElementById(`rp-line-${openPromptMsg.id}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "center" })
+            }
+          >
+            Есть промпт ↑
+          </button>
+        )}
       </div>
 
       <div
@@ -992,8 +1076,9 @@ export function RpStage({
         onScroll={() => {
           const el = listRef.current;
           if (!el) return;
-          stickBottom.current =
-            el.scrollHeight - el.scrollTop - el.clientHeight < 56;
+          const stuck = el.scrollHeight - el.scrollTop - el.clientHeight < 56;
+          stickBottom.current = stuck;
+          if (stuck) setNewBelowCount(0);
         }}
       >
         {visibleMessages.length === 0 && (
@@ -1002,21 +1087,34 @@ export function RpStage({
             <p className="hint">Начните речью, действием — или ответьте жестом.</p>
           </div>
         )}
+        {olderCount > 0 && (
+          <button
+            type="button"
+            className="rp-stage__load-older"
+            onClick={showOlderMessages}
+          >
+            Показать более раннее ({olderCount})
+          </button>
+        )}
         <AnimatePresence initial={false}>
-          {visibleMessages.map((m) => {
+          {renderedMessages.map((m) => {
             const parsed = parseReplyBody(m.body);
             const fresh = freshIds.has(m.id);
             const open = activeLineId === m.id;
             const isPrompt = m.type === "prompt";
+            const canReply = m.type !== "system" && !isPrompt;
             return (
               <motion.article
                 key={m.id}
+                id={`rp-line-${m.id}`}
                 className={[
                   "rp-line",
                   `rp-line--${m.type}`,
                   fresh ? "rp-line--fresh" : "",
                   open ? "rp-line--open" : "",
-                  m.visibility === "whisper" ? "rp-line--whisper" : "",
+                  isAsideVisibility(m.visibility, channel.visibility)
+                    ? "rp-line--whisper"
+                    : "",
                   m.type !== "system" && !isPrompt ? "fx-spotlight" : "",
                 ]
                   .filter(Boolean)
@@ -1025,12 +1123,22 @@ export function RpStage({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.24 }}
                 {...(m.type !== "system" && !isPrompt ? spotlight.bind : {})}
+                title={
+                  canReply && !channel.readOnly
+                    ? "Нажмите — реакции и ответ"
+                    : undefined
+                }
                 onClick={() => {
                   if (m.type === "system" || isPrompt || channel.readOnly)
                     return;
                   setActiveLineId((cur) => (cur === m.id ? null : m.id));
                 }}
               >
+                {canReply && !channel.readOnly && !open && (
+                  <span className="rp-line__reply-hint" aria-hidden>
+                    ↩
+                  </span>
+                )}
                 {m.type !== "system" && (
                   <header className="rp-line__head">
                     <span
@@ -1060,8 +1168,10 @@ export function RpStage({
                     {m.tone && (
                       <span className="rp-line__tone">{m.tone}</span>
                     )}
-                    {m.visibility === "whisper" && (
-                      <span className="rp-line__tone">шёпот → ГМ</span>
+                    {isAsideVisibility(m.visibility, channel.visibility) && (
+                      <span className="rp-line__tone">
+                        {m.visibility === "whisper" ? "шёпот → ГМ" : "шёпот"}
+                      </span>
                     )}
                     <time dateTime={m.at}>{fmtTime(m.at)}</time>
                   </header>
@@ -1203,6 +1313,19 @@ export function RpStage({
           })}
         </AnimatePresence>
         <div ref={bottomRef} />
+        {newBelowCount > 0 && (
+          <button
+            type="button"
+            className="rp-stage__jump-new"
+            onClick={() => {
+              stickBottom.current = true;
+              setNewBelowCount(0);
+              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            Новые сообщения · {newBelowCount > 9 ? "9+" : newBelowCount} ↓
+          </button>
+        )}
       </div>
 
       {!channel.readOnly && (
@@ -1226,6 +1349,8 @@ export function RpStage({
                   type="button"
                   className={`rp-stage__icon-btn ${whisper ? "on" : ""}`}
                   title="Шёпот ГМ"
+                  aria-label="Шёпот только мастеру"
+                  aria-pressed={whisper}
                   onClick={() => setWhisper((v) => !v)}
                 >
                   {whisper ? "Ш" : "·"}
@@ -1246,7 +1371,7 @@ export function RpStage({
             </div>
           ) : null}
 
-          {(!compact || toolsOpen) && (
+          {(compact ? toolsOpen : !desktopToolsCollapsed) && (
             <>
           <div
             className={`rp-stage__cast ${persona.kind !== "self" ? "rp-stage__cast--focus" : ""}`}
@@ -1274,20 +1399,6 @@ export function RpStage({
                 {!crest && initialOf(factionName)}
               </span>
               <span className="rp-cast__name">Я</span>
-            </button>
-            <button
-              type="button"
-              role="option"
-              aria-selected={persona.kind === "narrator"}
-              className={`rp-cast ${persona.kind === "narrator" ? "on" : ""}`}
-              title="Рассказчик"
-              onClick={() => {
-                setPersona({ kind: "narrator" });
-                setVoice("context");
-              }}
-            >
-              <span className="rp-cast__av rp-cast__av--narr">Ⅲ</span>
-              <span className="rp-cast__name">Рассказ</span>
             </button>
             {npcs.slice(0, 8).map((n) => (
               <button
@@ -1415,6 +1526,8 @@ export function RpStage({
               type="button"
               className={`rp-stage__whisper ${whisper ? "on" : ""}`}
               title="Только мастеру"
+              aria-pressed={whisper}
+              aria-label={whisper ? "Шёпот только мастеру, включён" : "Шёпот только мастеру"}
               onClick={() => setWhisper((v) => !v)}
             >
               {whisper ? "Шёпот → ГМ" : "Шёпот"}
@@ -1493,7 +1606,7 @@ export function RpStage({
                   );
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  if (isRpSendHotkey(e)) {
                     e.preventDefault();
                     void post();
                   }
@@ -1520,7 +1633,8 @@ export function RpStage({
           </div>
           {!compact && (
             <p className="rp-stage__hint">
-              Ctrl+Enter · клик по реплике — жесты ответа · {personaLabel} ·{" "}
+              Enter шлёт · Shift+Enter новая строка · клик по реплике — ответ ·{" "}
+              {personaLabel} ·{" "}
               {VOICES.find((v) => v.id === voice)?.label}
               {tone ? ` · ${tone}` : ""}
               {whisper ? " · только мастеру" : ""}

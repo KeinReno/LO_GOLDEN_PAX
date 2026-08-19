@@ -127,7 +127,10 @@
         },
         "name": "Громоносец · элита"
       }
-    }
+    },
+    "requireProperties": [
+      "dreadnought_keel"
+    ]
   },
   "ship.swarm_brood": {
     "id": "ship.swarm_brood",
@@ -230,7 +233,10 @@
         },
         "name": "Роевая масса · элита"
       }
-    }
+    },
+    "requireProperties": [
+      "frigate_keel"
+    ]
   },
   "ship.advent_cruiser": {
     "id": "ship.advent_cruiser",
@@ -360,6 +366,9 @@
         },
         "name": "Звёздный Адвент · элита"
       }
-    }
+    },
+    "requireProperties": [
+      "cruiser_ribs"
+    ]
   }
 }

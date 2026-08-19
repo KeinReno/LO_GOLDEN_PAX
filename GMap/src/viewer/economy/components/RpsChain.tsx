@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTouchDrag } from "../../shared/useTouchDrag";
 import {
   ECO_CATEGORY_COLORS,
@@ -17,7 +17,6 @@ type Props = {
 };
 
 export function RpsChain({
-  flowData,
   activeEdge,
   previewEdge,
   onSetPriority,
@@ -26,21 +25,6 @@ export function RpsChain({
   const [dragFrom, setDragFrom] = useState<string | null>(null);
   const [hoverTo, setHoverTo] = useState<string | null>(null);
   const [pickedEdge, setPickedEdge] = useState<string | null>(null);
-
-  const volumes = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (let i = 0; i < RPS_CHAIN.length; i++) {
-      const from = RPS_CHAIN[i]!;
-      const to = RPS_CHAIN[(i + 1) % RPS_CHAIN.length]!;
-      const rateFrom = flowData?.totals?.[from]?.rate ?? 0;
-      const rateTo = flowData?.totals?.[to]?.rate ?? 0;
-      const flow = Math.min(rateFrom, rateTo);
-      out[edgeKey(from, to)] = Math.max(0, flow);
-    }
-    return out;
-  }, [flowData]);
-
-  const maxVol = Math.max(1, ...Object.values(volumes));
 
   const bindCat = useTouchDrag(
     ({ args, first, last, xy: [x, y] }) => {
@@ -83,15 +67,14 @@ export function RpsChain({
       <header className="eco-chart-block__head">
         <h4>Цикл производства</h4>
         <span className="hint">
-          перетащите категорию на соседнюю — приоритет · клик — превью
+          перетащите на соседнюю — приоритет · клик только подсветит, не применит
         </span>
       </header>
       <div className="eco-rps__chain">
         {RPS_CHAIN.map((letter, i) => {
           const next = RPS_CHAIN[(i + 1) % RPS_CHAIN.length]!;
           const edge = edgeKey(letter, next);
-          const vol = volumes[edge] ?? 0;
-          const thickness = 2 + Math.round((vol / maxVol) * 10);
+          const thickness = 4;
           const isActive = activeEdge === edge;
           const isPreview = preview === edge;
           return (
@@ -125,7 +108,7 @@ export function RpsChain({
                   height: thickness,
                   ["--eco-rps-color" as string]: ECO_CATEGORY_COLORS[letter],
                 }}
-                title={`${letter}→${next}: ~${Math.round(vol)}/ход · клик — превью`}
+                title={`${letter}→${next} · клик — превью, перетащите буквы — приоритет`}
                 onClick={() => pickEdge(letter, next)}
               >
                 <span className="eco-rps__arrow-cap" aria-hidden>

@@ -23,7 +23,7 @@ export function stripLoginQuery(href: string): string {
 }
 
 export function missingLoginCredsMsg(): string {
-  return "Выберите державу и введите код";
+  return "Выберите кампанию и введите ключ доступа";
 }
 
 export function formatFactionsLoadError(msg: string): string {

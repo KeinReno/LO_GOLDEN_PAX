@@ -5,6 +5,8 @@ import {
   playEngagementCard,
 } from "../engagements.mjs";
 import { getContent } from "../contentLoader.mjs";
+import { pushSystemHistory } from "../planetActions.mjs";
+import { applyMoveFleet, applyMoveLegion } from "./movement.mjs";
 
 export function applyClaim(world, intent, journal) {
   const toId = intent.payload?.toSystemId;

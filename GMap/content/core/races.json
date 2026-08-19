@@ -1544,5 +1544,215 @@
     },
     "kind": "race",
     "origin": "Строители межзвёздных коридоров Дамиля; хранители врат"
+  },
+  "race_bistier": {
+    "id": "race_bistier",
+    "name": "Бистиер",
+    "kind": "fork",
+    "origin": "Живой стол: раса Бистиер (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "bistier"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_corinfad": {
+    "id": "race_corinfad",
+    "name": "Коринфад",
+    "kind": "fork",
+    "origin": "Живой стол: раса Коринфад (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "corinfad"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_elacrin": {
+    "id": "race_elacrin",
+    "name": "Элакрин",
+    "kind": "fork",
+    "origin": "Живой стол: раса Элакрин (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "elacrin"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_eladon": {
+    "id": "race_eladon",
+    "name": "Эладон",
+    "kind": "fork",
+    "origin": "Живой стол: раса Эладон (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "eladon"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_elanis": {
+    "id": "race_elanis",
+    "name": "Эланис",
+    "kind": "fork",
+    "origin": "Живой стол: раса Эланис (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "elanis"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_elanor": {
+    "id": "race_elanor",
+    "name": "Эланор",
+    "kind": "fork",
+    "origin": "Живой стол: раса Эланор (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "elanor"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_elatris": {
+    "id": "race_elatris",
+    "name": "Элатрис",
+    "kind": "fork",
+    "origin": "Живой стол: раса Элатрис (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "elatris"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_heshah": {
+    "id": "race_heshah",
+    "name": "ХэШах",
+    "kind": "fork",
+    "origin": "Живой стол: раса ХэШах (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "heshah"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_huchi": {
+    "id": "race_huchi",
+    "name": "Хучи",
+    "kind": "fork",
+    "origin": "Живой стол: раса Хучи (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "huchi"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_korvun": {
+    "id": "race_korvun",
+    "name": "Корвун",
+    "kind": "fork",
+    "origin": "Живой стол: раса Корвун (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "korvun"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_lithoid": {
+    "id": "race_lithoid",
+    "name": "Литоид",
+    "kind": "fork",
+    "origin": "Живой стол: раса Литоид (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "lithoid"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_sikuri": {
+    "id": "race_sikuri",
+    "name": "Сикури",
+    "kind": "fork",
+    "origin": "Живой стол: раса Сикури (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "sikuri"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_taala": {
+    "id": "race_taala",
+    "name": "Таала",
+    "kind": "fork",
+    "origin": "Живой стол: раса Таала (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "taala"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_triumvis": {
+    "id": "race_triumvis",
+    "name": "Триумвис",
+    "kind": "fork",
+    "origin": "Живой стол: раса Триумвис (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "triumvis"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
+  },
+  "race_vendir": {
+    "id": "race_vendir",
+    "name": "Вендир",
+    "kind": "fork",
+    "origin": "Живой стол: раса Вендир (AUD-05)",
+    "base": "race_human",
+    "forked_from": "race_human",
+    "tags": [
+      "board",
+      "vendir"
+    ],
+    "override_traits": [],
+    "xenorelations": {}
   }
 }

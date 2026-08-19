@@ -2,13 +2,15 @@ import { useDrag } from "@use-gesture/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Minus, Square, X } from "lucide-react";
-import { RpChat, type RpChatProps } from "./RpChat";
+import { isInputFocused } from "../viewer/hooks/isInputFocused";
 
 type Geom = { x: number; y: number; w: number; h: number };
 
-const DEFAULT_GEOM: Geom = { x: 40, y: 32, w: 980, h: 720 };
+const DEFAULT_GEOM: Geom = { x: 40, y: 108, w: 980, h: 720 };
 const MIN_W = 280;
 const MIN_H = 280;
+/** Above GM `.top-bar` (z-index 400) so close/title stay clickable. */
+const RP_FLOAT_Z = 520;
 
 function clampGeom(g: Geom): Geom {
   const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
@@ -16,7 +18,9 @@ function clampGeom(g: Geom): Geom {
   const w = Math.min(Math.max(g.w, MIN_W), vw - 16);
   const h = Math.min(Math.max(g.h, MIN_H), vh - 16);
   const x = Math.min(Math.max(g.x, 0), Math.max(0, vw - w));
-  const y = Math.min(Math.max(g.y, 0), Math.max(0, vh - 40));
+  /** Keep the title/close row below the glued GM top-bar (~53px). */
+  const yMin = 56;
+  const y = Math.min(Math.max(g.y, yMin), Math.max(yMin, vh - 40));
   return { x, y, w, h };
 }
 
@@ -38,7 +42,7 @@ function writeGeom(key: string, g: Geom): void {
   }
 }
 
-export type FloatingRpWindowProps = RpChatProps & {
+export type FloatingRpWindowProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
@@ -46,7 +50,7 @@ export type FloatingRpWindowProps = RpChatProps & {
   storageKey?: string;
   unread?: number;
   zIndex?: number;
-  /** Replace default RpChat body (e.g. CourtPanel). */
+  /** RP chat body (RpGmDesk for the GM, RpStage/ChronicleRoom for players). */
   children?: ReactNode;
 };
 
@@ -57,9 +61,8 @@ export function FloatingRpWindow({
   title = "Сцена · мастер",
   storageKey = "gmap-rp-float-geom",
   unread = 0,
-  zIndex = 220,
+  zIndex = RP_FLOAT_Z,
   children,
-  ...chatProps
 }: FloatingRpWindowProps) {
   const [geom, setGeom] = useState<Geom>(() => readGeom(storageKey));
   const [minimized, setMinimized] = useState(false);
@@ -74,7 +77,16 @@ export function FloatingRpWindow({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onOpenChange(false);
+      if (e.key !== "Escape") return;
+      if (isInputFocused(e.target)) return;
+      if (
+        document.querySelector(
+          ".ctx-menu, .eco-doctrine-modal, [role='dialog'][aria-modal='true']",
+        )
+      ) {
+        return;
+      }
+      onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -140,9 +152,14 @@ export function FloatingRpWindow({
     >
       <header className="rp-float-title" {...bindMove()}>
         <span className="rp-float-title-text">
-          {title}
+          <span>{title}</span>
           {unread > 0 && !minimized && (
-            <span className="rp-float-unread">{unread > 9 ? "9+" : unread}</span>
+            <span
+              className="rp-float-unread"
+              aria-label={`${unread} непрочитанных`}
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
           )}
         </span>
         <div className="rp-float-actions">
@@ -150,6 +167,7 @@ export function FloatingRpWindow({
             type="button"
             className="rp-float-btn"
             title={minimized ? "Развернуть" : "Свернуть"}
+            aria-label={minimized ? "Развернуть" : "Свернуть"}
             onClick={() => setMinimized((m) => !m)}
           >
             {minimized ? (
@@ -162,6 +180,7 @@ export function FloatingRpWindow({
             type="button"
             className="rp-float-btn"
             title="Закрыть (Esc)"
+            aria-label="Закрыть (Esc)"
             onClick={() => onOpenChange(false)}
           >
             <X size={14} strokeWidth={2} />
@@ -170,9 +189,7 @@ export function FloatingRpWindow({
       </header>
       {!minimized && (
         <>
-          <div className="rp-float-body">
-            {children ?? <RpChat {...chatProps} layout="fill" />}
-          </div>
+          <div className="rp-float-body">{children}</div>
           <div
             className="rp-float-resize"
             title="Потяни за угол"
@@ -203,7 +220,13 @@ export function RpFloatLauncher({
       type="button"
       className={`rp-float-launcher ${open ? "on" : ""}`}
       onClick={onToggle}
-      title="Окно RP-чата"
+      title="Окно RP-чата поверх карты"
+      aria-label={
+        unread > 0 && !open
+          ? `Окно RP-чата, ${unread} непрочитанных`
+          : "Окно RP-чата"
+      }
+      aria-pressed={open}
     >
       {label}
       {unread > 0 && !open && (

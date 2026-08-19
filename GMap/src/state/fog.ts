@@ -204,11 +204,12 @@ export function filterWorldForFaction(
   );
   const playerOrders = world.orders.filter((o) => o.factionId === factionId);
 
-  // Strip passwords from other factions
-  const factions = world.factions.map((f) => ({
-    ...f,
-    password: f.id === factionId ? f.password : "••••",
-  }));
+  const factions = world.factions.map((f) => {
+    const { password: _pw, passwordHash: _ph, gmNotes: _g, ...rest } = f as Faction & {
+      passwordHash?: string;
+    };
+    return { ...rest, password: "" };
+  });
 
   return {
     visibleSystemIds,

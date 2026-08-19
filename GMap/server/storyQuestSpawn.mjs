@@ -106,11 +106,17 @@ export function spawnStoryQuestFromCatalog(catalogId, factionId, opts = {}) {
   world.quests.push(quest);
 
   if (!opts.skipWrite) {
-    writeLiveBoard(world, {
+    const written = writeLiveBoard(world, {
       backup: true,
       reason: "spawn_story_quest",
       alsoDraft: true,
     });
+    return {
+      ok: true,
+      quest,
+      world: opts.returnWorld ? written.world : undefined,
+      tableRevision: written.tableRevision,
+    };
   }
 
   return { ok: true, quest, world: opts.returnWorld ? world : undefined };

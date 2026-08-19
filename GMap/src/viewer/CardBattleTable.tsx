@@ -38,6 +38,11 @@ import { COMBAT_STANCE_LABELS, type CombatStanceId } from "./PlayerEngagementPan
 import { HoldButton } from "./shared/HoldButton";
 import { CombatCardMeta } from "./forces/CombatCardMeta";
 import { SLOT_ROLE_LABELS } from "./forces/constants";
+import {
+  playerAuthHeaders,
+  playerJsonBody,
+  rememberPlayerTokenFromPayload,
+} from "../state/playerAuth";
 
 function CardFace({
   card,
@@ -545,10 +550,10 @@ export function CardBattleTable({
     const tick = async () => {
       try {
         const res = await fetch("/api/engagements", {
-          headers: {
+          headers: playerAuthHeaders({
             "X-Faction-Id": factionId,
-            "X-Faction-Password": password,
-          },
+            ...(password ? { "X-Faction-Password": password } : {}),
+          }),
         });
         if (!res.ok || cancelled) return;
         const data = await res.json();
@@ -714,10 +719,13 @@ export function CardBattleTable({
     try {
       const res = await fetch(`/api/engagements/${engagement.id}/${path}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ factionId, password, ...body }),
+        headers: playerAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(
+          playerJsonBody({ factionId, password, ...body }),
+        ),
       });
       const data = await res.json().catch(() => ({}));
+      rememberPlayerTokenFromPayload(data);
       if (!res.ok) {
         throw new Error(
           (data && (data.error || data.message)) ||

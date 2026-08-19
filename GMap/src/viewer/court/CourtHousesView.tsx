@@ -16,7 +16,9 @@ export function CourtHousesView({
   npcs,
   accent,
   selectedId,
+  targetBlocId,
   onSelectNpc,
+  onVacantPick,
   onDropLeader,
   busy,
 }: {
@@ -24,7 +26,9 @@ export function CourtHousesView({
   npcs: FactionNpc[];
   accent?: string;
   selectedId?: string | null;
+  targetBlocId?: string | null;
   onSelectNpc: (id: string | null) => void;
+  onVacantPick?: (blocId: string) => void;
   onDropLeader: (npcId: string, blocId: string) => void;
   busy?: boolean;
 }) {
@@ -48,7 +52,7 @@ export function CourtHousesView({
   return (
     <section className="court-houses" aria-label="Дома">
       <p className="hint court-houses__lede">
-        Drop лица на дом — назначить главу. Клик по карточке — детали.
+        Клик по дому без главы, затем «Глава» в пуле — или перетащите лицо.
       </p>
       <ul className="court-houses-bento">
         {ranked.map((b, i) => {
@@ -68,6 +72,7 @@ export function CourtHousesView({
               bloc={b}
               index={i}
               vacant={vacant}
+              targeted={targetBlocId === b.id}
               leader={leader}
               members={members}
               open={open}
@@ -78,6 +83,7 @@ export function CourtHousesView({
                 setExpandedId((id) => (id === b.id ? null : b.id))
               }
               onSelectNpc={onSelectNpc}
+              onVacantPick={onVacantPick}
               onDropLeader={onDropLeader}
               acceptCardIds={npcCardIds}
             />
@@ -92,6 +98,7 @@ function HouseCard({
   bloc,
   index,
   vacant,
+  targeted,
   leader,
   members,
   open,
@@ -100,12 +107,14 @@ function HouseCard({
   busy,
   onToggle,
   onSelectNpc,
+  onVacantPick,
   onDropLeader,
   acceptCardIds,
 }: {
   bloc: InternalBloc;
   index: number;
   vacant: boolean;
+  targeted?: boolean;
   leader: FactionNpc | null | undefined;
   members: FactionNpc[];
   open: boolean;
@@ -114,6 +123,7 @@ function HouseCard({
   busy?: boolean;
   onToggle: () => void;
   onSelectNpc: (id: string | null) => void;
+  onVacantPick?: (blocId: string) => void;
   onDropLeader: (npcId: string, blocId: string) => void;
   acceptCardIds: string[];
 }) {
@@ -125,7 +135,7 @@ function HouseCard({
     <motion.li
       className={`court-house-card court-house-card--${bloc.stance}${
         vacant ? " is-vacant" : ""
-      }${open ? " is-open" : ""}`}
+      }${targeted ? " is-target" : ""}${open ? " is-open" : ""}`}
       style={{ ["--house-accent" as string]: color } as CSSProperties}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -152,7 +162,10 @@ function HouseCard({
           <button
             type="button"
             className="court-house-card__hit"
-            onClick={onToggle}
+            onClick={() => {
+              if (vacant) onVacantPick?.(bloc.id);
+              onToggle();
+            }}
             aria-expanded={open}
             disabled={busy}
           >
@@ -201,9 +214,9 @@ function HouseCard({
                 </button>
               </>
             ) : vacant ? (
-              "Drop — назначить главу"
+              "Нет главы · выбрать, затем назначить из пула"
             ) : (
-              "Без обозначенного главы · drop сюда"
+              "Без обозначенного главы"
             )}
             {members.length > 0 ? ` · ${members.length} лиц` : ""}
           </p>

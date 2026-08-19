@@ -13,12 +13,12 @@ import {
   FLEET_STANCE_LABELS,
   LEGION_STATUS_LABELS,
   LINK_TYPE_LABELS,
-  RESOURCE_POOL,
   SHIP_TYPES,
   SYSTEM_ACTIVITY_LABELS,
   SYSTEM_POI_LABELS,
 } from "../state/defaults";
-import { SystemEditor } from "./SystemEditor";
+import { paintTagList, resourcesHas, toggleDeposit } from "../state/depositPaint";
+import { resourceDisplayName } from "../state/economyLabels";
 import { resolvePolityKind } from "../state/territory";
 import { SPACE_OBJECT_TYPES } from "../state/types";
 import { hasSpaceObject } from "../state/spaceObjects";
@@ -27,9 +27,6 @@ import { v4 as uuid } from "uuid";
 export function Inspector() {
   const world = useWorldStore((s) => s.world);
   const selectedSystemId = useWorldStore((s) => s.selectedSystemId);
-  const activeFactionId = useWorldStore((s) => s.activeFactionId);
-  const openPolityEditor = useWorldStore((s) => s.openPolityEditor);
-  const setDiplomacyPanelOpen = useWorldStore((s) => s.setDiplomacyPanelOpen);
   const pendingCapitalFactionId = useWorldStore(
     (s) => s.pendingCapitalFactionId,
   );
@@ -61,21 +58,34 @@ export function Inspector() {
   const hasSelection = !!(system || fleet || legion || link || sector);
 
   return (
-    <aside className="panel panel-right">
-      <header className="inspector-head">
-        <h3>Инспектор</h3>
-        <p className="hint">
+    <aside className="panel panel-right insp">
+      <header className="insp-head">
+        <p className="insp-kicker">На карте</p>
+        <h3>
+          {fleet
+            ? fleet.name
+            : legion
+              ? legion.name
+              : link
+                ? "Связь"
+                : sector
+                  ? sector.name
+                  : system
+                    ? system.name
+                    : "Не выбрано"}
+        </h3>
+        <p className="insp-kind">
           {fleet
             ? "Флот"
             : legion
               ? "Легион"
               : link
-                ? "Сцена"
+                ? "Коридор"
                 : sector
                   ? "Сектор"
                   : system
                     ? "Система"
-                    : "Ничего не выбрано"}
+                    : "Клик по системе / флоту"}
         </p>
       </header>
 
@@ -97,29 +107,16 @@ export function Inspector() {
       )}
 
       {!hasSelection && (
-        <section className="inspector-empty">
-          <p className="hint">
-            Кликните систему, флот, легион, связь или сектор на карте.
+        <section className="insp-empty">
+          <p className="insp-empty-lead">
+            Карточка выбранного объекта, не каталог. Клик по системе, флоту или
+            легиону. F1 — очередь, F2 — казна, F7 — доска квестов. На выбранной
+            системе — «На системе». Дипломатия — меню «Стол…». Конструкторы —
+            «Мастерская».
           </p>
-          <div className="btn-col">
-            <button
-              type="button"
-              className="btn primary block"
-              onClick={() => openPolityEditor(activeFactionId)}
-            >
-              Редактор державы…
-            </button>
-            <button
-              type="button"
-              className="btn ghost block"
-              onClick={() => setDiplomacyPanelOpen(true)}
-            >
-              Дипломатия…
-            </button>
-          </div>
           {world.sectors.length > 0 && (
-            <div className="inspector-sectors-mini">
-              <h4>Секторы</h4>
+            <details className="insp-fold">
+              <summary>Секторы · {world.sectors.length}</summary>
               <div className="faction-list">
                 {world.sectors.map((sec) => (
                   <button
@@ -136,7 +133,7 @@ export function Inspector() {
                   </button>
                 ))}
               </div>
-            </div>
+            </details>
           )}
         </section>
       )}
@@ -164,7 +161,7 @@ export function Inspector() {
           deleteLink={deleteLink}
         />
       ) : sector ? (
-        <section>
+    <section className="insp-sheet">
           <h3>Сектор</h3>
           <label className="field">
             <span>Название</span>
@@ -227,7 +224,7 @@ function FleetPanel({
 }) {
   const fleetComposition = fleet.composition ?? [];
   return (
-    <section>
+    <section className="insp-sheet">
       <h3>Флот</h3>
       <label className="field">
         <span>Название</span>
@@ -352,7 +349,7 @@ function LegionPanel({
   deleteLegion: (id: string) => void;
 }) {
   return (
-    <section>
+    <section className="insp-sheet">
       <h3>Легион</h3>
       <label className="field">
         <span>Название</span>
@@ -426,7 +423,7 @@ function LinkPanel({
   deleteLink: (id: string) => void;
 }) {
   return (
-    <section>
+    <section className="insp-sheet">
       <h3>Гиперлинк</h3>
       <p className="hint">
         {world.systems.find((s) => s.id === link.fromId)?.name ?? "?"} ↔{" "}
@@ -522,19 +519,22 @@ function SystemCard({
   const selectedSystemIds = useWorldStore((s) => s.selectedSystemIds);
   const updateSelectedSystem = useWorldStore((s) => s.updateSelectedSystem);
   const openPolityEditor = useWorldStore((s) => s.openPolityEditor);
+  const setGmShellMode = useWorldStore((s) => s.setGmShellMode);
   const upsertQuest = useWorldStore((s) => s.upsertQuest);
   const setOpenQuestId = useWorldStore((s) => s.setOpenQuestId);
   const addCaravan = useWorldStore((s) => s.addCaravan);
+  const setGmLiveDomain = useWorldStore((s) => s.setGmLiveDomain);
   const [advanced, setAdvanced] = useState(false);
   const owner = world.factions.find((f) => f.id === system.ownerFactionId);
   const quests = (world.quests ?? []).filter((q) => q.systemId === system.id);
+  const caravansHere = (world.caravans ?? []).filter(
+    (c) => c.fromSystemId === system.id || c.toSystemId === system.id,
+  );
+  const localCount = quests.length + caravansHere.length;
+  const planetCount = system.planets?.length ?? 0;
 
   return (
-    <section className="system-card">
-      <h3>
-        {system.isCapital ? "★ " : ""}
-        {system.name}
-      </h3>
+    <section className="insp-sheet">
       <label className="field">
         <span>Название</span>
         <input
@@ -577,20 +577,33 @@ function SystemCard({
         <button
           type="button"
           className="btn ghost block"
-          onClick={() => openPolityEditor(owner.id)}
+          onClick={() => {
+            openPolityEditor(owner.id);
+            setGmShellMode("polities");
+          }}
         >
           Держава · {owner.name}
         </button>
       )}
-      {selectedSystemIds.length > 1 && (
-        <p className="hint">
-          Выделено систем: {selectedSystemIds.length} · правки ниже — для
-          активной; метки космоса — через инструменты слева
-        </p>
-      )}
+      <div className="insp-chips">
+        {system.isCapital && <span className="insp-chip">Столица</span>}
+        {system.contested && <span className="insp-chip">Спор</span>}
+        {system.blockaded && <span className="insp-chip">Блокада</span>}
+        <span className="insp-chip">{planetCount} планет</span>
+        {selectedSystemIds.length > 1 && (
+          <span className="insp-chip">{selectedSystemIds.length} выделено</span>
+        )}
+      </div>
+      <div className="insp-actions">
+        <button type="button" className="btn primary block" onClick={onOpenDossier}>
+          Планеты и постройки
+        </button>
+      </div>
 
-      <div className="block-title">Космос (можно несколько)</div>
-      <div className="tag-row space-obj-tags">
+      <details className="insp-fold">
+        <summary>Метки карты</summary>
+        <div className="block-title">Космос</div>
+        <div className="tag-row space-obj-tags">
         {SPACE_OBJECT_TYPES.map((tag) => {
           const on = hasSpaceObject(system, tag);
           return (
@@ -613,35 +626,30 @@ function SystemCard({
         })}
       </div>
 
-      <div className="block-title">Ресурсы системы</div>
-      <div className="tag-row">
-        {RESOURCE_POOL.map((r) => {
-          const on = (system.resources ?? []).includes(r);
+        <div className="block-title">Ресурсы</div>
+        <div className="tag-row">
+          {paintTagList(system.resources).map((r) => {
+          const on = resourcesHas(system.resources, r);
           return (
             <button
               key={r}
               type="button"
               className={on ? "tag on" : "tag"}
-              onClick={() => {
-                const cur = system.resources ?? [];
+              onClick={() =>
                 updateSelectedSystem({
-                  resources: on
-                    ? cur.filter((x) => x !== r)
-                    : [...cur, r],
-                });
-              }}
+                  resources: toggleDeposit(system.resources, r),
+                })
+              }
             >
-              {r}
+              {resourceDisplayName(r)}
             </button>
           );
         })}
       </div>
-      <p className="hint">
-        Планет: {system.planets?.length ?? 0}. На планеты — инструмент «Ресурсы»
-        слева или карточка планеты.
-      </p>
+      </details>
 
-      <div className="block-title">Владение / спор</div>
+      <details className="insp-fold">
+        <summary>Владение</summary>
       <label className="check">
         <input
           type="checkbox"
@@ -653,7 +661,7 @@ function SystemCard({
         Спорная система
       </label>
       <label className="field">
-        <span>Совладелец (кондоминиум)</span>
+        <span>Совладелец</span>
         <select
           value={(system.coOwnerFactionIds ?? [])[0] ?? ""}
           onChange={(e) =>
@@ -672,20 +680,6 @@ function SystemCard({
             ))}
         </select>
       </label>
-      {(system.coOwnerFactionIds?.length ?? 0) > 0 && (
-        <p className="hint">
-          Совладельцы:{" "}
-          {(system.coOwnerFactionIds ?? [])
-            .map(
-              (id) => world.factions.find((f) => f.id === id)?.name ?? id,
-            )
-            .join(", ")}
-        </p>
-      )}
-      <p className="hint">
-        Инструменты слева: «Совладелец» / «Спорная» — кистью по карте.
-      </p>
-
       <label className="check">
         <input
           type="checkbox"
@@ -696,21 +690,33 @@ function SystemCard({
         />
         Столица
       </label>
+      </details>
 
-      <div className="btn-col">
-        <button type="button" className="btn primary block" onClick={onOpenDossier}>
-          Открыть систему → планеты
-        </button>
-        <button
-          type="button"
-          className="btn ghost block"
-          onClick={() => setAdvanced((v) => !v)}
-        >
-          {advanced ? "Скрыть доп. поля" : "Ещё… ситуация, квесты, караваны"}
-        </button>
-      </div>
+      <button
+        type="button"
+        className="btn ghost block"
+        aria-expanded={advanced}
+        onClick={() => setAdvanced((v) => !v)}
+      >
+        {advanced
+          ? "Свернуть локальное"
+          : localCount > 0
+            ? `На системе · ${localCount}`
+            : "На системе"}
+      </button>
       {advanced && (
-        <div className="system-card-advanced">
+        <div className="insp-fold insp-fold--open">
+          <p className="hint">
+            Ситуация, квесты и караваны этой системы. Вся доска стола — F7
+            Сессия.
+          </p>
+          <button
+            type="button"
+            className="btn ghost block"
+            onClick={() => setGmLiveDomain("quests")}
+          >
+            Доска квестов · F7
+          </button>
           <label className="field">
             <span>Ситуация</span>
             <select
@@ -756,8 +762,11 @@ function SystemCard({
               setOpenQuestId(id);
             }}
           >
-            + Квест здесь
+            + Квест на систему
           </button>
+          {quests.length === 0 && (
+            <p className="hint">Нет квестов, привязанных к этой системе.</p>
+          )}
           {quests.map((q) => (
             <button
               key={q.id}
@@ -768,6 +777,20 @@ function SystemCard({
               ◇ {q.name}
             </button>
           ))}
+          {caravansHere.length > 0 && (
+            <p className="hint">
+              Караваны:{" "}
+              {caravansHere
+                .map((c) => {
+                  const otherId =
+                    c.fromSystemId === system.id ? c.toSystemId : c.fromSystemId;
+                  const other =
+                    world.systems.find((s) => s.id === otherId)?.name ?? otherId;
+                  return `${c.name} → ${other}`;
+                })
+                .join("; ")}
+            </p>
+          )}
           <button
             type="button"
             className="btn ghost block"
@@ -775,6 +798,13 @@ function SystemCard({
               const others = world.systems.filter((s) => s.id !== system.id);
               const to = others[Math.floor(Math.random() * others.length)];
               if (!to) return;
+              if (
+                !confirm(
+                  `Караван из «${system.name}» в «${to.name}»? Цель случайная.`,
+                )
+              ) {
+                return;
+              }
               addCaravan({
                 name: `Караван ${system.name.slice(0, 8)}`,
                 fromSystemId: system.id,
@@ -786,7 +816,6 @@ function SystemCard({
           >
             + Караван отсюда
           </button>
-          <SystemEditor system={system} />
         </div>
       )}
     </section>

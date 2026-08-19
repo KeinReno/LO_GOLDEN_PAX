@@ -16,23 +16,34 @@ import {
   classifyPlanet,
   HABIT_LABELS,
   isCorridorSystem,
-  planetsByOrbit,
 } from "../state/planets";
 import {
   CLIMATE_LABELS,
   COLONY_TYPE_LABELS,
+  canonicalColonyType,
+  colonyTypeLabel,
   PLANET_BUILDING_KIND_LABELS,
   PLANET_TYPE_LABELS,
-  RESOURCE_POOL,
   SYSTEM_ACTIVITY_LABELS,
   SYSTEM_POI_LABELS,
+  STATION_KIND_LABELS,
 } from "../state/defaults";
+import { paintTagList, resourcesHas, toggleDeposit } from "../state/depositPaint";
+import { getCachedContent } from "../state/contentCatalog";
+import {
+  defaultGmCatalogBuilding,
+  gmBuildingOptionLabel,
+  listGmCatalogBuildings,
+  patchFromCatalogDef,
+} from "../state/gmCatalogBuildings";
+import { resourceDisplayName } from "../state/economyLabels";
 import { buildingZoneLabel } from "../state/displayLabels";
 import {
   SystemSchematic,
   type SchematicContextEvent,
   type SchematicFeature,
 } from "./SystemSchematic";
+import { GmPlanetStage } from "./GmPlanetStage";
 import { SystemEditor } from "./SystemEditor";
 import { v4 as uuid } from "uuid";
 import {
@@ -57,8 +68,9 @@ import {
 import { planetContributionChips } from "../viewer/planetContributions";
 import { ActionRing, type ActionRingItem } from "../ui/ActionRing";
 import type { TechEcoSlice } from "../state/techGate";
-import { Pickaxe, Eye, Wrench, Trash2, Rocket } from "lucide-react";
+import { Pickaxe, Eye, Wrench, Trash2, Rocket, Flag, Plus } from "lucide-react";
 import { PlanetRevoltReadout } from "../viewer/PlanetRevoltReadout";
+import { isInputFocused } from "../viewer/hooks/isInputFocused";
 
 /** Override galaxy/system/planet navigation (player map layer vs GM dossier). */
 export type SystemViewNav = {
@@ -122,6 +134,7 @@ export type PlayerSystemManageProps = {
   /** Target fleet/legion when producing from Forces deck. */
   produceFleetId?: string | null;
   produceLegionId?: string | null;
+  onSetProduceTab?: (tab: "ships" | "units") => void;
 };
 
 /** Full drill-down: Galaxy → System schematic → Planet card. */
@@ -156,8 +169,10 @@ export function SystemView({
   const openSystemView = useWorldStore((s) => s.openSystemView);
   const closeSystemView = useWorldStore((s) => s.closeSystemView);
   const updatePlanet = useWorldStore((s) => s.updatePlanet);
+  const updateSelectedSystem = useWorldStore((s) => s.updateSelectedSystem);
   const addPlanet = useWorldStore((s) => s.addPlanet);
   const removePlanet = useWorldStore((s) => s.removePlanet);
+  const activeFactionId = useWorldStore((s) => s.activeFactionId);
   const tool = useWorldStore((s) => s.tool);
   const activeResource = useWorldStore((s) => s.activeResource);
   const paintResourceOnSystem = useWorldStore((s) => s.paintResourceOnSystem);
@@ -169,8 +184,6 @@ export function SystemView({
   const paintingOwner = !readOnly && tool === "paint_faction";
   const paintingCo = !readOnly && tool === "paint_coowner";
   const paintingContest = !readOnly && tool === "mark_contested";
-  const paintingClaim =
-    paintingRes || paintingOwner || paintingCo || paintingContest;
 
   const applyPlanetTool = (planetId: string) => {
     if (paintingRes) {
@@ -208,7 +221,6 @@ export function SystemView({
     [system.planets, selectedPlanetId],
   );
 
-  const ordered = planetsByOrbit(system.planets);
   const fleetsHere = world.fleets.filter((f) => f.systemId === system.id);
   const legionsHere = world.legions.filter((l) => l.systemId === system.id);
   const owner = world.factions.find((f) => f.id === system.ownerFactionId);
@@ -242,10 +254,13 @@ export function SystemView({
   }, [system.id, systemManage?.preferDeck]);
 
   const playerDive = !!(readOnly && systemManage);
+  const gmDive = !readOnly;
+  const immersive = playerDive || gmDive;
   const canBuildBelt =
-    playerDive &&
-    !!systemManage &&
-    system.ownerFactionId === systemManage.factionId;
+    gmDive ||
+    (playerDive &&
+      !!systemManage &&
+      system.ownerFactionId === systemManage.factionId);
   const drilledPlanet = planet;
   const previewPlanet = useMemo(
     () =>
@@ -277,6 +292,36 @@ export function SystemView({
     clearPlace();
   };
 
+  useEffect(() => {
+    if (!immersive || drilledPlanet) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (isInputFocused(e.target)) return;
+      if (
+        !placeMode &&
+        !selectedFeature &&
+        !selectedStationId &&
+        !previewPlanetId &&
+        !forceDeck
+      ) {
+        return;
+      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      clearSoft();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [
+    immersive,
+    drilledPlanet,
+    placeMode,
+    selectedFeature,
+    selectedStationId,
+    previewPlanetId,
+    forceDeck,
+  ]);
+
   const commitStation = (kind: StationKind, angle: number) => {
     if (!systemManage) return;
     systemManage.onAction({
@@ -289,6 +334,30 @@ export function SystemView({
     setSelectedFeature(null);
   };
 
+  const commitGmStation = (kind: StationKind, angle?: number | null) => {
+    const factionId = activeFactionId || system.ownerFactionId;
+    updateSelectedSystem({
+      stations: [
+        ...(system.stations ?? []),
+        {
+          id: uuid(),
+          name: STATION_KIND_LABELS[kind] ?? kind,
+          kind,
+          factionId,
+          beltAngle: angle ?? undefined,
+        },
+      ],
+    });
+    clearPlace();
+  };
+
+  const removeGmStation = (stationId: string) => {
+    updateSelectedSystem({
+      stations: (system.stations ?? []).filter((s) => s.id !== stationId),
+    });
+    setSelectedStationId(null);
+  };
+
   const armPlace = (kind?: StationKind | null) => {
     if (drilledPlanet) goSystem(system.id);
     setPreviewPlanetId(null);
@@ -299,9 +368,136 @@ export function SystemView({
   };
 
   const handleSchematicContext = (ev: SchematicContextEvent) => {
-    if (!playerDive || !systemManage) return;
     const items: ActionRingItem[] = [];
     const t = ev.target;
+
+    if (gmDive) {
+      if (t.kind === "planet") {
+        const pl = system.planets.find((p) => p.id === t.planetId);
+        items.push({
+          id: "preview",
+          label: "Осмотр",
+          icon: <Eye size={14} />,
+          onSelect: () => {
+            setPreviewPlanetId(t.planetId);
+            if (drilledPlanet) goSystem(system.id);
+          },
+        });
+        items.push({
+          id: "edit",
+          label: "Править",
+          icon: <Wrench size={14} />,
+          onSelect: () => goPlanet(system.id, t.planetId),
+        });
+        items.push({
+          id: "contest",
+          label: pl?.contested ? "Снять спор" : "Спорная",
+          icon: <Flag size={14} />,
+          onSelect: () => togglePlanetContested(system.id, t.planetId),
+        });
+        if (paintingRes || paintingOwner) {
+          items.push({
+            id: "paint",
+            label: paintingRes ? "Кисть ресурса" : "Кисть владельца",
+            icon: <Pickaxe size={14} />,
+            onSelect: () => {
+              applyPlanetTool(t.planetId);
+            },
+          });
+        }
+        items.push({
+          id: "del-planet",
+          label: "Удалить мир",
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onSelect: () => {
+            removePlanet(t.planetId);
+            setPreviewPlanetId(null);
+            goSystem(system.id);
+          },
+        });
+      } else if (t.kind === "deposit") {
+        items.push({
+          id: "inspect",
+          label: "Осмотр",
+          icon: <Eye size={14} />,
+          onSelect: () => {
+            setSelectedFeature({ kind: "deposit", resourceId: t.resourceId });
+            setPreviewPlanetId(null);
+          },
+        });
+        items.push({
+          id: "mine",
+          label: "Добыча здесь",
+          icon: <Pickaxe size={14} />,
+          onSelect: () => commitGmStation("mining", t.beltAngle),
+        });
+      } else if (t.kind === "station") {
+        items.push({
+          id: "st-select",
+          label: "Выбрать",
+          icon: <Eye size={14} />,
+          onSelect: () => {
+            setSelectedStationId(t.stationId);
+            setPlaceMode(false);
+            setPreviewPlanetId(null);
+          },
+        });
+        items.push({
+          id: "st-del",
+          label: "Удалить станцию",
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onSelect: () => removeGmStation(t.stationId),
+        });
+      } else if (t.kind === "belt") {
+        items.push({
+          id: "belt-mine",
+          label: "Добыча",
+          icon: <Pickaxe size={14} />,
+          onSelect: () => commitGmStation("mining", t.beltAngle),
+        });
+        items.push({
+          id: "belt-sci",
+          label: "Наука",
+          icon: <Plus size={14} />,
+          onSelect: () => commitGmStation("science", t.beltAngle),
+        });
+        items.push({
+          id: "belt-mil",
+          label: "Военная",
+          icon: <Flag size={14} />,
+          onSelect: () => commitGmStation("military", t.beltAngle),
+        });
+        if (!isCorridorSystem(system)) {
+          items.push({
+            id: "add-planet",
+            label: "+ Планета",
+            icon: <Plus size={14} />,
+            onSelect: () => addPlanet(),
+          });
+        }
+      } else if (t.kind === "poi") {
+        items.push({
+          id: "poi",
+          label: "Осмотр",
+          icon: <Eye size={14} />,
+          onSelect: () => {
+            setSelectedFeature({
+              kind: "poi",
+              tag: t.tag,
+              index: t.index,
+            });
+            setPreviewPlanetId(null);
+          },
+        });
+      }
+      if (items.length === 0) return;
+      setCtxRing({ x: ev.clientX, y: ev.clientY, items });
+      return;
+    }
+
+    if (!playerDive || !systemManage) return;
 
     if (t.kind === "planet") {
       const pl = system.planets.find((p) => p.id === t.planetId);
@@ -349,7 +545,7 @@ export function SystemView({
       if (canBuildBelt && mineInfo.status === "none") {
         items.push({
           id: "mine-here",
-          label: "Mining здесь",
+          label: "Добыча здесь",
           icon: <Pickaxe size={14} />,
           onSelect: () => {
             commitStation("mining", t.beltAngle);
@@ -398,7 +594,7 @@ export function SystemView({
       if (canBuildBelt) {
         items.push({
           id: "belt-mine",
-          label: "Mining",
+          label: "Добыча",
           icon: <Pickaxe size={14} />,
           disabled: mineInfo.status === "own",
           onSelect: () => commitStation("mining", t.beltAngle),
@@ -435,9 +631,9 @@ export function SystemView({
 
   return (
     <div
-      className={`system-view${playerDive ? " system-view--dive" : ""}${
-        playerDive && drilledPlanet ? " system-view--planet-manage" : ""
-      }`}
+      className={`system-view${immersive ? " system-view--dive" : ""}${
+        immersive && drilledPlanet ? " system-view--planet-manage" : ""
+      }${gmDive ? " system-view--gm" : ""}`}
     >
       <nav className="sys-crumb" aria-label="Иерархия">
         <button type="button" className="crumb-link" onClick={goGalaxy}>
@@ -470,6 +666,14 @@ export function SystemView({
             }}
           />
         )}
+        {gmDive && (
+          <InlineRename
+            value={system.name}
+            affordanceOnly
+            title="Переименовать систему"
+            onCommit={(name) => updateSelectedSystem({ name })}
+          />
+        )}
         {(drilledPlanet || previewPlanet) && (
           <>
             <span className="crumb-sep">›</span>
@@ -477,17 +681,22 @@ export function SystemView({
               {(() => {
                 const p = drilledPlanet ?? previewPlanet!;
                 const canRename =
-                  !!playerDive &&
-                  !!planetManage &&
-                  (p.ownerFactionId || system.ownerFactionId) ===
-                    planetManage.factionId;
+                  gmDive ||
+                  (!!playerDive &&
+                    !!planetManage &&
+                    (p.ownerFactionId || system.ownerFactionId) ===
+                      planetManage.factionId);
                 if (!canRename) return p.name;
                 return (
                   <InlineRename
                     value={p.name}
                     title="Переименовать планету"
                     onCommit={(name) => {
-                      planetManage.onAction({
+                      if (gmDive) {
+                        updatePlanet(p.id, { name });
+                        return;
+                      }
+                      planetManage?.onAction({
                         action: "rename",
                         systemId: system.id,
                         planetId: p.id,
@@ -507,6 +716,14 @@ export function SystemView({
             <span className="crumb-current">Стройка на поясе</span>
           </>
         )}
+        {!placeMode && forceDeck === "produce" && !drilledPlanet && (
+          <>
+            <span className="crumb-sep">›</span>
+            <span className="crumb-current">
+              {systemManage?.preferProduceTab === "units" ? "Войска" : "Верфь"}
+            </span>
+          </>
+        )}
       </nav>
 
       <div className="system-view-grid">
@@ -518,7 +735,7 @@ export function SystemView({
               previewPlanetId={previewPlanetId}
               onSelectPlanet={(id) => {
                 if (id && applyPlanetTool(id)) return;
-                if (!playerDive) {
+                if (!immersive) {
                   if (id) goPlanet(system.id, id);
                   else goSystem(system.id);
                   return;
@@ -529,7 +746,7 @@ export function SystemView({
                 }
               }}
               onPlanetPreview={
-                playerDive
+                immersive
                   ? (id) => {
                       if (applyPlanetTool(id)) return;
                       clearPlace();
@@ -541,7 +758,7 @@ export function SystemView({
                   : undefined
               }
               onPlanetDrill={
-                playerDive
+                immersive
                   ? (id) => {
                       if (applyPlanetTool(id)) return;
                       clearPlace();
@@ -561,7 +778,7 @@ export function SystemView({
               onSelectLegion={onSelectOwnLegion}
               selectedStationId={selectedStationId}
               onSelectStation={
-                playerDive
+                immersive
                   ? (id) => {
                       setSelectedFeature(null);
                       setPreviewPlanetId(null);
@@ -588,28 +805,30 @@ export function SystemView({
                       setPreviewPlanetId(null);
                       setSelectedFeature(null);
                       if (placingKind) {
-                        commitStation(placingKind, angle);
+                        if (gmDive) commitGmStation(placingKind, angle);
+                        else commitStation(placingKind, angle);
                         return;
                       }
                       setPlaceMode(true);
                       setPendingBeltAngle(angle);
-                      setForceDeck("stations");
+                      if (playerDive) setForceDeck("stations");
                     }
                   : undefined
               }
               onDepositBuildMining={
-                canBuildBelt && mineInfo.status === "none"
+                canBuildBelt
                   ? (resourceId) => {
                       setSelectedFeature({
                         kind: "deposit",
                         resourceId,
                       });
-                      armPlace("mining");
+                      if (gmDive) armPlace("mining");
+                      else if (mineInfo.status === "none") armPlace("mining");
                     }
                   : undefined
               }
               onSchematicContext={
-                playerDive ? handleSchematicContext : undefined
+                immersive ? handleSchematicContext : undefined
               }
             />
           ) : (
@@ -670,6 +889,32 @@ export function SystemView({
                   goSystem(system.id);
                 }}
               />
+            ) : gmDive ? (
+              <>
+                <GmPlanetStage
+                  system={system}
+                  planet={drilledPlanet}
+                  onBack={() => {
+                    setPreviewPlanetId(drilledPlanet.id);
+                    goSystem(system.id);
+                  }}
+                  onChange={(patch) => updatePlanet(drilledPlanet.id, patch)}
+                />
+                <details className="sys-editor-fold">
+                  <summary>Поля мира (владелец, климат, население…)</summary>
+                  <PlanetDetail
+                    planet={drilledPlanet}
+                    hideBuildings
+                    onBack={() => goSystem(system.id)}
+                    onChange={(patch) => updatePlanet(drilledPlanet.id, patch)}
+                    onRemove={() => {
+                      removePlanet(drilledPlanet.id);
+                      goSystem(system.id);
+                    }}
+                    races={world.races}
+                  />
+                </details>
+              </>
             ) : (
               <PlanetDetail
                 planet={drilledPlanet}
@@ -687,13 +932,19 @@ export function SystemView({
               />
             ))}
 
-          {!drilledPlanet && previewPlanet && playerDive && (
+          {!drilledPlanet && previewPlanet && immersive && (
             <div className="sys-planet-preview">
               <div className="sys-feature-card__head">
                 <strong>
-                  {planetManage &&
-                  (previewPlanet.ownerFactionId || system.ownerFactionId) ===
-                    planetManage.factionId ? (
+                  {gmDive ? (
+                    <InlineRename
+                      value={previewPlanet.name}
+                      title="Переименовать планету"
+                      onCommit={(name) => updatePlanet(previewPlanet.id, { name })}
+                    />
+                  ) : planetManage &&
+                    (previewPlanet.ownerFactionId || system.ownerFactionId) ===
+                      planetManage.factionId ? (
                     <InlineRename
                       value={previewPlanet.name}
                       title="Переименовать планету"
@@ -748,10 +999,12 @@ export function SystemView({
                 className="btn primary block"
                 onClick={() => goPlanet(system.id, previewPlanet.id)}
               >
-                Управлять миром
+                {gmDive ? "Открыть мир" : "Управлять миром"}
               </button>
               <p className="hint" style={{ marginTop: 6 }}>
-                Двойной тап / ПКМ → Управлять
+                {gmDive
+                  ? "Тап — осмотр, кнопка «Открыть мир» — править · ПКМ на орбите — владелец, станция, спор"
+                  : "Своя колония: тап в списке — управлять · глаз — осмотр"}
               </p>
             </div>
           )}
@@ -763,7 +1016,7 @@ export function SystemView({
                   {placingKind && pendingBeltAngle != null
                     ? "Готово — зажми карту или тапни пояс ещё раз"
                     : placingKind
-                      ? `Тип «${placingKind}» — тапни пояс`
+                      ? `Тип «${STATION_KIND_LABELS[placingKind] ?? placingKind}» — тапни пояс`
                       : pendingBeltAngle != null
                         ? "Точка выбрана — выбери тип станции"
                         : "Выбери тип и точку на поясе"}
@@ -823,7 +1076,7 @@ export function SystemView({
                           className="btn primary block"
                           onClick={() => armPlace("mining")}
                         >
-                          Mining → тапни пояс · или ПКМ на депозите
+                          Добыча → тапни пояс · или ПКМ на депозите
                         </button>
                       )}
                     </>
@@ -929,16 +1182,58 @@ export function SystemView({
                   name,
                 });
               }}
-              onOpenProduce={() => {
+              onOpenProduce={(tab) => {
                 setForceDeck("produce");
-                setPlaceMode(true);
+                setPlaceMode(false);
+                setPlacingKind(null);
+                setPendingBeltAngle(null);
+                systemManage.onSetProduceTab?.(tab);
               }}
             />
           )}
 
-          {/* GM / non-dive fallback overview */}
-          {!drilledPlanet && !previewPlanet && !showBeltDock && !playerDive && (
+          {/* GM rail: same schematic as player, tools on the side / RMB */}
+          {!drilledPlanet && !previewPlanet && !playerDive && gmDive && (
             <>
+              {placeMode && (
+                <p className="sys-place-tip">
+                  {pendingBeltAngle != null
+                    ? "Точка пояса · ПКМ — тип станции"
+                    : "Тапни пояс или ПКМ на орбите"}
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ marginLeft: 8 }}
+                    onClick={clearPlace}
+                  >
+                    Отмена
+                  </button>
+                </p>
+              )}
+              {selectedStationId && (
+                <div className="sys-feature-card">
+                  <div className="sys-feature-card__head">
+                    <strong>
+                      {(system.stations ?? []).find((s) => s.id === selectedStationId)
+                        ?.name ?? "Станция"}
+                    </strong>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => setSelectedStationId(null)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn ghost block"
+                    onClick={() => removeGmStation(selectedStationId)}
+                  >
+                    Удалить станцию
+                  </button>
+                </div>
+              )}
               <div className="sys-meta">
                 <div className="sys-meta-row">
                   <span>Владелец</span>
@@ -971,46 +1266,26 @@ export function SystemView({
                   </div>
                 )}
               </div>
-              <div className="block-title sys-orbit-strip-title">
-                Планеты ({ordered.length})
-                <button
-                  type="button"
-                  className="btn ghost"
-                  style={{ marginLeft: "auto" }}
-                  onClick={() => addPlanet()}
-                  disabled={isCorridorSystem(system)}
-                >
-                  + Планета
-                </button>
-              </div>
-              <div className="sys-orbit-strip" role="list">
-                {ordered.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`sys-orbit-chip ${classifyPlanet(p)}${
-                      paintingClaim ? " paint-target" : ""
-                    }`}
-                    onClick={() => {
-                      if (applyPlanetTool(p.id)) return;
-                      goPlanet(system.id, p.id);
-                    }}
-                  >
-                    <span className="sys-orbit-chip__orbit">
-                      {p.orbitIndex ?? "—"}
-                    </span>
-                    <span className="sys-orbit-chip__name">{p.name}</span>
-                  </button>
-                ))}
-              </div>
+              <p className="hint">
+                Как у игрока: тап — осмотр, кнопка мира — править. ПКМ на планете,
+                поясе, станции — править на месте.
+              </p>
+              <button
+                type="button"
+                className="btn ghost block"
+                onClick={() => addPlanet()}
+                disabled={isCorridorSystem(system)}
+              >
+                + Планета
+              </button>
             </>
           )}
         </div>
       </div>
 
-      {!readOnly && (
+      {gmDive && (
         <details className="sys-editor-fold">
-          <summary>Полная правка системы (звёзды, станции, владение…)</summary>
+          <summary>Полная правка (звёзды, владение, список станций)</summary>
           <SystemEditor system={system} />
         </details>
       )}
@@ -1028,23 +1303,6 @@ export function SystemView({
   );
 }
 
-function kindsForZone(zone: PlanetBuildingZone): PlanetBuildingKind[] {
-  if (zone === "orbital") {
-    return ["spaceport", "shipyard", "habitat", "defense", "lab", "custom"];
-  }
-  return [
-    "residential",
-    "farm",
-    "mine",
-    "factory",
-    "lab",
-    "barracks",
-    "capitol",
-    "defense",
-    "custom",
-  ];
-}
-
 function formatPop(n: number): string {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -1059,6 +1317,7 @@ function PlanetDetail({
   onRemove,
   races,
   readOnly = false,
+  hideBuildings = false,
 }: {
   planet: Planet;
   onBack: () => void;
@@ -1066,6 +1325,7 @@ function PlanetDetail({
   onRemove: () => void;
   races: { id: string; name: string; color?: string }[];
   readOnly?: boolean;
+  hideBuildings?: boolean;
 }) {
   const world = useWorldStore((s) => s.world);
   const habit = classifyPlanet(planet);
@@ -1087,6 +1347,18 @@ function PlanetDetail({
     const list = z === "surface" ? surface : orbital;
     const max = z === "surface" ? surfaceMax : orbitalMax;
     if (list.length >= max) return;
+    const listZone = z === "orbital" ? "orbital" : "surface";
+    const def = defaultGmCatalogBuilding(
+      getCachedContent()?.buildings,
+      listZone,
+    );
+    if (def) {
+      setBuildings(z, [
+        ...list,
+        { id: uuid(), ...patchFromCatalogDef(def) },
+      ]);
+      return;
+    }
     const kind: PlanetBuildingKind =
       z === "orbital" ? "spaceport" : "residential";
     setBuildings(z, [
@@ -1120,7 +1392,7 @@ function PlanetDetail({
           <div className="sys-meta-row">
             <span>Колония</span>
             <strong>
-              {COLONY_TYPE_LABELS[planet.colonyType ?? "none"]}
+              {colonyTypeLabel(planet.colonyType)}
               {planet.population > 0
                 ? ` · нас. ${formatPop(planet.population)}`
                 : ""}
@@ -1160,13 +1432,17 @@ function PlanetDetail({
 
   return (
     <div className="planet-detail">
+      {!hideBuildings && (
       <div className="planet-detail-head">
         <button type="button" className="btn ghost" onClick={onBack}>
           ← К системе
         </button>
         <span className={`habit-badge ${habit}`}>{HABIT_LABELS[habit]}</span>
       </div>
+      )}
+      {!hideBuildings && (
       <h3 className="planet-detail-title">{planet.name}</h3>
+      )}
 
       <label className="field">
         <span>Название</span>
@@ -1288,7 +1564,7 @@ function PlanetDetail({
       <label className="field">
         <span>Тип колонии</span>
         <select
-          value={planet.colonyType ?? "none"}
+          value={canonicalColonyType(planet.colonyType)}
           onChange={(e) =>
             onChange({ colonyType: e.target.value as ColonyType })
           }
@@ -1338,6 +1614,7 @@ function PlanetDetail({
         </label>
       </div>
 
+      {!hideBuildings && (
       <div className="planet-zone-tabs">
         <button
           type="button"
@@ -1354,6 +1631,7 @@ function PlanetDetail({
           Орбита ({orbital.length}/{orbitalMax})
         </button>
       </div>
+      )}
       <div className="planet-detail-2col">
         <label className="field">
           <span>Слоты поверхности</span>
@@ -1383,6 +1661,7 @@ function PlanetDetail({
         </label>
       </div>
 
+      {!hideBuildings && (
       <BuildingZoneEditor
         zone={zone}
         buildings={zone === "surface" ? surface : orbital}
@@ -1390,26 +1669,24 @@ function PlanetDetail({
         onChange={(list) => setBuildings(zone, list)}
         onAdd={() => addBuilding(zone)}
       />
+      )}
 
       <GmPlanetSocietyFields planet={planet} onChange={onChange} />
 
       <div className="block-title">Ресурсы</div>
       <div className="tag-row">
-        {RESOURCE_POOL.map((r) => {
-          const on = (planet.resources ?? []).includes(r);
+        {paintTagList(planet.resources).map((r) => {
+          const on = resourcesHas(planet.resources, r);
           return (
             <button
               key={r}
               type="button"
               className={on ? "tag on" : "tag"}
-              onClick={() => {
-                const cur = planet.resources ?? [];
-                onChange({
-                  resources: on ? cur.filter((x) => x !== r) : [...cur, r],
-                });
-              }}
+              onClick={() =>
+                onChange({ resources: toggleDeposit(planet.resources, r) })
+              }
             >
-              {r}
+              {resourceDisplayName(r)}
             </button>
           );
         })}
@@ -1458,6 +1735,95 @@ function PlanetDetail({
   );
 }
 
+function GmBuildingCatalogSelect({
+  zone,
+  building,
+  onPatch,
+}: {
+  zone: PlanetBuildingZone;
+  building: PlanetBuilding;
+  onPatch: (patch: Partial<PlanetBuilding>) => void;
+}) {
+  const listZone = zone === "orbital" ? "orbital" : "surface";
+  const catalog = listGmCatalogBuildings(
+    getCachedContent()?.buildings,
+    listZone,
+  );
+  const known = catalog.some((d) => d.id === building.buildingId);
+  const value = building.buildingId ?? "";
+
+  if (catalog.length === 0) {
+    return (
+      <label className="field">
+        <span>Тип</span>
+        <select
+          value={building.kind}
+          onChange={(e) => {
+            const kind = e.target.value as PlanetBuildingKind;
+            onPatch({
+              kind,
+              name: PLANET_BUILDING_KIND_LABELS[kind],
+              buildingId: undefined,
+            });
+          }}
+        >
+          {(listZone === "orbital"
+            ? (["spaceport", "shipyard", "habitat", "defense", "lab", "custom"] as PlanetBuildingKind[])
+            : ([
+                "residential",
+                "farm",
+                "mine",
+                "factory",
+                "lab",
+                "barracks",
+                "capitol",
+                "defense",
+                "custom",
+              ] as PlanetBuildingKind[])
+          ).map((k) => (
+            <option key={k} value={k}>
+              {PLANET_BUILDING_KIND_LABELS[k]}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  return (
+    <label className="field">
+      <span>Каталог</span>
+      <select
+        value={known ? value : value}
+        onChange={(e) => {
+          const id = e.target.value;
+          if (!id) {
+            onPatch({ buildingId: undefined });
+            return;
+          }
+          const def = catalog.find((d) => d.id === id);
+          if (!def) return;
+          onPatch(patchFromCatalogDef(def, building));
+        }}
+      >
+        {!building.buildingId && (
+          <option value="">без каталога · {PLANET_BUILDING_KIND_LABELS[building.kind]}</option>
+        )}
+        {building.buildingId && !known && (
+          <option value={building.buildingId}>
+            {building.buildingId} (нет в каталоге)
+          </option>
+        )}
+        {catalog.map((d) => (
+          <option key={d.id} value={d.id}>
+            {gmBuildingOptionLabel(d)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function BuildingZoneEditor({
   zone,
   buildings,
@@ -1475,8 +1841,8 @@ function BuildingZoneEditor({
     <div className="building-zone">
       <p className="hint">
         {zone === "surface"
-          ? "Поверхность: районы, шахты, казармы…"
-          : "Орбита: космопорт, верфь, хабитат…"}
+          ? "Поверхность / недра: из каталога (экономика читает buildingId)."
+          : "Орбита: из каталога (космопорт, верфь, хабитат…)."}
       </p>
       {buildings.map((b) => (
         <div
@@ -1496,32 +1862,17 @@ function BuildingZoneEditor({
               }
             />
           </label>
-          <label className="field">
-            <span>Тип</span>
-            <select
-              value={b.kind}
-              onChange={(e) => {
-                const kind = e.target.value as PlanetBuildingKind;
-                onChange(
-                  buildings.map((x) =>
-                    x.id === b.id
-                      ? {
-                          ...x,
-                          kind,
-                          name: PLANET_BUILDING_KIND_LABELS[kind],
-                        }
-                      : x,
-                  ),
-                );
-              }}
-            >
-              {kindsForZone(zone).map((k) => (
-                <option key={k} value={k}>
-                  {PLANET_BUILDING_KIND_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <GmBuildingCatalogSelect
+            zone={zone}
+            building={b}
+            onPatch={(patch) =>
+              onChange(
+                buildings.map((x) =>
+                  x.id === b.id ? { ...x, ...patch } : x,
+                ),
+              )
+            }
+          />
           <label className="check">
             <input
               type="checkbox"

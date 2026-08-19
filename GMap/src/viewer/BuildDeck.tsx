@@ -45,6 +45,8 @@ export type BuildDeckProps = {
   /** When hosted inside FloatingPanel — no own chrome. */
   embedded?: boolean;
   onOpenResearch?: (techId: string) => void;
+  /** GM: ignore AP, stocks, and tech gates. */
+  freeBuild?: boolean;
 };
 
 type DeckCardProps = {
@@ -62,6 +64,7 @@ type DeckCardProps = {
   onHoldBuild: (id: string) => void;
   onDragStart: (id: string, clientX: number, clientY: number) => void;
   onOpenResearch?: (techId: string) => void;
+  freeBuild?: boolean;
 };
 
 function DeckCard({
@@ -79,6 +82,7 @@ function DeckCard({
   onHoldBuild,
   onDragStart,
   onOpenResearch,
+  freeBuild,
 }: DeckCardProps) {
   const needAp = intentApCost("intent.build");
   const affordAp = needAp <= 0 || apLeft >= needAp;
@@ -91,7 +95,7 @@ function DeckCard({
   const affordRes =
     (stocks["currency.metal"] ?? 0) >= metalNeed &&
     (stocks["currency.supply"] ?? 0) >= supplyNeed;
-  const enabled = !busy && techGate.ok && affordAp && affordRes;
+  const enabled = freeBuild || (!busy && techGate.ok && affordAp && affordRes);
   const color = buildingKindColor(def.kind);
   const cat = def.category ? String(def.category) : null;
   return (
@@ -203,6 +207,7 @@ export function BuildDeck({
   onClose,
   embedded,
   onOpenResearch,
+  freeBuild,
 }: BuildDeckProps) {
   const techs = getCachedContent()?.technologies || {};
   const [groupId, setGroupId] = useState<BuildingCatalogGroupId | "all">(
@@ -322,6 +327,7 @@ export function BuildDeck({
                     onHoldBuild={onHoldBuild}
                     onDragStart={onDragStart}
                     onOpenResearch={onOpenResearch}
+                    freeBuild={freeBuild}
                   />
                 );
               })}

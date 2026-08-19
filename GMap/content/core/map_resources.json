@@ -231,6 +231,7 @@
   "map.alloys": {
     "id": "map.alloys",
     "name": "сплавы",
+    "stub": true,
     "yield": {
       "currency.metal": 3
     },
@@ -371,6 +372,7 @@
   "map.buildplex": {
     "id": "map.buildplex",
     "name": "стройплексы",
+    "stub": true,
     "yield": {
       "currency.metal": 2
     },
@@ -448,6 +450,7 @@
   "map.energy": {
     "id": "map.energy",
     "name": "энергия",
+    "stub": true,
     "yield": {
       "currency.supply": 1
     },
@@ -468,6 +471,7 @@
   "map.trade_value": {
     "id": "map.trade_value",
     "name": "торговое значение",
+    "stub": true,
     "yield": {},
     "category": null,
     "tier": null,

@@ -7,7 +7,7 @@ import { getContent } from "../contentLoader.mjs";
 import { readLedger, writeLedger, ensureFactionEco } from "../ledger.mjs";
 import { writeLiveBoard } from "../tableStore.mjs";
 import { canBuild as canBuildSlots, resourceMatchesRequire } from "../slotResolver.mjs";
-import { factionHasProperty, applyUnlockEffects } from "../techActions.mjs";
+import { factionHasProperty, applyUnlockEffects, collectBuildingUnlockEffects } from "../techActions.mjs";
 import { listAvailableVariants } from "../variantResolver.mjs";
 import { transferColonizePopulation } from "../colonizePop.mjs";
 import { derivedGradeFields, gradeUpgradePlan } from "../planetGrade.mjs";
@@ -37,12 +37,6 @@ import {
   sanitizeName,
   pushSystemHistory,
 } from "./helpers.mjs";
-
-function collectBuildingUnlockEffects(def) {
-  return [...(def?.effects || []), ...(def?.extra_effects || [])].filter(
-    (e) => e.effect === "unlock_tech_tier" || e.effect === "unlock_property",
-  );
-}
 
 export function applyPlanetAction({
   world,
@@ -176,10 +170,10 @@ export function applyPlanetAction({
 
     if (!skipCost) {
       spendCost(ledger, factionId, cost, turn, intent.id, "build");
-      const unlockFx = collectBuildingUnlockEffects(def);
-      if (unlockFx.length) applyUnlockEffects(eco, unlockFx);
-      writeLedger(ledger);
     }
+    const unlockFx = collectBuildingUnlockEffects(def);
+    if (unlockFx.length) applyUnlockEffects(eco, unlockFx);
+    if (!skipCost || unlockFx.length) writeLedger(ledger);
 
     if (deferPlacement) {
       return {

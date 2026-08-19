@@ -23,7 +23,7 @@ import type { PlayerView } from "./viewerNavTypes";
 export interface ViewerDockProps {
   mobile: boolean;
   viewMode: PlayerView;
-  desktopGlass: boolean;
+  roomCompact?: boolean;
   dockCollapsed: boolean;
   dockMoreOpen: boolean;
   cardBattleId: string | null;
@@ -40,6 +40,7 @@ export interface ViewerDockProps {
   warCount: number;
   tradePartnerCount: number;
   activeQuestCount: number;
+  courtAttentionCount?: number;
   viewerAlertItems: AlertItem[];
   onGoView: (v: PlayerView) => void;
   onToggleDockCollapsed: () => void;
@@ -51,6 +52,7 @@ export function ViewerDock({
   mobile,
   viewMode,
   desktopGlass,
+  roomCompact = false,
   dockCollapsed,
   dockMoreOpen,
   cardBattleId,
@@ -65,8 +67,9 @@ export function ViewerDock({
   rpUnread,
   diploIncoming,
   warCount,
-  tradePartnerCount,
+  tradePartnerCount: _tradePartnerCount,
   activeQuestCount,
+  courtAttentionCount = 0,
   viewerAlertItems,
   onGoView,
   onToggleDockCollapsed,
@@ -78,6 +81,8 @@ export function ViewerDock({
       className={`viewer-dock viewer-dock--float ${
         mobile ? "viewer-dock--mobile viewer-dock--v2" : "viewer-dock--desktop"
       }${dockCollapsed ? " viewer-dock--collapsed" : ""}${
+        roomCompact ? " viewer-dock--room" : ""
+      }${
         cardBattleId && !cardBattleMinimized ? " viewer-dock--battle-hidden" : ""
       }`}
       aria-label="Навигация игрока"
@@ -167,18 +172,34 @@ export function ViewerDock({
         {mobile ? (
           <button
             type="button"
-            className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
-            onClick={onRpOpen}
-            title="RP · 5"
-            aria-label="RP · ролевой чат"
+            className={`viewer-dock-btn ${viewMode === "diplomacy" ? "active" : ""} ${diploIncoming.length > 0 ? "is-alert" : ""}`}
+            onClick={() => onGoView("diplomacy")}
+            title={
+              diploIncoming.length > 0
+                ? `Дипломатия · ${diploIncoming.length} входящих · 5`
+                : warCount > 0
+                  ? `Дипломатия · ${warCount} войн · 5`
+                  : "Дипломатия · 5"
+            }
+            aria-label={
+              diploIncoming.length > 0
+                ? `Дипломатия, ${diploIncoming.length} входящих`
+                : "Дипломатия"
+            }
           >
             <span className="viewer-dock-icon" aria-hidden>
-              <MessageSquare size={18} strokeWidth={2} />
+              <Handshake size={18} strokeWidth={2} />
             </span>
-            RP
-            {rpUnread > 0 && viewMode !== "rp" && (
-              <span className="dock-badge dock-badge--hot">
-                {rpUnread > 9 ? "9+" : rpUnread}
+            Дипло
+            {(warCount > 0 || diploIncoming.length > 0) && (
+              <span
+                className={`dock-badge ${diploIncoming.length > 0 ? "dock-badge--hot" : ""}`}
+              >
+                {diploIncoming.length > 0
+                  ? diploIncoming.length > 9
+                    ? "9+"
+                    : diploIncoming.length
+                  : warCount}
               </span>
             )}
           </button>
@@ -188,8 +209,18 @@ export function ViewerDock({
               type="button"
               className={`viewer-dock-btn ${viewMode === "diplomacy" ? "active" : ""} ${diploIncoming.length > 0 ? "is-alert" : ""}`}
               onClick={() => onGoView("diplomacy")}
-              title="Дипломатия · 5"
-              aria-label="Дипломатия"
+              title={
+                diploIncoming.length > 0
+                  ? `Дипломатия · ${diploIncoming.length} входящих · 5`
+                  : warCount > 0
+                    ? `Дипломатия · ${warCount} войн · 5`
+                    : "Дипломатия · 5"
+              }
+              aria-label={
+                diploIncoming.length > 0
+                  ? `Дипломатия, ${diploIncoming.length} входящих`
+                  : "Дипломатия"
+              }
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <Handshake size={18} strokeWidth={2} />
@@ -212,7 +243,7 @@ export function ViewerDock({
               type="button"
               className={`viewer-dock-btn viewer-dock-btn--secondary ${viewMode === "market" ? "active" : ""}`}
               onClick={() => onGoView("market")}
-              title="Биржа · 6"
+              title="Биржа · клавиша 6"
               aria-label="Биржа"
             >
               <span className="viewer-dock-icon" aria-hidden>
@@ -220,11 +251,6 @@ export function ViewerDock({
               </span>
               Биржа
               <kbd className="viewer-dock-kbd">6</kbd>
-              {tradePartnerCount > 0 && (
-                <span className="dock-badge">
-                  {tradePartnerCount > 9 ? "9+" : tradePartnerCount}
-                </span>
-              )}
             </button>
             <button
               type="button"
@@ -249,13 +275,22 @@ export function ViewerDock({
               className={`viewer-dock-btn viewer-dock-btn--secondary ${viewMode === "court" ? "active" : ""}`}
               onClick={() => onGoView("court")}
               title="Двор · 8"
-              aria-label="Двор"
+              aria-label={
+                courtAttentionCount > 0
+                  ? `Двор, ${courtAttentionCount} требуют внимания`
+                  : "Двор"
+              }
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <Users size={18} strokeWidth={2} />
               </span>
               Двор
               <kbd className="viewer-dock-kbd">8</kbd>
+              {courtAttentionCount > 0 && (
+                <span className="dock-badge dock-badge--hot">
+                  {courtAttentionCount > 9 ? "9+" : courtAttentionCount}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -279,16 +314,16 @@ export function ViewerDock({
               type="button"
               className={`viewer-dock-btn ${viewMode === "rp" ? "active" : ""}`}
               onClick={onRpOpen}
-              title="RP"
-              aria-label="RP"
+              title="RP · R"
+              aria-label={
+                rpUnread > 0 ? `RP, ${rpUnread} непрочитанных` : "RP"
+              }
             >
               <span className="viewer-dock-icon" aria-hidden>
                 <MessageSquare size={18} strokeWidth={2} />
               </span>
               RP
-              <kbd className="viewer-dock-kbd viewer-dock-kbd--spacer" aria-hidden>
-                ·
-              </kbd>
+              <kbd className="viewer-dock-kbd">R</kbd>
               {rpUnread > 0 && viewMode !== "rp" && (
                 <span className="dock-badge dock-badge--hot">
                   {rpUnread > 9 ? "9+" : rpUnread}
@@ -318,13 +353,13 @@ export function ViewerDock({
                 dockMoreOpen ||
                 viewMode === "hq" ||
                 viewMode === "market" ||
-                viewMode === "diplomacy" ||
+                viewMode === "rp" ||
                 viewMode === "quests" ||
                 viewMode === "court" ||
                 viewMode === "codex"
                   ? "active"
                   : ""
-              } ${diploIncoming.length > 0 ? "is-alert" : ""}`}
+              } ${rpUnread > 0 ? "is-alert" : ""}`}
               onClick={onToggleDockMore}
               title="Ещё"
               aria-label="Ещё разделы"
@@ -335,18 +370,16 @@ export function ViewerDock({
               </span>
               Ещё
               {(viewerAlertItems.length > 0 ||
-                diploIncoming.length > 0 ||
+                rpUnread > 0 ||
                 (activeQuestCount > 0 && viewMode !== "quests")) && (
                 <span className="dock-badge dock-badge--hot">
-                  {Math.min(
-                    9,
-                    viewerAlertItems.length +
-                      diploIncoming.length +
-                      (activeQuestCount > 0 && viewMode !== "quests" ? 1 : 0),
-                  ) > 9
+                  {viewerAlertItems.length +
+                    (rpUnread > 0 ? 1 : 0) +
+                    (activeQuestCount > 0 && viewMode !== "quests" ? 1 : 0) >
+                  9
                     ? "9+"
                     : viewerAlertItems.length +
-                      diploIncoming.length +
+                      (rpUnread > 0 ? 1 : 0) +
                       (activeQuestCount > 0 && viewMode !== "quests" ? 1 : 0)}
                 </span>
               )}
@@ -370,14 +403,14 @@ export function ViewerDock({
                 <button
                   type="button"
                   role="menuitem"
-                  className={`viewer-dock-more-item ${viewMode === "diplomacy" ? "active" : ""}`}
-                  onClick={() => onGoView("diplomacy")}
+                  className={`viewer-dock-more-item ${viewMode === "rp" ? "active" : ""}`}
+                  onClick={onRpOpen}
                 >
-                  <Handshake size={16} strokeWidth={2} aria-hidden />
-                  Дипломатия
-                  {diploIncoming.length > 0 && (
+                  <MessageSquare size={16} strokeWidth={2} aria-hidden />
+                  RP
+                  {rpUnread > 0 && (
                     <span className="dock-badge dock-badge--hot">
-                      {diploIncoming.length > 9 ? "9+" : diploIncoming.length}
+                      {rpUnread > 9 ? "9+" : rpUnread}
                     </span>
                   )}
                 </button>
@@ -389,11 +422,6 @@ export function ViewerDock({
                 >
                   <Store size={16} strokeWidth={2} aria-hidden />
                   Биржа
-                  {tradePartnerCount > 0 && (
-                    <span className="dock-badge">
-                      {tradePartnerCount > 9 ? "9+" : tradePartnerCount}
-                    </span>
-                  )}
                 </button>
                 <button
                   type="button"
@@ -417,6 +445,11 @@ export function ViewerDock({
                 >
                   <Users size={16} strokeWidth={2} aria-hidden />
                   Двор
+                  {courtAttentionCount > 0 && (
+                    <span className="dock-badge dock-badge--hot">
+                      {courtAttentionCount > 9 ? "9+" : courtAttentionCount}
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"

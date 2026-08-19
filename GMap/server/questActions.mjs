@@ -86,7 +86,7 @@ export function applyQuestAction(opts) {
 
   if (action === "throw_quest_dice") {
     if (hasRolledYearlyQuests(world, factionId)) {
-      return { ok: false, error: "Кубик ежходных квестов уже брошен в этом ходу" };
+      return { ok: false, error: "Кубик ежеходных квестов уже брошен в этом ходу" };
     }
     const result = rollYearlyQuests(factionId, world, content);
     if (!result.ok) return result;

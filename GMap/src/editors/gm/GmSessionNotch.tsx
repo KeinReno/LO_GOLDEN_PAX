@@ -10,6 +10,7 @@ import {
 import { useCampaignSessionCtx } from "../CampaignSessionContext";
 import { FloatingPanel } from "../../ui/FloatingPanel";
 import { SessionBriefSection } from "./GmHealthExtras";
+import { GmBeatSheet } from "./GmBeatSheet";
 
 /**
  * Session notch: turn · rev · pending · share · host · brief.
@@ -18,9 +19,11 @@ import { SessionBriefSection } from "./GmHealthExtras";
 export function GmSessionNotch({
   onOpenInbox,
   onOpenSpotter,
+  onRequestTick,
 }: {
   onOpenInbox?: () => void;
   onOpenSpotter?: () => void;
+  onRequestTick?: () => void;
 }) {
   const world = useWorldStore((s) => s.world);
   const setCampaignTurn = useWorldStore((s) => s.setCampaignTurn);
@@ -137,6 +140,12 @@ export function GmSessionNotch({
         >
           очередь {pending.length}
         </button>
+
+        <GmBeatSheet
+          variant="notch"
+          onRequestTick={onRequestTick}
+          onOpenInbox={onOpenInbox}
+        />
 
         <button
           type="button"

@@ -28,7 +28,7 @@
     "D": {
       "id": "D",
       "name": "Энергия",
-      "role": "Энергия, топливо, орудийные компоненты",
+      "role": "Энергия и топливо",
       "currencyId": "currency.energia",
       "color": "#e8c44c"
     },
@@ -195,6 +195,11 @@
       "label": "Аномальный",
       "description": "Аномальная физика"
     },
+    "anomaly_tap": {
+      "id": "anomaly_tap",
+      "label": "Аномальный съём",
+      "description": "Именной замок аномального коллектора"
+    },
     "lightweight": {
       "id": "lightweight",
       "label": "Лёгкий",
@@ -209,6 +214,11 @@
       "id": "heat_resistant",
       "label": "Жаростойкий",
       "description": "B2 clone tag — термостойкость (пока контентная разметка)"
+    },
+    "lithogenesis": {
+      "id": "lithogenesis",
+      "label": "Литогенез",
+      "description": "Живой камень / минеральный рост (хиноварь)"
     },
     "kinetic": {
       "id": "kinetic",
@@ -280,6 +290,11 @@
       "label": "Нервюры крейсера",
       "description": "Набор крейсера"
     },
+    "battleship_keel": {
+      "id": "battleship_keel",
+      "label": "Киль линкора",
+      "description": "Набор линкора; не крейсер"
+    },
     "carrier_decks": {
       "id": "carrier_decks",
       "label": "Палубы носителя",
@@ -290,10 +305,20 @@
       "label": "Киль дредноута",
       "description": "Набор дредноута"
     },
+    "black_iron_keel": {
+      "id": "black_iron_keel",
+      "label": "Киль Чёрного Железа",
+      "description": "Именной набор флагмана Чёрное Железо"
+    },
     "line_infantry": {
       "id": "line_infantry",
       "label": "Линейная пехота",
       "description": "Набор линии из ополчения"
+    },
+    "heavy_legion": {
+      "id": "heavy_legion",
+      "label": "Тяжёлый легион",
+      "description": "Набор тяжёлой линии; не линейная пехота"
     },
     "siege_gun": {
       "id": "siege_gun",

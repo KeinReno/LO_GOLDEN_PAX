@@ -2,6 +2,7 @@ import { useMemo, type CSSProperties } from "react";
 import type { ViewerPayload } from "../../state/types";
 import { getCachedContent } from "../../state/contentCatalog";
 import { fmtInt } from "../../state/numberFormat";
+import { liveBreakthroughTechId } from "../../state/techPathLive";
 
 /**
  * RoleScore path rows + Прорыв. Extracted from the retired radial overview.
@@ -53,7 +54,7 @@ export function ResearchPathsPanel({
         Number(schemaTh[key]) ||
         0;
       const isOpen = open.has(p.id);
-      const techId = p.breakthroughTechId || null;
+      const techId = liveBreakthroughTechId(p, content?.technologies);
       let techCost = techId
         ? Number(
             content?.technologies?.[techId]?.cost?.["currency.cognitio"] || 0,
@@ -65,7 +66,8 @@ export function ResearchPathsPanel({
       if (techCost > 0 && affinityMult !== 1) {
         techCost = Math.max(1, Math.ceil(techCost * affinityMult));
       }
-      const ready = !isOpen && threshold > 0 && score >= threshold;
+      const ready =
+        !isOpen && Boolean(techId) && threshold > 0 && score >= threshold;
       return {
         id: p.id,
         label: p.label,
@@ -93,7 +95,7 @@ export function ResearchPathsPanel({
     <div className="research-paths" aria-label="Пути развития">
       <header className="research-paths__head">
         <h4>Пути развития</h4>
-        <span className="hint">пилот · RoleScore + Прорыв</span>
+        <span className="hint">RoleScore · прорыв, если он в каталоге</span>
       </header>
       <ul className="research-paths__list">
         {pathRows.map((row) => (
@@ -120,14 +122,13 @@ export function ResearchPathsPanel({
             </div>
             {row.isOpen ? (
               <span className="research-paths__badge">Открыт</span>
-            ) : (
+            ) : row.techId ? (
               <button
                 type="button"
                 className="btn sm primary"
                 disabled={
                   !!busy ||
                   !row.ready ||
-                  !row.techId ||
                   !onResearch ||
                   (row.techCost > 0 && cognitio < row.techCost)
                 }
@@ -145,7 +146,7 @@ export function ResearchPathsPanel({
                   <span className="tabular-nums"> · {row.techCost}</span>
                 ) : null}
               </button>
-            )}
+            ) : null}
           </li>
         ))}
       </ul>

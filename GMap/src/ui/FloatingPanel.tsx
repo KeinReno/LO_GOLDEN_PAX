@@ -8,6 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Minus, Square, X } from "lucide-react";
+import { isInputFocused } from "../viewer/hooks/isInputFocused";
 
 type Geom = { x: number; y: number; w: number; h: number };
 
@@ -118,6 +119,7 @@ export function FloatingPanel({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (isInputFocused(e.target)) return;
       // Nested overlays (ActionRing, doctrine modal) own Escape first.
       if (
         document.querySelector(".action-ring, .eco-doctrine-modal")
@@ -125,10 +127,11 @@ export function FloatingPanel({
         return;
       }
       e.stopPropagation();
+      e.stopImmediatePropagation();
       onClose();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [open, onClose]);
 
   const bindMove = useDrag(

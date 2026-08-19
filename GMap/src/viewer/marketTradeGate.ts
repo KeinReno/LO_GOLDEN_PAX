@@ -2,8 +2,8 @@
 export const UC_ID = "fx.universal_credit";
 
 /**
- * Soft empire warehouse for market UX when flow capacity is unknown.
- * Ledger itself is uncapped. 250 × 8 base goods = 2000.
+ * Soft empire warehouse for *display* when flow capacity is unknown.
+ * The ledger is uncapped — do not use this as a hard trade gate.
  */
 export const MARKET_WAREHOUSE_PER_SLOT = 250;
 
@@ -23,7 +23,10 @@ const KEY_STRIP: { id: string; label: string; short: string }[] = [
 
 const GOODS_IDS = KEY_STRIP.map((row) => row.id);
 
-export type TradeGateReason = "ap" | "storage" | "funds";
+/** Quote asset for common-market lots — matches the УЕ charts, then metal, then supply. */
+const MARKET_QUOTE_PREFERENCE = [UC_ID, METAL, SUPPLY] as const;
+
+export type TradeGateReason = "ap" | "storage" | "funds" | "rate";
 
 export type TradeGateOk = { ok: true };
 export type TradeGateFail = {
@@ -47,6 +50,12 @@ export type StockpileStripModel = {
   cap: number;
   remaining: number;
   full: boolean;
+};
+
+export type MarketRateRow = {
+  pair?: string;
+  buy?: number;
+  sell?: number;
 };
 
 export function isPhysicalGood(currencyId: string): boolean {
@@ -91,9 +100,55 @@ export function buildStockpileStrip(
   };
 }
 
+function parseRateEnds(pairStr: string): { from: string; to: string } | null {
+  const parts = String(pairStr || "")
+    .split(/→|->/)
+    .map((s) => s.trim());
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return { from: parts[0], to: parts[1] };
+}
+
+function rowCoversPair(
+  row: MarketRateRow,
+  from: string,
+  to: string,
+): boolean {
+  const pair = parseRateEnds(String(row.pair || ""));
+  if (!pair) return false;
+  if (pair.from === from && pair.to === to) {
+    const sell = Number(row.sell ?? row.buy);
+    return Number.isFinite(sell) && sell > 0;
+  }
+  if (pair.from === to && pair.to === from) {
+    const buy = Number(row.buy ?? row.sell);
+    return Number.isFinite(buy) && buy > 0;
+  }
+  return false;
+}
+
+/** Counterparty for a quick lot. УЕ first so the book matches the quote charts. */
+export function resolveMarketQuoteCurrency(
+  rates: MarketRateRow[] | null | undefined,
+  resourceId: string,
+): string | null {
+  if (!resourceId) return null;
+  const rows = rates ?? [];
+  for (const quote of MARKET_QUOTE_PREFERENCE) {
+    if (quote === resourceId) continue;
+    if (rows.some((row) => rowCoversPair(row, resourceId, quote))) return quote;
+  }
+  for (const row of rows) {
+    const pair = parseRateEnds(String(row.pair || ""));
+    if (!pair) continue;
+    if (pair.from === resourceId && pair.to !== resourceId) return pair.to;
+    if (pair.to === resourceId && pair.from !== resourceId) return pair.from;
+  }
+  return null;
+}
+
 /**
- * 3-factor pre-validation for market trades (AP → warehouse → funds).
- * `payCurrency`/`payAmount` = what the player spends; `receiveCurrency`/`receiveAmount` = incoming goods.
+ * Pre-validation for market trades (AP → funds).
+ * Warehouse is display-only: the live ledger has no stock ceiling.
  */
 export function validateMarketTrade(opts: {
   reservedAp: number;
@@ -104,8 +159,10 @@ export function validateMarketTrade(opts: {
   payAmount?: number;
   receiveCurrency?: string | null;
   receiveAmount?: number;
+  /** Ignored — kept so callers do not invent a second gate. */
   warehouseCap?: number;
   receiveStockCap?: number | null;
+  quoteOk?: boolean;
 }): TradeGate {
   const apCost = Math.max(0, Math.floor(Number(opts.apCost) || 0));
   const reserved = Math.max(0, Math.floor(Number(opts.reservedAp) || 0));
@@ -118,22 +175,8 @@ export function validateMarketTrade(opts: {
     };
   }
 
-  const receiveAmount = Math.max(0, Math.floor(Number(opts.receiveAmount) || 0));
-  const receiveId = opts.receiveCurrency ?? "";
-  if (receiveAmount > 0 && isPhysicalGood(receiveId)) {
-    const perGood = opts.receiveStockCap;
-    if (perGood != null && Number.isFinite(perGood)) {
-      const dest = Math.max(0, Math.floor(Number(opts.stocks?.[receiveId] ?? 0)));
-      if (dest + receiveAmount > perGood) {
-        return { ok: false, reason: "storage", message: "Склад переполнен" };
-      }
-    } else {
-      const used = physicalStockUsed(opts.stocks);
-      const cap = opts.warehouseCap ?? marketWarehouseCap();
-      if (used + receiveAmount > cap) {
-        return { ok: false, reason: "storage", message: "Склад переполнен" };
-      }
-    }
+  if (opts.quoteOk === false) {
+    return { ok: false, reason: "rate", message: "Нет курса" };
   }
 
   const payAmount = Math.max(0, Math.floor(Number(opts.payAmount) || 0));

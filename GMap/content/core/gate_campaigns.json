@@ -1,0 +1,28 @@
+{
+  "campaigns": [
+    {
+      "id": "silver_hearts",
+      "title": "Silver Hearts Part IV",
+      "kicker": "Скоро",
+      "blurb": "Старые герои соберутся вновь, чтобы завершить историю, длящуюся 8 лет.",
+      "live": false,
+      "image": "/campaigns/art/silver_hearts.jpg?v=1787084889974"
+    },
+    {
+      "id": "golden_pax",
+      "title": "Golden Pax",
+      "kicker": "Campaign",
+      "blurb": "Галактика Оберона: карта, державы, наука и сцена.",
+      "live": true,
+      "image": "/campaigns/art/golden-pax.png"
+    },
+    {
+      "id": "final_crusade",
+      "title": "The Final Crusade",
+      "kicker": "Скоро",
+      "blurb": "Это локальная история о последнем подвиге Адмирала Руффо, погружающегося всё глубже в пучины просторов, куда никогда не входили люди. Объединяйтесь, жертвуйте, молитесь, чтобы найти то, что даст ключ к пониманию природы Обливиона.",
+      "live": false,
+      "image": ""
+    }
+  ]
+}

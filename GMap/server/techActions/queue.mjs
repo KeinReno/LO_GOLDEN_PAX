@@ -39,6 +39,10 @@ export function canQueueTech(factionId, techId, opts = {}) {
   }
 
   // Alchemy / combo techs are granted via laboratory, not normal research queue.
+  if (def.catalogPending) {
+    return { ok: false, error: "Технология ещё не в столе", canQueue: false };
+  }
+
   if (def.alchemyOnly || (def.tags || []).includes("alchemy") || (def.tags || []).includes("combo")) {
     return {
       ok: false,

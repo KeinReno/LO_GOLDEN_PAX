@@ -85,7 +85,7 @@ export type ViewerPlayRoomActions = ViewerPlayEngagementActions & {
     }) => void,
   ) => Promise<boolean>;
   focusSystemOnMap: (systemId: string) => void;
-  openPlayerSystem: (systemId: string) => void;
+  openPlayerSystem: (systemId: string, planetId?: string) => void;
   applyRecruitSession: (data: RecruitSessionPatch) => void;
   setFlowPriority: (opts: {
     from: string;
@@ -177,7 +177,6 @@ export function ViewerPlayRooms({
     activeQuestCount,
     warCount,
     diploIncoming,
-    tradePartnerCount,
   } = viewerPlayHudStats(payload);
   const openEngagementCount = countOpenEngagements(
     engagements,
@@ -291,13 +290,11 @@ export function ViewerPlayRooms({
             forceApMax={forceApMax}
             attentionItems={viewerAlertItems}
             orderMsg={orderMsg}
-            selectedSystemId={selectedSystemId}
             affordableResearch={affordableResearch}
-            tradePartnerCount={tradePartnerCount}
             activeQuestCount={activeQuestCount}
             warCount={warCount}
             openEngagementCount={openEngagementCount}
-            actions={actions}
+            openPlayerSystem={actions.openPlayerSystem}
           />
         ),
         research: (

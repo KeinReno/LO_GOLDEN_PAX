@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { useCampaignSessionCtx } from "../CampaignSessionContext";
+import { useWorldStore } from "../../state/worldStore";
 
 type FactionRow = {
   factionId: string;
@@ -292,6 +293,47 @@ export function SessionBriefSection({
     void refresh();
   }, [refresh]);
 
+  const restoreBackup = useCallback(
+    async (name: string) => {
+      if (
+        !confirm(
+          `Восстановить live-стол из снимка «${name}»? Текущая доска будет перезаписана.`,
+        )
+      ) {
+        return;
+      }
+      setBusy(true);
+      setErr(null);
+      try {
+        const res = await fetch("/api/gm/cockpit/backups/restore", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Token": masterToken,
+          },
+          body: JSON.stringify({ name }),
+        });
+        const data = (await res.json()) as { ok?: boolean; error?: string };
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.error || res.statusText);
+        }
+        const tableRes = await fetch("/api/table", {
+          headers: { "X-Master-Token": masterToken },
+        });
+        const table = (await tableRes.json()) as { world?: unknown };
+        if (tableRes.ok && table.world) {
+          useWorldStore.getState().loadWorld(table.world as never);
+        }
+        await refresh(from || undefined, to || undefined);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [masterToken, refresh, from, to],
+  );
+
   return (
     <div>
       {!compact && <h4>Бриф сессии</h4>}
@@ -339,6 +381,17 @@ export function SessionBriefSection({
       >
         {busy ? "Сборка…" : "Обновить бриф"}
       </button>
+      {to ? (
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={busy}
+          onClick={() => void restoreBackup(to)}
+          title="Откатить live-стол к снимку «К»"
+        >
+          Восстановить «{to}»
+        </button>
+      ) : null}
       {err && (
         <p className="hint" style={{ color: "#e07070", marginTop: 6 }}>
           {err}

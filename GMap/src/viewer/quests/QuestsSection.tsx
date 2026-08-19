@@ -285,6 +285,12 @@ export function QuestsSection({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && chatOpen) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        closeChat();
+        return;
+      }
       if (!selected || selected.status !== "active") return;
       const choices = selected.choices ?? [];
       if (!choices.length) return;
@@ -300,12 +306,13 @@ export function QuestsSection({
       const n = Number(e.key);
       if (n >= 1 && n <= choices.length) {
         e.preventDefault();
+        e.stopImmediatePropagation();
         void choose(choices[n - 1]!.id);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selected, choose]);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [selected, choose, chatOpen, closeChat]);
 
   const sendChat = async (text: string) => {
     if (!selected) return;
@@ -438,6 +445,7 @@ export function QuestsSection({
               onOpenCourt={() => onOpenCourt?.()}
               onOpenJournal={openJournal}
               onFocusSystem={onFocusSystem}
+              showCourtLink={false}
             />
           ) : null}
           {screen === "detail" && selected ? (
@@ -499,7 +507,7 @@ export function QuestsSection({
           droppingIds={droppingIds}
           collapsed={sidebarCollapsed}
           onToggleCollapse={toggleSidebar}
-          attentionCount={collectAttention(quests, turn).length}
+          attentionCount={attentionCount}
         />
       )}
 
@@ -609,6 +617,7 @@ export function QuestsSection({
               onOpenCourt={() => onOpenCourt?.()}
               onOpenJournal={openJournal}
               onFocusSystem={onFocusSystem}
+              showCourtLink={false}
             />
           ))}
       </div>

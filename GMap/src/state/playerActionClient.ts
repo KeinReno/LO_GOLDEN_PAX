@@ -1,4 +1,8 @@
-import { playerAuthHeaders, rememberPlayerTokenFromPayload } from "./playerAuth";
+import {
+  playerAuthHeaders,
+  playerJsonBody,
+  rememberPlayerTokenFromPayload,
+} from "./playerAuth";
 
 export type PlayerActionJson = {
   error?: string;
@@ -47,7 +51,7 @@ export async function postPlayerJson(
   const res = await fetch(url, {
     method: "POST",
     headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(body),
+    body: JSON.stringify(playerJsonBody(body)),
   });
   const data = ((await res.json().catch(() => ({}))) ?? {}) as PlayerActionJson;
   rememberPlayerTokenFromPayload(data);
@@ -98,9 +102,10 @@ export function postQuestAction(body: Record<string, unknown>) {
   return postPlayerJson("/api/quest/action", body);
 }
 
-export function fetchEngagements(factionId: string, password: string) {
-  return getPlayerJson("/api/engagements", {
+export function fetchEngagements(factionId: string, password?: string) {
+  const extra: Record<string, string> = {
     "X-Faction-Id": factionId,
-    "X-Faction-Password": password,
-  });
+  };
+  if (password) extra["X-Faction-Password"] = password;
+  return getPlayerJson("/api/engagements", extra);
 }

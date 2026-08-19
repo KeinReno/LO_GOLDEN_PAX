@@ -16,7 +16,7 @@ import type {
   QuestObjective,
   QuestStatus,
 } from "./types";
-import { QUEST_ART_BY_KIND } from "./types";
+import { QUEST_ART_BY_KIND } from "./types.ts";
 
 export function visiblePlayerQuests(
   world: WorldState,
@@ -26,7 +26,8 @@ export function visiblePlayerQuests(
     if (q.status === "hidden") return false;
     if (!factionId) return true;
     if (!q.sourceFactionId || q.sourceFactionId === factionId) return true;
-    if (q.type === "foreign" || q.type === "main") return true;
+    // Issued by someone else, shown as an incoming foreign offer.
+    if (q.type === "foreign") return true;
     return false;
   });
 }

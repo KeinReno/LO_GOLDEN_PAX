@@ -121,6 +121,12 @@ export function ViewerPlayMapStage({
   const setEcoHighlightCategory = useViewerPanelFocusStore(
     (s) => s.setEcoHighlightCategory,
   );
+  const setEconomyFocusCategory = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusCategory,
+  );
+  const setEconomyFocusSection = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusSection,
+  );
   const setEconomyLinkedSystemId = useViewerPanelFocusStore(
     (s) => s.setEconomyLinkedSystemId,
   );
@@ -192,6 +198,7 @@ export function ViewerPlayMapStage({
             accepts={stockpileCardIds()}
             className="viewer-map-dropzone"
             contentLayout="contents"
+            armWhileDragging
             onDrop={(cardId, pos) => events.onStockpileMapDrop(cardId, pos)}
           />
           <TurnStampHud
@@ -218,8 +225,12 @@ export function ViewerPlayMapStage({
               }}
               onOpenEconomy={() => {
                 const top = economySystemSignals[0];
-                if (top?.category) setEcoHighlightCategory(top.category);
+                if (top?.category) {
+                  setEcoHighlightCategory(top.category);
+                  setEconomyFocusCategory(top.category);
+                }
                 if (top?.systemId) setEconomyLinkedSystemId(top.systemId);
+                setEconomyFocusSection("production");
                 setEconomyPopover(null);
                 navigateViewerRoom("economy");
               }}

@@ -4,6 +4,7 @@
     "name": "Геология",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -85,6 +86,7 @@
     "name": "Глубинный анализ планет",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -168,6 +170,7 @@
     "name": "Астероидная добыча",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -251,6 +254,7 @@
     "name": "Аномальная добыча",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -260,6 +264,12 @@
         "args": {
           "category": "A",
           "to": 9
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "anomaly_tap"
         }
       }
     ],
@@ -334,6 +344,7 @@
     "name": "Наука о материалах",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -414,6 +425,7 @@
     "name": "Пирометаллургия",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -496,6 +508,7 @@
     "name": "Интеграция кристаллов",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -584,6 +597,7 @@
     "name": "Метаматериалы",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -666,6 +680,7 @@
     "name": "Промышленная организация",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -746,6 +761,7 @@
     "name": "Модульная стройка",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 28
     },
@@ -828,6 +844,7 @@
     "name": "Кибернетика",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 50
     },
@@ -910,6 +927,7 @@
     "name": "Нанотехнологии",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 180
     },
@@ -992,6 +1010,7 @@
     "name": "Энергосеть",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -1072,6 +1091,7 @@
     "name": "Плазменная инженерия",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 28
     },
@@ -1154,6 +1174,7 @@
     "name": "Термояд",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 50
     },
@@ -1244,6 +1265,7 @@
     "name": "Антиматерия",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 180
     },
@@ -1326,6 +1348,7 @@
     "name": "Гидропоника",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -1405,6 +1428,7 @@
     "name": "Медицина",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -1486,6 +1510,7 @@
     "name": "Биокатализ",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -1567,6 +1592,7 @@
     "name": "Ксенобиология",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -1648,6 +1674,7 @@
     "name": "Научная хартия",
     "category": "F",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 16
     },
@@ -1728,6 +1755,7 @@
     "name": "Археология",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 32
     },
@@ -1810,6 +1838,7 @@
     "name": "Псионика",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 58
     },
@@ -1910,6 +1939,7 @@
     "name": "Белые коридоры",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 180
     },
@@ -2009,6 +2039,7 @@
     "name": "Разрушение материи",
     "category": "F",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 220
     },
@@ -2042,6 +2073,7 @@
     "name": "Кузницы Чёрного Железа",
     "category": "B",
     "era": 5,
+    "direction": "military",
     "isBreakthrough": true,
     "cost": {
       "currency.cognitio": 220
@@ -2058,6 +2090,12 @@
         "effect": "unlock_property",
         "args": {
           "property": "matter_destroy"
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "black_iron_keel"
         }
       },
       {
@@ -2086,6 +2124,7 @@
     "name": "Пси-армада",
     "category": "F",
     "era": 5,
+    "direction": "military",
     "isBreakthrough": true,
     "cost": {
       "currency.cognitio": 220
@@ -2129,6 +2168,7 @@
     "name": "Планетарные мегаструктуры",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "isBreakthrough": true,
     "cost": {
       "currency.cognitio": 220
@@ -2172,6 +2212,7 @@
     "name": "Сеть белых врат",
     "category": "F",
     "era": 5,
+    "direction": "industry",
     "isBreakthrough": true,
     "cost": {
       "currency.cognitio": 220
@@ -2214,6 +2255,7 @@
     "name": "Антиматериальная сингулярность",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "isBreakthrough": true,
     "cost": {
       "currency.cognitio": 220
@@ -2257,6 +2299,7 @@
     "name": "Пси-резонанс",
     "category": "F",
     "era": 3,
+    "direction": "military",
     "raceLock": "race_psionic",
     "cost": {
       "currency.cognitio": 78
@@ -2290,6 +2333,7 @@
     "name": "Роевая адаптация",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "raceLock": "race_swarm",
     "cost": {
       "currency.cognitio": 72
@@ -2324,6 +2368,7 @@
     "name": "Синт-аплифт",
     "category": "C",
     "era": 3,
+    "direction": "military",
     "raceLock": "race_synth",
     "cost": {
       "currency.cognitio": 76
@@ -2358,6 +2403,7 @@
     "name": "ИИ-исследования",
     "category": "F",
     "era": 2,
+    "direction": "governance",
     "factionTraitLock": "trait.technocracy",
     "cost": {
       "currency.cognitio": 43
@@ -2391,6 +2437,7 @@
     "name": "Доктрина военной экономики",
     "category": "C",
     "era": 2,
+    "direction": "military",
     "factionTraitLock": "trait.war_economy",
     "cost": {
       "currency.cognitio": 43
@@ -2425,6 +2472,7 @@
     "name": "Хор пси-доктрины",
     "category": "F",
     "era": 3,
+    "direction": "military",
     "factionTraitLock": "trait.psi_doctrine",
     "cost": {
       "currency.cognitio": 70
@@ -2458,6 +2506,7 @@
     "name": "Эмпатическое командование",
     "category": "F",
     "era": 3,
+    "direction": "military",
     "hybridOf": [
       "race_human",
       "race_psionic"
@@ -2496,6 +2545,7 @@
     "name": "Холодная литейная",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "hybridOf": [
       "race_karned",
       "race_synth"
@@ -2535,6 +2585,7 @@
     "name": "Имперский синтез",
     "category": "C",
     "era": 3,
+    "direction": "military",
     "hybridOf": [
       "race_belator",
       "race_horn"
@@ -2575,6 +2626,7 @@
     "name": "Интерфейс Пустоты",
     "category": "D",
     "era": 3,
+    "direction": "military",
     "hybridOf": [
       "race_human",
       "race_voidborn"
@@ -2614,6 +2666,7 @@
     "name": "Хор завета",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "hybridOf": [
       "race_lord_dust",
       "race_psionic"
@@ -2651,6 +2704,7 @@
     "name": "Разведка астероидов",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -2737,6 +2791,7 @@
     "name": "Автоматизированные шахтёры",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -2825,6 +2880,7 @@
     "name": "Глубокое бурение",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -2913,6 +2969,7 @@
     "name": "Геологическое сканирование",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3000,6 +3057,7 @@
     "name": "Минеральные катализаторы",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3088,6 +3146,7 @@
     "name": "Минеральная разведка",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3175,6 +3234,7 @@
     "name": "Горные сети",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3264,6 +3324,7 @@
     "name": "Извлечение руды",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3352,6 +3413,7 @@
     "name": "Очистка руды",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3440,6 +3502,7 @@
     "name": "Картирование ресурсов",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3529,6 +3592,7 @@
     "name": "Сенсоры ресурсов",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3616,6 +3680,7 @@
     "name": "Подповерхностная добыча",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3704,6 +3769,7 @@
     "name": "Поверхностная добыча",
     "category": "A",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -3792,6 +3858,7 @@
     "name": "Автоматизированные очистители",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -3880,6 +3947,7 @@
     "name": "Кристаллическая добыча",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -3968,6 +4036,7 @@
     "name": "Сбор газовых гигантов",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4056,6 +4125,7 @@
     "name": "Геотермальная добыча",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4144,6 +4214,7 @@
     "name": "Магнитное разделение",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4232,6 +4303,7 @@
     "name": "Добыча из мантии",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4320,6 +4392,7 @@
     "name": "Сжатие минералов",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4409,6 +4482,7 @@
     "name": "Синтез минералов",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4497,6 +4571,7 @@
     "name": "Подводная добыча",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4585,6 +4660,7 @@
     "name": "Орбитальная добыча",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4673,6 +4749,7 @@
     "name": "Обогащение руды",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4761,6 +4838,7 @@
     "name": "Добыча редкоземельных",
     "category": "A",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -4849,6 +4927,7 @@
     "name": "Захват астероидов",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -4938,6 +5017,7 @@
     "name": "Кристаллический резонанс",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5026,6 +5106,7 @@
     "name": "Спасение полей обломков",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5114,6 +5195,7 @@
     "name": "Глубокое бурение ядра",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5202,6 +5284,7 @@
     "name": "Синтез экзотических минералов",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5290,6 +5373,7 @@
     "name": "Гравитационная добыча",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5378,6 +5462,7 @@
     "name": "Масс-драйверный подъём",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5467,6 +5552,7 @@
     "name": "Нанитная добыча",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5555,6 +5641,7 @@
     "name": "Орбитальные очистители",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5643,6 +5730,7 @@
     "name": "Добыча из ядра планеты",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5731,6 +5819,7 @@
     "name": "Плазменное бурение",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5819,6 +5908,7 @@
     "name": "Квантовая экстракция",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5907,6 +5997,7 @@
     "name": "Переработка хвостов",
     "category": "A",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -5995,6 +6086,7 @@
     "name": "Уплотнение сырой руды",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6084,6 +6176,7 @@
     "name": "Массив маяков претензий",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6171,6 +6264,7 @@
     "name": "Сбор кометного льда",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6259,6 +6353,7 @@
     "name": "Краны криовулканов",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6347,6 +6442,7 @@
     "name": "Экстракторы разломов",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6435,6 +6531,7 @@
     "name": "Буры высокой гравитации",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6523,6 +6620,7 @@
     "name": "Изотопная разведка",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6610,6 +6708,7 @@
     "name": "Риги мантийных плюмов",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6698,6 +6797,7 @@
     "name": "Картирование микросейсмики",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6785,6 +6885,7 @@
     "name": "Рудные конвейерные сети",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6874,6 +6975,7 @@
     "name": "Спекание реголита",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -6962,6 +7064,7 @@
     "name": "Рекультивация шлаков",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -7050,6 +7153,7 @@
     "name": "Логистика карьеров",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -7138,6 +7242,7 @@
     "name": "Скимминг летучих газов",
     "category": "A",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -7226,6 +7331,7 @@
     "name": "Рои авто-разведки",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7256,6 +7362,7 @@
     "name": "Замкнутая очистка на месте",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7287,6 +7394,7 @@
     "name": "Генезис месторождений",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7318,6 +7426,7 @@
     "name": "Хвосты Дайсона",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7349,6 +7458,7 @@
     "name": "Скважины экзо-изотопов",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7380,6 +7490,7 @@
     "name": "Доктрина экстракции",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7411,6 +7522,7 @@
     "name": "Принтеры материи",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7442,6 +7554,7 @@
     "name": "Рудный оракул",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7472,6 +7585,7 @@
     "name": "Раскалывание планет",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7503,6 +7617,7 @@
     "name": "Контроль приоритетных жил",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7534,6 +7649,7 @@
     "name": "Звёздный лифт-добыча",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7565,6 +7681,7 @@
     "name": "Звёздные свалки",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7596,6 +7713,7 @@
     "name": "Мировые рудные хранилища",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7628,6 +7746,7 @@
     "name": "Безотходная добыча",
     "category": "A",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -7659,6 +7778,7 @@
     "name": "Очистка сплавов",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -7745,6 +7865,7 @@
     "name": "Базовые сплавы",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -7833,6 +7954,7 @@
     "name": "Керамическая инженерия",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -7921,6 +8043,7 @@
     "name": "Химическая обработка",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8009,6 +8132,7 @@
     "name": "Композитные материалы",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8097,6 +8221,7 @@
     "name": "Выращивание кристаллов",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8185,6 +8310,7 @@
     "name": "Волоконная оптика",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8273,6 +8399,7 @@
     "name": "Переработка материалов",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8361,6 +8488,7 @@
     "name": "Тестирование материалов",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8448,6 +8576,7 @@
     "name": "Металлургия",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8536,6 +8665,7 @@
     "name": "Наноматериалы",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8624,6 +8754,7 @@
     "name": "Синтез полимеров",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8712,6 +8843,7 @@
     "name": "Обработка поверхности",
     "category": "B",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -8800,6 +8932,7 @@
     "name": "Продвинутые композиты",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -8888,6 +9021,7 @@
     "name": "Биокомпозиты",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -8976,6 +9110,7 @@
     "name": "Углеродные нанотрубки",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9064,6 +9199,7 @@
     "name": "Керамические матричные композиты",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9152,6 +9288,7 @@
     "name": "Синтез графена",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9240,6 +9377,7 @@
     "name": "Металлическое стекло",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9328,6 +9466,7 @@
     "name": "Дизайн метаматериалов",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9416,6 +9555,7 @@
     "name": "Материалы с фазовым переходом",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9504,6 +9644,7 @@
     "name": "Квантовые точки",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9592,6 +9733,7 @@
     "name": "Самовосстанавливающиеся сплавы",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9680,6 +9822,7 @@
     "name": "Умные материалы",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9768,6 +9911,7 @@
     "name": "Сверхпроводники",
     "category": "B",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -9856,6 +10000,7 @@
     "name": "Атомно-слоевое осаждение",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -9944,6 +10089,7 @@
     "name": "Композиты тёмной материи",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10032,6 +10178,7 @@
     "name": "Экзотические сплавы",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10120,6 +10267,7 @@
     "name": "Синтез экзотических кристаллов",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10208,6 +10356,7 @@
     "name": "Гравитонное экранирование",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10295,6 +10444,7 @@
     "name": "Молекулярная сборка",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10383,6 +10533,7 @@
     "name": "Нейтрониевые сплавы",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10471,6 +10622,7 @@
     "name": "Фотонные кристаллы",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10559,6 +10711,7 @@
     "name": "Плазменная ковка",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10647,6 +10800,7 @@
     "name": "Квантовые материалы",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10735,6 +10889,7 @@
     "name": "Сплавы стресс-тестов",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10822,6 +10977,7 @@
     "name": "Синтез сверхтекучести",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10910,6 +11066,7 @@
     "name": "Топологические изоляторы",
     "category": "B",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -10998,6 +11155,7 @@
     "name": "Абляционные обшивки",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11086,6 +11244,7 @@
     "name": "Криогенные решётки",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11174,6 +11333,7 @@
     "name": "Гибкие жгуты",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11263,6 +11423,7 @@
     "name": "Теплотрубные композиты",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11351,6 +11512,7 @@
     "name": "Изотопно-обогащённая сталь",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11439,6 +11601,7 @@
     "name": "Слоистая реактивная броня",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11527,6 +11690,7 @@
     "name": "Магнитопамятные сплавы",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11614,6 +11778,7 @@
     "name": "Оптическое метастекло",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11702,6 +11867,7 @@
     "name": "Рамы литья под давлением",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11790,6 +11956,7 @@
     "name": "Радиационно-стойкая керамика",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11878,6 +12045,7 @@
     "name": "Шлак → заготовка",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -11966,6 +12134,7 @@
     "name": "Самогидравлические пены",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -12053,6 +12222,7 @@
     "name": "Прозрачная броня",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -12141,6 +12311,7 @@
     "name": "Линии вакуумного осаждения",
     "category": "B",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -12229,6 +12400,7 @@
     "name": "Генезис брони",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12260,6 +12432,7 @@
     "name": "Каталитическая доводка",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12291,6 +12464,7 @@
     "name": "Холодносварные узлы",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12322,6 +12496,7 @@
     "name": "Полево-настроенные сплавы",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12353,6 +12528,7 @@
     "name": "Протоколы памяти корпуса",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12383,6 +12559,7 @@
     "name": "Живые обшивки",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12414,6 +12591,7 @@
     "name": "Доктрина материалов",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12445,6 +12623,7 @@
     "name": "Молекулярные хранилища вторсырья",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12477,6 +12656,7 @@
     "name": "Моноатомные нити",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12508,6 +12688,7 @@
     "name": "Нейтрониевые ламинаты",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12539,6 +12720,7 @@
     "name": "Фазово-закреплённые кристаллы",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12569,6 +12751,7 @@
     "name": "Программируемая материя",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12599,6 +12782,7 @@
     "name": "Сверхлёгкие фермы",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12630,6 +12814,7 @@
     "name": "Литейки нулевого брака",
     "category": "B",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -12661,6 +12846,7 @@
     "name": "Сборочные линии",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -12747,6 +12933,7 @@
     "name": "Автоматизация",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -12835,6 +13022,7 @@
     "name": "Строительная робототехника",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -12923,6 +13111,7 @@
     "name": "Фабричные сети",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13012,6 +13201,7 @@
     "name": "Промышленные сенсоры",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13100,6 +13290,7 @@
     "name": "Точно в срок",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13188,6 +13379,7 @@
     "name": "Бережливое производство",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13276,6 +13468,7 @@
     "name": "Массовое производство",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13364,6 +13557,7 @@
     "name": "Обработка материалов",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13452,6 +13646,7 @@
     "name": "Контроль качества",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13540,6 +13735,7 @@
     "name": "Роботизированная сборка",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13628,6 +13824,7 @@
     "name": "Управление цепочками поставок",
     "category": "C",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -13716,6 +13913,7 @@
     "name": "Продвинутая автоматизация",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -13804,6 +14002,7 @@
     "name": "Астероидные кузницы",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -13892,6 +14091,7 @@
     "name": "Автоматизированное строительство",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -13980,6 +14180,7 @@
     "name": "Верфи глубокого космоса",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14068,6 +14269,7 @@
     "name": "Промышленный ИИ",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14156,6 +14358,7 @@
     "name": "Промышленный симбиоз",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14244,6 +14447,7 @@
     "name": "Основы мегаструктур",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14332,6 +14536,7 @@
     "name": "Молекулярная сборка",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14420,6 +14625,7 @@
     "name": "Наносборка",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14508,6 +14714,7 @@
     "name": "Орбитальное производство",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14596,6 +14803,7 @@
     "name": "Планетарные кузницы",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14684,6 +14892,7 @@
     "name": "Квантовое производство",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14772,6 +14981,7 @@
     "name": "Самовоспроизводящиеся фабрики",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14860,6 +15070,7 @@
     "name": "Производство в невесомости",
     "category": "C",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -14948,6 +15159,7 @@
     "name": "Межсистемный инструментарий",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15036,6 +15248,7 @@
     "name": "Расширение сухих доков",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15125,6 +15338,7 @@
     "name": "Сферы Дайсона",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15213,6 +15427,7 @@
     "name": "Изготовление экзотической материи",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15301,6 +15516,7 @@
     "name": "Гравитонное строительство",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15389,6 +15605,7 @@
     "name": "Мегаструктуры",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15477,6 +15694,7 @@
     "name": "Орбитальные среды обитания",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15565,6 +15783,7 @@
     "name": "Планетарные двигатели",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15653,6 +15872,7 @@
     "name": "Стандарты префаб-отсеков",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15741,6 +15961,7 @@
     "name": "Квантовые кузницы",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15829,6 +16050,7 @@
     "name": "Строительство мир-кольца",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -15917,6 +16139,7 @@
     "name": "Самособирающиеся структуры",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -16005,6 +16228,7 @@
     "name": "Звёздные двигатели",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -16093,6 +16317,7 @@
     "name": "Верфи пустоты",
     "category": "C",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -16181,6 +16406,7 @@
     "name": "Каркасы аркологий",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16269,6 +16495,7 @@
     "name": "Оптимизаторы очередей",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16357,6 +16584,7 @@
     "name": "Конверсия гражданских верфей",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16445,6 +16673,7 @@
     "name": "Серийная постройка флотов",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16533,6 +16762,7 @@
     "name": "Комплекты каркасов врат",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16621,6 +16851,7 @@
     "name": "Рельсы секций корпуса",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16709,6 +16940,7 @@
     "name": "Мобильные верфи",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16796,6 +17028,7 @@
     "name": "Горячая замена модулей",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16883,6 +17116,7 @@
     "name": "Ночные смены ИИ",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -16971,6 +17205,7 @@
     "name": "Орбитальные крановые сети",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -17060,6 +17295,7 @@
     "name": "Литейки-принтеры",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -17148,6 +17384,7 @@
     "name": "Отсеки быстрого ремонта",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -17236,6 +17473,7 @@
     "name": "Комплекты осадных сооружений",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -17324,6 +17562,7 @@
     "name": "Склады ЗИП",
     "category": "C",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -17413,6 +17652,7 @@
     "name": "Конвейеры капитальных кораблей",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17444,6 +17684,7 @@
     "name": "Рой сухих доков",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17476,6 +17717,7 @@
     "name": "Корабли-семена фабрик",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17506,6 +17748,7 @@
     "name": "Доктрина переоснащения",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17537,6 +17780,7 @@
     "name": "Принтеры крепостей",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17568,6 +17812,7 @@
     "name": "Доктрина промышленности",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17599,6 +17844,7 @@
     "name": "Мгновенные леса",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17630,6 +17876,7 @@
     "name": "Власть мегаверфей",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17661,6 +17908,7 @@
     "name": "Параллельная закладка килей",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17692,6 +17940,7 @@
     "name": "Саморазворачиваемые хабитаты",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17722,6 +17971,7 @@
     "name": "Связки кузница–снабжение",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17753,6 +18003,7 @@
     "name": "Инструментарий военной экономики",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17784,6 +18035,7 @@
     "name": "Кольца мировых кузниц",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17815,6 +18067,7 @@
     "name": "Линии нулевого простоя",
     "category": "C",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -17846,6 +18099,7 @@
     "name": "Батарейные технологии",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -17932,6 +18186,7 @@
     "name": "Переработка энергии",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18020,6 +18275,7 @@
     "name": "Хранение энергии",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18109,6 +18365,7 @@
     "name": "Реакторы деления",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18197,6 +18454,7 @@
     "name": "Термоядерная энергия",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18285,6 +18543,7 @@
     "name": "Геотермальные краны",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18373,6 +18632,7 @@
     "name": "Водородное топливо",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18461,6 +18721,7 @@
     "name": "Магнитное удержание",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18549,6 +18810,7 @@
     "name": "Удержание плазмы",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18637,6 +18899,7 @@
     "name": "Управление энергосетями",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18725,6 +18988,7 @@
     "name": "Солнечные массивы",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18813,6 +19077,7 @@
     "name": "Сверхпроводящие линии",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18901,6 +19166,7 @@
     "name": "Термальная эффективность",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -18989,6 +19255,7 @@
     "name": "Ветряные турбины",
     "category": "D",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -19077,6 +19344,7 @@
     "name": "Удержание антиматерии",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19165,6 +19433,7 @@
     "name": "Краны тёмной энергии",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19253,6 +19522,7 @@
     "name": "Энергетические кристаллы",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19341,6 +19611,7 @@
     "name": "Реакторы экзотических частиц",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19429,6 +19700,7 @@
     "name": "Термоядерные реакторы",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19517,6 +19789,7 @@
     "name": "Гравитационная энергия",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19605,6 +19878,7 @@
     "name": "Магнитные бутылки",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19693,6 +19967,7 @@
     "name": "Сбор нейтрино",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19781,6 +20056,7 @@
     "name": "Плазменный синтез",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19869,6 +20145,7 @@
     "name": "Квантовые батареи",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -19958,6 +20235,7 @@
     "name": "Энергия квантового вакуума",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -20046,6 +20324,7 @@
     "name": "Звёздные энергетические сифоны",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -20134,6 +20413,7 @@
     "name": "Краны энергии пустоты",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -20222,6 +20502,7 @@
     "name": "Энергия нулевой точки",
     "category": "D",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -20310,6 +20591,7 @@
     "name": "Антиматериевые реакторы",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20398,6 +20680,7 @@
     "name": "Лучевые линии питания",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20486,6 +20769,7 @@
     "name": "Компактные токамаки",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20574,6 +20858,7 @@
     "name": "Реакторы тёмной материи",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20662,6 +20947,7 @@
     "name": "Сбор экзотической энергии",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20750,6 +21036,7 @@
     "name": "Гравитонные реакторы",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20838,6 +21125,7 @@
     "name": "Островковые энергосети",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -20925,6 +21213,7 @@
     "name": "Краны нейтронных звёзд",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21013,6 +21302,7 @@
     "name": "Импульсные конденсаторы",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21102,6 +21392,7 @@
     "name": "Реакторы квантовой пены",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21190,6 +21481,7 @@
     "name": "Двигатели сингулярности",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21278,6 +21570,7 @@
     "name": "Реакторы звёздного ядра",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21366,6 +21659,7 @@
     "name": "Генераторы энергии пустоты",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21454,6 +21748,7 @@
     "name": "Радиаторы отработанного тепла",
     "category": "D",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -21542,6 +21837,7 @@
     "name": "Инжекторы антиматерии",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -21630,6 +21926,7 @@
     "name": "Устойчивость к блэкауту",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -21717,6 +22014,7 @@
     "name": "Банки конденсаторов",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -21806,6 +22104,7 @@
     "name": "Распределённые микросети",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -21895,6 +22194,7 @@
     "name": "Доктрина флотских танкеров",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -21983,6 +22283,7 @@
     "name": "Каскады топливных элементов",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22071,6 +22372,7 @@
     "name": "Броня-теплоотвод",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22159,6 +22461,7 @@
     "name": "Магнито-инерционный синтез",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22247,6 +22550,7 @@
     "name": "Орбитальные приёмники луча",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22335,6 +22639,7 @@
     "name": "Протоколы перегруза",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22423,6 +22728,7 @@
     "name": "Стеки плазменных двигателей",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22511,6 +22817,7 @@
     "name": "Защита реакторов",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22599,6 +22906,7 @@
     "name": "Телеметрия реакторов",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22686,6 +22994,7 @@
     "name": "Ядра спайк-приводов",
     "category": "D",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -22774,6 +23083,7 @@
     "name": "Питание лучевой артиллерии",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22805,6 +23115,7 @@
     "name": "Реакторы холодного старта",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22835,6 +23146,7 @@
     "name": "Поля аварийного сброса",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22865,6 +23177,7 @@
     "name": "Доктрина энергии",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22896,6 +23209,7 @@
     "name": "Отказоустойчивые ядра",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22927,6 +23241,7 @@
     "name": "Единая шина флота",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22958,6 +23273,7 @@
     "name": "Маршрутизация гиперсети",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -22989,6 +23305,7 @@
     "name": "Планетарный энергофьюжн",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23021,6 +23338,7 @@
     "name": "Управление роем реакторов",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23052,6 +23370,7 @@
     "name": "Бутылки сингулярности",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23083,6 +23402,7 @@
     "name": "Станции звёздного сифона",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23114,6 +23434,7 @@
     "name": "Кольца варп-конденсаторов",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23145,6 +23466,7 @@
     "name": "Сбор отработанной энергии",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23176,6 +23498,7 @@
     "name": "Массивы нулевой точки",
     "category": "D",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -23207,6 +23530,7 @@
     "name": "Автоматизация сельского хозяйства",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23293,6 +23617,7 @@
     "name": "Сельское хозяйство",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23381,6 +23706,7 @@
     "name": "Био-переработка",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23469,6 +23795,7 @@
     "name": "Биоинженерия",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23557,6 +23884,7 @@
     "name": "Клонирование",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23645,6 +23973,7 @@
     "name": "Управление экосистемами",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23733,6 +24062,7 @@
     "name": "Синтез пищи",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23821,6 +24151,7 @@
     "name": "Генетическое разнообразие",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23909,6 +24240,7 @@
     "name": "Генетическая инженерия",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -23997,6 +24329,7 @@
     "name": "Медицинские достижения",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -24085,6 +24418,7 @@
     "name": "Рост населения",
     "category": "E",
     "era": 1,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 12
     },
@@ -24173,6 +24507,7 @@
     "name": "Био-вычисления",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24261,6 +24596,7 @@
     "name": "Биоаугментация",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24349,6 +24685,7 @@
     "name": "Кибернетическое улучшение",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24437,6 +24774,7 @@
     "name": "Инженерия экосистем",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24525,6 +24863,7 @@
     "name": "Редактирование генов",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24613,6 +24952,7 @@
     "name": "Генетическая оптимизация",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24701,6 +25041,7 @@
     "name": "Продление жизни",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24789,6 +25130,7 @@
     "name": "Нейроинтерфейсы",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24877,6 +25219,7 @@
     "name": "Псионический потенциал",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -24965,6 +25308,7 @@
     "name": "Синтетическая биология",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -25053,6 +25397,7 @@
     "name": "Терраформирование",
     "category": "E",
     "era": 2,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 24
     },
@@ -25141,6 +25486,7 @@
     "name": "Био-цифровое слияние",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25229,6 +25575,7 @@
     "name": "Загрузка сознания",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25317,6 +25664,7 @@
     "name": "Сети массового здравоохранения",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25405,6 +25753,7 @@
     "name": "Криосонные палаты",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25492,6 +25841,7 @@
     "name": "Хранилища генофонда",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25581,6 +25931,7 @@
     "name": "Генетическая асцензия",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25669,6 +26020,7 @@
     "name": "Генетическое совершенство",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25757,6 +26109,7 @@
     "name": "Биом-комплекты хабитатов",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25845,6 +26198,7 @@
     "name": "Псионическое пробуждение",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -25933,6 +26287,7 @@
     "name": "Псионическое мастерство",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -26021,6 +26376,7 @@
     "name": "Синтетическая жизнь",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -26109,6 +26465,7 @@
     "name": "Ксенобиологическая интеграция",
     "category": "E",
     "era": 3,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 42
     },
@@ -26197,6 +26554,7 @@
     "name": "Патчинг биосферы",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26285,6 +26643,7 @@
     "name": "Пулы клон-призыва",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26372,6 +26731,7 @@
     "name": "Сети яслей",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26461,6 +26821,7 @@
     "name": "Глубоководные фермы",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26549,6 +26910,7 @@
     "name": "Массивы экзоматок",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26636,6 +26998,7 @@
     "name": "Клиники долголетия",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26723,6 +27086,7 @@
     "name": "Нейрореабилитация",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26811,6 +27175,7 @@
     "name": "Пандемические фильтры",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26898,6 +27263,7 @@
     "name": "Радиационно-стойкие культуры",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -26986,6 +27352,7 @@
     "name": "Споровое атмосфероформирование",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -27073,6 +27440,7 @@
     "name": "Симбионтный труд",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -27161,6 +27529,7 @@
     "name": "Адаптация ксено-диет",
     "category": "E",
     "era": 4,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 144
     },
@@ -27249,6 +27618,7 @@
     "name": "Доктрина биомассы",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27280,6 +27650,7 @@
     "name": "Корабли замкнутой экологии",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27311,6 +27682,7 @@
     "name": "Боевые эндорфины",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27342,6 +27714,7 @@
     "name": "Камеры генезиса",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27372,6 +27745,7 @@
     "name": "Гигиена роевого разума",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27403,6 +27777,7 @@
     "name": "Бессмертные клеточные линии",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27433,6 +27808,7 @@
     "name": "Наследование памяти",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27464,6 +27840,7 @@
     "name": "Нуллификаторы чумы",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27494,6 +27871,7 @@
     "name": "Протоколы демографического рывка",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27524,6 +27902,7 @@
     "name": "Лаборатории дизайна видов",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27554,6 +27933,7 @@
     "name": "Вакуумная флора",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27585,6 +27965,7 @@
     "name": "Кроны мировых деревьев",
     "category": "E",
     "era": 5,
+    "direction": "industry",
     "cost": {
       "currency.cognitio": 200
     },
@@ -27616,6 +27997,7 @@
     "name": "Обнаружение аномалий",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -27702,6 +28084,7 @@
     "name": "Астрономия",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -27790,6 +28173,7 @@
     "name": "Базовые исследования",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -27878,6 +28262,7 @@
     "name": "Космология",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -27966,6 +28351,7 @@
     "name": "Анализ данных",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28054,6 +28440,7 @@
     "name": "Физика частиц",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28142,6 +28529,7 @@
     "name": "Псионическая теория",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28230,6 +28618,7 @@
     "name": "Квантовая механика",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28318,6 +28707,7 @@
     "name": "Относительность",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28406,6 +28796,7 @@
     "name": "Научный метод",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28494,6 +28885,7 @@
     "name": "Теоретическая физика",
     "category": "F",
     "era": 1,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 12
     },
@@ -28582,6 +28974,7 @@
     "name": "Продвинутые исследования",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -28670,6 +29063,7 @@
     "name": "Исследования ИИ",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -28758,6 +29152,7 @@
     "name": "Удержание аномалий",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -28846,6 +29241,7 @@
     "name": "Когнитивное усиление",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -28934,6 +29330,7 @@
     "name": "Экспериментальная физика",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29022,6 +29419,7 @@
     "name": "Теория информации",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29110,6 +29508,7 @@
     "name": "Теория мультивселенной",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29198,6 +29597,7 @@
     "name": "Нейронные сети",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29286,6 +29686,7 @@
     "name": "Псионическое усиление",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29374,6 +29775,7 @@
     "name": "Псионические практики",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29462,6 +29864,7 @@
     "name": "Квантовые вычисления",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29550,6 +29953,7 @@
     "name": "Теория струн",
     "category": "F",
     "era": 2,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 24
     },
@@ -29638,6 +30042,7 @@
     "name": "Каталоги аномалий",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -29725,6 +30130,7 @@
     "name": "Сжатие архивов",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -29814,6 +30220,7 @@
     "name": "Полевые экспедиции",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -29902,6 +30309,7 @@
     "name": "Движки гипотез",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -29990,6 +30398,7 @@
     "name": "Кодексы безопасности лабораторий",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30078,6 +30487,7 @@
     "name": "Сети рецензирования",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30166,6 +30576,7 @@
     "name": "Предиктивные модели",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30254,6 +30665,7 @@
     "name": "Псионическая асцензия",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30341,6 +30753,7 @@
     "name": "Псионическое мастерство",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30429,6 +30842,7 @@
     "name": "Псионические сети",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30517,6 +30931,7 @@
     "name": "Квантовое сознание",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30605,6 +31020,7 @@
     "name": "Криптоанализ сигналов",
     "category": "F",
     "era": 3,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 42
     },
@@ -30693,6 +31109,7 @@
     "name": "Карантин аномалий",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -30780,6 +31197,7 @@
     "name": "Усилители хора",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -30868,6 +31286,7 @@
     "name": "Лаборатории контрразведки",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -30956,6 +31375,7 @@
     "name": "Массивы глубинного обучения",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31044,6 +31464,7 @@
     "name": "Симуляторы доктрин",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31132,6 +31553,7 @@
     "name": "Планировщики экспериментов",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31219,6 +31641,7 @@
     "name": "Мнемонические импланты",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31307,6 +31730,7 @@
     "name": "Сетки обсерваторий",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31394,6 +31818,7 @@
     "name": "Пакты открытой науки",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31482,6 +31907,7 @@
     "name": "Тренировка пси-щитов",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31570,6 +31996,7 @@
     "name": "Расшифровка реликвий",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31658,6 +32085,7 @@
     "name": "Кэширование мысли",
     "category": "F",
     "era": 4,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 144
     },
@@ -31747,6 +32175,7 @@
     "name": "Упряжь аномалий",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31777,6 +32206,7 @@
     "name": "Рывок когнитио",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31808,6 +32238,7 @@
     "name": "Галактический архив",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31840,6 +32271,7 @@
     "name": "Мгновенная синхронизация знаний",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31871,6 +32303,7 @@
     "name": "Доктрина знания",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31902,6 +32335,7 @@
     "name": "Управление роем лабораторий",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31933,6 +32367,7 @@
     "name": "Сети бэкапа разума",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31963,6 +32398,7 @@
     "name": "Кластеры оракулов",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -31994,6 +32430,7 @@
     "name": "Пси-решётка",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -32024,6 +32461,7 @@
     "name": "Самоулучшающиеся лаборатории",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -32055,6 +32493,7 @@
     "name": "Движки истины",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -32086,6 +32525,7 @@
     "name": "ИИ военных академий",
     "category": "F",
     "era": 5,
+    "direction": "culture",
     "cost": {
       "currency.cognitio": 200
     },
@@ -32117,6 +32557,7 @@
     "name": "Прорыв Пути Удара",
     "category": "C",
     "era": 3,
+    "direction": "military",
     "opensPath": "offensive",
     "isBreakthrough": true,
     "cost": {
@@ -32498,6 +32939,7 @@
     "name": "Прорыв Пути Защиты",
     "category": "C",
     "era": 3,
+    "direction": "military",
     "opensPath": "defensive",
     "isBreakthrough": true,
     "cost": {
@@ -32876,6 +33318,387 @@
         ],
         "prerequisites": [
           "tech.defensive.deep_bunkers.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.path.mobility_breakthrough": {
+    "id": "tech.path.mobility_breakthrough",
+    "name": "Прорыв Пути Мобильности",
+    "category": "C",
+    "era": 3,
+    "direction": "military",
+    "opensPath": "mobility",
+    "isBreakthrough": true,
+    "cost": {
+      "currency.cognitio": 70
+    },
+    "iconTag": "industry",
+    "flavor": "Прорыв фиксирует роль Мобильный. Дальше стол открывает прыжок, блиц и топливо хода.",
+    "tags": [
+      "breakthrough"
+    ],
+    "prerequisites": [],
+    "effects": [
+      {
+        "effect": "open_path",
+        "args": {
+          "pathId": "mobility"
+        }
+      }
+    ],
+    "upgrades": []
+  },
+  "tech.mobility.jump_drive": {
+    "id": "tech.mobility.jump_drive",
+    "name": "Прыжковый привод",
+    "category": "C",
+    "era": 3,
+    "direction": "military",
+    "researchPath": "mobility",
+    "tradeable": true,
+    "cost": {
+      "currency.cognitio": 42
+    },
+    "iconTag": "industry",
+    "flavor": "Прыжок режет ячейки хода. Флот входит в систему, пока линейные ещё считают бак.",
+    "tags": [
+      "general",
+      "path:mobility",
+      "path_cluster"
+    ],
+    "prerequisites": [
+      "tech.path.mobility_breakthrough"
+    ],
+    "effects": [
+      {
+        "effect": "move_cost_mult",
+        "args": {
+          "mult": 0.92
+        }
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "tech.mobility.jump_drive.efficiency",
+        "name": "Короткий прыжок",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "move_cost_mult",
+            "args": {
+              "mult": 0.91
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.jump_drive.austerity",
+        "name": "Сухой бак",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 0.96
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.jump_drive.feature",
+        "name": "Второй импульс",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "combat_role_mult",
+            "args": {
+              "role": "screen",
+              "mult": 1.04
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.mobility.jump_drive.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.mobility.blitz_doctrine": {
+    "id": "tech.mobility.blitz_doctrine",
+    "name": "Доктрина блица",
+    "category": "C",
+    "era": 3,
+    "direction": "military",
+    "researchPath": "mobility",
+    "tradeable": true,
+    "cost": {
+      "currency.cognitio": 42
+    },
+    "iconTag": "industry",
+    "flavor": "Блиц снимает завесу. Рейд и перехват входят первыми, не ждут колонну.",
+    "tags": [
+      "general",
+      "path:mobility",
+      "path_cluster"
+    ],
+    "prerequisites": [
+      "tech.path.mobility_breakthrough"
+    ],
+    "effects": [
+      {
+        "effect": "combat_role_mult",
+        "args": {
+          "role": "screen",
+          "mult": 1.1
+        }
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "tech.mobility.blitz_doctrine.efficiency",
+        "name": "Снятие завесы",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "combat_role_mult",
+            "args": {
+              "role": "screen",
+              "mult": 1.04
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.blitz_doctrine.austerity",
+        "name": "Лёгкий рейд",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 0.96
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.blitz_doctrine.feature",
+        "name": "Удар с фланга",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "combat_role_mult",
+            "args": {
+              "role": "assault",
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.mobility.blitz_doctrine.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.mobility.rapid_deployment": {
+    "id": "tech.mobility.rapid_deployment",
+    "name": "Быстрое развёртывание",
+    "category": "C",
+    "era": 3,
+    "direction": "military",
+    "researchPath": "mobility",
+    "tradeable": true,
+    "cost": {
+      "currency.cognitio": 42
+    },
+    "iconTag": "industry",
+    "flavor": "Десант выгружается в том же ходе. Кадр прорыва не ждёт обоз.",
+    "tags": [
+      "general",
+      "path:mobility",
+      "path_cluster"
+    ],
+    "prerequisites": [
+      "tech.path.mobility_breakthrough"
+    ],
+    "effects": [
+      {
+        "effect": "combat_role_mult",
+        "args": {
+          "role": "assault",
+          "mult": 1.1
+        }
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "tech.mobility.rapid_deployment.efficiency",
+        "name": "Выгрузка с ходу",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "combat_role_mult",
+            "args": {
+              "role": "assault",
+              "mult": 1.04
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.rapid_deployment.austerity",
+        "name": "Без обоза",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 0.96
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.rapid_deployment.feature",
+        "name": "Лёгкая волна",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "combat_role_mult",
+            "args": {
+              "role": "screen",
+              "mult": 1.08
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.mobility.rapid_deployment.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ]
+  },
+  "tech.mobility.wormhole_theory": {
+    "id": "tech.mobility.wormhole_theory",
+    "name": "Теория червоточин",
+    "category": "C",
+    "era": 3,
+    "direction": "military",
+    "researchPath": "mobility",
+    "tradeable": true,
+    "cost": {
+      "currency.cognitio": 42
+    },
+    "iconTag": "industry",
+    "flavor": "Червоточина кормит бак водородом. Прыжок держится на топливе, не на удаче.",
+    "tags": [
+      "general",
+      "path:mobility",
+      "path_cluster"
+    ],
+    "prerequisites": [
+      "tech.path.mobility_breakthrough"
+    ],
+    "effects": [
+      {
+        "effect": "production_mult",
+        "args": {
+          "resource": "map.hydrogen",
+          "mult": 1.05
+        }
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "tech.mobility.wormhole_theory.efficiency",
+        "name": "Съём водорода",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "map.hydrogen",
+              "mult": 1.04
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.wormhole_theory.austerity",
+        "name": "Сухой газ",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 0.96
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.mobility.wormhole_theory.feature",
+        "name": "Экзотический бак",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "map.exotic_gases",
+              "mult": 1.04
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.mobility.wormhole_theory.efficiency"
         ],
         "balanceBudget": 0
       }
@@ -44347,6 +45170,101 @@
     ],
     "balanceBudget": 0
   },
+  "tech.military.heavy_legion": {
+    "id": "tech.military.heavy_legion",
+    "name": "Тяжёлый легион",
+    "category": "C",
+    "era": 3,
+    "direction": "military",
+    "cost": {
+      "currency.cognitio": 42
+    },
+    "iconTag": "industry",
+    "flavor": "Линия набирает массу. Это уже не ополчение в строю.",
+    "tags": [
+      "general",
+      "military",
+      "combat"
+    ],
+    "prerequisites": [
+      "tech.military.militia_line"
+    ],
+    "effects": [
+      {
+        "effect": "unit_upgrade",
+        "args": {
+          "from": "unit.generic_line",
+          "to": "unit.heavy_legion"
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "heavy_legion"
+        }
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "tech.military.heavy_legion.efficiency",
+        "name": "Доводка",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 1.02
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.military.heavy_legion.austerity",
+        "name": "Экономия",
+        "cost": {
+          "currency.cognitio": 21
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 0.96
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.military.heavy_legion.feature",
+        "name": "Расширение",
+        "cost": {
+          "currency.cognitio": 23
+        },
+        "effects": [
+          {
+            "effect": "capacity_add",
+            "args": {
+              "category": "C",
+              "tier": 4,
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.military.heavy_legion.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ],
+    "balanceBudget": 0
+  },
   "tech.military.deep_scanner": {
     "id": "tech.military.deep_scanner",
     "name": "Глубинный сканер",
@@ -44897,6 +45815,101 @@
         ],
         "prerequisites": [
           "tech.military.cruiser_ribs.efficiency"
+        ],
+        "balanceBudget": 0
+      }
+    ],
+    "balanceBudget": 0
+  },
+  "tech.military.battleship_keel": {
+    "id": "tech.military.battleship_keel",
+    "name": "Киль линкора",
+    "category": "C",
+    "era": 4,
+    "direction": "military",
+    "cost": {
+      "currency.cognitio": 144
+    },
+    "iconTag": "industry",
+    "flavor": "Крейсер набирает капитал. Линкор — не увеличенные рёбра.",
+    "tags": [
+      "general",
+      "military",
+      "combat"
+    ],
+    "prerequisites": [
+      "tech.military.cruiser_ribs"
+    ],
+    "effects": [
+      {
+        "effect": "unit_upgrade",
+        "args": {
+          "from": "ship.cruiser",
+          "to": "ship.battleship"
+        }
+      },
+      {
+        "effect": "unlock_property",
+        "args": {
+          "property": "battleship_keel"
+        }
+      }
+    ],
+    "upgrades": [
+      {
+        "id": "tech.military.battleship_keel.efficiency",
+        "name": "Доводка",
+        "cost": {
+          "currency.cognitio": 72
+        },
+        "effects": [
+          {
+            "effect": "production_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 1.02
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.military.battleship_keel.austerity",
+        "name": "Экономия",
+        "cost": {
+          "currency.cognitio": 72
+        },
+        "effects": [
+          {
+            "effect": "upkeep_mult",
+            "args": {
+              "resource": "currency.supply",
+              "mult": 0.96
+            }
+          }
+        ],
+        "prerequisites": [],
+        "balanceBudget": 0
+      },
+      {
+        "id": "tech.military.battleship_keel.feature",
+        "name": "Расширение",
+        "cost": {
+          "currency.cognitio": 79
+        },
+        "effects": [
+          {
+            "effect": "capacity_add",
+            "args": {
+              "category": "C",
+              "tier": 6,
+              "amount": 1
+            }
+          }
+        ],
+        "prerequisites": [
+          "tech.military.battleship_keel.efficiency"
         ],
         "balanceBudget": 0
       }
@@ -45728,7 +46741,7 @@
       "breakthrough"
     ],
     "prerequisites": [
-      "tech.military.frigate_keel"
+      "tech.military.battleship_keel"
     ],
     "effects": [
       {

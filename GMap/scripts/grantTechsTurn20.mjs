@@ -319,6 +319,7 @@ function traitIdsOf(faction) {
 
 function canGrant(def, id, { world, factionId, faction }) {
   if (!def) return { ok: false, reason: "missing" };
+  if (def.catalogPending) return { ok: false, reason: "catalogPending" };
   if (factionId === "faction_amalfea" && AMALFEA_DENY.test(id)) {
     return { ok: false, reason: "amalfea-no-psi" };
   }

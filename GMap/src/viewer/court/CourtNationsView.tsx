@@ -31,7 +31,9 @@ export function CourtNationsView({
   payload,
   accent,
   selectedId,
+  targetRaceId,
   onSelect,
+  onVacantPick,
   onDropLeader,
   busy,
 }: {
@@ -40,7 +42,9 @@ export function CourtNationsView({
   payload: ViewerPayload;
   accent?: string;
   selectedId?: string | null;
+  targetRaceId?: string | null;
   onSelect: (id: string | null) => void;
+  onVacantPick?: (raceId: string) => void;
   onDropLeader: (npcId: string, raceId: string) => void;
   busy?: boolean;
 }) {
@@ -95,7 +99,7 @@ export function CourtNationsView({
   return (
     <section className="court-nations" aria-label="Народы">
       <p className="hint court-nations__lede">
-        Перетащите лицо из пула на народ — назначить голос. Клик — досье.
+        Клик по народу без лидера, затем «Лидер» в пуле — или перетащите лицо.
       </p>
       <ul className="court-nations-grid">
         {rows.map((row) => {
@@ -108,7 +112,9 @@ export function CourtNationsView({
                 accepts={npcCardIds}
                 armWhileDragging
                 onDrop={(cardId) => onDropLeader(cardId, row.raceId)}
-                className={`court-nation-slot${vacant ? " is-vacant" : ""}`}
+                className={`court-nation-slot${vacant ? " is-vacant" : ""}${
+                  targetRaceId === row.raceId ? " is-target" : ""
+                }`}
                 contentLayout="stack"
                 label={row.label}
               >
@@ -116,7 +122,7 @@ export function CourtNationsView({
                   <strong>{row.label}</strong>
                   {title ? <span className="hint">{title}</span> : null}
                   {vacant ? (
-                    <span className="hint">Нет лидера — drop сюда</span>
+                    <span className="hint">Нет лидера</span>
                   ) : null}
                 </div>
                 {row.leader ? (
@@ -128,9 +134,14 @@ export function CourtNationsView({
                     onSelect={onSelect}
                   />
                 ) : (
-                  <div className="court-nation-slot__empty" aria-hidden>
-                    +
-                  </div>
+                  <button
+                    type="button"
+                    className="court-nation-slot__empty"
+                    disabled={busy}
+                    onClick={() => onVacantPick?.(row.raceId)}
+                  >
+                    Выбрать
+                  </button>
                 )}
               </DropZone>
             </li>

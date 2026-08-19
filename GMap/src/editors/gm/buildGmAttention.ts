@@ -98,7 +98,7 @@ export function buildGmAttention(opts: {
       id: `combat:${e.id}`,
       kind: "combat",
       label: `Бой · ${sys?.name ?? e.theater ?? e.id}`,
-      detail: e.status,
+      detail: e.status === "contact" ? "контакт" : e.status === "commit" ? "решение" : undefined,
       domain: "diplo",
       systemId: e.systemId ?? null,
       priority: 1,
@@ -135,19 +135,59 @@ export function buildGmAttention(opts: {
         });
       }
     }
-    for (const p of sys.planets ?? []) {
-      if (typeof p.loyalty === "number" && p.loyalty < 35) {
-        items.push({
-          id: `loyal:${sys.id}:${p.id}`,
-          kind: "loyalty",
-          label: `Низкая лояльность · ${p.name || sys.name}`,
-          detail: `${Math.round(p.loyalty)}`,
-          domain: "court",
-          systemId: sys.id,
-          factionId: p.ownerFactionId ?? sys.ownerFactionId ?? null,
-          priority: 3,
-        });
-      }
+  }
+
+  const lowLoyalty: {
+    systemId: string;
+    name: string;
+    count: number;
+    minLoy: number;
+    factionId: string | null;
+  }[] = [];
+  for (const sys of world.systems) {
+    const planets = (sys.planets ?? []).filter(
+      (p) => typeof p.loyalty === "number" && p.loyalty < 35,
+    );
+    if (!planets.length) continue;
+    const minLoy = Math.min(
+      ...planets.map((p) => p.loyalty as number),
+    );
+    lowLoyalty.push({
+      systemId: sys.id,
+      name: sys.name,
+      count: planets.length,
+      minLoy,
+      factionId:
+        sys.ownerFactionId ?? planets[0]?.ownerFactionId ?? null,
+    });
+  }
+  if (lowLoyalty.length > 3) {
+    const worst = [...lowLoyalty].sort((a, b) => a.minLoy - b.minLoy)[0]!;
+    items.push({
+      id: "loyal:summary",
+      kind: "loyalty",
+      label: `Лояльность · ${worst.name} и ещё ${lowLoyalty.length - 1}`,
+      detail: `мин. ${Math.round(worst.minLoy)}`,
+      domain: "court",
+      systemId: worst.systemId,
+      factionId: worst.factionId,
+      priority: 3,
+    });
+  } else {
+    for (const row of lowLoyalty) {
+      items.push({
+        id: `loyal:${row.systemId}`,
+        kind: "loyalty",
+        label:
+          row.count > 1
+            ? `Низкая лояльность · ${row.name} (${row.count})`
+            : `Низкая лояльность · ${row.name}`,
+        detail: `мин. ${Math.round(row.minLoy)}`,
+        domain: "court",
+        systemId: row.systemId,
+        factionId: row.factionId,
+        priority: 3,
+      });
     }
   }
 

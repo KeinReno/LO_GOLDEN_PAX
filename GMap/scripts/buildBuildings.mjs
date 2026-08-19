@@ -82,6 +82,14 @@ const B = {
     upkeep_slots: [{ require: { category: "E", tier: ">=1" }, count: 1, per: "turn" }],
     signature: "+pop_cap", tradeoff: "требует Bios upkeep"
   },
+  "logistics.depot": {
+    id: "logistics.depot", kind: "depot", zone: "surface", name: "Склад снабжения", ap: 1,
+    category: "C", tier: 1, faction: "generic", maxPerPlanet: 1,
+    cost: tierCost("C", 1),
+    effects: [{ effect: "stability_add", args: { amount: 1 } }],
+    signature: "Узел снабжения: стабильность, не добыча",
+    tradeoff: "не расширяет логистический граф (депо на карте — space object)",
+  },
   "building.farm": {
     id: "building.farm", kind: "farm", zone: "surface", name: "Агрокомплекс", ap: 1,
     category: "E", tier: 3, faction: "generic",
@@ -241,6 +249,7 @@ const B = {
   "extract.anomaly_collector": {
     id: "extract.anomaly_collector", kind: "mine", zone: "deep", name: "Аномальный коллектор", ap: 2,
     category: "A", extractsCategory: "A", tier: 10, faction: "generic", maxPerSystem: 1,
+    requireProperties: ["anomaly_tap"],
     cost: tierCost("A", 10, { "currency.cognitio": 6, "currency.energia": 4 }),
     effects: [
       yieldFlat("currency.extracta", tierYield(10)),
@@ -597,7 +606,7 @@ const B = {
   },
   "mega.gate.damyl": {
     id: "mega.gate.damyl", base: "mega.gate", kind: "relay", zone: "deep", name: "Дамильские врата",
-    faction: "damyl", maxPerSystem: 1,
+    faction: "damyl", category: "F", tier: 8, maxPerSystem: 1,
     extra_slots: [{ role: "white_corridor", require: { properties: ["corridor_open"], tier: ">=8" }, count: 2 }],
     extra_effects: [{ effect: "unlock_property", args: { property: "corridor_open" } }],
     prerequisites: { race: "damilian" },
@@ -605,7 +614,7 @@ const B = {
   },
   "mega.archive.belator": {
     id: "mega.archive.belator", base: "cognitio.archive", kind: "lab", zone: "deep",
-    name: "Архив Дая-Чины", faction: "belator", maxPerSystem: 1,
+    name: "Архив Дая-Чины", faction: "belator", category: "F", tier: 9, maxPerSystem: 1,
     extra_slots: [{ role: "norborian_logic", require: { properties: ["info_store"], tier: ">=7" }, count: 2 }],
     extra_effects: [
       { effect: "unlock_tech_tier", args: { category: "F", to: 10 } },

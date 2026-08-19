@@ -117,10 +117,14 @@ function SystemRow({
             )}
           </span>
           <span
-            className="eco-prod-row__rate tabular-nums"
-            title="Оценка по зданиям и ресурсам, не поток движка"
+            className={`eco-prod-row__rate ${row.bottleneck ? "is-warn" : "hint"}`}
+            title={
+              row.bottleneck
+                ? row.bottleneckReason ?? "Узкое место категории на этой системе"
+                : "Доход за ход — в полосе A–F сверху, не в этой цифре"
+            }
           >
-            ~{fmtInt(row.ratePerTurn)}
+            {row.bottleneck ? "узкое место" : row.resourceIds.length ? "добыча" : ""}
           </span>
           <span className="eco-prod-row__open hint">открыть →</span>
         </button>

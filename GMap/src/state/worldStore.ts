@@ -6,8 +6,8 @@ import {
   createEmptyWorld,
   DEFAULT_MASTER_TOKEN,
   DIPLOMACY_LABELS,
-  RESOURCE_POOL,
 } from "./defaults";
+import { depositPaintPool, resourcesHas } from "./depositPaint";
 import {
   POI_PAINT_TOOLS,
   type Caravan,
@@ -62,8 +62,6 @@ function readGmShellMode(): GmShellMode {
     const v = localStorage.getItem(GM_SHELL_KEY);
     if (
       v === "atelier" ||
-      v === "rp" ||
-      v === "simulator" ||
       v === "tech" ||
       v === "units" ||
       v === "buildings" ||
@@ -73,6 +71,7 @@ function readGmShellMode(): GmShellMode {
     ) {
       return v;
     }
+    // RP / simulator persist while open, but boot to map so F-keys are there.
     // Legacy prep/live → unified GM session
     if (v === "gm" || v === "prep" || v === "live") return "gm";
   } catch {
@@ -376,6 +375,14 @@ function normalizeWorld(raw: WorldState): WorldState {
   };
 }
 
+function resolveActiveFactionId(
+  current: string | null | undefined,
+  factions: { id: string }[],
+): string | null {
+  if (current && factions.some((f) => f.id === current)) return current;
+  return factions[0]?.id ?? null;
+}
+
 export const useWorldStore = create<WorldStore>((rawSet, get) => {
   const set = ((
     partial:
@@ -428,7 +435,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
   selectedSectorId: null,
   linkDraftFromId: null,
   sectorDraftPoints: [],
-  activeFactionId: "faction_a",
+  activeFactionId: null,
   brush: {
     density: 0.55,
     minDistance: 48,
@@ -620,9 +627,26 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
     } catch {
       /* ignore */
     }
+    const prev = get().gmShellMode;
     set({
       gmShellMode: mode,
       gmLiveDomain: mode === "gm" ? get().gmLiveDomain : null,
+      ...(mode === "rp"
+        ? { rpFloatOpen: false, rpFocusFactionId: null }
+        : {}),
+      ...(mode === "polities" && !get().dossierFactionId
+        ? {
+            dossierFactionId:
+              get().activeFactionId ?? get().world.factions[0]?.id ?? null,
+          }
+        : {}),
+      ...(mode === "gm" && prev !== "gm"
+        ? {
+            dossierFactionId: null,
+            diplomacyPanelOpen: false,
+            dossierSystemId: null,
+          }
+        : {}),
     });
   },
   setGmLiveDomain: (domain) => set({ gmLiveDomain: domain }),
@@ -981,6 +1005,10 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
         cameraFocusSystemId: null,
         mapFocus: { level: "galaxy" },
         contextMenu: null,
+        activeFactionId: resolveActiveFactionId(
+          get().activeFactionId,
+          normalized.factions,
+        ),
         ...emptyHistory(),
       });
       return;
@@ -1036,14 +1064,19 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
         cameraFocusSystemId: keepSys(state.cameraFocusSystemId),
         mapFocus,
         contextMenu: null,
+        activeFactionId: resolveActiveFactionId(
+          state.activeFactionId,
+          normalized.factions,
+        ),
         ...emptyHistory(),
       };
     });
   },
 
-  resetWorld: () =>
+  resetWorld: () => {
+    const world = createEmptyWorld();
     rawSet({
-      world: createEmptyWorld(),
+      world,
       selectedSystemId: null,
       selectedSystemIds: [],
       selectedFleetId: null,
@@ -1057,8 +1090,10 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
       pendingCapitalFactionId: null,
       cameraFocusSystemId: null,
       mapFocus: { level: "galaxy" },
+      activeFactionId: resolveActiveFactionId(null, world.factions),
       ...emptyHistory(),
-    }),
+    });
+  },
 
   touchMeta: () => rawSet((s) => ({ world: touch(s.world) })),
 
@@ -1356,11 +1391,11 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
 
   paintResourceOnSystem: (systemId) => {
     const { world, activeResource, mapFocus } = get();
+    const pool = depositPaintPool();
     const res =
-      activeResource &&
-      (RESOURCE_POOL as readonly string[]).includes(activeResource)
+      activeResource && pool.includes(activeResource)
         ? activeResource
-        : RESOURCE_POOL[Math.floor(Math.random() * RESOURCE_POOL.length)]!;
+        : pool[Math.floor(Math.random() * pool.length)]!;
     set({
       world: touch({
         ...world,
@@ -1376,7 +1411,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
               ...s,
               planets: s.planets.map((p) => {
                 if (p.id !== mapFocus.planetId) return p;
-                if ((p.resources ?? []).includes(res)) return p;
+                if (resourcesHas(p.resources, res)) return p;
                 return { ...p, resources: [...(p.resources ?? []), res] };
               }),
             };
@@ -1384,7 +1419,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
 
           // Inside system dossier (not a specific planet): system-space only
           if (mapFocus.level === "system" && mapFocus.systemId === systemId) {
-            if ((s.resources ?? []).includes(res)) return s;
+            if (resourcesHas(s.resources, res)) return s;
             return { ...s, resources: [...(s.resources ?? []), res] };
           }
 
@@ -1397,12 +1432,12 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
               ...s,
               planets: planets.map((p, i) => {
                 if (i !== idx) return p;
-                if ((p.resources ?? []).includes(res)) return p;
+                if (resourcesHas(p.resources, res)) return p;
                 return { ...p, resources: [...(p.resources ?? []), res] };
               }),
             };
           }
-          if ((s.resources ?? []).includes(res)) return s;
+          if (resourcesHas(s.resources, res)) return s;
           return { ...s, resources: [...(s.resources ?? []), res] };
         }),
       }),
@@ -1411,11 +1446,11 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
 
   paintResourceOnPlanet: (systemId, planetId) => {
     const { world, activeResource } = get();
+    const pool = depositPaintPool();
     const res =
-      activeResource &&
-      (RESOURCE_POOL as readonly string[]).includes(activeResource)
+      activeResource && pool.includes(activeResource)
         ? activeResource
-        : RESOURCE_POOL[Math.floor(Math.random() * RESOURCE_POOL.length)]!;
+        : pool[Math.floor(Math.random() * pool.length)]!;
     set({
       world: touch({
         ...world,
@@ -1425,7 +1460,7 @@ export const useWorldStore = create<WorldStore>((rawSet, get) => {
             ...s,
             planets: s.planets.map((p) => {
               if (p.id !== planetId) return p;
-              if ((p.resources ?? []).includes(res)) return p;
+              if (resourcesHas(p.resources, res)) return p;
               return { ...p, resources: [...(p.resources ?? []), res] };
             }),
           };

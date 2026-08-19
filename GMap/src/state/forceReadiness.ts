@@ -11,6 +11,9 @@ import {
   roleLabel,
 } from "./cardBattleHints";
 import type { Fleet, Legion, ShipGroup, ViewerPayload } from "./types";
+import { weightedHpRatio } from "./forceHp";
+
+export { weightedHpRatio } from "./forceHp";
 
 export type RoleMixEntry = {
   role: string;
@@ -73,15 +76,26 @@ function shipDef(defId?: string, type?: string) {
   const c = getCachedContent();
   const key = defId || type;
   if (!key || !c) return null;
+  const aliases = (c as { id_aliases?: { ships?: Record<string, string>; units?: Record<string, string> } }).id_aliases;
+  const aliased =
+    aliases?.ships?.[key] ||
+    aliases?.ships?.[key.toLowerCase()] ||
+    aliases?.units?.[key] ||
+    aliases?.units?.[key.toLowerCase()] ||
+    key;
+  const needle = String(type || key).toLowerCase();
+  const matchName = (d: { id?: string; name?: string } | null | undefined) =>
+    d?.id === key ||
+    d?.id === aliased ||
+    d?.name === type ||
+    (d?.name && String(d.name).toLowerCase() === needle);
   return (
+    (c.ships as Record<string, any>)?.[aliased] ||
     (c.ships as Record<string, any>)?.[key] ||
+    (c.units as Record<string, any>)?.[aliased] ||
     (c.units as Record<string, any>)?.[key] ||
-    Object.values((c.ships as Record<string, any>) || {}).find(
-      (s: any) => s?.name === type,
-    ) ||
-    Object.values((c.units as Record<string, any>) || {}).find(
-      (u: any) => u?.name === type,
-    ) ||
+    Object.values((c.ships as Record<string, any>) || {}).find(matchName) ||
+    Object.values((c.units as Record<string, any>) || {}).find(matchName) ||
     null
   );
 }
@@ -315,6 +329,17 @@ export function groupNeedsRepair(group: ShipGroup): boolean {
   const hp = group.hp;
   if (hp == null) return false;
   return hp < max - 0.5;
+}
+
+export function compositionHpRatio(
+  composition: ShipGroup[] | undefined,
+): number | null {
+  const rows = (composition ?? []).map((g) => ({
+    hp: g.hp,
+    count: g.count,
+    maxHp: groupMaxHp(g),
+  }));
+  return weightedHpRatio(rows);
 }
 
 export function systemHasShipyardForFaction(

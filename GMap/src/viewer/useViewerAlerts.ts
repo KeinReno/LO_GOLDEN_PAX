@@ -9,7 +9,10 @@ import { useViewerBattleSessionStore } from "../state/viewerBattleSessionStore";
 import { buildViewerAlerts } from "./buildViewerAlerts";
 import type { AlertFocusAnchor } from "./ViewerAlertFab";
 import type { EconomySystemSignal } from "./economyFlowTypes";
+import { questAttentionCount } from "./quests/questAttention";
 import { writeStoredStart } from "./viewerNavTypes";
+import { navigateViewerRoom } from "./features/rooms-router/navigateViewerRoom";
+import { ECO_SECTION_STORAGE, type EconomySectionId } from "./economy/types";
 
 export interface ViewerAlertNavActions {
   closeMapOverlays: () => void;
@@ -54,6 +57,12 @@ export function useViewerAlerts({
   const setEcoHighlightCategory = useViewerPanelFocusStore(
     (s) => s.setEcoHighlightCategory,
   );
+  const setEconomyFocusCategory = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusCategory,
+  );
+  const setEconomyFocusSection = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusSection,
+  );
   const setEconomyLinkedSystemId = useViewerPanelFocusStore(
     (s) => s.setEconomyLinkedSystemId,
   );
@@ -77,11 +86,8 @@ export function useViewerAlerts({
       setSelectedFleetId(fleetId);
       setSelectedLegionId(null);
       setSelectedSystemId(systemId);
-      setViewMode("map");
-      closeMapOverlays();
-      closeShellOverlays();
       setTouchMoveArmed(false);
-      writeStoredStart("map");
+      navigateViewerRoom("forces");
       window.setTimeout(
         () => mapApiRef.current?.focusSystem(systemId),
         80,
@@ -89,13 +95,10 @@ export function useViewerAlerts({
     },
     [
       payload,
-      closeMapOverlays,
-      closeShellOverlays,
       mapApiRef,
       setSelectedFleetId,
       setSelectedLegionId,
       setSelectedSystemId,
-      setViewMode,
       setTouchMoveArmed,
     ],
   );
@@ -199,17 +202,45 @@ export function useViewerAlerts({
     setRpUnread,
   ]);
 
+  const focusAlertQuests = useCallback(() => {
+    closeMapOverlays();
+    setQueueOpen(false);
+    setMenuOpen(false);
+    setSettingsOpen(false);
+    setMapFiltersOpen(false);
+    setRpFloatOpen(false);
+    setTouchMoveArmed(false);
+    goView("quests");
+    writeStoredStart("hq");
+  }, [
+    closeMapOverlays,
+    goView,
+    setQueueOpen,
+    setMenuOpen,
+    setSettingsOpen,
+    setMapFiltersOpen,
+    setRpFloatOpen,
+    setTouchMoveArmed,
+  ]);
+
   const focusAlertEconomy = useCallback(
     (anchor?: AlertFocusAnchor) => {
       const top = economySystemSignals[0];
-      if (top?.category) setEcoHighlightCategory(top.category);
+      if (top?.category) {
+        setEcoHighlightCategory(top.category);
+        setEconomyFocusCategory(top.category);
+      }
       if (top?.systemId) setEconomyLinkedSystemId(top.systemId);
-      if ((economyPressure ?? 0) >= 2) {
-        try {
-          localStorage.setItem("gmap-eco-section", "policies");
-        } catch {
-          /* ignore */
-        }
+      const section: EconomySectionId = top
+        ? "production"
+        : (economyPressure ?? 0) >= 2
+          ? "policies"
+          : "overview";
+      setEconomyFocusSection(section);
+      try {
+        localStorage.setItem(ECO_SECTION_STORAGE, section);
+      } catch {
+        /* ignore */
       }
       setMenuOpen(false);
       setSettingsOpen(false);
@@ -218,15 +249,15 @@ export function useViewerAlerts({
       setTouchMoveArmed(false);
       setEconomyPopover(null);
       goView("economy");
-      if (anchor) {
-        void anchor;
-      }
+      void anchor;
     },
     [
       economySystemSignals,
       economyPressure,
       goView,
       setEcoHighlightCategory,
+      setEconomyFocusCategory,
+      setEconomyFocusSection,
       setEconomyLinkedSystemId,
       setMenuOpen,
       setSettingsOpen,
@@ -244,6 +275,7 @@ export function useViewerAlerts({
       engagements,
       pendingOrderCount: pendingCount,
       rpUnread,
+      questAttention: questAttentionCount(payload),
       systemSignals: economySystemSignals,
       callbacks: {
         onFocusIdleFleet: focusAlertIdleFleet,
@@ -252,6 +284,7 @@ export function useViewerAlerts({
         onFocusRp: focusAlertRp,
         onFocusEconomy: focusAlertEconomy,
         onFocusDiplo: focusAlertDiplo,
+        onFocusQuests: focusAlertQuests,
       },
     });
   }, [
@@ -263,6 +296,7 @@ export function useViewerAlerts({
     focusAlertEngagement,
     focusAlertOrders,
     focusAlertDiplo,
+    focusAlertQuests,
     focusAlertRp,
     focusAlertEconomy,
     economySystemSignals,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatOdMeter } from "../state/playerUiTerms";
 import { createPortal } from "react-dom";
 import type {
   Planet,
@@ -64,6 +65,7 @@ import type { ForceRecruitSession } from "../state/forceRaiseClient";
 
 export type BuildingSlotDef = {
   role: string;
+  fillOnly?: boolean;
   require: { category?: string; tier?: string; properties?: string[] };
   count: number;
 };
@@ -80,6 +82,7 @@ export type BuildingDef = {
   category?: string;
   tier?: number;
   faction?: string;
+  requireRoleMilestone?: string;
   prerequisites?: { race?: string; races?: string[] };
   biome_restrictions?: string[];
   slots?: BuildingSlotDef[];
@@ -671,6 +674,7 @@ export function PlayerPlanetManage({
               password={password}
               stocks={stocks}
               busy={busy}
+              techEco={techEco}
               onSession={onForceRecruitSession}
             />
           )}
@@ -684,7 +688,7 @@ export function PlayerPlanetManage({
                   {Math.round(laborSum.free)}
                 </span>
                 <span className="hint">
-                  ОД {reservedAp}/{apMax}
+                  {formatOdMeter(reservedAp, apMax)}
                   {apLeft === 0 ? " · нет ОД" : ""}
                 </span>
                 <div
@@ -697,7 +701,7 @@ export function PlayerPlanetManage({
                     className={viewMode === "radial" ? "is-on" : ""}
                     onClick={() => setViewMode("radial")}
                   >
-                    Радиал
+                    Кольцо
                   </button>
                   <button
                     type="button"

@@ -19,6 +19,7 @@ import {
   transferAssets,
   shareableTechIds,
   setDiplomacyRelation,
+  affordResources,
 } from "./helpers.mjs";
 
 /**
@@ -62,15 +63,15 @@ export function respondDiploOffer({
   ensureFactionEco(ledger, offer.fromFactionId);
   ensureFactionEco(ledger, offer.toFactionId);
 
-  for (const item of offer.want || []) {
-    if (item.kind !== "resource") continue;
-    const have = ledger.factions[offer.toFactionId].stocks[item.currencyId] ?? 0;
-    if (have < item.amount) {
-      return {
-        ok: false,
-        error: `недостаточно ${item.currencyId} для ответа (есть ${have})`,
-      };
-    }
+  const wantPay = affordResources(
+    ledger.factions[offer.toFactionId]?.stocks,
+    offer.want || [],
+  );
+  if (!wantPay.ok) {
+    return {
+      ok: false,
+      error: `${wantPay.error} для ответа`,
+    };
   }
 
   const worldPre = readLiveBoard();
@@ -131,12 +132,15 @@ export function respondDiploOffer({
   }
   writeLedger(ledger);
 
+  // `world` read here (was previously re-declared further down, after the
+  // research_pact block already referenced it — a TDZ ReferenceError on
+  // every research_pact accept, found during the file-decomposition pass).
+  // recomputeUnlocksFromTechs already null-guards `world` internally, so
+  // reusing this single read for both the research-pact block and the
+  // transfer/effects block below is safe even when there's no live board.
+  const world = readLiveBoard();
+
   // Research pact: share only transferable / non-exclusive techs (not race/trait locks).
-  // NOTE (found during file-decomposition pass, not fixed here — flagged in
-  // agent-tasks/STATUS.md): `world` below is referenced before its `const world =
-  // readLiveBoard()` declaration further down this same function. That's a
-  // TDZ ReferenceError on every research_pact accept. Preserved as-is —
-  // decomposition is behavior-preserving only, bug fixes are a separate pass.
   let researchPactNewTechs = null;
   if (treatyItem?.treaty === "research_pact") {
     const content = getContent();
@@ -166,7 +170,6 @@ export function respondDiploOffer({
     };
   }
 
-  const world = readLiveBoard();
   if (world) {
     transferAssets(
       world,

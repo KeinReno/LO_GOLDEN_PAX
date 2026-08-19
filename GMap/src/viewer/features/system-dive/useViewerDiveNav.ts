@@ -30,13 +30,18 @@ export function useViewerDiveNav(mapApiRef: {
   const closeSystemView = useWorldStore((s) => s.closeSystemView);
 
   const openPlayerSystem = useCallback(
-    (systemId: string) => {
+    (systemId: string, planetId?: string) => {
+      navigateViewerRoom("map");
       openDive(systemId);
       setSelectedSystemId(systemId);
       setSheetOpen(false);
       setTouchMoveArmed(false);
       setViewerCtx(null);
-      useWorldStore.setState(diveOpenWorldPatch(systemId));
+      useWorldStore.setState(
+        planetId
+          ? divePlanetWorldPatch(systemId, planetId)
+          : diveOpenWorldPatch(systemId),
+      );
       window.setTimeout(() => mapApiRef.current?.focusSystem(systemId), 80);
     },
     [
@@ -60,9 +65,9 @@ export function useViewerDiveNav(mapApiRef: {
 
   const openPlayerPlanet = useCallback(
     (systemId: string, planetId: string) => {
-      useWorldStore.setState(divePlanetWorldPatch(systemId, planetId));
+      openPlayerSystem(systemId, planetId);
     },
-    [],
+    [openPlayerSystem],
   );
 
   const closePlayerSystem = useCallback(() => {

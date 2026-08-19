@@ -36,6 +36,27 @@ export function isCraftedModule(resource) {
   return resource?.kind === "module" || String(id).startsWith("module.");
 }
 
+export function isMapDeposit(resource) {
+  if (!resource) return false;
+  if (resource.notDeposit) return false;
+  if (resource.category === null) return false;
+  return !isCraftedModule(resource);
+}
+
+const STUB_DEPOSIT_IDS = new Set([
+  "map.energy",
+  "map.buildplex",
+  "map.trade_value",
+  "map.alloys",
+]);
+
+export function isPaintDeposit(resource) {
+  if (!isMapDeposit(resource)) return false;
+  if (resource.stub) return false;
+  const id = resource.id || resource.resourceId || "";
+  return !STUB_DEPOSIT_IDS.has(id);
+}
+
 export function resourceMatchesRequire(resource, require) {
   if (!require) return true;
   // Crafted modules never fill building/ore slots (no theater on the require).
@@ -75,26 +96,35 @@ export function buildResourceIndex(content) {
   const c = content || getContent();
   const all = [];
   const byCategory = {};
+  const byCategoryDeposits = {};
   const byTier = {};
-  for (const [id, def] of Object.entries(c.map_resources || {})) {
-    if (def.category == null) continue; // skip derived flows like "торговое значение"
-    const entry = {
-      resourceId: id,
-      name: def.name,
-      category: def.category,
-      tier: Number(def.tier),
-      properties: def.properties || [],
-      toxic: !!def.toxic,
-      biome_tags: def.biome_tags || [],
-      kind: def.kind || null,
-      theater: def.theater || null,
-    };
-    all.push(entry);
-    (byCategory[def.category] = byCategory[def.category] || []).push(entry);
-    const t = Number(def.tier);
-    (byTier[t] = byTier[t] || []).push(entry);
+  for (const bag of [c.map_resources, c.modules]) {
+    for (const [id, def] of Object.entries(bag || {})) {
+      if (def.category == null) continue;
+      const entry = {
+        resourceId: id,
+        id,
+        name: def.name,
+        category: def.category,
+        tier: Number(def.tier),
+        properties: def.properties || [],
+        toxic: !!def.toxic,
+        biome_tags: def.biome_tags || [],
+        kind: def.kind || null,
+        theater: def.theater || null,
+        notDeposit: !!def.notDeposit,
+        stub: !!def.stub,
+      };
+      all.push(entry);
+      (byCategory[def.category] = byCategory[def.category] || []).push(entry);
+      if (isPaintDeposit(entry)) {
+        (byCategoryDeposits[def.category] = byCategoryDeposits[def.category] || []).push(entry);
+      }
+      const t = Number(def.tier);
+      (byTier[t] = byTier[t] || []).push(entry);
+    }
   }
-  return { all, byCategory, byTier };
+  return { all, byCategory, byCategoryDeposits, byTier };
 }
 
 /**

@@ -1,17 +1,13 @@
 import {
-  useCallback,
   type CSSProperties,
-  type DragEvent,
-  type MouseEvent,
 } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { BookOpen, MapPin, RotateCcw } from "lucide-react";
+import { BookOpen, MapPin } from "lucide-react";
 import { StatefulButton } from "../../ui/StatefulButton";
 import { QuestDiceRoller } from "./DiceRoller";
 import { canAffordCosts } from "./adaptQuest";
 import type { Quest, QuestChoice } from "./types";
 import { QUEST_KIND_META, QUEST_STATUS_LABEL } from "./types";
-import { useQuestsState } from "./useQuestsState";
 import {
   openCourtForNpc,
   QuestAssignedChip,
@@ -79,15 +75,6 @@ function ChoiceFan({
                     "--fan-i": i - (choices.length - 1) / 2,
                   } as CSSProperties
                 }
-                draggable={affordable}
-                onDragStart={(e) => {
-                  if (!affordable) {
-                    e.preventDefault();
-                    return;
-                  }
-                  e.dataTransfer.setData("text/quest-choice", c.id);
-                  e.dataTransfer.effectAllowed = "copy";
-                }}
                 onClick={() => onChoose(c.id)}
                 title={title}
               >
@@ -117,22 +104,16 @@ function ChoiceFan({
 function Briefing({
   quest,
   chatOpen,
-  flipped,
   compact,
-  onToggleFlip,
   onOpenChat,
   onFocusSystem,
   onOpenCourt,
-  onMiddleFlip,
 }: {
   quest: Quest;
   chatOpen?: boolean;
-  flipped: boolean;
   compact?: boolean;
-  onToggleFlip: () => void;
   onOpenChat: () => void;
   onFocusSystem?: (systemId: string) => void;
-  onMiddleFlip: (e: MouseEvent) => void;
   onOpenCourt?: () => void;
 }) {
   const meta = QUEST_KIND_META[quest.kind];
@@ -144,12 +125,7 @@ function Briefing({
 
   return (
     <article
-      className={`quest-brief quest-brief--${quest.kind} ${flipped ? "is-flipped" : ""}`}
-      onMouseDown={onMiddleFlip}
-      onAuxClick={(e) => {
-        if (e.button === 1) e.preventDefault();
-      }}
-      onDragOver={(e: DragEvent) => e.preventDefault()}
+      className={`quest-brief quest-brief--${quest.kind}`}
     >
       <header className="quest-brief__bar">
         <span className="quest-brief__lane">
@@ -187,24 +163,15 @@ function Briefing({
               {quest.systemName ?? "Карта"}
             </button>
           ) : null}
-          {!compact ? (
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={onToggleFlip}
-              title="Карточка (СКМ)"
-              aria-pressed={flipped}
-            >
-              <RotateCcw size={13} aria-hidden />
-            </button>
-          ) : null}
         </div>
       </header>
 
-      {!flipped ? (
-        <div className="quest-brief__body">
-          <h2 className="quest-brief__title">{quest.title}</h2>
-          <p className="quest-brief__hook">{quest.hook}</p>
+      <div className="quest-brief__body">
+        <h2 className="quest-brief__title">{quest.title}</h2>
+        <p className="quest-brief__hook">{quest.hook}</p>
+        {quest.description && quest.description !== quest.hook ? (
+          <div className="quest-card-face__desc">{quest.description}</div>
+        ) : null}
           <div className="quest-card-face__chips">
             {quest.giverFactionName ? (
               <span className="quest-card-chip">{quest.giverFactionName}</span>
@@ -264,13 +231,8 @@ function Briefing({
               </div>
             </div>
           ) : null}
-        </div>
-      ) : (
-        <div className="quest-brief__dossier">
-          <p className="dossier-kicker">Карточка квеста</p>
-          <div className="quest-card-face__desc">{quest.description}</div>
           {quest.objectives?.length ? (
-            <ul className="quest-card-face__objs">
+            <ul className="quest-card-face__objs" aria-label="Цели">
               {quest.objectives.map((o) => (
                 <li key={o.id} className={o.done ? "is-done" : ""}>
                   {o.done ? "✓" : "○"} {o.text}
@@ -279,7 +241,6 @@ function Briefing({
             </ul>
           ) : null}
         </div>
-      )}
     </article>
   );
 }
@@ -298,19 +259,6 @@ export function QuestStage({
   dicePreview,
   onDiceSettled,
 }: QuestStageProps) {
-  const flipped = useQuestsState((s) => s.flipped);
-  const toggleFlip = useQuestsState((s) => s.toggleFlip);
-
-  const handleFlip = useCallback(
-    (e: MouseEvent) => {
-      if (e.button === 1) {
-        e.preventDefault();
-        toggleFlip();
-      }
-    },
-    [toggleFlip],
-  );
-
   if (!quest) {
     return (
       <div className="quest-stage quest-stage--empty">
@@ -324,36 +272,19 @@ export function QuestStage({
     quest.status === "active" &&
     quest.diceCheck &&
     !choices.some((c) => c.needsDice);
-  const showObjectives =
-    (quest.objectives?.length ?? 0) > 0 &&
-    choices.length === 0 &&
-    !showDice;
 
   return (
     <div className={`quest-stage${compact ? " quest-stage--compact" : ""}`}>
       <Briefing
         quest={quest}
         chatOpen={chatOpen}
-        flipped={flipped}
         compact={compact}
-        onToggleFlip={toggleFlip}
         onOpenChat={onOpenChat}
         onFocusSystem={onFocusSystem}
         onOpenCourt={onOpenCourt}
-        onMiddleFlip={handleFlip}
       />
 
-      <div
-        className="quest-stage__interact"
-        onDragOver={(e) => {
-          if (choices.length) e.preventDefault();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          const id = e.dataTransfer.getData("text/quest-choice");
-          if (id) void onChoose(id);
-        }}
-      >
+      <div className="quest-stage__interact">
         {choices.length > 0 ? (
           <ChoiceFan
             choices={choices}
@@ -392,17 +323,6 @@ export function QuestStage({
               </p>
             ) : null}
           </div>
-        ) : null}
-
-        {showObjectives ? (
-          <ul className="quest-objectives" aria-label="Цели">
-            {quest.objectives!.map((o) => (
-              <li key={o.id} className={o.done ? "is-done" : ""}>
-                <span aria-hidden>{o.done ? "☑" : "☐"}</span>
-                {o.text}
-              </li>
-            ))}
-          </ul>
         ) : null}
       </div>
 

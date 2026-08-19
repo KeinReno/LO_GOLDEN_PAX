@@ -17,6 +17,8 @@ interface ViewerPanelFocusState {
   economyLinkedSystemId: string | null;
   ecoHighlightCategory: string | null;
   economyFocusCategory: string | null;
+  /** Open a named Economy section (e.g. stockpile from the metal cell). */
+  economyFocusSection: string | null;
   researchHighlightTechId: string | null;
   researchBranch: string | null;
   techMapHighlightIds: string[];
@@ -28,6 +30,7 @@ interface ViewerPanelFocusState {
   setEconomyLinkedSystemId: (id: string | null) => void;
   setEcoHighlightCategory: (c: string | null) => void;
   setEconomyFocusCategory: (c: string | null) => void;
+  setEconomyFocusSection: (id: string | null) => void;
   setResearchHighlightTechId: (id: string | null) => void;
   setResearchBranch: (c: string | null) => void;
   setTechMapHighlightIds: (ids: string[]) => void;
@@ -49,6 +52,7 @@ export const useViewerPanelFocusStore = create<ViewerPanelFocusState>(
     economyLinkedSystemId: null,
     ecoHighlightCategory: null,
     economyFocusCategory: null,
+    economyFocusSection: null,
     researchHighlightTechId: null,
     researchBranch: null,
     techMapHighlightIds: [],
@@ -60,6 +64,7 @@ export const useViewerPanelFocusStore = create<ViewerPanelFocusState>(
     setEconomyLinkedSystemId: (id) => set({ economyLinkedSystemId: id }),
     setEcoHighlightCategory: (c) => set({ ecoHighlightCategory: c }),
     setEconomyFocusCategory: (c) => set({ economyFocusCategory: c }),
+    setEconomyFocusSection: (id) => set({ economyFocusSection: id }),
     setResearchHighlightTechId: (id) => set({ researchHighlightTechId: id }),
     setResearchBranch: (c) => set({ researchBranch: c }),
     setTechMapHighlightIds: (ids) => set({ techMapHighlightIds: ids }),

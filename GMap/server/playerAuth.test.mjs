@@ -14,6 +14,8 @@ import {
   verifyFactionPassword,
   scryptHash,
   scryptVerify,
+  publicLoginFactions,
+  isPlayerLoginFaction,
   PLAYER_TOKEN_HEADER,
 } from "./playerAuth.mjs";
 
@@ -210,5 +212,65 @@ describe("playerAuth", () => {
     assert.equal(row.tokenHash.includes(token), false);
     assert.equal(row.factionId, "house_a");
     assert.ok(findSessionByPlainToken(token));
+  });
+
+  it("publicLoginFactions drops empty PIN, destroyed names, and Galivan houses", () => {
+    const list = publicLoginFactions({
+      factions: [
+        { id: "house_a", name: "A", password: "4821", color: "#000" },
+        { id: "npc", name: "NPC", password: "", color: "#111" },
+        { id: "dead", name: "Южный Рой (уничтожен)", password: "x", color: "#222" },
+        { id: "fallen", name: "Союз Балсагон (павший)", password: "y", color: "#333" },
+        {
+          id: "faction_nomad_pax_terrialis",
+          name: "Pax Terrialis · Галиван",
+          password: "1111",
+          color: "#444",
+        },
+        {
+          id: "faction_nomad_f_abc",
+          name: "Вайсы · Галиван",
+          password: "2222",
+          color: "#555",
+        },
+      ],
+    });
+    assert.deepEqual(
+      list.map((f) => f.id),
+      ["house_a"],
+    );
+    assert.equal(isPlayerLoginFaction({ id: "npc", password: "" }), false);
+    assert.equal(
+      isPlayerLoginFaction({
+        id: "faction_nomad_pax_terrialis",
+        name: "Pax Terrialis · Галиван",
+        password: "1111",
+      }),
+      false,
+    );
+  });
+
+  it("PIN-only login seats the matching faction", () => {
+    const login = loginWithPassword(world, { password: "5510" });
+    assert.equal(login.ok, true);
+    assert.equal(login.faction.id, "hashed");
+    assert.ok(login.playerToken);
+  });
+
+  it("PIN-only login rejects unknown keys", () => {
+    const login = loginWithPassword(world, { password: "0000" });
+    assert.equal(login.ok, false);
+    assert.equal(store.dump().sessions.length, 0);
+  });
+
+  it("PIN-only login rejects a duplicated PIN", () => {
+    const dupWorld = {
+      factions: [
+        { id: "a", name: "A", password: "1111" },
+        { id: "b", name: "B", password: "1111" },
+      ],
+    };
+    const login = loginWithPassword(dupWorld, { password: "1111" });
+    assert.equal(login.ok, false);
   });
 });

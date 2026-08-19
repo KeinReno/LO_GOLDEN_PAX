@@ -1,16 +1,11 @@
 import { useMemo, type ReactNode } from "react";
 import { Info, Layers, Menu, ScrollText, Settings } from "lucide-react";
 import type { MapResourceDef } from "../../../state/contentCatalog";
-import {
-  formatForceOdMeter,
-  formatOdMeter,
-  FORCE_OD_TOOLTIP,
-  OD_TOOLTIP,
-} from "../../../state/playerUiTerms";
 import type { ViewerPayload } from "../../../state/types";
 import { useViewerChromeStore } from "../../../state/viewerChromeStore";
 import { useViewerOrderSessionStore } from "../../../state/viewerOrderSessionStore";
 import { useViewerSessionStore } from "../../../state/viewerSessionStore";
+import { useViewerPanelFocusStore } from "../../../state/viewerPanelFocusStore";
 import { EmpireResourceStrip } from "../../EmpireResourceStrip";
 import { PathsStrip } from "../../PathsStrip";
 import { navigateViewerRoom } from "../rooms-router/navigateViewerRoom";
@@ -75,6 +70,13 @@ export function ViewerPlayTopbar({
     fn();
   };
 
+  const setEconomyFocusCategory = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusCategory,
+  );
+  const setEconomyFocusSection = useViewerPanelFocusStore(
+    (s) => s.setEconomyFocusSection,
+  );
+
   return (
     <>
       <header className="viewer-topbar viewer-topbar--empire">
@@ -100,41 +102,47 @@ export function ViewerPlayTopbar({
             </span>
           </div>
         </div>
-        {mobile ? (
-          <>
-            <span className="viewer-ap-pill" title={OD_TOOLTIP}>
-              {formatOdMeter(reservedAp, apMax)}
-            </span>
-            <span className="viewer-ap-pill" title={FORCE_OD_TOOLTIP}>
-              {formatForceOdMeter(reservedForceAp, forceApMax)}
-            </span>
-          </>
-        ) : (
-          <EmpireResourceStrip
-            economy={payload.economy}
-            flowData={flowData}
-            world={payload.world}
-            factionId={payload.factionId}
-            reservedAp={reservedAp}
-            apMax={apMax}
-            reservedForceAp={reservedForceAp}
-            forceApMax={forceApMax}
-            fleetCount={(payload.world.fleets ?? []).filter(
-              (f) => f.factionId === payload.factionId,
-            ).length}
-            legionCount={(payload.world.legions ?? []).filter(
-              (l) => l.factionId === payload.factionId,
-            ).length}
-            mapResources={mapResourcesCatalog}
-            onOpenForces={() => navigateViewerRoom("forces")}
-            trailing={
+        <EmpireResourceStrip
+          compact={mobile}
+          economy={payload.economy}
+          flowData={flowData}
+          world={payload.world}
+          factionId={payload.factionId}
+          reservedAp={reservedAp}
+          apMax={apMax}
+          reservedForceAp={reservedForceAp}
+          forceApMax={forceApMax}
+          fleetCount={(payload.world.fleets ?? []).filter(
+            (f) => f.factionId === payload.factionId,
+          ).length}
+          legionCount={(payload.world.legions ?? []).filter(
+            (l) => l.factionId === payload.factionId,
+          ).length}
+          mapResources={mapResourcesCatalog}
+          onOpenForces={() =>
+            closeDrawersThen(() => navigateViewerRoom("forces"))
+          }
+          onOpenCategory={(letter) => {
+            closeDrawersThen(() => {
+              setEconomyFocusCategory(letter);
+              navigateViewerRoom("economy");
+            });
+          }}
+          onOpenStockpile={() =>
+            closeDrawersThen(() => {
+              setEconomyFocusSection("stockpile");
+              navigateViewerRoom("economy");
+            })
+          }
+          trailing={
+            mobile ? undefined : (
               <PathsStrip
                 economy={payload.economy}
                 onNavigate={(v) => navigateViewerRoom(v)}
               />
-            }
-          />
-        )}
+            )
+          }
+        />
         <div className="viewer-topbar-actions" style={{ position: "relative" }}>
           <button
             type="button"
@@ -165,7 +173,7 @@ export function ViewerPlayTopbar({
             type="button"
             className={`viewer-icon-btn ${mapFiltersOpen ? "active" : ""}`}
             aria-label="Фильтры карты"
-            title="Фильтры · F5–F9"
+            title="Фильтры · F4–F8, F10"
             aria-expanded={mapFiltersOpen}
             onClick={() => {
               setQueueOpen(false);
@@ -193,7 +201,10 @@ export function ViewerPlayTopbar({
             className="viewer-icon-btn"
             aria-label="Инфо"
             disabled={!hasSheetTarget}
-            onClick={() => setSheetOpen(true)}
+            onClick={() => {
+              navigateViewerRoom("map");
+              setSheetOpen(true);
+            }}
           >
             <Info size={18} strokeWidth={2} aria-hidden />
           </button>

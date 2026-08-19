@@ -29,7 +29,11 @@ export function MapLayersPopover() {
   };
 
   return (
-    <aside className={`viewer-drawer ${open ? "open" : ""}`}>
+    <aside
+      className={`viewer-drawer ${open ? "open" : ""}`}
+      inert={open ? undefined : true}
+      aria-hidden={!open}
+    >
       <div className="viewer-drawer-head">
         <h2>Фильтры карты</h2>
         <button
@@ -44,7 +48,7 @@ export function MapLayersPopover() {
       <section>
         <h3>Режим карты</h3>
         <p className="hint">
-          F5–F9 — быстрый выбор на карте. Ниже — доп. пресеты и отдельные слои.
+          F4–F8 и F10 с клавиатуры. Ниже — доп. пресеты и отдельные слои.
         </p>
         <div className="layer-preset-row">
           {MAP_MODE_PRESETS.filter((mode) => mode.id !== "gm").map((mode) => (

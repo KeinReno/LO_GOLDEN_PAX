@@ -1,10 +1,11 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, useEffect, type CSSProperties } from "react";
 import type { ViewerPayload } from "../state/types";
 import { DIPLOMACY_LABELS } from "../state/defaults";
 import {
   BUILD_METAL,
   BUILD_SUPPLY,
   CATEGORY_CURRENCIES,
+  resourceDisplayName,
 } from "../state/economyLabels";
 import { getCachedContent } from "../state/contentCatalog";
 import { BackgroundBeamsLite } from "../ui/BackgroundBeamsLite";
@@ -32,6 +33,17 @@ import { DiploSwipeOffer } from "./DiploSwipeOffer";
 import { DiploDealTray } from "./DiploDealTray";
 import { DiploCompareStrip } from "./DiploCompareStrip";
 import { ContactMarketStrip } from "./ContactMarketStrip";
+import {
+  addDealItem,
+  cardAllowedOnSide,
+  dealFairness,
+  dealNeedsHold,
+  parseDiploCard,
+  parsedToDealItem,
+  remainingStock,
+  resourceCommittedInOffers,
+  treatyConflict,
+} from "./diploDealCards";
 
 export type { DiploDealItem, DiploOffer } from "./diploTradeTypes";
 
@@ -51,17 +63,30 @@ function buildAssetPool(
 ): TradeAssetPool {
   const visible = new Set(payload.visibleSystemIds ?? []);
   const content = getCachedContent();
+  const sysName = (id?: string) =>
+    payload.world.systems.find((s) => s.id === id)?.name;
   const fleets = (payload.world.fleets ?? [])
     .filter((f) => f.factionId === factionId)
     .filter((f) => !visibleOnly || visible.has(f.systemId))
-    .map((f) => ({ id: f.id, name: f.name }));
+    .map((f) => ({
+      id: f.id,
+      name: f.name,
+      where: sysName(f.systemId),
+    }));
   const legions = (payload.world.legions ?? [])
     .filter((l) => l.factionId === factionId)
     .filter((l) => !visibleOnly || visible.has(l.systemId))
-    .map((l) => ({ id: l.id, name: l.name }));
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      where: sysName(l.systemId),
+    }));
+  const fac = payload.world.factions.find((f) => f.id === factionId);
+  const capitalId = fac?.capitalSystemId;
   const systems = (payload.world.systems ?? [])
     .filter((s) => s.ownerFactionId === factionId)
     .filter((s) => !visibleOnly || visible.has(s.id))
+    .filter((s) => !s.isCapital && s.id !== capitalId)
     .map((s) => ({ id: s.id, name: s.name }));
   const unlocked = payload.economy?.unlockedTechs ?? [];
   const techs =
@@ -70,6 +95,7 @@ function buildAssetPool(
           .filter((tid) => {
             const def = content?.technologies?.[tid];
             if (!def) return false;
+            if (def.catalogPending) return false;
             if (def.raceLock || def.factionTraitLock) return false;
             return true;
           })
@@ -175,6 +201,22 @@ export function DealDesk({
   );
   const [sendSuccess, setSendSuccess] = useState(false);
   const [quoteRate, setQuoteRate] = useState(1);
+  const [handTarget, setHandTarget] = useState<"give" | "want">("give");
+  const [pendingDeal, setPendingDeal] = useState<{
+    side: "give" | "want";
+    currencyId: string;
+    label: string;
+  } | null>(null);
+  const [dealQty, setDealQty] = useState(10);
+  const [dealHint, setDealHint] = useState("");
+
+  useEffect(() => {
+    if (!others.length) {
+      if (otherId) setOtherId("");
+      return;
+    }
+    if (!others.some((f) => f.id === otherId)) setOtherId(others[0].id);
+  }, [others, otherId]);
 
   const faceoffSpot = useSpotlight();
   const tableSpot = useSpotlight();
@@ -187,7 +229,13 @@ export function DealDesk({
 
   const other = others.find((f) => f.id === otherId) ?? null;
   const relation = other ? getRelation(payload, meId, other.id) : "neutral";
-  const opinion = other ? opinionOf(me, other.id) : 0;
+  const theirOpinion = other
+    ? Number(
+        other.opinionTowardViewer ??
+          opinionOf(other, meId),
+      )
+    : 0;
+  const myOpinion = other ? opinionOf(me, other.id) : 0;
   const intelLevel = other
     ? Number(payload.intel?.knownFactions?.[other.id] ?? 1)
     : 0;
@@ -253,10 +301,7 @@ export function DealDesk({
   const canSend =
     !!otherId && (give.length > 0 || want.length > 0) && !busy;
 
-  const packageHasAlliance = [...give, ...want].some(
-    (i) => i.kind === "treaty" && i.treaty === "alliance",
-  );
-  const needsHold = packageHasAlliance;
+  const needsHold = dealNeedsHold([...give, ...want]);
 
   const canBreak =
     !!other &&
@@ -286,6 +331,8 @@ export function DealDesk({
     setGive([]);
     setWant([]);
     setNote("");
+    setPendingDeal(null);
+    setDealHint("");
   };
 
   const runStance = async (stance: "war" | "embargo" | "break") => {
@@ -295,6 +342,94 @@ export function DealDesk({
 
   const otherIncoming = incoming.filter((o) => o.fromFactionId === otherId);
   const itemLabel = (item: DiploDealItem) => diploItemLabel(item, nameLookup);
+
+  const giveEscrowed = (currencyId: string) =>
+    resourceCommittedInOffers(outgoing, currencyId);
+
+  const giveRemaining = (currencyId: string) =>
+    remainingStock(
+      economy?.stocks?.[currencyId],
+      give,
+      currencyId,
+      giveEscrowed(currencyId),
+    );
+
+  const fair = dealFairness(give, want);
+
+  const tryAddDeal = (side: "give" | "want", item: DiploDealItem) => {
+    if (item.kind === "treaty" && treatyConflict([...give, ...want], item.treaty)) {
+      setDealHint("в сделке только один вид договора");
+      return;
+    }
+    const list = side === "give" ? give : want;
+    const { next, skipped } = addDealItem(list, item);
+    if (skipped) {
+      setDealHint("уже на столе");
+      return;
+    }
+    if (side === "give") setGive(next);
+    else setWant(next);
+    setDealHint("");
+  };
+
+  const applyCard = (cardId: string, side: "give" | "want") => {
+    if (!other || busy) {
+      if (!other) setDealHint("сначала выберите державу");
+      return;
+    }
+    const parsed = parseDiploCard(cardId);
+    if (!parsed) return;
+    if (!cardAllowedOnSide(parsed, side, myAssets, theirAssets)) {
+      setDealHint(
+        side === "give"
+          ? "это нельзя отдать — не ваш актив"
+          : "этого нет среди видимых сил партнёра",
+      );
+      return;
+    }
+    if (parsed.kind === "resource") {
+      const rem = side === "give" ? giveRemaining(parsed.currencyId) : 99999;
+      if (side === "give" && rem <= 0) {
+        setDealHint("в казне нет свободного остатка");
+        return;
+      }
+      const start =
+        side === "give"
+          ? Math.min(100, Math.max(1, Math.floor(rem / 4) || 1))
+          : 50;
+      setDealQty(start);
+      setPendingDeal({
+        side,
+        currencyId: parsed.currencyId,
+        label: resourceDisplayName(parsed.currencyId),
+      });
+      setDealHint("");
+      return;
+    }
+    tryAddDeal(side, parsedToDealItem(parsed));
+  };
+
+  const confirmDealAmount = () => {
+    if (!pendingDeal) return;
+    let amount = Math.max(1, Math.floor(dealQty));
+    if (pendingDeal.side === "give") {
+      const rem = giveRemaining(pendingDeal.currencyId);
+      if (rem <= 0) {
+        setPendingDeal(null);
+        setDealHint("в казне нет свободного остатка");
+        return;
+      }
+      amount = Math.min(amount, rem);
+    }
+    tryAddDeal(
+      pendingDeal.side,
+      parsedToDealItem(
+        { kind: "resource", currencyId: pendingDeal.currencyId },
+        amount,
+      ),
+    );
+    setPendingDeal(null);
+  };
 
   return (
     <div className="deal-desk gc-diplo">
@@ -325,6 +460,7 @@ export function DealDesk({
                       subtitle={`отдают: ${o.give.map(itemLabel).join(", ") || "—"} · просят: ${o.want.map(itemLabel).join(", ") || "—"}`}
                       busy={busy}
                       focused={focusedIncoming?.id === o.id}
+                      needsHold={dealNeedsHold([...(o.give ?? []), ...(o.want ?? [])])}
                       onAccept={() => {
                         setOtherId(o.fromFactionId);
                         onAccept(o.id);
@@ -349,8 +485,11 @@ export function DealDesk({
                       <div>
                         <strong>→ {to}</strong>
                         <p className="hint">
-                          ждёт ответа ·{" "}
+                          заморожено · ждёт ответа ·{" "}
                           {o.give.map(itemLabel).join(", ") || "—"}
+                          {o.want.length
+                            ? ` ↔ ${o.want.map(itemLabel).join(", ")}`
+                            : ""}
                         </p>
                       </div>
                       <button
@@ -380,8 +519,12 @@ export function DealDesk({
           <DiploLeaderCard faction={me} align="start" />
           <div className="gc-diplo-status">
             <RelationBadge relation={relation} />
-            <DiploAttitudeLabel opinion={opinion} />
-            <OpinionBar value={opinion} />
+            <p className="hint gc-diplo-opinion-whose">их отношение к вам</p>
+            <DiploAttitudeLabel opinion={theirOpinion} />
+            <OpinionBar value={theirOpinion} />
+            <span className="hint">
+              вы о них: {opinionLabel(myOpinion)} ({myOpinion > 0 ? `+${myOpinion}` : myOpinion})
+            </span>
             <span className="diplo-intel-pill">Разведка {intelLevel}/4</span>
           </div>
           <DiploLeaderCard faction={other} align="end" />
@@ -390,74 +533,6 @@ export function DealDesk({
 
       {me && other && (
         <DiploCompareStrip payload={payload} me={me} other={other} />
-      )}
-
-      {me && other && onStance && (
-        <section className="gc-diplo-acts" aria-label="Односторонние действия">
-          <div className="gc-diplo-acts__copy">
-            <strong>Действия</strong>
-            <p className="hint">
-              Война, эмбарго и разрыв договора вступают в силу сразу — вторая
-              сторона не подтверждает.
-            </p>
-          </div>
-          <div className="gc-diplo-acts__btns">
-            {canBreak && (
-              <span
-                className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
-                {...magBreak.bind}
-                {...rippleActs.bind}
-              >
-                <HoldButton
-                  className="btn ghost sm hold-btn--danger"
-                  ms={700}
-                  disabled={busy}
-                  holdHint="Удерживайте: разорвать договор"
-                  onConfirm={() => void runStance("break")}
-                >
-                  Разорвать договор
-                </HoldButton>
-              </span>
-            )}
-            {canEmbargo && (
-              <span
-                className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
-                {...magEmbargo.bind}
-                {...rippleActs.bind}
-              >
-                <HoldButton
-                  className="btn ghost sm hold-btn--danger"
-                  ms={700}
-                  disabled={busy}
-                  holdHint="Удерживайте: эмбарго"
-                  onConfirm={() => void runStance("embargo")}
-                >
-                  Эмбарго
-                </HoldButton>
-              </span>
-            )}
-            {canWar && (
-              <span
-                className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
-                {...magWar.bind}
-                {...rippleActs.bind}
-              >
-                <HoldButton
-                  className="btn primary sm hold-btn--danger is-war"
-                  ms={900}
-                  disabled={busy}
-                  holdHint="Удерживайте: объявить войну"
-                  onConfirm={() => void runStance("war")}
-                >
-                  Объявить войну
-                </HoldButton>
-              </span>
-            )}
-            {relation === "war" && (
-              <span className="hint">Война уже идёт · мир — через перемирие в сделке</span>
-            )}
-          </div>
-        </section>
       )}
 
       <div className="gc-diplo-grid deal-desk-grid">
@@ -477,7 +552,9 @@ export function DealDesk({
             >
               {others.map((f) => {
                 const rel = getRelation(payload, meId, f.id);
-                const op = opinionOf(me, f.id);
+                const op = Number(
+                  f.opinionTowardViewer ?? opinionOf(f, meId),
+                );
                 const pendingIn = incoming.some(
                   (o) => o.fromFactionId === f.id,
                 );
@@ -490,7 +567,8 @@ export function DealDesk({
                         <span>
                           <strong>{f.name}</strong>
                           <br />
-                          {DIPLOMACY_LABELS[rel]} · {opinionLabel(op)} ({op})
+                          {DIPLOMACY_LABELS[rel]} · они о вас:{" "}
+                          {opinionLabel(op)} ({op})
                         </span>
                       }
                     >
@@ -533,11 +611,11 @@ export function DealDesk({
           {...tableSpot.bind}
         >
           <h3 className="gc-diplo-table__title gc-diplo-lamp-title">
-            Торговля
+            Стол сделки
           </h3>
           <p className="hint">
-            Сделка требует согласия адресата. Война и разрыв договора — кнопки
-            выше, без ожидания ответа.
+            Левая колонка — что отдаёте. Правая — что просите. Карты из
+            колоды снизу.
           </p>
 
           {otherIncoming.length > 0 && (
@@ -550,59 +628,67 @@ export function DealDesk({
             </div>
           )}
 
-          {other && (onPlaceOffer || onCancelOffer) && (
-            <ContactMarketStrip
-              factionId={meId}
-              password={password}
-              partnerId={other.id}
-              partnerName={other.name}
-              isTradePartner={isContactTradePartner}
-              stocks={economy?.stocks}
-              factionNames={Object.fromEntries(
-                payload.world.factions.map((f) => [f.id, f.name]),
-              )}
-              reservedAp={reservedAp}
-              apMax={apMax}
-              busy={busy}
-              onPlaceOffer={onPlaceOffer}
-              onCancelOffer={onCancelOffer}
-            />
-          )}
-
-          <DiploDealTray
-            stocks={economy?.stocks}
-            disabled={!other || busy}
-            onAddGive={(item) => setGive((g) => [...g, item])}
-            onAddWant={(item) => setWant((w) => [...w, item])}
-          />
-
           <div className="gc-trade-board">
             <TradeColumn
               side="you"
               civName={me?.name ?? "Вы"}
               items={give}
-              stocks={economy?.stocks}
-              assets={myAssets}
               nameLookup={nameLookup}
               disabled={!other || busy}
               onRemove={(i) => setGive((g) => g.filter((_, idx) => idx !== i))}
-              onAdd={(item) => setGive((g) => [...g, item])}
+              onDropCard={(id) => applyCard(id, "give")}
             />
-            <div className="gc-trade-balance" aria-hidden>
-              <span className="gc-trade-balance__icon">⇄</span>
+            <div
+              className="gc-trade-balance"
+              aria-label={fair?.label ?? "баланс пакета"}
+            >
+              <span className="gc-trade-balance__icon" aria-hidden>
+                ⇄
+              </span>
+              {fair ? (
+                <span
+                  className={`gc-trade-balance__fair gc-trade-balance__fair--${fair.tone}`}
+                >
+                  {fair.label}
+                </span>
+              ) : null}
             </div>
             <TradeColumn
               side="them"
               civName={other?.name ?? "—"}
               items={want}
-              stocks={economy?.stocks}
-              assets={theirAssets}
               nameLookup={nameLookup}
               disabled={!other || busy}
               onRemove={(i) => setWant((w) => w.filter((_, idx) => idx !== i))}
-              onAdd={(item) => setWant((w) => [...w, item])}
+              onDropCard={(id) => applyCard(id, "want")}
             />
           </div>
+
+          <DiploDealTray
+            stocks={economy?.stocks}
+            myAssets={myAssets}
+            theirAssets={theirAssets}
+            disabled={!other || busy}
+            target={handTarget}
+            onTarget={setHandTarget}
+            onActivate={(id) => applyCard(id, handTarget)}
+            dealHint={dealHint}
+          />
+
+          {pendingDeal && (
+            <AmountSheet
+              label={`${pendingDeal.side === "give" ? "Отдаю" : "Прошу"} · ${pendingDeal.label}`}
+              stock={
+                pendingDeal.side === "give"
+                  ? giveRemaining(pendingDeal.currencyId)
+                  : undefined
+              }
+              value={dealQty}
+              onChange={setDealQty}
+              onConfirm={confirmDealAmount}
+              onCancel={() => setPendingDeal(null)}
+            />
+          )}
 
           <label className="gc-trade-note field">
             <span>Записка</span>
@@ -620,10 +706,10 @@ export function DealDesk({
               <HoldButton
                 className="btn primary block hold-btn--danger"
                 disabled={!canSend}
-                holdHint="Удерживайте: предложить союз"
+                holdHint="Удерживайте: отправить пакет"
                 onConfirm={flushSend}
               >
-                {busy ? "Отправка…" : "Удержать · предложить союз"}
+                {busy ? "Отправка…" : "Удержать · отправить пакет"}
               </HoldButton>
             </div>
           ) : (
@@ -642,6 +728,11 @@ export function DealDesk({
                 Предложить сделку
               </StatefulButton>
             </div>
+          )}
+          {dealHint && (
+            <p className="hint" role="status">
+              {dealHint}
+            </p>
           )}
           {msg && <p className="hint">{msg}</p>}
         </section>
@@ -738,20 +829,119 @@ export function DealDesk({
                         >
                           Валютный договор
                         </button>
-                        <button
-                          type="button"
-                          className="gc-trade-chip"
+                        <HoldButton
+                          className="gc-trade-chip hold-btn--danger"
+                          ms={700}
                           disabled={busy}
-                          onClick={() => void onEconomicTrack("union", otherId)}
+                          holdHint="Удерживайте: валютный союз"
+                          onConfirm={() => void onEconomicTrack("union", otherId)}
                         >
                           Валютный союз
-                        </button>
+                        </HoldButton>
                       </div>
                     </div>
                   ) : null}
                 </>
               ) : (
                 <DiploTimeline events={focusHistory} />
+              )}
+
+              {onStance && (
+                <ExpandableSection
+                  title="Война и разрыв"
+                  badge="сразу, без их согласия"
+                  className="gc-diplo-acts-fold"
+                >
+                  <section className="gc-diplo-acts" aria-label="Односторонние действия">
+                    <p className="hint">
+                      Война, эмбарго и разрыв вступают в силу сразу — вторая
+                      сторона не подтверждает.
+                    </p>
+                    <div className="gc-diplo-acts__btns">
+                      {canBreak && (
+                        <span
+                          className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
+                          {...magBreak.bind}
+                          {...rippleActs.bind}
+                        >
+                          <HoldButton
+                            className="btn ghost sm hold-btn--danger"
+                            ms={700}
+                            disabled={busy}
+                            holdHint="Удерживайте: разорвать договор"
+                            onConfirm={() => void runStance("break")}
+                          >
+                            Разорвать договор
+                          </HoldButton>
+                        </span>
+                      )}
+                      {canEmbargo && (
+                        <span
+                          className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
+                          {...magEmbargo.bind}
+                          {...rippleActs.bind}
+                        >
+                          <HoldButton
+                            className="btn ghost sm hold-btn--danger"
+                            ms={700}
+                            disabled={busy}
+                            holdHint="Удерживайте: эмбарго"
+                            onConfirm={() => void runStance("embargo")}
+                          >
+                            Эмбарго
+                          </HoldButton>
+                        </span>
+                      )}
+                      {canWar && (
+                        <span
+                          className="gc-diplo-acts__mag fx-magnetic fx-ripple-host"
+                          {...magWar.bind}
+                          {...rippleActs.bind}
+                        >
+                          <HoldButton
+                            className="btn primary sm hold-btn--danger is-war"
+                            ms={900}
+                            disabled={busy}
+                            holdHint="Удерживайте: объявить войну"
+                            onConfirm={() => void runStance("war")}
+                          >
+                            Объявить войну
+                          </HoldButton>
+                        </span>
+                      )}
+                      {relation === "war" && (
+                        <span className="hint">
+                          Война уже идёт · мир — через перемирие в сделке
+                        </span>
+                      )}
+                    </div>
+                  </section>
+                </ExpandableSection>
+              )}
+
+              {other && (onPlaceOffer || onCancelOffer) && (
+                <ExpandableSection
+                  title="Биржа контакта"
+                  badge={isContactTradePartner ? "партнёр" : "нужен торговый договор"}
+                  className="gc-diplo-market-fold"
+                >
+                  <ContactMarketStrip
+                    factionId={meId}
+                    password={password}
+                    partnerId={other.id}
+                    partnerName={other.name}
+                    isTradePartner={isContactTradePartner}
+                    stocks={economy?.stocks}
+                    factionNames={Object.fromEntries(
+                      payload.world.factions.map((f) => [f.id, f.name]),
+                    )}
+                    reservedAp={reservedAp}
+                    apMax={apMax}
+                    busy={busy}
+                    onPlaceOffer={onPlaceOffer}
+                    onCancelOffer={onCancelOffer}
+                  />
+                </ExpandableSection>
               )}
 
               <ExpandableSection

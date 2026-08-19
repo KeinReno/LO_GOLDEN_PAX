@@ -9,7 +9,7 @@ import {
 } from "../../ui/useLongPress";
 import { useWorldStore } from "../../state/worldStore";
 import type { GmLiveDomainId } from "../../state/types";
-import { GM_LIVE_DOMAINS } from "./gmDomains";
+import { GM_LIVE_DOMAINS, domainHotkeyLabel } from "./gmDomains";
 import { GmAttentionStrip } from "./GmAttentionStrip";
 import { parseAttentionCard } from "./gmAttentionCard";
 
@@ -117,7 +117,7 @@ export function GmLiveStage({
       },
       {
         id: "science",
-        label: "Наука",
+        label: "Выдача техов",
         onSelect: () => onOpenDomain("science"),
       },
       {
@@ -159,7 +159,7 @@ export function GmLiveStage({
       },
       {
         id: "quests",
-        label: "Квесты",
+        label: "Сессия",
         onSelect: () => onOpenDomain("quests"),
       },
       {
@@ -287,7 +287,7 @@ export function GmLiveStage({
 
         <div className="gm-verb-deck" aria-label="Глаголы стола">
           <p className="gm-verb-deck__hint">
-            Перетащите глагол на цель · удержание цели — кольцо · F1–F9
+            Перетащите глагол на цель · удержание цели — кольцо · F1–F4, F6–F9
           </p>
           <div className="gm-verb-deck__hand">
             {VERB_DOMAINS.map((d) => (
@@ -295,7 +295,7 @@ export function GmLiveStage({
                 key={d.id}
                 cardId={`gm-domain:${d.id}`}
                 title={d.label}
-                subtitle={`F${d.hotkey}`}
+                subtitle={domainHotkeyLabel(d.hotkey) ?? "клик"}
                 accent="var(--accent)"
                 tilt
                 className="gm-verb-card"

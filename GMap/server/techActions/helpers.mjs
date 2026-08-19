@@ -16,6 +16,7 @@ import {
 } from "../hybridRegistry.mjs";
 import { collectTechModifierEffects } from "../techGrades.mjs";
 import { applyOpenPathEffect } from "../techPaths.mjs";
+import { resolveVariant } from "../variantResolver.mjs";
 
 export { collectTechModifierEffects };
 
@@ -43,6 +44,53 @@ export function resolveTechDef(content, techId) {
   );
 }
 
+/** Offers/tick/unlocks: stubs stay out of the live table. */
+export function isLiveResearchDef(def) {
+  return Boolean(def) && !def.catalogPending;
+}
+
+/**
+ * Drop catalogPending / missing ids from unlockedTechs and related bags.
+ * Mutates eco. Returns dropped ids (empty if already clean).
+ */
+export function pruneNonLiveUnlockedTechs(eco, content) {
+  const before = Array.isArray(eco?.unlockedTechs) ? eco.unlockedTechs : [];
+  const keep = [];
+  const dropped = [];
+  for (const id of before) {
+    if (isLiveResearchDef(resolveTechDef(content, id))) keep.push(id);
+    else dropped.push(id);
+  }
+  if (!dropped.length) return dropped;
+  eco.unlockedTechs = keep;
+  const drop = new Set(dropped);
+  if (Array.isArray(eco.unlockedUpgrades)) {
+    eco.unlockedUpgrades = eco.unlockedUpgrades.filter((u) => {
+      const sid = String(u || "");
+      return ![...drop].some((id) => sid === id || sid.startsWith(`${id}.`));
+    });
+  }
+  if (eco.techGrades && typeof eco.techGrades === "object") {
+    for (const id of drop) delete eco.techGrades[id];
+  }
+  if (eco.techSockets && typeof eco.techSockets === "object") {
+    for (const id of drop) delete eco.techSockets[id];
+  }
+  if (Array.isArray(eco.researchQueue)) {
+    eco.researchQueue = eco.researchQueue.filter((row) => {
+      const tid = typeof row === "string" ? row : row?.techId;
+      return !drop.has(tid);
+    });
+  }
+  if (Array.isArray(eco.acquiredTechs)) {
+    eco.acquiredTechs = eco.acquiredTechs.filter((row) => {
+      const tid = typeof row === "string" ? row : row?.techId;
+      return !drop.has(tid);
+    });
+  }
+  return dropped;
+}
+
 /**
  * @param {object} eco - faction economy ledger slice
  * @param {string} prop - property id from economy_schema
@@ -55,20 +103,32 @@ export function factionHasProperty(eco, prop) {
 /**
  * Properties required to *construct* a building (construction slots only).
  * Upkeep slots are operational cost after build — not a build gate.
+ * `fillOnly` slots are outfit/deposit matching after the building exists.
  * Properties the building itself unlocks via effects are excluded (no chicken-egg).
  */
 export function collectRequiredProperties(consumerDef) {
   const props = new Set();
   for (const p of consumerDef?.requireProperties || []) props.add(p);
   for (const slot of consumerDef?.slots || []) {
+    if (slot.fillOnly) continue;
     for (const p of slot.require?.properties || []) props.add(p);
   }
-  for (const e of consumerDef?.effects || []) {
+  for (const e of [
+    ...(consumerDef?.effects || []),
+    ...(consumerDef?.extra_effects || []),
+  ]) {
     if (e.effect === "unlock_property" && e.args?.property) {
       props.delete(e.args.property);
     }
   }
   return props;
+}
+
+/** Tier / property unlocks granted by completing a building. */
+export function collectBuildingUnlockEffects(def) {
+  return [...(def?.effects || []), ...(def?.extra_effects || [])].filter(
+    (e) => e.effect === "unlock_tech_tier" || e.effect === "unlock_property",
+  );
 }
 
 export function propertyLabel(content, propId) {
@@ -292,9 +352,10 @@ export function applyUnlockEffects(eco, effects) {
 }
 
 /**
- * Recompute techTiers / properties from unlockedTechs + upgrades (idempotent).
+ * Recompute techTiers / properties from unlockedTechs + upgrades + standing buildings.
  */
 export function recomputeUnlocksFromTechs(eco, content, factionId = null, world = null) {
+  pruneNonLiveUnlockedTechs(eco, content);
   eco.techTiers = { ...DEFAULT_TECH_TIERS };
   eco.unlockedProperties = [];
   eco.openPaths = [];
@@ -302,7 +363,8 @@ export function recomputeUnlocksFromTechs(eco, content, factionId = null, world 
 
   for (const id of eco.unlockedTechs || []) {
     const def = resolveTechDef(content, id);
-    if (def) applyUnlockEffects(eco, def.effects);
+    if (!isLiveResearchDef(def)) continue;
+    applyUnlockEffects(eco, def.effects);
     for (const u of def?.upgrades || []) {
       if (unlockedUpgrades.has(u.id)) applyUnlockEffects(eco, u.effects);
     }
@@ -315,6 +377,31 @@ export function recomputeUnlocksFromTechs(eco, content, factionId = null, world 
       for (const tid of traitIdsOf(faction)) {
         const def = traitCatalog[tid];
         if (def) applyUnlockEffects(eco, def.effects);
+      }
+    }
+    applyBuildingUnlocksFromWorld(eco, world, factionId, content);
+  }
+}
+
+function applyBuildingUnlocksFromWorld(eco, world, factionId, content) {
+  const pack = content || getContent();
+  for (const sys of world.systems || []) {
+    for (const p of sys.planets || []) {
+      const owner = p.ownerFactionId || sys.ownerFactionId;
+      if (owner !== factionId) continue;
+      for (const inst of [
+        ...(p.surfaceBuildings || []),
+        ...(p.orbitalBuildings || []),
+      ]) {
+        if (inst?.disabled) continue;
+        const id = inst.buildingId || inst.baseBuildingId || inst.id;
+        if (!id || typeof id !== "string") continue;
+        const resolved = resolveVariant("buildings", id, pack, {
+          composition: p.raceComposition || [],
+        });
+        const def = resolved?.def || pack.buildings?.[id];
+        if (!def) continue;
+        applyUnlockEffects(eco, collectBuildingUnlockEffects(def));
       }
     }
   }

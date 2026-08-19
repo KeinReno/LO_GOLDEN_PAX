@@ -28,8 +28,15 @@ function targetLabel(npc: FactionNpc, payload: ViewerPayload): string {
   return "";
 }
 
+type FieldAssignOpts = {
+  kind: FieldKind;
+  systemId?: string;
+  legionId?: string;
+  fleetId?: string;
+};
+
 /**
- * Field workplace — drop NPCs onto systems / legions / fleets.
+ * Field workplace — vacant click then pool «Назначить», or drop onto a post.
  * Drag posted NPC back to pool (handled by parent zone council:pool).
  */
 export function CourtFieldView({
@@ -37,7 +44,9 @@ export function CourtFieldView({
   payload,
   accent,
   selectedId,
+  targetKey,
   onSelect,
+  onVacantPick,
   onDropAssign,
   busy,
 }: {
@@ -45,16 +54,10 @@ export function CourtFieldView({
   payload: ViewerPayload;
   accent?: string;
   selectedId?: string | null;
+  targetKey?: string | null;
   onSelect: (id: string | null) => void;
-  onDropAssign: (
-    npcId: string,
-    opts: {
-      kind: FieldKind;
-      systemId?: string;
-      legionId?: string;
-      fleetId?: string;
-    },
-  ) => void;
+  onVacantPick?: (opts: FieldAssignOpts) => void;
+  onDropAssign: (npcId: string, opts: FieldAssignOpts) => void;
   busy?: boolean;
 }) {
   const ownedSystems = useMemo(
@@ -113,8 +116,7 @@ export function CourtFieldView({
   return (
     <section className="court-field" aria-label="Поле">
       <p className="hint court-field__lede">
-        Перетащите лицо из пула на систему, легион или флот. С поста — обратно в
-        пул.
+        Клик по вакансии, затем «Назначить» в пуле — или перетащите лицо на пост.
       </p>
       {ungoverned.length > 0 ? (
         <p className="court-field__alert hint" role="status">
@@ -151,7 +153,9 @@ export function CourtFieldView({
                       systemId: s.id,
                     })
                   }
-                  className={`court-field-slot${vacant ? " is-vacant" : ""}`}
+                  className={`court-field-slot${vacant ? " is-vacant" : ""}${
+                    targetKey === `governor:${s.id}` ? " is-target" : ""
+                  }`}
                   contentLayout="stack"
                   label={s.name || s.id}
                 >
@@ -164,6 +168,15 @@ export function CourtFieldView({
                     busy={busy}
                     payload={payload}
                     onSelect={onSelect}
+                    onVacantPick={
+                      vacant
+                        ? () =>
+                            onVacantPick?.({
+                              kind: "governor",
+                              systemId: s.id,
+                            })
+                        : undefined
+                    }
                   />
                 </DropZone>
               );
@@ -189,7 +202,9 @@ export function CourtFieldView({
                       legionId: l.id,
                     })
                   }
-                  className={`court-field-slot${!occ ? " is-vacant" : ""}`}
+                  className={`court-field-slot${!occ ? " is-vacant" : ""}${
+                    targetKey === `commander:${l.id}` ? " is-target" : ""
+                  }`}
                   contentLayout="stack"
                   label={l.name || l.id}
                 >
@@ -202,6 +217,15 @@ export function CourtFieldView({
                     busy={busy}
                     payload={payload}
                     onSelect={onSelect}
+                    onVacantPick={
+                      !occ
+                        ? () =>
+                            onVacantPick?.({
+                              kind: "commander",
+                              legionId: l.id,
+                            })
+                        : undefined
+                    }
                   />
                 </DropZone>
               );
@@ -227,7 +251,9 @@ export function CourtFieldView({
                       fleetId: f.id,
                     })
                   }
-                  className={`court-field-slot${!occ ? " is-vacant" : ""}`}
+                  className={`court-field-slot${!occ ? " is-vacant" : ""}${
+                    targetKey === `admiral:${f.id}` ? " is-target" : ""
+                  }`}
                   contentLayout="stack"
                   label={f.name || f.id}
                 >
@@ -240,6 +266,15 @@ export function CourtFieldView({
                     busy={busy}
                     payload={payload}
                     onSelect={onSelect}
+                    onVacantPick={
+                      !occ
+                        ? () =>
+                            onVacantPick?.({
+                              kind: "admiral",
+                              fleetId: f.id,
+                            })
+                        : undefined
+                    }
                   />
                 </DropZone>
               );
@@ -279,6 +314,7 @@ function SlotBody({
   busy,
   payload,
   onSelect,
+  onVacantPick,
 }: {
   label: string;
   vacantHint: string;
@@ -288,14 +324,20 @@ function SlotBody({
   busy?: boolean;
   payload: ViewerPayload;
   onSelect: (id: string | null) => void;
+  onVacantPick?: () => void;
 }) {
   const spot = useSpotlight();
   if (!npc) {
     return (
-      <div className="court-field-slot__empty">
+      <button
+        type="button"
+        className="court-field-slot__empty"
+        disabled={busy}
+        onClick={onVacantPick}
+      >
         <strong>{label}</strong>
-        <span className="hint">{vacantHint}</span>
-      </div>
+        <span className="hint">{vacantHint} · выбрать</span>
+      </button>
     );
   }
   const where = targetLabel(npc, payload);

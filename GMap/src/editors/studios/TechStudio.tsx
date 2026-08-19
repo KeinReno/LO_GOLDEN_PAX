@@ -193,8 +193,7 @@ export function TechStudio() {
       <aside className="studio-sidebar">
         <div className="studio-sidebar-header">
           <div>
-            <p className="panel-kicker">GM · Lab</p>
-            <h3>Конструктор технологий</h3>
+            <h3>Технологии</h3>
           </div>
           <button
             type="button"

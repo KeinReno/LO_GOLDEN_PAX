@@ -254,6 +254,32 @@ try {
   /* tech_paths.json optional for this validator */
 }
 
+// Direction-fallback cross-check (SCIENCE_ORBIT_REDESIGN_SPEC.md §3.1): a
+// technology with no explicit `direction` field that resolves to "industry"
+// only via resolveTechDirection()'s unconditional final fallback (no tag /
+// iconTag / researchPath / civicPath / factionTraitLock match against any
+// direction's spec, and category/researchPath don't hit industry's own
+// categories/paths either) renders as anonymous industry content in the
+// orbit-wheel UI, silently inflating that sector's angular budget (see §1b).
+// WARN, not err: this is content debt, not a broken build — but it must stay
+// visible so future content additions without an explicit `direction` don't
+// silently regress the content fix landed alongside this check (430
+// previously-unlabeled technologies were given an explicit direction).
+let industryFallbackCount = 0;
+try {
+  const { resolveTechDirection } = await import("../server/techDirections.mjs");
+  const tdContent = { tech_directions: loadJson("content/core/tech_directions.json") };
+  for (const def of byId.values()) {
+    if (def.direction) continue;
+    if (resolveTechDirection(def, tdContent) === "industry") {
+      industryFallbackCount++;
+      warn(`${def.id}: no explicit direction, resolves to "industry" only via fallback`);
+    }
+  }
+} catch (e) {
+  warn(`direction-fallback cross-check failed to run: ${e.message}`);
+}
+
 // Schema file sanity
 if (!schema.definitions?.effect) err("tech_schema.json missing definitions.effect");
 for (const k of Object.keys(icons)) {
@@ -261,6 +287,7 @@ for (const k of Object.keys(icons)) {
 }
 
 console.log(`validateTechnologies: ${byId.size} techs`);
+console.log(`  INFO  ${industryFallbackCount} technology(ies) resolve direction via industry fallback only`);
 for (const w of warnings) console.log(`  WARN  ${w}`);
 for (const e of errors) console.log(`  ERROR ${e}`);
 

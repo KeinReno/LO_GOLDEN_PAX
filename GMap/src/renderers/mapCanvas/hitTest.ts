@@ -106,11 +106,20 @@ export function findLegionAt(
   for (const [sysId, legs] of bySystem) {
     const sys = byId.get(sysId);
     if (!sys) continue;
-    for (const slot of layoutLegionsAroundSystem(sys, legs, anim)) {
+    for (const slot of layoutLegionsAroundSystem(
+      sys,
+      legs,
+      anim,
+      model.selectedLegionId,
+    )) {
       const d = (slot.x - tip.x) ** 2 + (slot.y - tip.y) ** 2;
       if (d <= bestD) {
         bestD = d;
-        bestId = slot.legion.id;
+        bestId =
+          (model.selectedLegionId &&
+          slot.legionIds?.includes(model.selectedLegionId)
+            ? model.selectedLegionId
+            : null) ?? slot.legion.id;
       }
     }
   }
@@ -180,8 +189,16 @@ export function findHostileUnitAt(
     const legs = (model.world.legions ?? []).filter(
       (x) => x.systemId === sys.id && x.id !== excludeLegionId,
     );
-    for (const slot of layoutLegionsAroundSystem(sys, legs, anim)) {
-      if (slot.legion.id === legionId) {
+    for (const slot of layoutLegionsAroundSystem(
+      sys,
+      legs,
+      anim,
+      model.selectedLegionId,
+    )) {
+      if (
+        slot.legion.id === legionId ||
+        (slot.legionIds?.includes(legionId) ?? false)
+      ) {
         return {
           targetKind: "legion",
           targetId: legionId,
@@ -219,7 +236,10 @@ export function findHostileUnitAt(
       anim,
       model.selectedFleetId,
     )) {
-      if (slot.fleet.id === fleetId) {
+      if (
+        slot.fleet.id === fleetId ||
+        (slot.fleetIds?.includes(fleetId) ?? false)
+      ) {
         return {
           targetKind: "fleet",
           targetId: fleetId,

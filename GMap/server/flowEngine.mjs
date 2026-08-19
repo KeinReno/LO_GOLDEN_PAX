@@ -14,6 +14,7 @@ import { CATEGORY_CURRENCY } from "./ledger.mjs";
 import { resolveAlias } from "./normalizeWorld.mjs";
 import { canExtractDeposit } from "./depositExtract.mjs";
 import { resolveUpkeepCategory } from "./techSockets.mjs";
+import { isMapDeposit } from "./slotResolver.mjs";
 
 export const CATEGORIES = ["A", "B", "C", "D", "E", "F"];
 export const TIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -120,19 +121,45 @@ export function extractionYieldUnits(def) {
   return entries.reduce((sum, [, amt]) => sum + Number(amt), 0);
 }
 
+/**
+ * T1–T3 deposits extract at start (same freeBuildTier as buildings).
+ * Higher tiers need researched techTiers[cat]. Own treasury peg skips this.
+ */
+export function depositTechCeiling(content, techTiers, category) {
+  const free =
+    Number(content?.economy_balance?.principles?.freeBuildTier) || 3;
+  const researched = Number(techTiers?.[category] ?? 1);
+  return Math.max(free, researched);
+}
+
+export function isTreasuryPegDeposit(def, treasuryPeg) {
+  if (!def || treasuryPeg == null || treasuryPeg === "") return false;
+  const peg = String(treasuryPeg);
+  const id = String(def.id || "");
+  const name = String(def.name || "");
+  if (id && (id === peg || name === peg)) return true;
+  const pegBare = peg.replace(/^map\./, "");
+  const idBare = id.replace(/^map\./, "");
+  return Boolean(idBare && idBare === pegBare);
+}
+
 /** Resolve map resource by id, Russian name, or id-aliases (соларид→map.solari). */
 export function lookupMapResource(content, nameOrId) {
   const c = content || getContent();
   if (!nameOrId) return null;
   const raw = String(nameOrId);
   const aliased = resolveAlias("resources", raw);
-  if (c.map_resources?.[aliased]) return c.map_resources[aliased];
-  if (c.map_resources?.[raw]) return c.map_resources[raw];
-  return (
-    Object.values(c.map_resources || {}).find(
+  const bags = [c.map_resources, c.modules];
+  for (const bag of bags) {
+    if (!bag) continue;
+    if (bag[aliased]) return bag[aliased];
+    if (bag[raw]) return bag[raw];
+    const hit = Object.values(bag).find(
       (r) => r.name === raw || r.id === raw || r.name === aliased || r.id === aliased,
-    ) || null
-  );
+    );
+    if (hit) return hit;
+  }
+  return null;
 }
 
 export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
@@ -152,13 +179,20 @@ export function addPlanetExtraction(flows, resourceNames, content, opts = {}) {
         buildings,
         depositType: name,
         content: c,
+        planet: opts.planet || null,
       });
       if (!allowed) continue;
     }
     const def = lookupMapResource(c, name);
-    if (!def || def.category == null || def.tier == null) continue;
+    if (!def || !isMapDeposit(def) || def.category == null || def.tier == null) continue;
     const t = Number(def.tier);
-    if (maxTiers && Number(maxTiers[def.category] ?? 1) < t) continue;
+    if (
+      maxTiers &&
+      !isTreasuryPegDeposit(def, opts.treasuryPeg)
+    ) {
+      const ceil = depositTechCeiling(c, maxTiers, def.category);
+      if (ceil < t) continue;
+    }
     if (!flows[def.category]?.[t]) continue;
     let laborScale = 1;
     if (typeof opts.laborScaleForDeposit === "function") {

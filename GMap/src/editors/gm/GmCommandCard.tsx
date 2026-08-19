@@ -140,7 +140,7 @@ export function GmCommandCard({
               className="btn ghost"
               onClick={() => onOpenDomain("quests")}
             >
-              Квесты
+              Сессия
             </button>
           </div>
         </div>

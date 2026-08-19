@@ -186,7 +186,7 @@ for (const cat of cats) {
       id,
       name,
       summary,
-      detail: `Категория: ${cat.tag}. Ситуативный ежходный квест.`,
+      detail: `Категория: ${cat.tag}. Ситуативный ежеходный квест.`,
       category: cat.tag,
       filterBy,
       choices,

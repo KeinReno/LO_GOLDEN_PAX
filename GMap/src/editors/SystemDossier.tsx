@@ -12,6 +12,16 @@ export type PlayerSystemActions = {
   onSelectOwnLegion?: (legionId: string) => void;
 };
 
+function ruHopsWord(n: number): string {
+  const abs = Math.abs(Math.trunc(n));
+  const mod100 = abs % 100;
+  const mod10 = abs % 10;
+  if (mod100 >= 11 && mod100 <= 14) return "хопов";
+  if (mod10 === 1) return "хоп";
+  if (mod10 >= 2 && mod10 <= 4) return "хопа";
+  return "хопов";
+}
+
 function formatSupplyLine(
   system: {
     logistics?: {
@@ -45,8 +55,11 @@ function formatSupplyLine(
       ? "через депо"
       : "прямая линия";
   const level = (L.supplyLevel ?? 0).toFixed(2);
+  const hopWord = ruHopsWord(hops);
+  const hopPart =
+    hops === 0 ? "столица" : `${hops} ${hopWord} до столицы`;
   return {
-    text: `${hops} хоп${hops === 1 ? "" : hops < 5 ? "а" : "ов"} до столицы, ${via} · supplyLevel: ${level}`,
+    text: `${hopPart}, ${via} · уровень ${level}`,
     tone: L.bottlenecked ? "warn" : "ok",
   };
 }
@@ -65,6 +78,7 @@ export function SystemDossier({
   onClose?: () => void;
 }) {
   const dossierSystemId = useWorldStore((s) => s.dossierSystemId);
+  const gmShellMode = useWorldStore((s) => s.gmShellMode);
   const closeSystemView = useWorldStore((s) => s.closeSystemView);
   const close = onClose ?? closeSystemView;
   const system = useWorldStore((s) =>
@@ -79,6 +93,7 @@ export function SystemDossier({
 
   const currentTurn = useWorldStore((s) => s.world.meta.turn ?? 0);
 
+  if (gmShellMode !== "gm") return null;
   if (!dossierSystemId || !system) return null;
 
   const ownedByOther =
@@ -116,106 +131,92 @@ export function SystemDossier({
 
   const node = (
     <div
-      className="dossier-backdrop"
-      role="dialog"
-      aria-modal="true"
-      onClick={() => close()}
+      className="gm-system-layer"
+      role="region"
+      aria-label={system.name}
     >
-      <div
-        className="dossier-panel dossier-panel-wide"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="dossier-head">
-          <div>
-            <p className="dossier-kicker">
-              {readOnly
-                ? "Карта → система → планета"
-                : "Галактика → система → планета"}
-            </p>
-            <h2>{system.name}</h2>
-            <p
-              className={`dossier-supply dossier-supply-${supply.tone}`}
-              title="Статус снабжения от столицы"
-            >
-              <span className="dossier-supply-label">Снабжение</span>
-              {supply.text}
-            </p>
-            {loyaltyAvg != null ? (
-              <p
-                className={`hint loyalty-dossier-avg loyalty-ring-${loyaltyTone}`}
-                title="Средняя лояльность населённых планет"
-              >
-                Лояльность · {loyaltyAvg}
-              </p>
-            ) : null}
-            {worstRevolt != null ? (
-              <p
-                className={`hint loyalty-dossier-avg loyalty-ring-${worstRevolt.tone === "critical" || worstRevolt.tone === "bad" ? "low" : worstRevolt.tone === "warn" ? "warn" : "high"}`}
-                title={`Стабильность: ср. ${stabilityAvg}, худшая стадия ${worstRevolt.stage} (${worstRevolt.stageName})${worstRevolt.stage === 2 && worstRevolt.turnsToSecession != null ? `, до сецессии: ${worstRevolt.turnsToSecession} х.` : ""}`}
-              >
-                Стабильность · {stabilityAvg}/100 · Стадия {worstRevolt.stage} ({worstRevolt.stageName}){worstRevolt.productionPenaltyPercent > 0 ? ` · ${worstRevolt.productionPenaltyLabel} прод.` : ""}{worstRevolt.stage === 2 && worstRevolt.turnsToSecession != null ? ` · до отд. ${worstRevolt.turnsToSecession} х.` : ""}
-              </p>
-            ) : null}
-          </div>
+      <header className="viewer-system-head gm-system-layer__head">
+        <button
+          type="button"
+          className="btn viewer-system-back"
+          onClick={() => close()}
+        >
+          К карте
+          <span className="viewer-system-back-kbd">Esc</span>
+        </button>
+        <h2 className="viewer-system-title">{system.name}</h2>
+        <p
+          className={`dossier-supply dossier-supply-${supply.tone} gm-system-layer__supply`}
+          title="Статус снабжения от столицы"
+        >
+          <span className="dossier-supply-label">Снабжение</span>
+          {supply.text}
+        </p>
+        {loyaltyAvg != null ? (
+          <p
+            className={`hint loyalty-dossier-avg loyalty-ring-${loyaltyTone}`}
+            title="Средняя лояльность населённых планет"
+          >
+            Лояльность · {loyaltyAvg}
+          </p>
+        ) : null}
+        {worstRevolt != null ? (
+          <p
+            className={`hint loyalty-dossier-avg loyalty-ring-${worstRevolt.tone === "critical" || worstRevolt.tone === "bad" ? "low" : worstRevolt.tone === "warn" ? "warn" : "high"}`}
+            title={`Стабильность: ср. ${stabilityAvg}, худшая стадия ${worstRevolt.stage} (${worstRevolt.stageName})`}
+          >
+            Стаб. · {stabilityAvg}/100 · ст. {worstRevolt.stage}
+          </p>
+        ) : null}
+      </header>
+      <div className="viewer-system-body gm-system-layer__body">
+        <SystemView
+          system={system}
+          readOnly={readOnly}
+          playerFactionId={playerActions?.factionId}
+          onSelectOwnFleet={playerActions?.onSelectOwnFleet}
+          onSelectOwnLegion={playerActions?.onSelectOwnLegion}
+          planetManage={planetManage}
+        />
+      </div>
+      {readOnly && playerActions && (
+        <footer className="dossier-player-actions">
           <button
             type="button"
             className="btn ghost"
-            onClick={() => close()}
+            onClick={() => {
+              close();
+              playerActions.onClaim(system.id);
+            }}
           >
-            На карту
+            Захват
           </button>
-        </header>
-        <div className="dossier-body">
-          <SystemView
-            system={system}
-            readOnly={readOnly}
-            playerFactionId={playerActions?.factionId}
-            onSelectOwnFleet={playerActions?.onSelectOwnFleet}
-            onSelectOwnLegion={playerActions?.onSelectOwnLegion}
-            planetManage={planetManage}
-          />
-        </div>
-        {readOnly && playerActions && (
-          <footer className="dossier-player-actions">
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => {
-                close();
-                playerActions.onClaim(system.id);
-              }}
-            >
-              Захват
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              disabled={!ownedByOther}
-              title={
-                ownedByOther
-                  ? "Атаковать систему"
-                  : "Нет чужого владельца"
-              }
-              onClick={() => {
-                close();
-                playerActions.onAttack(system.id);
-              }}
-            >
-              Атака
-            </button>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => {
-                close();
-                playerActions.onOpenRp();
-              }}
-            >
-              Сцена с ГМом
-            </button>
-          </footer>
-        )}
-      </div>
+          <button
+            type="button"
+            className="btn ghost"
+            disabled={!ownedByOther}
+            title={
+              ownedByOther ? "Атаковать систему" : "Нет чужого владельца"
+            }
+            onClick={() => {
+              close();
+              playerActions.onAttack(system.id);
+            }}
+          >
+            Атака
+          </button>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => {
+              close();
+              playerActions.onOpenRp();
+            }}
+          >
+            Сцена с ГМом
+          </button>
+        </footer>
+      )}
     </div>
   );
 

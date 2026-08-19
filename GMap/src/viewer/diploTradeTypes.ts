@@ -20,9 +20,11 @@ export type DiploOffer = {
   createdAt?: string;
 };
 
+export type TradeAsset = { id: string; name: string; where?: string };
+
 export type TradeAssetPool = {
-  fleets: { id: string; name: string }[];
-  legions: { id: string; name: string }[];
-  systems: { id: string; name: string }[];
-  techs: { id: string; name: string }[];
+  fleets: TradeAsset[];
+  legions: TradeAsset[];
+  systems: TradeAsset[];
+  techs: TradeAsset[];
 };

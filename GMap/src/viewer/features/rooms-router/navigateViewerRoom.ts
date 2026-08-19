@@ -19,10 +19,15 @@ export function closeViewerMapOverlays(): void {
 /** Room switch via Zustand — no callback drilling. */
 export function navigateViewerRoom(v: PlayerView): void {
   useViewerSessionStore.getState().setViewMode(v);
-  useViewerChromeStore.getState().closeShellOverlays();
-  useViewerChromeStore.getState().setQueueOpen(false);
-  useViewerChromeStore.getState().setRpFloatOpen(v === "rp");
-  if (v !== "map") useViewerChromeStore.getState().setSheetOpen(false);
+  useViewerChromeStore.setState({
+    menuOpen: false,
+    settingsOpen: false,
+    mapFiltersOpen: false,
+    rpFloatOpen: v === "rp",
+    sheetOpen: false,
+    dockMoreOpen: false,
+    queueOpen: false,
+  });
   useViewerSessionStore.getState().setTouchMoveArmed(false);
   useViewerPanelFocusStore.getState().clearEconomyLinkIfLeaving(v);
   useViewerPanelFocusStore.getState().clearCourtFocusIfLeaving(v);

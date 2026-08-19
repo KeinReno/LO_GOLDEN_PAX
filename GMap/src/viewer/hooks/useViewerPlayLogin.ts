@@ -18,8 +18,10 @@ import {
 import { toViewerMapModel } from "../viewerMapModel";
 import type { PerfMode } from "../viewerSessionPrefs";
 import { fetchViewerLogin } from "./useViewerAuth";
-import { missingLoginCredsMsg, stripLoginQuery } from "./viewerAuthParse";
+import { missingLoginCredsMsg, parseAutoLoginQuery, stripLoginQuery } from "./viewerAuthParse";
 import { mapVersionStamp } from "./viewerLivePolls";
+import { postPlayerJson } from "../../state/playerActionClient";
+import { clearPlayerToken, hasPlayerToken } from "../../state/playerAuth";
 
 type Creds = { factionId: string; password: string };
 
@@ -55,74 +57,91 @@ type Opts = {
 };
 
 export function useViewerPlayLogin(opts: Opts) {
+  const applySession = (
+    data: ViewerPayload & {
+      apMax?: number;
+      reservedAp?: number;
+      forceApMax?: number;
+      reservedForceAp?: number;
+      tableRevision?: number;
+    },
+    fid: string,
+    pw: string,
+  ) => {
+    opts.credsRef.current = { factionId: fid, password: pw };
+    opts.mapStampRef.current = mapVersionStamp({
+      turn: data.world.meta.turn,
+      tableRevision: data.tableRevision ?? data.world.meta.tableRevision,
+    });
+
+    const chosen = clampPerfForDevice(opts.loginPerf);
+    const nextLayers = layersForPerfChoice(chosen);
+    const nextGfx = graphicsForPerf(chosen);
+    try {
+      localStorage.setItem("gmap-viewer-perf", chosen);
+      writeStoredViewerLayers(nextLayers);
+      writeStoredGraphics(nextGfx);
+    } catch {
+      /* ignore */
+    }
+    opts.setPerfModeDirect(chosen);
+    opts.commitLayers(nextLayers);
+    opts.setGraphicsDirect(nextGfx);
+    opts.applyMapStyle(opts.loginMapStyle);
+
+    opts.setPayload({
+      ...data,
+      factionId: fid,
+      updatedAt: data.updatedAt ?? data.world.meta.updatedAt,
+    });
+    opts.loadWorld(data.world);
+    opts.applyApFromApi({
+      apMax: data.apMax ?? 9,
+      reservedAp: data.reservedAp ?? 0,
+      forceApMax: data.forceApMax ?? 2,
+      reservedForceAp: data.reservedForceAp ?? 0,
+    });
+    opts.setSyncHint(null);
+    opts.clearMapSelection();
+    opts.closeShellOverlays();
+    closeViewerMapOverlays();
+    {
+      const start = readStoredStart() ?? defaultStartForDevice();
+      opts.setViewMode(start);
+      writeStoredStart(start);
+    }
+    opts.modelRef.current = toViewerMapModel(
+      data.world,
+      null,
+      null,
+      nextLayers,
+    );
+    opts.bump();
+    try {
+      const next = stripLoginQuery(window.location.href);
+      const cur = window.location.pathname + window.location.search;
+      if (next !== cur) window.history.replaceState({}, "", next);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const login = async (override?: { factionId?: string; password?: string }) => {
     const fid = override?.factionId ?? opts.factionId;
     const pw = override?.password ?? opts.password;
-    if (!fid || !pw) {
+    if (!pw) {
       opts.setError(missingLoginCredsMsg());
       return;
     }
-    opts.setFactionId(fid);
+    if (fid) opts.setFactionId(fid);
     opts.setPassword(pw);
     opts.setError(null);
     opts.setIsLoggingIn(true);
     try {
-      const data = await fetchViewerLogin(fid, pw);
-      opts.credsRef.current = { factionId: fid, password: pw };
-      opts.mapStampRef.current = mapVersionStamp({
-        turn: data.world.meta.turn,
-        tableRevision: data.tableRevision ?? data.world.meta.tableRevision,
-      });
-
-      const chosen = clampPerfForDevice(opts.loginPerf);
-      const nextLayers = layersForPerfChoice(chosen);
-      const nextGfx = graphicsForPerf(chosen);
-      try {
-        localStorage.setItem("gmap-viewer-perf", chosen);
-        writeStoredViewerLayers(nextLayers);
-        writeStoredGraphics(nextGfx);
-      } catch {
-        /* ignore */
-      }
-      opts.setPerfModeDirect(chosen);
-      opts.commitLayers(nextLayers);
-      opts.setGraphicsDirect(nextGfx);
-      opts.applyMapStyle(opts.loginMapStyle);
-
-      opts.setPayload({
-        ...data,
-        updatedAt: data.updatedAt ?? data.world.meta.updatedAt,
-      });
-      opts.loadWorld(data.world);
-      opts.applyApFromApi({
-        apMax: data.apMax ?? 9,
-        reservedAp: data.reservedAp ?? 0,
-        forceApMax: data.forceApMax ?? 2,
-        reservedForceAp: data.reservedForceAp ?? 0,
-      });
-      opts.setSyncHint(null);
-      opts.clearMapSelection();
-      opts.closeShellOverlays();
-      closeViewerMapOverlays();
-      {
-        const start = readStoredStart() ?? defaultStartForDevice();
-        opts.setViewMode(start);
-        writeStoredStart(start);
-      }
-      opts.modelRef.current = toViewerMapModel(
-        data.world,
-        null,
-        null,
-        nextLayers,
-      );
-      opts.bump();
-      try {
-        const next = stripLoginQuery(window.location.href);
-        const cur = window.location.pathname + window.location.search;
-        if (next !== cur) window.history.replaceState({}, "", next);
-      } catch {
-        /* ignore */
-      }
+      const data = await fetchViewerLogin(fid || undefined, pw);
+      const seated = String(data.factionId || fid || "").trim();
+      if (!seated) throw new Error(missingLoginCredsMsg());
+      applySession(data, seated, pw);
     } catch (e) {
       opts.setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -130,5 +149,37 @@ export function useViewerPlayLogin(opts: Opts) {
     }
   };
 
-  return { login };
+  const restoreFromToken = async () => {
+    if (!hasPlayerToken()) return false;
+    try {
+      if (parseAutoLoginQuery(window.location.search)) return false;
+    } catch {
+      /* ignore */
+    }
+    opts.setIsLoggingIn(true);
+    try {
+      const { ok, data } = await postPlayerJson("/api/view-refresh", {});
+      if (!ok || !data.world) {
+        clearPlayerToken();
+        return false;
+      }
+      const fid = String(data.factionId || "");
+      if (!fid) {
+        clearPlayerToken();
+        return false;
+      }
+      opts.setFactionId(fid);
+      opts.setPassword("");
+      opts.setError(null);
+      applySession(data as ViewerPayload, fid, "");
+      return true;
+    } catch {
+      clearPlayerToken();
+      return false;
+    } finally {
+      opts.setIsLoggingIn(false);
+    }
+  };
+
+  return { login, restoreFromToken };
 }

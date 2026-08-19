@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Bell,
+  BookMarked,
   Coins,
   MessageSquare,
   ScrollText,
@@ -12,7 +13,7 @@ export type AlertFocusAnchor = { clientX: number; clientY: number };
 
 export type AlertItem = {
   id: string;
-  kind: "idle_fleet" | "engagement" | "orders" | "rp" | "economy";
+  kind: "idle_fleet" | "engagement" | "orders" | "rp" | "economy" | "quest";
   /** Imperative CTA — shared with HQ «Внимание». */
   verb: string;
   title: string;
@@ -31,6 +32,7 @@ const KIND_ICONS = {
   orders: ScrollText,
   rp: MessageSquare,
   economy: Coins,
+  quest: BookMarked,
 } as const;
 
 export function ViewerAlertFab({ items, unreadRp }: Props) {

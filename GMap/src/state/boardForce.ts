@@ -1,5 +1,9 @@
 import type { Fleet, Legion, ViewerPayload, WorldState } from "./types";
-import { playerAuthHeaders, rememberPlayerTokenFromPayload } from "./playerAuth";
+import {
+  playerAuthHeaders,
+  playerJsonBody,
+  rememberPlayerTokenFromPayload,
+} from "./playerAuth";
 
 /**
  * Player boarding client — POST /api/forces/board.
@@ -67,7 +71,7 @@ export async function postForceBoard(body: {
     const res = await fetch("/api/forces/board", {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body as Record<string, unknown>)),
     });
     const data = (await res.json()) as BoardForceSession;
     rememberPlayerTokenFromPayload(data as { playerToken?: string | null });

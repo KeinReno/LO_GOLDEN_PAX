@@ -655,9 +655,18 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
           const startSys = byId.get(legion.systemId);
           if (!startSys) continue;
           const here = legionsBySystem.get(legion.systemId) ?? [legion];
-          const slots = layoutLegionsAroundSystem(startSys, here, anim);
+          const slots = layoutLegionsAroundSystem(
+            startSys,
+            here,
+            anim,
+            legion.id,
+          );
           const slot =
-            slots.find((s) => s.legion.id === legion.id) ?? slots[0];
+            slots.find(
+              (s) =>
+                s.legion.id === legion.id ||
+                (s.legionIds?.includes(legion.id) ?? false),
+            ) ?? slots[0];
           const startIso = slot
             ? { x: slot.x, y: slot.y }
             : toIso(startSys.x, startSys.y);
@@ -1463,7 +1472,7 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
               item.slot.stackCount ?? 1,
             );
           }
-          const stackKey = `${item.slot.fleet.systemId}:${item.slot.fleet.factionId}`;
+          const stackKey = `fleet:${item.slot.fleet.systemId}:${item.slot.fleet.factionId}`;
           if ((item.slot.stackCount ?? 1) > 1) {
             seenFleetStacks.add(stackKey);
             let stackLabel = fleetStackLabelMapRef.current.get(stackKey);
@@ -1519,13 +1528,6 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
           }
         }
       }
-      for (const [key, stackLabel] of fleetStackLabelMapRef.current) {
-        if (!seenFleetStacks.has(key)) {
-          labels.removeChild(stackLabel);
-          stackLabel.destroy();
-          fleetStackLabelMapRef.current.delete(key);
-        }
-      }
 
       legionsG.clear();
       if (showLegions) {
@@ -1537,8 +1539,15 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
             drag?.kind === "legion" && drag.moved
               ? legs.filter((l) => l.id !== drag.id)
               : legs;
-          for (const slot of layoutLegionsAroundSystem(sys, visibleLegs, anim)) {
-            const selected = slot.legion.id === selectedLegionId;
+          for (const slot of layoutLegionsAroundSystem(
+            sys,
+            visibleLegs,
+            anim,
+            selectedLegionId,
+          )) {
+            const selected =
+              slot.legion.id === selectedLegionId ||
+              (slot.legionIds?.includes(selectedLegionId ?? "") ?? false);
             const col = factionColors.get(slot.legion.factionId)?.system ?? 0xcccccc;
             if (useUnitSprites) {
               registerUnitTransit(
@@ -1555,6 +1564,7 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
                 tint: col,
                 size: selected ? LEGION_ICON_SIZE_SEL : LEGION_ICON_SIZE,
                 selected,
+                stackCount: slot.stackCount,
               });
               drawLegionStanceBadge(
                 legionsG,
@@ -1573,6 +1583,29 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
                 slot.legion.status,
                 anim,
               );
+            }
+            const stackKey = `legion:${slot.legion.systemId}:${slot.legion.factionId}`;
+            if ((slot.stackCount ?? 1) > 1) {
+              seenFleetStacks.add(stackKey);
+              let stackLabel = fleetStackLabelMapRef.current.get(stackKey);
+              if (!stackLabel) {
+                stackLabel = new Text({
+                  text: `×${slot.stackCount}`,
+                  style: {
+                    fontSize: 10,
+                    fill: 0xa8e4ef,
+                    fontFamily: "Rajdhani, Segoe UI, sans-serif",
+                    fontWeight: "700",
+                    stroke: { color: 0x05070c, width: 2 },
+                  },
+                });
+                stackLabel.anchor.set(0.5);
+                fleetStackLabelMapRef.current.set(stackKey, stackLabel);
+                labels.addChild(stackLabel);
+              }
+              stackLabel.text = `×${slot.stackCount}`;
+              stackLabel.visible = true;
+              stackLabel.position.set(slot.x - 10, slot.y - 10);
             }
           }
         }
@@ -1603,6 +1636,14 @@ export function redrawAll(ctx: MapRedrawCtx, pulseOnly = false): void {
               );
             }
           }
+        }
+      }
+
+      for (const [key, stackLabel] of fleetStackLabelMapRef.current) {
+        if (!seenFleetStacks.has(key)) {
+          labels.removeChild(stackLabel);
+          stackLabel.destroy();
+          fleetStackLabelMapRef.current.delete(key);
         }
       }
 

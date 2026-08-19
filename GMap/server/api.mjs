@@ -493,7 +493,7 @@ function filterWorldForFaction(world, factionId) {
   const factions = (world.factions ?? [])
     .map((f) => {
       if (f.id === factionId) {
-        const { gmNotes: _fgm, ...rest } = f;
+        const rest = maskFactionForIntel(f, 4, factionId);
         const npcs = (f.npcs ?? [])
           .map((n) => {
             const { gmNotes: _ngm, ...nRest } = n;
@@ -520,9 +520,7 @@ function filterWorldForFaction(world, factionId) {
 
   const quests = (world.quests ?? []).filter((q) => {
     if (q.status === "hidden") return false;
-    // Own / unscoped / intentional foreign & main story quests
     if (!q.sourceFactionId || q.sourceFactionId === factionId) return true;
-    if (q.type === "foreign" || q.type === "main") return true;
     return false;
   });
 
@@ -556,9 +554,9 @@ function filterWorldForFaction(world, factionId) {
       quests,
       caravans,
       courtEvents,
-      sectors: world.sectors ?? [],
+      sectors: [],
       races: world.races ?? [],
-      loyaltyMatrix: world.loyaltyMatrix ?? {},
+      loyaltyMatrix: {},
       turnHistory: [],
     },
   };

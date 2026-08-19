@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useCardBoard } from "./cardBoardContext";
+import { useCardBoard, zoneAcceptsCard } from "./cardBoardContext";
 
 export type DropZoneProps = {
   zoneId: string;
@@ -67,8 +67,7 @@ export function DropZone({
   const acceptsDrag = useMemo(() => {
     const id = board.draggingCardId;
     if (!id) return false;
-    if (!accepts || accepts.length === 0) return true;
-    return accepts.includes(id) || accepts.includes("*");
+    return zoneAcceptsCard(id, accepts);
   }, [board.draggingCardId, accepts]);
 
   const armed = armWhileDragging && acceptsDrag;
@@ -87,7 +86,7 @@ export function DropZone({
         .filter(Boolean)
         .join(" ")}
       data-zone-id={zoneId}
-      aria-dropeffect="move"
+      {...(board.draggingCardId ? { "aria-dropeffect": "move" as const } : {})}
     >
       {label ? <div className="drop-zone__label">{label}</div> : null}
       <div

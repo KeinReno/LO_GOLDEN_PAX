@@ -19,12 +19,18 @@ import {
 import {
   CLIMATE_LABELS,
   PLANET_TYPE_LABELS,
-  RESOURCE_POOL,
   STAR_CLASS_LABELS,
   STATION_KIND_LABELS,
   SYSTEM_ACTIVITY_LABELS,
   SYSTEM_POI_LABELS,
 } from "../state/defaults";
+import {
+  depositPaintPool,
+  resourcesHas,
+  toggleDeposit,
+  uniqueDepositTokens,
+} from "../state/depositPaint";
+import { resourceDisplayName } from "../state/economyLabels";
 import { v4 as uuid } from "uuid";
 import type { SystemPoiType } from "../state/types";
 
@@ -274,7 +280,7 @@ export function SystemEditor({ system }: SystemEditorProps) {
       <div className="block-title">Ресурсы системы</div>
       <TagEditor
         values={system.resources}
-        pool={RESOURCE_POOL}
+        pool={[...depositPaintPool()]}
         onChange={(resources) => updateSelectedSystem({ resources })}
       />
 
@@ -513,7 +519,7 @@ export function SystemEditor({ system }: SystemEditorProps) {
               <div className="block-title">Ресурсы планеты</div>
               <TagEditor
                 values={p.resources ?? []}
-                pool={RESOURCE_POOL}
+                pool={[...depositPaintPool()]}
                 onChange={(resources) => updatePlanet(p.id, { resources })}
               />
               <div className="block-title">Расы %</div>
@@ -659,20 +665,21 @@ function TagEditor({
   pool: string[];
   onChange: (next: string[]) => void;
 }) {
-  const available = pool.filter((r) => !values.includes(r));
+  const chips = uniqueDepositTokens(values);
+  const available = pool.filter((r) => !resourcesHas(values, r));
   return (
     <div className="tag-editor">
       <div className="tag-list">
-        {values.length === 0 && <span className="hint">— нет —</span>}
-        {values.map((v) => (
+        {chips.length === 0 && <span className="hint">— нет —</span>}
+        {chips.map((v) => (
           <button
             key={v}
             type="button"
             className="tag"
             title="Убрать"
-            onClick={() => onChange(values.filter((x) => x !== v))}
+            onClick={() => onChange(toggleDeposit(values, v))}
           >
-            {v} ×
+            {resourceDisplayName(v)} ×
           </button>
         ))}
       </div>
@@ -681,13 +688,13 @@ function TagEditor({
           value=""
           onChange={(e) => {
             const v = e.target.value;
-            if (v) onChange([...values, v]);
+            if (v) onChange(toggleDeposit(values, v));
           }}
         >
           <option value="">+ ресурс…</option>
           {available.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {resourceDisplayName(r)}
             </option>
           ))}
         </select>

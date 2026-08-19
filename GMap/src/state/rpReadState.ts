@@ -96,3 +96,31 @@ export function saveGmLastChannel(ch: GmLastChannel): void {
     /* ignore */
   }
 }
+
+const GM_VIEWER = "master";
+
+type HqEpisode = {
+  id: string;
+  kind?: string;
+  rail?: {
+    marks?: Parameters<typeof countUnread>[0];
+    openPrompts?: number;
+  };
+};
+
+/** Unread HQ lines across the rail (ignores own GM posts). */
+export function sumGmHqUnread(chapters: { episodes?: HqEpisode[] }[]): number {
+  let n = 0;
+  for (const ch of chapters) {
+    for (const ep of ch.episodes || []) {
+      if (ep.kind !== "hq" && !String(ep.id).startsWith("hq_")) continue;
+      n += countUnread(ep.rail?.marks || [], {
+        episodeId: ep.id,
+        viewer: GM_VIEWER,
+        ignoreSystem: true,
+        ignoreMaster: true,
+      });
+    }
+  }
+  return n;
+}

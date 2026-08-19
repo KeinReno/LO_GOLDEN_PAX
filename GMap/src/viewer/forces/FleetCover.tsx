@@ -8,6 +8,7 @@ import {
   compositionUpkeep,
   type ForceEngagementHit,
 } from "../../state/forceReadiness";
+import { CoverHpBar } from "./CoverHpBar";
 
 export function FleetCover({
   fleet,
@@ -33,13 +34,13 @@ export function FleetCover({
   const inBattle = (engagements?.length ?? 0) > 0;
 
   return (
-    <CometCard className="forces-cover-comet" rotateDepth={10} disabled={!!reduce}>
+    <CometCard className="forces-cover-comet" rotateDepth={0} disabled>
       <motion.button
         type="button"
         className={`forces-cover forces-cover--fleet${inBattle ? " is-battle" : ""}`}
         onClick={onOpen}
-        whileHover={reduce ? undefined : { y: -4, scale: 1.02 }}
-        whileTap={reduce ? undefined : { scale: 0.97 }}
+        whileHover={reduce ? undefined : { y: -3 }}
+        whileTap={reduce ? undefined : { scale: 0.98 }}
         initial={reduce ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 28 }}
@@ -55,11 +56,22 @@ export function FleetCover({
           <strong className="forces-cover-name">{fleet.name}</strong>
           <span className="forces-cover-meta">{systemName}</span>
           <span className="forces-cover-count">
-            <span className="forces-cover-count-num">{totalUnits}</span> юнитов
-            {preview.cardCount > 0 ? (
-              <span className="forces-cover-deck"> · колода {preview.cardCount}</span>
-            ) : null}
+            {totalUnits > 0 ? (
+              <>
+                <span className="forces-cover-count-num">{totalUnits}</span>{" "}
+                кораблей
+                {preview.cardCount > 0 ? (
+                  <span className="forces-cover-deck">
+                    {" "}
+                    · карт {preview.cardCount}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <span className="forces-cover-empty">нет состава</span>
+            )}
           </span>
+          <CoverHpBar composition={fleet.composition} />
           <span className="forces-cover-roles">
             {preview.roles.slice(0, 4).map((r) => (
               <span key={r.role} className="forces-role-chip is-mini">

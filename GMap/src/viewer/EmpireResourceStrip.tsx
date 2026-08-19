@@ -10,15 +10,19 @@ import {
 import { createPortal } from "react-dom";
 import type { MapResourceDef } from "../state/contentCatalog";
 import {
+  BUILD_METAL,
+  BUILD_SUPPLY,
   CATEGORY_CURRENCIES,
+  resourceDisplayName,
   type CategoryCurrency,
 } from "../state/economyLabels";
 import { buildResourceIndex } from "../state/resourceIndex";
 import { fmtSigned } from "../state/numberFormat";
 import type { ViewerPayload, WorldState } from "../state/types";
-import { formatOdMeter, formatForceOdMeter, OD_TOOLTIP, FORCE_OD_TOOLTIP } from "../state/playerUiTerms";
+import { formatOdHud, formatForceOdHud, OD_TOOLTIP, FORCE_OD_TOOLTIP } from "../state/playerUiTerms";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import type { EconomyFlowBreakdown, FlowCell } from "./economyFlowTypes";
+import { resolveTreasuryCurrencyId } from "./economy/economyMath";
 
 const HOVER_OPEN_MS = 380;
 const HOVER_CLOSE_MS = 160;
@@ -191,6 +195,33 @@ function CategoryHoverPanel({
   );
 }
 
+function SpendCell({
+  id,
+  label,
+  stock,
+  stocks,
+  onOpen,
+}: {
+  id: string;
+  label: string;
+  stock: number;
+  stocks?: Record<string, number>;
+  onOpen?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="empire-res-cell empire-res-cell--spend"
+      title={`${label}: ${stock} · склад`}
+      aria-label={`${label}: ${stock}. Клик — склад.`}
+      onClick={() => onOpen?.()}
+    >
+      <ResourceIcon resourceId={id} stocks={stocks} size={15} />
+      <span className="empire-res-stock">{stock}</span>
+    </button>
+  );
+}
+
 function CategoryCell({
   cat,
   stock,
@@ -200,6 +231,7 @@ function CategoryCell({
   deposits,
   stocks,
   tierFlows,
+  onSelect,
 }: {
   cat: CategoryCurrency;
   stock: number;
@@ -209,6 +241,7 @@ function CategoryCell({
   deposits: Record<string, number>;
   stocks?: Record<string, number>;
   tierFlows?: Record<string, FlowCell>;
+  onSelect?: (letter: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<{
@@ -275,7 +308,7 @@ function CategoryCell({
     total
       ? `приток ${fmtSigned(total.rate)}, спрос ${fmtSigned(total.demand).replace("+", "")}, итог ${fmtSigned(total.net)}`
       : null,
-    "Удержите курсор — детали и ресурсы.",
+    "Удержите курсор — детали. Клик — производство.",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -315,9 +348,16 @@ function CategoryCell({
       onBlur={onLeave}
       tabIndex={0}
       title={tip}
-      aria-label={`${cat.name}: имеется ${stock}${hasNet ? `, итог ${fmtSigned(net)}` : ""}`}
+      aria-label={`${cat.name}: имеется ${stock}${hasNet ? `, итог ${fmtSigned(net)}` : ""}. Клик — производство.`}
       aria-expanded={open}
       aria-describedby={open ? `empire-res-pop-${cat.letter}` : undefined}
+      onClick={() => onSelect?.(cat.letter)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(cat.letter);
+        }
+      }}
     >
       <ResourceIcon resourceId={cat.id} stocks={stocks} size={15} />
       <span className="empire-res-stock" title="Имеется в казне">
@@ -349,6 +389,9 @@ export function EmpireResourceStrip({
   legionCount,
   mapResources,
   onOpenForces,
+  onOpenCategory,
+  onOpenStockpile,
+  compact = false,
   trailing,
 }: {
   economy?: ViewerPayload["economy"];
@@ -363,6 +406,9 @@ export function EmpireResourceStrip({
   legionCount: number;
   mapResources?: Record<string, MapResourceDef>;
   onOpenForces?: () => void;
+  onOpenCategory?: (letter: string) => void;
+  onOpenStockpile?: () => void;
+  compact?: boolean;
   trailing?: ReactNode;
 }) {
   const index = useMemo(
@@ -376,9 +422,42 @@ export function EmpireResourceStrip({
   const bottlenecks = flowData?.bottlenecks ?? economy?.bottlenecks ?? {};
   const stocks = economy?.stocks;
   const totals = flowData?.totals;
+  const fac = world?.factions?.find((f) => f.id === factionId);
+  const pegId = resolveTreasuryCurrencyId(fac);
+  const spendIds: string[] = [BUILD_METAL.id, BUILD_SUPPLY.id];
+  if (
+    pegId &&
+    pegId !== BUILD_METAL.id &&
+    pegId !== BUILD_SUPPLY.id &&
+    !CATEGORY_CURRENCIES.some((c) => c.id === pegId)
+  ) {
+    spendIds.push(pegId);
+  }
 
   return (
-    <div className="empire-res-strip" aria-label="Ресурсы державы">
+    <div
+      className={`empire-res-strip${compact ? " empire-res-strip--compact" : ""}`}
+      aria-label="Ресурсы державы"
+    >
+      <div className="empire-res-cats empire-res-cats--spend" role="list">
+        {spendIds.map((id) => (
+          <SpendCell
+            key={id}
+            id={id}
+            label={
+              id === BUILD_METAL.id
+                ? BUILD_METAL.label
+                : id === BUILD_SUPPLY.id
+                  ? BUILD_SUPPLY.label
+                  : resourceDisplayName(id)
+            }
+            stock={stocks?.[id] ?? 0}
+            stocks={stocks}
+            onOpen={onOpenStockpile}
+          />
+        ))}
+      </div>
+      <span className="empire-res-sep" aria-hidden />
       <div className="empire-res-cats" role="list">
         {CATEGORY_CURRENCIES.map((cat) => (
           <CategoryCell
@@ -387,10 +466,11 @@ export function EmpireResourceStrip({
             stock={stocks?.[cat.id] ?? 0}
             total={totals?.[cat.letter]}
             bottleneck={cat.letter in bottlenecks}
-            resources={index.byCategory[cat.letter] ?? []}
+            resources={index.byCategoryDeposits[cat.letter] ?? []}
             deposits={deposits}
             stocks={stocks}
             tierFlows={flowData?.flows?.[cat.letter]}
+            onSelect={onOpenCategory}
           />
         ))}
       </div>
@@ -399,13 +479,13 @@ export function EmpireResourceStrip({
         className="empire-res-pill empire-res-pill--ap"
         title={OD_TOOLTIP}
       >
-        {formatOdMeter(reservedAp, apMax)}
+        {formatOdHud(reservedAp, apMax)}
       </span>
       <span
         className="empire-res-pill empire-res-pill--ap"
         title={FORCE_OD_TOOLTIP}
       >
-        {formatForceOdMeter(reservedForceAp, forceApMax)}
+        {formatForceOdHud(reservedForceAp, forceApMax)}
       </span>
       <button
         type="button"

@@ -1,3 +1,5 @@
+import { ruCount } from "../../../state/playerUiTerms.ts";
+
 export function systemSheetMetaLine(p: {
   kind?: string;
   starCount: number;
@@ -7,7 +9,7 @@ export function systemSheetMetaLine(p: {
   const kind =
     p.kind === "corridor" || p.starCount === 0
       ? "Коридор"
-      : `${p.starCount}★ · ${p.planetCount} планет`;
+      : `${p.starCount}★ · ${ruCount(p.planetCount, "планета", "планеты", "планет")}`;
   return `${kind}${p.ownerName ? ` · ${p.ownerName}` : " · нейтрал"}`;
 }
 
@@ -25,4 +27,14 @@ export function scoutRevealButtonLabel(
 ): string {
   const base = "Разведка · открыть систему";
   return apCost > 0 ? `${base} (${formatCost(apCost)})` : base;
+}
+
+/** Owned capital/system opens dive; foreign still costs scout AP. */
+export function systemSheetOpenButtonLabel(p: {
+  owned: boolean;
+  apCost: number;
+  formatCost: (n: number) => string;
+}): string {
+  if (p.owned) return "Управлять";
+  return scoutRevealButtonLabel(p.apCost, p.formatCost);
 }

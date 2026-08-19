@@ -1,5 +1,4 @@
 import { useEffect, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 type Props = {
@@ -36,6 +35,15 @@ export function WorkbenchShell({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (
+        e.target instanceof HTMLElement &&
+        (e.target.tagName === "INPUT" ||
+          e.target.tagName === "TEXTAREA" ||
+          e.target.tagName === "SELECT" ||
+          e.target.isContentEditable)
+      ) {
+        return;
+      }
       // System dive owns Esc when master–detail is open (see ViewerPage).
       if (masterDetail && document.querySelector(".viewer-system-layer")) {
         return;
@@ -61,7 +69,9 @@ export function WorkbenchShell({
 
   if (!open) return null;
 
-  return createPortal(
+  // In-tree (not body portal): dock/topbar stay in the same stacking
+  // context and keep receiving room-switch clicks.
+  return (
     <div
       className={`workbench-root${masterDetail ? " workbench-root--master-detail" : ""}`}
       role="presentation"
@@ -97,7 +107,6 @@ export function WorkbenchShell({
         </header>
         <div className="workbench-body">{children}</div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }

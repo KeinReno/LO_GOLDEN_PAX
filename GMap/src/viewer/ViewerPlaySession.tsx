@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -195,7 +196,7 @@ export function ViewerPlaySession() {
   });
   const mapGraphics = mapGraphicsWhenPaused(graphics, mapBackgroundPaused);
 
-  const { login } = useViewerPlayLogin({
+  const { login, restoreFromToken } = useViewerPlayLogin({
     factionId,
     password,
     loginPerf,
@@ -227,6 +228,12 @@ export function ViewerPlaySession() {
     setPassword,
     login,
   });
+
+  useEffect(() => {
+    void restoreFromToken();
+    // Token boot once; PIN form remains if restore fails.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     submitPlayerIntent,
@@ -571,6 +578,7 @@ export function ViewerPlaySession() {
         payload={payload}
         mobile={mobile}
         actions={engagementActions}
+        openPlayerSystem={openPlayerSystem}
       />
 
       <ViewerPlayFloats

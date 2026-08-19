@@ -993,7 +993,7 @@
     "faction": "generic",
     "tier": 5,
     "roles": [
-      "vehicle",
+      "armor",
       "assault"
     ],
     "stats": {
@@ -1263,7 +1263,7 @@
       }
     },
     "requireProperties": [
-      "line_infantry"
+      "heavy_legion"
     ]
   }
 }

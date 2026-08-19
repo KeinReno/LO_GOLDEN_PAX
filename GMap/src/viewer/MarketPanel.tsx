@@ -11,6 +11,12 @@ import {
 import type { EconomySchema, MapResourceDef } from "../state/contentCatalog";
 import { fetchContent, intentApCost } from "../state/contentCatalog";
 import {
+  getPlayerToken,
+  playerAuthHeaders,
+  playerJsonBody,
+} from "../state/playerAuth";
+import { isPaintDeposit } from "../state/resourceIndex";
+import {
   BUILD_METAL,
   BUILD_SUPPLY,
   CATEGORY_CURRENCIES,
@@ -20,18 +26,16 @@ import { economyCategoryLabel } from "../state/displayLabels";
 import { DIPLOMACY_LABELS } from "../state/defaults";
 import type { DiplomacyRelation, ViewerPayload } from "../state/types";
 import { fmtInt } from "../state/numberFormat";
+import { formatOdMeter } from "../state/playerUiTerms";
 import { ResourceIcon } from "../ui/ResourceIcon";
 import { ExpandableSection } from "../ui/ExpandableSection";
 import { StatefulButton } from "../ui/StatefulButton";
 import type { EconomyFlowBreakdown } from "./economyFlowTypes";
-import {
-  inferWarehouseCap,
-  parseRatePair,
-  previewConvert,
-} from "./economy/stockpileExpressTrade";
+import { parseRatePair, previewConvert } from "./economy/stockpileExpressTrade";
 import {
   UC_ID,
   buildStockpileStrip,
+  resolveMarketQuoteCurrency,
   validateMarketTrade,
   type TradeGate,
 } from "./marketTradeGate";
@@ -46,7 +50,7 @@ export type MarketBookStats = {
 };
 
 export const MARKET_TAB_ORDER: { id: MarketTab; label: string; hotkey: string }[] = [
-  { id: "trade", label: "Стакан", hotkey: "Alt+1" },
+  { id: "trade", label: "Лоты", hotkey: "Alt+1" },
   { id: "quotes", label: "Котировки", hotkey: "Alt+2" },
   { id: "currencies", label: "Валюты", hotkey: "Alt+3" },
   { id: "superpowers", label: "Державы", hotkey: "Alt+4" },
@@ -158,10 +162,6 @@ function categoryCurrencyId(category: string | undefined): string | null {
   return categoryByLetter(category)?.id ?? null;
 }
 
-function offerTouchesCurrency(o: MarketBookOffer, currencyId: string): boolean {
-  return o.giveCurrency === currencyId || o.wantCurrency === currencyId;
-}
-
 function normalizeChartPoints(raw: HistoryPoint[]): HistoryPoint[] {
   const sorted = [...raw]
     .filter((p) => Number.isFinite(p.price))
@@ -211,7 +211,7 @@ function pickChartPoints(
   historyPairs: Record<string, HistoryPoint[]>,
   seedSeries: Record<string, number[]>,
   turnStart: number,
-): HistoryPoint[] {
+): { points: HistoryPoint[]; fromSeed: boolean } {
   const preferred = `${id}->${UC}`;
   const live = historyPairs[preferred];
   const liveNorm = live?.length ? normalizeChartPoints(live) : [];
@@ -220,16 +220,16 @@ function pickChartPoints(
   );
 
   if (liveNorm.length >= 2 && liveNorm.length >= seedNorm.length) {
-    return liveNorm;
+    return { points: liveNorm, fromSeed: false };
   }
-  if (seedNorm.length >= 2) return seedNorm;
+  if (seedNorm.length >= 2) return { points: seedNorm, fromSeed: true };
 
   const altKey = Object.keys(historyPairs).find((k) => k.startsWith(`${id}->`));
   if (altKey && historyPairs[altKey]?.length) {
     const alt = normalizeChartPoints(historyPairs[altKey]!);
-    if (alt.length >= 2) return alt;
+    if (alt.length >= 2) return { points: alt, fromSeed: false };
   }
-  return liveNorm.length ? liveNorm : seedNorm;
+  return { points: liveNorm.length ? liveNorm : seedNorm, fromSeed: false };
 }
 
 function MiniSpark({ values }: { values: number[] }) {
@@ -287,9 +287,11 @@ function TradeGateBadge({ gate }: { gate: TradeGate }) {
 function PriceChart({
   points,
   emptyHint,
+  fromSeed = false,
 }: {
   points: HistoryPoint[];
   emptyHint: string;
+  fromSeed?: boolean;
 }) {
   const gid = useId().replace(/:/g, "");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -351,7 +353,10 @@ function PriceChart({
       onMouseLeave={() => setHoverIdx(null)}
     >
       <div className="ex-chart-head">
-        <span className="hint">Котировка, {UC_LABEL}</span>
+        <span className="hint">
+          Котировка, {UC_LABEL}
+          {fromSeed ? " · справочный ряд" : ""}
+        </span>
         <strong className="ex-chart-live">
           {active ? fmtRate(active.price) : "—"}
           {hoverIdx != null && active ? (
@@ -359,7 +364,7 @@ function PriceChart({
           ) : null}
         </strong>
         <span className="hint ex-chart-range">
-          min {fmtRate(stats.min)} · max {fmtRate(stats.max)}
+          от {fmtRate(stats.min)} · до {fmtRate(stats.max)}
         </span>
       </div>
       <div className={`ex-chart ${trendUp ? "is-up" : "is-down"}`}>
@@ -528,9 +533,8 @@ export function MarketPanel({
   onOpenDiplomacy,
   onBookStats,
   prefillSellCurrency,
-  flowData,
+  flowData: _flowData,
 }: {
-  compact?: boolean;
   interactive?: boolean;
   factionId?: string;
   password?: string;
@@ -566,7 +570,7 @@ export function MarketPanel({
   onBookStats?: (stats: MarketBookStats) => void;
   /** Prefill quick-sell currency when opening from Economy stockpile. */
   prefillSellCurrency?: string | null;
-  /** Production flow matrix — warehouse cap = pipe capacity × turns. */
+  /** Kept for room wiring; warehouse is not a hard market gate. */
   flowData?: EconomyFlowBreakdown | null;
 }) {
   const [internalTab, setInternalTab] = useState<Tab>("trade");
@@ -592,7 +596,6 @@ export function MarketPanel({
   const [fx, setFx] = useState<FactionCurrency[]>([]);
   const [seedSeries, setSeedSeries] = useState<Record<string, number[]>>({});
   const [turnStart, setTurnStart] = useState(4);
-  const [narrative, setNarrative] = useState<string | null>(null);
   const [historyPairs, setHistoryPairs] = useState<
     Record<string, HistoryPoint[]>
   >({});
@@ -611,6 +614,8 @@ export function MarketPanel({
   const [fxId, setFxId] = useState("fx.damyl_doubloon");
   const [catFilter, setCatFilter] =
     useState<(typeof CAT_FILTERS)[number]>("ALL");
+  const [quoteBook, setQuoteBook] = useState<"goods" | "deposits">("goods");
+  const [goodsId, setGoodsId] = useState(TRADE_CURRENCIES[0] ?? BUILD_METAL.id);
   const [query, setQuery] = useState("");
   const [scoutSystemId, setScoutSystemId] = useState(
     () => mapSelectedSystemId ?? "",
@@ -636,6 +641,7 @@ export function MarketPanel({
   const [quickHint, setQuickHint] = useState<string | null>(null);
   const [offerSubmitting, setOfferSubmitting] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
+  const [lastQuickLot, setLastQuickLot] = useState<number | null>(null);
   const [takingLotId, setTakingLotId] = useState<string | null>(null);
   const [convertBusy, setConvertBusy] = useState(false);
   const [convertMsg, setConvertMsg] = useState<string | null>(null);
@@ -726,7 +732,8 @@ export function MarketPanel({
         })
         .catch(() => {});
       const mapList = Object.values(c.map_resources ?? {}).filter(
-        (r): r is MapResourceDef => Boolean(r?.id && r.name),
+        (r): r is MapResourceDef =>
+          Boolean(r?.id && r.name) && isPaintDeposit(r),
       );
       mapList.sort((a, b) => {
         const ca = String(a.category ?? "Z");
@@ -765,7 +772,6 @@ export function MarketPanel({
       }
       setSeedSeries(series);
       setTurnStart(seed?.meta?.turnStart ?? 4);
-      setNarrative(seed?.meta?.narrative ?? null);
       setReady(true);
     });
     return () => {
@@ -774,7 +780,7 @@ export function MarketPanel({
   }, []);
 
   const refreshBook = useCallback(async () => {
-    if (!factionId || !password) {
+    if (!factionId || !(password || getPlayerToken())) {
       setBook([]);
       return;
     }
@@ -782,12 +788,14 @@ export function MarketPanel({
     try {
       const res = await fetch("/api/market/book", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          factionId,
-          password,
-          venue: tab === "trade" ? "common" : "all",
-        }),
+        headers: playerAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(
+          playerJsonBody({
+            factionId,
+            password,
+            venue: tab === "trade" ? "common" : "all",
+          }),
+        ),
       });
       if (!res.ok) return;
       const data = (await res.json()) as {
@@ -839,16 +847,19 @@ export function MarketPanel({
   }, [refreshBook]);
 
   /** Prefer live history when rich enough; else seed series. */
-  const pricesOf = useCallback(
-    (id: string): number[] =>
-      pickChartPoints(id, historyPairs, seedSeries, turnStart).map((p) => p.price),
+  const chartOf = useCallback(
+    (id: string) => pickChartPoints(id, historyPairs, seedSeries, turnStart),
     [historyPairs, seedSeries, turnStart],
   );
 
+  const pricesOf = useCallback(
+    (id: string): number[] => chartOf(id).points.map((p) => p.price),
+    [chartOf],
+  );
+
   const pointsOf = useCallback(
-    (id: string): HistoryPoint[] =>
-      pickChartPoints(id, historyPairs, seedSeries, turnStart),
-    [historyPairs, seedSeries, turnStart],
+    (id: string): HistoryPoint[] => chartOf(id).points,
+    [chartOf],
   );
 
   const filteredResources = useMemo(() => {
@@ -897,15 +908,16 @@ export function MarketPanel({
   const convertAp = intentApCost("intent.market_convert");
   const offerAp = intentApCost("intent.market_offer");
 
-  /** Counterparty currency for quick lots (metal, or supply when selling metal). */
-  const quotePairOf = useCallback((currencyId: string) => {
-    return currencyId === BUILD_METAL.id ? BUILD_SUPPLY.id : BUILD_METAL.id;
-  }, []);
+  /** Counterparty for quick lots: УЕ when a rate exists, else metal/supply. */
+  const quotePairOf = useCallback(
+    (currencyId: string) => resolveMarketQuoteCurrency(rates, currencyId),
+    [rates],
+  );
 
   const priceAgainst = useCallback(
     (from: string, to: string, amount: number) => {
       const priced = previewConvert(rates, from, to, amount);
-      return priced != null && priced > 0 ? priced : Math.max(1, amount);
+      return priced != null && priced > 0 ? priced : null;
     },
     [rates],
   );
@@ -913,22 +925,26 @@ export function MarketPanel({
   const buildQuickOffer = useCallback(
     (side: "sell" | "buy", currencyId: string, lotSize: number) => {
       const quote = quotePairOf(currencyId);
-      const priced = priceAgainst(currencyId, quote, lotSize);
+      const priced =
+        quote != null ? priceAgainst(currencyId, quote, lotSize) : null;
+      const quoteOk = quote != null && priced != null;
       if (side === "sell") {
         return {
           side,
           giveCurrency: currencyId,
           giveAmount: lotSize,
-          wantCurrency: quote,
-          wantAmount: priced,
+          wantCurrency: quote ?? "",
+          wantAmount: priced ?? 0,
+          quoteOk,
         } as const;
       }
       return {
         side,
-        giveCurrency: quote,
-        giveAmount: priced,
+        giveCurrency: quote ?? "",
+        giveAmount: priced ?? 0,
         wantCurrency: currencyId,
         wantAmount: lotSize,
+        quoteOk,
       } as const;
     },
     [priceAgainst, quotePairOf],
@@ -936,19 +952,23 @@ export function MarketPanel({
 
   const tradablePairs = useMemo(() => {
     const out: { from: string; to: string; label: string }[] = [];
+    const seen = new Set<string>();
     for (const row of rates) {
       const pair = parseRatePair(row.pair);
       if (!pair) continue;
-      out.push({
-        from: pair.from,
-        to: pair.to,
-        label: `${labelOf(pair.from, resources, fx)} → ${labelOf(pair.to, resources, fx)}`,
-      });
-      out.push({
-        from: pair.to,
-        to: pair.from,
-        label: `${labelOf(pair.to, resources, fx)} → ${labelOf(pair.from, resources, fx)}`,
-      });
+      for (const [from, to] of [
+        [pair.from, pair.to],
+        [pair.to, pair.from],
+      ] as const) {
+        const key = `${from}|${to}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          from,
+          to,
+          label: `${labelOf(from, resources, fx)} → ${labelOf(to, resources, fx)}`,
+        });
+      }
     }
     return out;
   }, [rates, resources, fx]);
@@ -985,31 +1005,9 @@ export function MarketPanel({
           parsedConvertAmount,
         )
       : null;
-  const flowWarehouseCap = useMemo(() => {
-    if (!flowData) return null;
-    let total = 0;
-    let any = false;
-    for (const c of CATEGORY_CURRENCIES) {
-      const cap = inferWarehouseCap(flowData, c.letter);
-      if (cap != null) {
-        total += cap;
-        any = true;
-      }
-    }
-    return any ? total : null;
-  }, [flowData]);
-
   const stockpile = useMemo(
-    () => buildStockpileStrip(economy?.stocks, flowWarehouseCap ?? undefined),
-    [economy?.stocks, flowWarehouseCap],
-  );
-
-  const receiveStockCap = useCallback(
-    (currencyId?: string | null) => {
-      const letter = CATEGORY_CURRENCIES.find((c) => c.id === currencyId)?.letter;
-      return inferWarehouseCap(flowData, letter);
-    },
-    [flowData],
+    () => buildStockpileStrip(economy?.stocks),
+    [economy?.stocks],
   );
 
   const gateTrade = useCallback(
@@ -1019,16 +1017,15 @@ export function MarketPanel({
       payAmount?: number;
       receiveCurrency?: string | null;
       receiveAmount?: number;
+      quoteOk?: boolean;
     }): TradeGate =>
       validateMarketTrade({
         reservedAp,
         apMax,
         stocks: economy?.stocks,
-        warehouseCap: stockpile.cap,
-        receiveStockCap: receiveStockCap(opts.receiveCurrency),
         ...opts,
       }),
-    [reservedAp, apMax, economy?.stocks, stockpile.cap, receiveStockCap],
+    [reservedAp, apMax, economy?.stocks],
   );
 
   const convertGate = gateTrade({
@@ -1051,7 +1048,11 @@ export function MarketPanel({
   const quickStock = economy?.stocks?.[quickCurrency] ?? 0;
   const quoteCurrency = quotePairOf(quickCurrency);
   const canQuickTrade =
-    interactive && !!onPlaceOffer && commonJoined && !!quickCurrency;
+    interactive &&
+    !!onPlaceOffer &&
+    commonJoined &&
+    !!quickCurrency &&
+    !!quoteCurrency;
 
   const myOffers = useMemo(
     () =>
@@ -1086,14 +1087,6 @@ export function MarketPanel({
     [book, factionId],
   );
 
-  const countLotsForCurrency = useCallback(
-    (currencyId: string | null) => {
-      if (!currencyId) return 0;
-      return peerLots.filter((o) => offerTouchesCurrency(o, currencyId)).length;
-    },
-    [peerLots],
-  );
-
   const placeQuickOffer = useCallback(
     async (side: "sell" | "buy", currencyId: string, lotSize: number) => {
       if (!onPlaceOffer || !canQuickTrade) return;
@@ -1104,12 +1097,14 @@ export function MarketPanel({
         payAmount: draft.giveAmount,
         receiveCurrency: draft.wantCurrency,
         receiveAmount: draft.wantAmount,
+        quoteOk: draft.quoteOk,
       });
       if (!gate.ok) {
         setQuickHint(gate.message);
         return;
       }
       setOfferSubmitting(true);
+      setLastQuickLot(lotSize);
       setQuickHint(null);
       try {
         const ok = await Promise.resolve(
@@ -1128,7 +1123,7 @@ export function MarketPanel({
           return;
         }
         setOfferSuccess(true);
-        setQuickHint("Заявка в очереди — в книге после хода");
+        setQuickHint("Заявка в очереди хода — в книге после тика");
         await refreshBook();
       } finally {
         setOfferSubmitting(false);
@@ -1165,6 +1160,7 @@ export function MarketPanel({
         payAmount: giveAmount,
         receiveCurrency: wantCurrency,
         receiveAmount: wantAmount,
+        quoteOk: true,
       });
       if (!gate.ok) {
         setQuickHint(gate.message);
@@ -1239,13 +1235,13 @@ export function MarketPanel({
   );
 
   const toggleCommon = async (join: boolean) => {
-    if (!factionId || !password) return;
+    if (!factionId || !(password || getPlayerToken())) return;
     setLocalMsg(null);
     try {
       const res = await fetch("/api/market/membership", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ factionId, password, join }),
+        headers: playerAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(playerJsonBody({ factionId, password, join })),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
@@ -1258,19 +1254,21 @@ export function MarketPanel({
   };
 
   const buySuperListing = async (listingId: string, needsSystem: boolean) => {
-    if (!factionId || !password) return;
+    if (!factionId || !(password || getPlayerToken())) return;
     setLocalMsg(null);
     setSuperBusy(listingId);
     try {
       const res = await fetch("/api/market/superpower", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          factionId,
-          password,
-          listingId,
-          systemId: needsSystem ? scoutSystemId || undefined : undefined,
-        }),
+        headers: playerAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(
+          playerJsonBody({
+            factionId,
+            password,
+            listingId,
+            systemId: needsSystem ? scoutSystemId || undefined : undefined,
+          }),
+        ),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
@@ -1317,7 +1315,7 @@ export function MarketPanel({
   const fxPoints = selectedFx ? pointsOf(selectedFx.id) : [];
 
   const lotCard = (o: MarketBookOffer) => {
-    const takeLabel = o.side === "sell" ? "Купить" : "Продать";
+    const takeLabel = o.side === "sell" ? "Взять" : "Ответить";
     const busy = takingLotId === o.id;
     const gate = gateTrade({
       apCost: offerAp,
@@ -1325,6 +1323,7 @@ export function MarketPanel({
       payAmount: o.wantAmount,
       receiveCurrency: o.giveCurrency,
       receiveAmount: o.giveAmount,
+      quoteOk: true,
     });
     const blocked = !interactive || !onPlaceOffer || !commonJoined || !!takingLotId || !gate.ok;
     return (
@@ -1359,7 +1358,9 @@ export function MarketPanel({
                 success={false}
                 title={tradeGateTitle(
                   gate,
-                  !commonJoined ? "Сначала вступите в общий рынок" : takeLabel,
+                  !commonJoined
+                    ? "Сначала вступите в общий рынок"
+                    : `${takeLabel} — встречная заявка в очереди хода`,
                 )}
                 onClick={() => void takeLot(o)}
               >
@@ -1377,12 +1378,12 @@ export function MarketPanel({
       <div className="market-command__banner">
         <span className="market-command__mark">БИР</span>
         <span className="market-command__line">
-          стакан · курсы в {UC_LABEL} · быстрые лоты · Alt+1–4
+          лоты · курсы в {UC_LABEL} · Alt+1–4
         </span>
         <span className="market-command__meta hint">
           партнёров: {(tradePartnerIds ?? []).length}
           {" · "}
-          ОД {reservedAp}/{apMax}
+          {formatOdMeter(reservedAp, apMax)}
         </span>
       </div>
 
@@ -1401,24 +1402,6 @@ export function MarketPanel({
               <strong className="tabular-nums">{fmtInt(item.amount)}</strong>
             </div>
           ))}
-          <div
-            className={`ex-stock-cell ex-stock-cell--cap${stockpile.full ? " is-full" : ""}`}
-            title={`Склад ${fmtInt(stockpile.used)} / ${fmtInt(stockpile.cap)}`}
-          >
-            <span className="hint">Склад</span>
-            <strong className="tabular-nums">
-              {fmtInt(stockpile.used)}/{fmtInt(stockpile.cap)}
-            </strong>
-            <span
-              className="ex-stock-meter"
-              aria-hidden
-              style={
-                {
-                  ["--ex-stock-fill" as string]: `${Math.min(100, Math.round((stockpile.used / Math.max(1, stockpile.cap)) * 100))}%`,
-                } as CSSProperties
-              }
-            />
-          </div>
         </section>
       ) : null}
 
@@ -1433,7 +1416,7 @@ export function MarketPanel({
             }}
           >
             <strong>Вступить в общий рынок</strong>
-            <span>без вступления стакан закрыт для сделок</span>
+            <span>без вступления сделки закрыты</span>
           </button>
         ) : null}
         {peerLotCount > 0 ? (
@@ -1443,7 +1426,7 @@ export function MarketPanel({
             onClick={() => setTab("trade")}
           >
             <strong>Лоты рынка</strong>
-            <span>{peerLotCount} чужих · открыть стакан</span>
+            <span>{peerLotCount} чужих · открыть лоты</span>
           </button>
         ) : null}
         {myOfferCount > 0 ? (
@@ -1458,7 +1441,7 @@ export function MarketPanel({
         ) : null}
         {commonJoined && peerLotCount === 0 && myOfferCount === 0 ? (
           <p className="hint market-command__calm">
-            Вы на общем рынке · стакан пуст — выставьте лот или смотрите котировки.
+            Вы на общем рынке · заявок нет — выставьте лот или откройте котировки.
           </p>
         ) : null}
       </section>
@@ -1510,85 +1493,189 @@ export function MarketPanel({
         role="tabpanel"
         aria-labelledby={`market-tab-${tab}`}
       >
-      {narrative && (tab === "quotes" || tab === "currencies") && (
-        <p className="ex-narrative hint">{narrative}</p>
-      )}
-
       {tab === "quotes" && (
         <div className="ex-bento">
           <aside className="ex-rail">
-            <h3>Ресурсы · {filteredResources.length}</h3>
-            <input
-              ref={searchRef}
-              className="ex-rail-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Поиск… (/"
-            />
-            <div className="ex-cat-filters">
-              {CAT_FILTERS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`ex-cat-filter ${catFilter === c ? "on" : ""}`}
-                  onClick={() => setCatFilter(c)}
-                >
-                  {c === "ALL" ? "Все" : c}
-                </button>
-              ))}
+            <div className="ex-cat-filters" role="tablist" aria-label="Что смотреть">
+              <button
+                type="button"
+                className={`ex-cat-filter ${quoteBook === "goods" ? "on" : ""}`}
+                aria-selected={quoteBook === "goods"}
+                onClick={() => setQuoteBook("goods")}
+              >
+                Категории
+              </button>
+              <button
+                type="button"
+                className={`ex-cat-filter ${quoteBook === "deposits" ? "on" : ""}`}
+                aria-selected={quoteBook === "deposits"}
+                onClick={() => setQuoteBook("deposits")}
+              >
+                Месторождения
+              </button>
             </div>
-            {filteredResources.length === 0 ? (
-              <div className="ex-empty">
-                <p className="hint">
-                  {resources.length === 0
-                    ? "Каталог ресурсов не загрузился. Обновите страницу / перезапустите сервер."
-                    : "Нет совпадений по фильтру."}
-                </p>
-              </div>
-            ) : (
-              <ul className="ex-rail-list">
-                {filteredResources.map((r) => {
-                  const prices = pricesOf(r.id);
-                  const delta =
-                    prices.length >= 2
-                      ? prices[prices.length - 1]! - prices[prices.length - 2]!
-                      : 0;
-                  const last = prices[prices.length - 1];
-                  return (
-                    <li key={r.id}>
-                      <button
-                        type="button"
-                        className={`ex-rail-btn ${resourceId === r.id ? "on" : ""}`}
-                        onClick={() => setResourceId(r.id)}
-                      >
-                        <ResourceIcon resourceId={r.id} size={22} />
-                        <span className="ex-rail-meta">
-                          <strong>{r.name}</strong>
-                          <span className="hint">
-                            {r.category ?? "—"}
-                            {r.tier != null ? ` · T${r.tier}` : ""}
-                            {last != null ? ` · ${fmtRate(last)}` : ""}
-                            {prices.length >= 2 ? (
-                              <span
-                                className={`ex-delta-inline ${delta >= 0 ? "is-up" : "is-down"}`}
-                              >
-                                {" "}
-                                {delta >= 0 ? "▲" : "▼"}
-                              </span>
-                            ) : null}
+            {quoteBook === "goods" ? (
+              <>
+                <h3>Что торгуется · {TRADE_CURRENCIES.length}</h3>
+                <ul className="ex-rail-list">
+                  {TRADE_CURRENCIES.map((id) => {
+                    const prices = pricesOf(id);
+                    const last = prices[prices.length - 1];
+                    const delta =
+                      prices.length >= 2
+                        ? prices[prices.length - 1]! - prices[prices.length - 2]!
+                        : 0;
+                    return (
+                      <li key={id}>
+                        <button
+                          type="button"
+                          className={`ex-rail-btn ${goodsId === id ? "on" : ""}`}
+                          onClick={() => setGoodsId(id)}
+                        >
+                          <ResourceIcon resourceId={id} size={22} />
+                          <span className="ex-rail-meta">
+                            <strong>
+                              {CURRENCY_LABELS[id]?.split(" (")[0] ?? id}
+                            </strong>
+                            <span className="hint">
+                              {last != null
+                                ? `${fmtRate(last)} ${UC_LABEL}`
+                                : "нет ряда"}
+                              {prices.length >= 2 ? (
+                                <span
+                                  className={`ex-delta-inline ${delta >= 0 ? "is-up" : "is-down"}`}
+                                >
+                                  {" "}
+                                  {delta >= 0 ? "▲" : "▼"}
+                                  {Math.abs(delta).toFixed(3)}
+                                </span>
+                              ) : null}
+                            </span>
                           </span>
-                        </span>
-                        <MiniSpark values={prices} />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                          <MiniSpark values={prices} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h3>Справочник · {filteredResources.length}</h3>
+                <input
+                  ref={searchRef}
+                  className="ex-rail-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Поиск…"
+                  aria-label="Поиск месторождения"
+                />
+                <div className="ex-cat-filters">
+                  {CAT_FILTERS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`ex-cat-filter ${catFilter === c ? "on" : ""}`}
+                      onClick={() => setCatFilter(c)}
+                    >
+                      {c === "ALL" ? "Все" : c}
+                    </button>
+                  ))}
+                </div>
+                {filteredResources.length === 0 ? (
+                  <div className="ex-empty">
+                    <p className="hint">
+                      {resources.length === 0
+                        ? "Каталог ресурсов не загрузился."
+                        : "Нет совпадений по фильтру."}
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="ex-rail-list">
+                    {filteredResources.map((r) => {
+                      const prices = pricesOf(r.id);
+                      const delta =
+                        prices.length >= 2
+                          ? prices[prices.length - 1]! -
+                            prices[prices.length - 2]!
+                          : 0;
+                      const last = prices[prices.length - 1];
+                      return (
+                        <li key={r.id}>
+                          <button
+                            type="button"
+                            className={`ex-rail-btn ${resourceId === r.id ? "on" : ""}`}
+                            onClick={() => setResourceId(r.id)}
+                          >
+                            <ResourceIcon resourceId={r.id} size={22} />
+                            <span className="ex-rail-meta">
+                              <strong>{r.name}</strong>
+                              <span className="hint">
+                                {r.category ?? "—"}
+                                {r.tier != null ? ` · T${r.tier}` : ""}
+                                {last != null ? ` · ${fmtRate(last)}` : ""}
+                                {prices.length >= 2 ? (
+                                  <span
+                                    className={`ex-delta-inline ${delta >= 0 ? "is-up" : "is-down"}`}
+                                  >
+                                    {" "}
+                                    {delta >= 0 ? "▲" : "▼"}
+                                    {Math.abs(delta).toFixed(3)}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </span>
+                            <MiniSpark values={prices} />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </>
             )}
           </aside>
 
           <section className="ex-main">
-            {selectedResource ? (
+            {quoteBook === "goods" ? (
+              <div className="ex-hero">
+                <div className="ex-hero-top">
+                  <div className="ex-hero-identity">
+                    <ResourceIcon resourceId={goodsId} size={36} />
+                    <div>
+                      <h3>
+                        {CURRENCY_LABELS[goodsId]?.split(" (")[0] ?? goodsId}
+                      </h3>
+                      <p className="hint">
+                        торгуется на лотах · котировка в {UC_LABEL}
+                      </p>
+                    </div>
+                  </div>
+                  <Ticker prices={pricesOf(goodsId)} />
+                </div>
+                <PriceChart
+                  points={pointsOf(goodsId)}
+                  fromSeed={chartOf(goodsId).fromSeed}
+                  emptyHint="Нет ряда цен по этой категории."
+                />
+                <div className="ex-hero-actions">
+                  <button
+                    type="button"
+                    className="btn sm primary"
+                    onClick={() => {
+                      setTab("trade");
+                      setQuickCurrency(goodsId);
+                      setOfferSide("sell");
+                      setQuickHint(
+                        `Лот: ${CURRENCY_LABELS[goodsId]?.split(" (")[0] ?? goodsId}`,
+                      );
+                    }}
+                  >
+                    К лотам
+                  </button>
+                </div>
+              </div>
+            ) : selectedResource ? (
               <div className="ex-hero">
                 <div className="ex-hero-top">
                   <div className="ex-hero-identity">
@@ -1596,11 +1683,7 @@ export function MarketPanel({
                     <div>
                       <h3>{selectedResource.name}</h3>
                       <p className="hint">
-                        {selectedResource.category ?? "—"}
-                        {selectedResource.tier != null
-                          ? ` · T${selectedResource.tier}`
-                          : ""}{" "}
-                        · котировка в {UC_LABEL}
+                        месторождение · не лот рынка · ориентир в {UC_LABEL}
                       </p>
                     </div>
                   </div>
@@ -1608,43 +1691,29 @@ export function MarketPanel({
                 </div>
                 <PriceChart
                   points={resPoints}
-                  emptyHint="Нет ряда цен — проверьте market_quote_seed / историю."
+                  fromSeed={chartOf(selectedResource.id).fromSeed}
+                  emptyHint="Нет ряда цен по этому месторождению."
                 />
                 <div className="ex-hero-actions">
-                  {(() => {
-                    const catCur = categoryCurrencyId(selectedResource.category);
-                    const lotN = countLotsForCurrency(catCur);
-                    return (
-                      <>
-                        {lotN > 0 ? (
-                          <span className="hint ex-hero-lots">
-                            Заявок по категории{" "}
-                            {economyCategoryLabel(selectedResource.category ?? "")}:{" "}
-                            <strong>{lotN}</strong>
-                          </span>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="btn sm primary"
-                          onClick={() =>
-                            goToTradeForCategory(selectedResource.category)
-                          }
-                        >
-                          Торговать ·{" "}
-                          {economyCategoryLabel(selectedResource.category ?? "A")}
-                        </button>
-                      </>
-                    );
-                  })()}
+                  <button
+                    type="button"
+                    className="btn sm primary"
+                    onClick={() =>
+                      goToTradeForCategory(selectedResource.category)
+                    }
+                  >
+                    Торговать категорией{" "}
+                    {economyCategoryLabel(selectedResource.category ?? "A")}
+                  </button>
                 </div>
                 <p className="hint">
-                  Котировки сырья в {UC_LABEL}. Быстрые лоты по категориям — во вкладке
-                  «Общий рынок» или кнопкой выше.
+                  На лотах торгуются категории A–F, металл и обеспечение — не
+                  эта руда.
                 </p>
               </div>
             ) : (
               <div className="ex-empty">
-                <p className="hint">Выберите ресурс слева.</p>
+                <p className="hint">Выберите месторождение слева.</p>
               </div>
             )}
           </section>
@@ -1654,45 +1723,39 @@ export function MarketPanel({
       {tab === "currencies" && (
         <div className="ex-bento ex-bento--fx">
           {fxCrossRates.length > 0 ? (
-            <div className="ex-fx-ec" aria-label="Курсы Биржи EC">
+            <div className="ex-fx-ec" aria-label="Курсы валют">
               <header className="ex-fx-ec__head">
-                <h3>Курсы Биржи (EC)</h3>
+                <h3>Курсы валют</h3>
                 <span className="hint">
-                  {fxMeta?.variant === "ema_inertia"
-                    ? "EMA · инерция"
-                    : fxMeta?.variant || "live"}
-                  {fxMeta?.turn != null ? ` · ход ${fxMeta.turn}` : ""}
+                  {fxMeta?.turn != null ? `ход ${fxMeta.turn}` : "живой курс"}
                 </span>
               </header>
               <ul className="ex-fx-ec__list">
-                {fxCrossRates.slice(0, 12).map((row) => (
-                  <li key={row.pair}>
-                    <span className="ex-fx-ec__pair">{row.pair}</span>
-                    <span className="tabular-nums">
-                      {fmtRate(Number(row.buy))} / {fmtRate(Number(row.sell))}
-                    </span>
-                    {row.note ? (
-                      <span className="hint ex-fx-ec__note">{row.note}</span>
-                    ) : null}
-                  </li>
-                ))}
+                {fxCrossRates.slice(0, 12).map((row) => {
+                  const parsed = parseRatePair(row.pair);
+                  const pairLabel = parsed
+                    ? `${labelOf(parsed.from, resources, fx)} → ${labelOf(parsed.to, resources, fx)}`
+                    : row.pair;
+                  const note = String(row.note ?? "");
+                  const showNote =
+                    note.length > 0 && !/EMA|α=|EC\s+map\./i.test(note);
+                  return (
+                    <li key={row.pair}>
+                      <span className="ex-fx-ec__pair">{pairLabel}</span>
+                      <span className="tabular-nums">
+                        {fmtRate(Number(row.buy))} / {fmtRate(Number(row.sell))}
+                      </span>
+                      {showNote ? (
+                        <span className="hint ex-fx-ec__note">{note}</span>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
-              {Object.keys(fxMeta?.credits ?? {}).length > 0 ? (
-                <p className="hint ex-fx-ec__credits">
-                  EC peg:{" "}
-                  {Object.entries(fxMeta!.credits!)
-                    .slice(0, 6)
-                    .map(
-                      ([peg, v]) =>
-                        `${peg.replace(/^map\./, "")} ${fmtRate(Number(v))}`,
-                    )
-                    .join(" · ")}
-                </p>
-              ) : null}
             </div>
           ) : (
             <p className="hint ex-fx-ec-empty">
-              Курсы fx.* появятся после первого economy tick (Exchange Credit).
+              Курсы валют появятся после следующего экономического хода.
             </p>
           )}
           <aside className="ex-rail">
@@ -1700,8 +1763,7 @@ export function MarketPanel({
             {fx.length === 0 ? (
               <div className="ex-empty">
                 <p className="hint">
-                  Валюты не загружены. Нужен
-                  content/core/faction_currencies.json и перезапуск API.
+                  Валюты не загружены. Обновите страницу.
                 </p>
               </div>
             ) : (
@@ -1725,7 +1787,9 @@ export function MarketPanel({
                           <strong>{c.name}</strong>
                           <span className="hint">
                             {last != null ? `${fmtRate(Number(last))} ${UC_LABEL}` : "—"}
-                            {c.pegLabel ? ` · ${c.pegLabel}` : ""}
+                          {c.pegLabel && c.pegLabel !== "неизвестно"
+                            ? ` · ${c.pegLabel}`
+                            : ""}
                             {prices.length >= 2 ? (
                               <span
                                 className={`ex-delta-inline ${delta >= 0 ? "is-up" : "is-down"}`}
@@ -1759,7 +1823,8 @@ export function MarketPanel({
                         <p className="hint">
                           {STRENGTH_LABEL[selectedFx.strength ?? ""] ??
                             selectedFx.strength}
-                          {selectedFx.pegLabel
+                          {selectedFx.pegLabel &&
+                          selectedFx.pegLabel !== "неизвестно"
                             ? ` · пег: ${selectedFx.pegLabel}`
                             : ""}
                           {selectedFx.issuerFactionIds?.length
@@ -1779,7 +1844,11 @@ export function MarketPanel({
                       extra={[
                         {
                           label: "Пег",
-                          value: selectedFx.pegLabel ?? "—",
+                          value:
+                            selectedFx.pegLabel &&
+                            selectedFx.pegLabel !== "неизвестно"
+                              ? selectedFx.pegLabel
+                              : "—",
                         },
                         {
                           label: "Эмитент",
@@ -1801,6 +1870,9 @@ export function MarketPanel({
                   )}
                   <PriceChart
                     points={fxPoints}
+                    fromSeed={
+                      selectedFx ? chartOf(selectedFx.id).fromSeed : false
+                    }
                     emptyHint="Нет котировок для этой валюты."
                   />
                 </div>
@@ -1832,7 +1904,9 @@ export function MarketPanel({
                               <strong>{row.name}</strong>
                               <span className="hint">
                                 {STRENGTH_LABEL[row.strength ?? ""] ?? ""}
-                                {row.pegLabel ? ` · ${row.pegLabel}` : ""}
+                                {row.pegLabel && row.pegLabel !== "неизвестно"
+                                  ? ` · ${row.pegLabel}`
+                                  : ""}
                               </span>
                             </span>
                             <span
@@ -1865,7 +1939,7 @@ export function MarketPanel({
         <div className="ex-trade">
           <div className="ex-common-bar">
             <div>
-              <strong className="ex-common-bar__title">Стакан общего рынка</strong>
+              <strong className="ex-common-bar__title">Общий рынок</strong>
               <p className="hint">
                 участников: {commonMembers.length}
                 {commonJoined ? " · вы внутри" : " · вы вне"}
@@ -1905,7 +1979,7 @@ export function MarketPanel({
             <div className="ex-book-col">
               <h4>Продажа · {sells.length}</h4>
               {sells.length === 0 ? (
-                <p className="hint ex-book-empty">Нет sell-лотов</p>
+                <p className="hint ex-book-empty">Нет заявок на продажу</p>
               ) : (
                 <ul className="ex-lot-list">{sells.map(lotCard)}</ul>
               )}
@@ -1913,7 +1987,7 @@ export function MarketPanel({
             <div className="ex-book-col">
               <h4>Покупка · {buys.length}</h4>
               {buys.length === 0 ? (
-                <p className="hint ex-book-empty">Нет buy-лотов</p>
+                <p className="hint ex-book-empty">Нет заявок на покупку</p>
               ) : (
                 <ul className="ex-lot-list">{buys.map(lotCard)}</ul>
               )}
@@ -1928,7 +2002,7 @@ export function MarketPanel({
               <header className="ex-compose-head">
                 <h4>Быстрая торговля</h4>
                 <span className="hint">
-                  {offerAp} ОД · лоты {QUICK_LOT_SIZES.join(" / ")}
+                  {offerAp} ОД · лоты {QUICK_LOT_SIZES.join(" / ")} · в очереди хода
                 </span>
               </header>
               {quickHint ? (
@@ -1991,11 +2065,18 @@ export function MarketPanel({
                       quickCurrency,
                       QUICK_LOT_SIZES[0],
                     );
+                    if (!preview.quoteOk) {
+                      return (
+                        <p className="hint">Нет курса для этой пары — лот недоступен.</p>
+                      );
+                    }
                     return (
                       <div className="market-compare-row market-compare-row--preview">
                         <span className="hint">
                           Курс к{" "}
-                          {CURRENCY_LABELS[quoteCurrency] ?? quoteCurrency}:{" "}
+                          {CURRENCY_LABELS[quoteCurrency ?? ""] ??
+                            (quoteCurrency === UC ? UC_LABEL : quoteCurrency)}
+                          :{" "}
                         </span>
                         <span className="market-compare-side">
                           <ResourceIcon
@@ -2031,6 +2112,7 @@ export function MarketPanel({
                         payAmount: draft.giveAmount,
                         receiveCurrency: draft.wantCurrency,
                         receiveAmount: draft.wantAmount,
+                        quoteOk: draft.quoteOk,
                       });
                       const disabled =
                         !canQuickTrade ||
@@ -2042,8 +2124,12 @@ export function MarketPanel({
                           key={size}
                           className="btn sm primary ex-lot-action"
                           disabled={disabled}
-                          busy={offerSubmitting}
-                          success={offerSuccess && !takingLotId}
+                          busy={offerSubmitting && lastQuickLot === size}
+                          success={
+                            offerSuccess &&
+                            !takingLotId &&
+                            lastQuickLot === size
+                          }
                           successLabel="В очереди"
                           onSuccessEnd={() => setOfferSuccess(false)}
                           title={tradeGateTitle(
@@ -2075,6 +2161,7 @@ export function MarketPanel({
                           payAmount: maxDraft.giveAmount,
                           receiveCurrency: maxDraft.wantCurrency,
                           receiveAmount: maxDraft.wantAmount,
+                          quoteOk: maxDraft.quoteOk,
                         });
                         return (
                           <StatefulButton
@@ -2099,7 +2186,7 @@ export function MarketPanel({
                               )
                             }
                           >
-                            max
+                            всё
                           </StatefulButton>
                         );
                       })()
@@ -2117,6 +2204,7 @@ export function MarketPanel({
                       payAmount: sample.giveAmount,
                       receiveCurrency: sample.wantCurrency,
                       receiveAmount: sample.wantAmount,
+                      quoteOk: sample.quoteOk,
                     });
                     return <TradeGateBadge gate={sampleGate} />;
                   })()}
@@ -2160,7 +2248,7 @@ export function MarketPanel({
 
           {interactive && economy && onConvert && tradablePairs.length > 0 && (
             <ExpandableSection
-              title="Обмен у стола (GM)"
+              title="Обмен у стола"
               badge={`${convertAp} ОД`}
               className="hq-card hq-expandable--flush ex-gm-convert"
             >

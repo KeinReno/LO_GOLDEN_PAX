@@ -9,17 +9,17 @@
       "id": "structural",
       "label": "Путь Структуры",
       "roleScoreKey": "structural",
-      "breakthroughTechId": "tech.path.structural_breakthrough",
+      "breakthroughTechId": null,
       "iconTag": "metallurgy",
-      "description": "Корпуса, броня, верфи. Открывается RoleScore «Структурный» + Прорыв."
+      "description": "Корпуса, броня, верфи. Очки копится с добычи структурной руды."
     },
     "energy": {
       "id": "energy",
       "label": "Путь Энергии",
       "roleScoreKey": "energy",
-      "breakthroughTechId": "tech.path.energy_breakthrough",
+      "breakthroughTechId": null,
       "iconTag": "energy",
-      "description": "Топливо, реакторы, ускорители. Открывается RoleScore «Энергетический» + Прорыв."
+      "description": "Топливо, реакторы, ускорители. Очки копится с энергетической руды."
     },
     "offensive": {
       "id": "offensive",
@@ -43,31 +43,31 @@
       "roleScoreKey": "mobility",
       "breakthroughTechId": "tech.path.mobility_breakthrough",
       "iconTag": "industry",
-      "description": "Двигатели и прыжок. Открывается RoleScore «Мобильность» + Прорыв."
+      "description": "Двигатели и прыжок. Открывается RoleScore «Мобильный» + Прорыв."
     },
     "cognitive": {
       "id": "cognitive",
       "label": "Путь Когниции",
       "roleScoreKey": "cognitive",
-      "breakthroughTechId": "tech.path.cognitive_breakthrough",
+      "breakthroughTechId": null,
       "iconTag": "psionics",
-      "description": "Наука и псионика. Открывается RoleScore «Когнитивный» + Прорыв."
+      "description": "Наука и псионика. Очки копится с когнитивной руды."
     },
     "biological": {
       "id": "biological",
       "label": "Путь Биологии",
       "roleScoreKey": "biological",
-      "breakthroughTechId": "tech.path.biological_breakthrough",
+      "breakthroughTechId": null,
       "iconTag": "biology",
-      "description": "Рост и эволюция. Открывается RoleScore «Биологический» + Прорыв."
+      "description": "Рост и эволюция. Очки копится с биомассы."
     },
     "exotic": {
       "id": "exotic",
       "label": "Путь Экзотики",
       "roleScoreKey": "exotic",
-      "breakthroughTechId": "tech.path.exotic_breakthrough",
+      "breakthroughTechId": null,
       "iconTag": "psionics",
-      "description": "Реликты и аномалии. Открывается RoleScore «Экзотический» + Прорыв."
+      "description": "Реликты и аномалии. Очки копится с экзотической руды."
     }
   },
   "raceAffinity": {
@@ -82,15 +82,13 @@
       "tech.crystal_integration",
       "tech.hybrid.cold_foundry",
       "tech.metamaterials",
-      "tech.black_iron_forges",
-      "tech.path.structural_hull_doctrine"
+      "tech.black_iron_forges"
     ],
     "energy": [
       "tech.fusion",
       "tech.hybrid.void_interface",
       "tech.antimatter",
-      "tech.antimatter_singularity",
-      "tech.path.energy_reactor_doctrine"
+      "tech.antimatter_singularity"
     ],
     "offensive": [
       "tech.offensive.vanguard_doctrine",
@@ -104,7 +102,12 @@
       "tech.defensive.reactive_armor",
       "tech.defensive.deep_bunkers"
     ],
-    "mobility": [],
+    "mobility": [
+      "tech.mobility.jump_drive",
+      "tech.mobility.blitz_doctrine",
+      "tech.mobility.rapid_deployment",
+      "tech.mobility.wormhole_theory"
+    ],
     "cognitive": [],
     "biological": [],
     "exotic": []

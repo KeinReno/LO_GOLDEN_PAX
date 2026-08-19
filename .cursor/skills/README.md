@@ -13,6 +13,23 @@
 | `tech-path-catalog` | Сигнатурный каталог путей (6 пустых RoleScore-кластеров): retag vs new, референсы, баланс |
 | `technologies-content` | Общий контракт `technologies.json` (схема, эффекты, validate, без хардкода id) |
 
+### QA / отладка
+| Скилл | Где применяется |
+|---|---|
+| `gmap-bug-hunt` | Оркестратор: пройти режим, найти косяк, починить — не патчить вслепую |
+| `systematic-debugging` | Любой баг: reproduce → root cause → одна гипотеза → фикс |
+| `verifying-in-browser` | После UI/API: Vite 5173, консоль, сеть, исходный репро |
+| `verification-before-completion` | Нельзя сказать «готово», пока нет свежего вывода команды |
+| `test-playable-web-games` | Матрица пути игрока + детерминированные фикстуры |
+| `visual-qa-testing` | Скрин + консоль + сеть после UI |
+| `grinding-until-pass` | Цикл fix→proof до зелёного, max 10 |
+| `pixijs-rendering` | Pixi v8 / MapCanvas (фрагменты, не весь файл) |
+| `card-game` | Зоны/эффекты; `cardBattle.mjs` осторожно |
+| `save-systems` | Атомарный write, revision, не затирать сервер клиентом |
+| `game-ui-ux` | Оверлеи/фокус/стек; 4X-токены — `strategy-game-ui` |
+| `iterate-until-verified` | Фан-аут / цикл до гейтов |
+| `ship-web-games` | Релиз: smoke, proof, rollback |
+
 ### Game development — механика
 | Скилл | Где применяется |
 |---|---|
@@ -51,4 +68,6 @@ UI-скиллы (`strategy-game-ui`, `framed-grid-layout`, `operational-enterpri
 ## Источники
 
 - Game-dev и UI-скиллы адаптированы из [MengTo/Skills](https://github.com/MengTo/Skills) (MIT).
+- QA/debug: [obra/superpowers](https://github.com/obra/superpowers) (`systematic-debugging`, `verification-before-completion`); браузер — [spencerpauly/awesome-cursor-skills](https://github.com/spencerpauly/awesome-cursor-skills).
+- Не ставить целиком [gamedev-skills/awesome-gamedev-agent-skills](https://github.com/gamedev-skills/awesome-gamedev-agent-skills) (67 скиллов Godot/Unity) — засоряет роутинг. Точечно: Pixi/card-game по нужде.
 - `strategy-game-ui` — кастомный, синтез 4X-паттернов из [GalCiv IV Dev Journal #114](https://www.stardock.com/games/article/541308/galciv-iv-dev-journal-114-the-evolving-4x-interface-and-v33), [GameDeveloper: Strategy UI Dos & Don'ts](https://www.gamedeveloper.com/design/ui-strategy-game-design-dos-and-don-ts), [treeform: Strategy Battle UI](https://medium.com/@treeform/strategy-game-battle-ui-3b313ffd3769) и паттерна «design system as skill» из [TypeUI](https://www.typeui.sh/blog/design-skills-for-claude).

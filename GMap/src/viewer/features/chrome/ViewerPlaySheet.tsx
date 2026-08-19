@@ -13,21 +13,23 @@ import {
 } from "../../PlayerEngagementPanel";
 import type { ViewerPlayEngagementActions } from "../combat-flow/viewerPlayEngagementActions";
 import {
-  scoutRevealButtonLabel,
   systemSheetColonyHint,
   systemSheetMetaLine,
+  systemSheetOpenButtonLabel,
 } from "./sheetCopy";
 
 type Props = {
   payload: ViewerPayload;
   mobile: boolean;
   actions: ViewerPlayEngagementActions;
+  openPlayerSystem: (systemId: string) => void;
 };
 
 export function ViewerPlaySheet({
   payload,
   mobile,
   actions,
+  openPlayerSystem,
 }: Props) {
   const sheetOpen = useViewerChromeStore((s) => s.sheetOpen);
   const setSheetOpen = useViewerChromeStore((s) => s.setSheetOpen);
@@ -109,12 +111,18 @@ export function ViewerPlaySheet({
                 type="button"
                 className="btn ghost block"
                 style={{ marginBottom: 8 }}
-                onClick={() => void actions.submitScoutReveal(selectedSystem.id)}
+                onClick={() => {
+                  const owned =
+                    selectedSystem.ownerFactionId === payload.factionId;
+                  if (owned) openPlayerSystem(selectedSystem.id);
+                  else void actions.submitScoutReveal(selectedSystem.id);
+                }}
               >
-                {scoutRevealButtonLabel(
-                  intentApCost("intent.scout_reveal"),
-                  formatOdCost,
-                )}
+                {systemSheetOpenButtonLabel({
+                  owned: selectedSystem.ownerFactionId === payload.factionId,
+                  apCost: intentApCost("intent.scout_reveal"),
+                  formatCost: formatOdCost,
+                })}
               </button>
               {selectedSystem.planets.length > 0 && (
                 <p className="hint">

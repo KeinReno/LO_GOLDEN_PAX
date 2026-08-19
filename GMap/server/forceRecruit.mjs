@@ -22,6 +22,7 @@ import { systemHasBarracks, systemHasShipyard } from "./systemActions.mjs";
 import { getContent } from "./contentLoader.mjs";
 import { laborPopulation, laborToCensus } from "./populationScale.mjs";
 import { stampForceMp } from "./forceMp.mjs";
+import { factionContentTag } from "./buildingAccess.mjs";
 import {
   adjustStock,
   ensureAllFactions,
@@ -72,6 +73,11 @@ function forceListKind(raiseKind) {
 export function canRaiseUnit(system, planet, def, kind, factionId, eco) {
   if (planetOwnerId(system, planet) !== factionId) {
     return { ok: false, error: "Планета не принадлежит вам" };
+  }
+  const tag = factionContentTag(factionId);
+  const fac = def?.faction;
+  if (fac && fac !== "generic" && fac !== tag && fac !== factionId) {
+    return { ok: false, error: "Этот тип недоступен вашей фракции" };
   }
   if (!def?.raisableWithoutBuilding) {
     const gated =

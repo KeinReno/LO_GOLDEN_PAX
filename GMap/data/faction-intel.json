@@ -532,7 +532,15 @@
         "building.barracks": 4,
         "industria.nanoforge": 4,
         "materia.metamaterial_forge": 4,
-        "cognitio.astral_loom": 4
+        "cognitio.astral_loom": 4,
+        "building.residential": 4,
+        "building.mine": 4,
+        "materia.smelter": 4,
+        "building.factory": 4,
+        "building.farm": 4,
+        "building.lab": 4,
+        "building.defense": 4,
+        "building.capitol": 4
       },
       "knownUnits": {
         "ship.battleship": 4,
@@ -545,70 +553,6 @@
       "systemProgress": {},
       "espionageCooldown": {},
       "intelHistory": [
-        {
-          "entityId": "4e4facf6-7973-44dc-aa45-afb12e299309",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "bacacc33-610e-4f28-9576-b9129fc6f7ed",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "b25f0321-15da-483b-abf2-34092924ecc1",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "86fcb266-0baf-49bb-923e-ede48557ec6a",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "08761bd8-50c9-4b71-b6f4-507cd4e8de51",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "eaa3caf6-791f-4a09-9edc-67aab82a9462",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "5b7f8505-8c87-47c7-9a19-bb2e47a769fa",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "dd4d1e0c-5cf0-46b7-8e0e-43f3c42514f7",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
         {
           "entityId": "0a0b5738-2229-46e7-a01b-964ba9cee9c4",
           "entityType": "building",
@@ -2144,6 +2088,70 @@
           "newLevel": 4,
           "source": "own",
           "turn": 19
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.mine",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "materia.smelter",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.factory",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.farm",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.lab",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.defense",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.capitol",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -2173,7 +2181,7 @@
         "faction_belator": 4
       },
       "knownRaces": {
-        "race_belator": 1,
+        "race_belator": 4,
         "race_corinfad": 1,
         "race_nagaar": 1,
         "race_human": 1,
@@ -2923,7 +2931,13 @@
         "f924acbe-d565-4f46-bb07-7d9c4c8e4221": 4,
         "0b26c6dd-6fe8-47ee-8802-ae6efd56c6f7": 4,
         "building.mine": 4,
-        "building.residential": 4
+        "building.residential": 4,
+        "energia.thermal_plant": 1,
+        "building.defense": 4,
+        "building.farm": 4,
+        "building.capitol": 4,
+        "building.factory": 4,
+        "building.spaceport": 4
       },
       "knownUnits": {
         "ship.battleship": 4,
@@ -2932,75 +2946,12 @@
         "ship.cruiser": 4,
         "ship.transport": 4,
         "unit.generic_line": 4,
-        "unit.assault": 4
+        "unit.assault": 4,
+        "unit.breach_cadre": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
       "intelHistory": [
-        {
-          "entityId": "6988687d-14a9-4b4f-87da-f62dbd9a555a",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "cdd53f50-c793-43fb-a9e6-d3878434c56e",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "d44d1ff3-4701-40a3-9982-6a482fd17cfa",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "1214b55b-65c0-4a9e-9549-273a9f3de97c",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "d656b25f-35f4-4933-850f-7b86ca1ff46a",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "f2de2350-c76e-4295-a00e-53c5eb10d5a5",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "032e3b42-6477-4599-9ef8-562fb19debae",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "859ea9e5-8a87-4d69-b696-a79f5d5c4f39",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
         {
           "entityId": "bc52a93e-a021-4a59-a062-332aa5367ab8",
           "entityType": "building",
@@ -4536,6 +4487,70 @@
           "newLevel": 4,
           "source": "own",
           "turn": 66
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 15
+        },
+        {
+          "entityId": "building.defense",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.farm",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.capitol",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.factory",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.spaceport",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "unit.breach_cadre",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "race_belator",
+          "entityType": "race",
+          "oldLevel": 1,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 18
         }
       ]
     },
@@ -5459,7 +5474,12 @@
         "ddcde9ae-1c1a-41c4-b95f-3924fd60620f": 4,
         "65e9b9d6-535a-4e29-8a34-f0362590348c": 4,
         "78b11d89-1b72-4898-b59d-48e6e67af633": 4,
-        "e704df48-57ee-4acc-9602-86c9e5cbe143": 4
+        "e704df48-57ee-4acc-9602-86c9e5cbe143": 4,
+        "building.residential": 4,
+        "building.capitol": 4,
+        "building.farm": 4,
+        "building.mine": 4,
+        "building.defense": 4
       },
       "knownUnits": {
         "unit.generic_line": 4
@@ -5467,46 +5487,6 @@
       "systemProgress": {},
       "espionageCooldown": {},
       "intelHistory": [
-        {
-          "entityId": "9fd9c6a0-bd0f-4322-9d07-f94c50908e6f",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "7259c17c-f199-4b36-b1d2-42281707f6cc",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "3aa570ae-a556-44b5-97b2-6475177041b9",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "dfe0dc09-abb7-4fe6-a195-9f8e0c85a548",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
-        {
-          "entityId": "17b993c1-c5f3-4c47-b330-484b6bb45b99",
-          "entityType": "building",
-          "oldLevel": 0,
-          "newLevel": 4,
-          "source": "own",
-          "turn": 15
-        },
         {
           "entityId": "deca6303-2bad-4ecd-bb69-8e289765911b",
           "entityType": "building",
@@ -7066,6 +7046,46 @@
           "newLevel": 1,
           "source": "legion",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.capitol",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.farm",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.mine",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "building.defense",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -7112,10 +7132,16 @@
         "743ce0ee-45e7-41ec-8d6d-8d83b1eb9425": 1,
         "76cc6fc0-0904-4d34-9af3-b7a46ae07a7c": 1,
         "logistics.depot": 1,
-        "building.mine": 1,
+        "building.mine": 4,
         "energia.solar_catcher": 1,
         "b98f4a7b-77bc-4f4d-998e-f962a9ad2713": 1,
-        "bios.hydroponics": 1
+        "bios.hydroponics": 1,
+        "building.residential": 4,
+        "building.capitol": 1,
+        "building.defense": 1,
+        "building.farm": 1,
+        "building.factory": 1,
+        "building.spaceport": 1
       },
       "knownUnits": {
         "ship.cruiser": 4,
@@ -7374,6 +7400,62 @@
           "newLevel": 1,
           "source": "fleet",
           "turn": 59
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.mine",
+          "entityType": "building",
+          "oldLevel": 1,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.capitol",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 17
+        },
+        {
+          "entityId": "building.defense",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 17
+        },
+        {
+          "entityId": "building.farm",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 17
+        },
+        {
+          "entityId": "building.factory",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 17
+        },
+        {
+          "entityId": "building.spaceport",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "legion",
+          "turn": 17
         }
       ]
     },
@@ -7393,7 +7475,10 @@
         "race_corinfad": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "energia.thermal_plant": 4
+      },
       "knownUnits": {
         "ship.frigate": 4
       },
@@ -7414,6 +7499,22 @@
           "oldLevel": 0,
           "newLevel": 1,
           "source": "fleet",
+          "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
           "turn": 15
         }
       ]
@@ -7439,7 +7540,10 @@
         "race_synth": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "energia.thermal_plant": 1
+      },
       "knownUnits": {
         "ship.corvette": 4,
         "ship.frigate": 4,
@@ -7521,6 +7625,22 @@
           "newLevel": 1,
           "source": "fleet",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 15
         }
       ]
     },
@@ -7541,8 +7661,13 @@
         "race_belator": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
-      "knownUnits": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "energia.thermal_plant": 1
+      },
+      "knownUnits": {
+        "ship.corvette": 4
+      },
       "systemProgress": {},
       "espionageCooldown": {},
       "intelHistory": [
@@ -7553,6 +7678,30 @@
           "newLevel": 1,
           "source": "fleet",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 1,
+          "source": "fleet",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -7570,11 +7719,41 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
-      "knownUnits": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "energia.thermal_plant": 4
+      },
+      "knownUnits": {
+        "ship.psi_cruiser": 4
+      },
       "systemProgress": {},
       "espionageCooldown": {},
-      "intelHistory": []
+      "intelHistory": [
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.psi_cruiser",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        }
+      ]
     },
     "faction_heshah": {
       "factionId": "faction_heshah",
@@ -7594,7 +7773,9 @@
         "race_heshah": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.battleship": 4,
         "ship.frigate": 4,
@@ -7650,6 +7831,14 @@
           "newLevel": 1,
           "source": "legion",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
         }
       ]
     },
@@ -7667,8 +7856,12 @@
         "race_human": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
-      "knownUnits": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
+      "knownUnits": {
+        "ship.transport": 4
+      },
       "systemProgress": {},
       "espionageCooldown": {},
       "intelHistory": [
@@ -7687,6 +7880,22 @@
           "newLevel": 1,
           "source": "fleet",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.transport",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -7700,11 +7909,22 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {},
       "systemProgress": {},
       "espionageCooldown": {},
-      "intelHistory": []
+      "intelHistory": [
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        }
+      ]
     },
     "faction_south_swarm": {
       "factionId": "faction_south_swarm",
@@ -7722,11 +7942,31 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "building.mine": 4
+      },
       "knownUnits": {},
       "systemProgress": {},
       "espionageCooldown": {},
-      "intelHistory": []
+      "intelHistory": [
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.mine",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        }
+      ]
     },
     "faction_balsagon": {
       "factionId": "faction_balsagon",
@@ -7771,9 +8011,14 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "materia.smelter": 4,
+        "energia.thermal_plant": 4
+      },
       "knownUnits": {
-        "ship.corvette": 4
+        "ship.corvette": 4,
+        "ship.patrol": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -7785,6 +8030,38 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "materia.smelter",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.patrol",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -7800,11 +8077,68 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
-      "knownUnits": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "energia.thermal_plant": 4,
+        "materia.smelter": 4,
+        "building.mine": 4
+      },
+      "knownUnits": {
+        "ship.corvette": 4,
+        "ship.patrol": 4
+      },
       "systemProgress": {},
       "espionageCooldown": {},
-      "intelHistory": []
+      "intelHistory": [
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "materia.smelter",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.mine",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        },
+        {
+          "entityId": "ship.patrol",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
+        }
+      ]
     },
     "faction_khanate": {
       "factionId": "faction_khanate",
@@ -7837,7 +8171,9 @@
         "race_corinfad": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.battleship": 4
       },
@@ -7859,6 +8195,14 @@
           "newLevel": 1,
           "source": "fleet",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
         }
       ]
     },
@@ -7873,11 +8217,31 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4,
+        "energia.thermal_plant": 4
+      },
       "knownUnits": {},
       "systemProgress": {},
       "espionageCooldown": {},
-      "intelHistory": []
+      "intelHistory": [
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        }
+      ]
     },
     "faction_nomad_pax_terrialis": {
       "factionId": "faction_nomad_pax_terrialis",
@@ -7893,11 +8257,14 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.frigate": 4,
         "ship.corvette": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.scout": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -7925,6 +8292,22 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.scout",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -7944,10 +8327,13 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.corvette": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.scout": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -7967,6 +8353,22 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.scout",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -7981,7 +8383,9 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.corvette": 4,
         "ship.frigate": 4,
@@ -8009,6 +8413,14 @@
         {
           "entityId": "unit.generic_line",
           "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
           "oldLevel": 0,
           "newLevel": 4,
           "source": "own",
@@ -8031,10 +8443,13 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.corvette": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.transport": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8054,6 +8469,22 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.transport",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8071,7 +8502,8 @@
       "knownBuildings": {},
       "knownUnits": {
         "ship.cruiser": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.corvette": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8091,6 +8523,14 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8157,7 +8597,8 @@
       "knownBuildings": {},
       "knownUnits": {
         "ship.corvette": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.patrol": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8177,6 +8618,14 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "ship.patrol",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8194,9 +8643,12 @@
         "race_human": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.scout": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8216,6 +8668,22 @@
           "newLevel": 1,
           "source": "legion",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.scout",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8230,7 +8698,9 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.frigate": 4,
         "ship.corvette": 4,
@@ -8258,6 +8728,14 @@
         {
           "entityId": "unit.generic_line",
           "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
           "oldLevel": 0,
           "newLevel": 4,
           "source": "own",
@@ -8279,11 +8757,14 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.corvette": 4,
         "ship.frigate": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.patrol": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8311,6 +8792,22 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.patrol",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8327,10 +8824,13 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.frigate": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.carrier": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8350,6 +8850,22 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "ship.carrier",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8368,7 +8884,8 @@
       "knownBuildings": {},
       "knownUnits": {
         "ship.cruiser": 4,
-        "unit.generic_line": 4
+        "unit.generic_line": 4,
+        "ship.corvette": 4
       },
       "systemProgress": {},
       "espionageCooldown": {},
@@ -8388,6 +8905,14 @@
           "newLevel": 4,
           "source": "own",
           "turn": 15
+        },
+        {
+          "entityId": "ship.corvette",
+          "entityType": "unit",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 17
         }
       ]
     },
@@ -8408,7 +8933,9 @@
         "race_human": 1
       },
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {
         "ship.battleship": 4,
         "ship.frigate": 4,
@@ -8457,6 +8984,14 @@
           "newLevel": 1,
           "source": "legion",
           "turn": 15
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
         }
       ]
     },
@@ -8489,11 +9024,22 @@
       },
       "knownRaces": {},
       "knownTechs": {},
-      "knownBuildings": {},
+      "knownBuildings": {
+        "building.residential": 4
+      },
       "knownUnits": {},
       "systemProgress": {},
       "espionageCooldown": {},
-      "intelHistory": []
+      "intelHistory": [
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        }
+      ]
     },
     "64928514-afb3-4cdb-b79c-23dd39cdcbd0": {
       "factionId": "64928514-afb3-4cdb-b79c-23dd39cdcbd0",
@@ -8509,7 +9055,11 @@
       },
       "knownTechs": {},
       "knownBuildings": {
-        "building.shipyard": 4
+        "building.shipyard": 4,
+        "building.residential": 4,
+        "materia.smelter": 4,
+        "building.mine": 4,
+        "energia.thermal_plant": 4
       },
       "knownUnits": {
         "ship.battleship": 4,
@@ -8565,6 +9115,38 @@
           "newLevel": 4,
           "source": "own",
           "turn": 19
+        },
+        {
+          "entityId": "building.residential",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "materia.smelter",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "building.mine",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
+        },
+        {
+          "entityId": "energia.thermal_plant",
+          "entityType": "building",
+          "oldLevel": 0,
+          "newLevel": 4,
+          "source": "own",
+          "turn": 15
         }
       ]
     },

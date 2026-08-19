@@ -20,6 +20,11 @@ import { useViewerOrderSessionStore } from "../../../state/viewerOrderSessionSto
 import { useViewerSessionStore } from "../../../state/viewerSessionStore";
 import { MAP_STYLE_OPTIONS } from "../../../ui/mapStylePrefs";
 import {
+  MAP_MODE_PRESETS,
+  activeMapModePreset,
+  applyLayerPreset,
+} from "../../../ui/mapLayers";
+import {
   GRAPHICS_TOGGLES,
   clampPerfForDevice,
   type GraphicsPrefKey,
@@ -66,6 +71,9 @@ export function ViewerPlayDrawers({
   const applyPerfModeStore = useViewerMapPrefsStore((s) => s.applyPerfMode);
   const applyMapStyleStore = useViewerMapPrefsStore((s) => s.applyMapStyle);
   const setGraphicFlag = useViewerMapPrefsStore((s) => s.setGraphicFlag);
+  const layers = useViewerMapPrefsStore((s) => s.layers);
+  const commitLayers = useViewerMapPrefsStore((s) => s.commitLayers);
+  const activeMapMode = activeMapModePreset(layers);
   const sfxMuted = useSyncExternalStore(
     subscribeStaffSfx,
     isStaffSfxMuted,
@@ -111,7 +119,11 @@ export function ViewerPlayDrawers({
         />
       )}
 
-      <aside className={`viewer-drawer ${settingsOpen ? "open" : ""}`}>
+      <aside
+        className={`viewer-drawer ${settingsOpen ? "open" : ""}`}
+        inert={settingsOpen ? undefined : true}
+        aria-hidden={!settingsOpen}
+      >
         <div className="viewer-drawer-head">
           <h2>Настройки карты</h2>
           <button
@@ -122,6 +134,28 @@ export function ViewerPlayDrawers({
             <X size={18} strokeWidth={2} aria-hidden />
           </button>
         </div>
+
+        <section>
+          <h3>Режим карты</h3>
+          <p className="hint">
+            Политика, война, экономика и остальные слои. F4–F8 и F10 — с
+            клавиатуры, не с карты.
+          </p>
+          <div className="layer-preset-row">
+            {MAP_MODE_PRESETS.filter((mode) => mode.id !== "gm").map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                className={`btn ghost ${activeMapMode === mode.id ? "active" : ""}`}
+                title={`${mode.hint} · ${mode.hotkey}`}
+                onClick={() => commitLayers(applyLayerPreset(layers, mode.id))}
+              >
+                {mode.label}
+                <kbd className="map-mode-kbd">{mode.hotkey}</kbd>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <section>
           <h3>Производительность</h3>
@@ -148,16 +182,16 @@ export function ViewerPlayDrawers({
             )}
           </div>
           <p className="hint">
-            Смена режима подставляет пресет слоёв и графики. Режимы и слои
-            карты — кнопка «Фильтры» на карте (F5–F9).
+            Смена режима подставляет пресет слоёв и графики. Отдельные слои —
+            кнопка «Фильтры».
           </p>
         </section>
 
         <section>
           <h3>Язык карты</h3>
           <p className="hint">
-            Визуальный язык территорий и систем. Классика — текущий вид;
-            Империя и Голо появятся в следующих обновлениях.
+            Визуальный язык территорий и систем. Классика, Империя и Голо
+            меняют отрисовку карты сразу.
           </p>
           <div
             className="viewer-perf-row"
@@ -253,6 +287,8 @@ export function ViewerPlayDrawers({
 
       <aside
         className={`viewer-drawer viewer-drawer--menu-v2 ${menuOpen ? "open" : ""}`}
+        inert={menuOpen ? undefined : true}
+        aria-hidden={!menuOpen}
       >
         <div className="viewer-drawer-head">
           <h2>Меню</h2>

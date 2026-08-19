@@ -22,13 +22,12 @@ export {
 } from "./viewerAuthParse";
 
 export async function fetchViewerLogin(
-  factionId: string,
+  factionId: string | undefined,
   password: string,
 ): Promise<ViewerPayload & { updatedAt?: string | null; playerToken?: string }> {
-  const { ok, status, data } = await postPlayerJson("/api/login", {
-    factionId,
-    password,
-  });
+  const body: Record<string, string> = { password };
+  if (factionId) body.factionId = factionId;
+  const { ok, status, data } = await postPlayerJson("/api/login", body);
   if (!ok) {
     throw new Error(data.error || `HTTP ${status}`);
   }

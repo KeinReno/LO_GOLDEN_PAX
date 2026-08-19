@@ -164,7 +164,7 @@ export async function previewBuild({
 
   const afterBreak = computeFlowBreakdown(clonedWorld, factionId, content, eco);
   const after = afterBreak.totals || {};
-  const cost = scaledCost(def.cost, buildCostMult(factionId, planet));
+  const cost = scaledCost(def.cost, buildCostMult(factionId, found.planet));
 
   return {
     ok: true,

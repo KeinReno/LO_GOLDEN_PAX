@@ -1,3 +1,5 @@
+import { getCachedContent } from "./contentCatalog";
+
 /**
  * Client mirror of server/techActions.mjs — keep in sync:
  * BASE_PROPERTIES, factionHasProperty, collectRequiredProperties, canBuildWithTech.
@@ -7,6 +9,7 @@ export type TechEcoSlice = {
   techTiers?: Record<string, number>;
   unlockedProperties?: string[];
   unlockedLineages?: string[];
+  roleScores?: Record<string, number>;
 };
 
 const BASE_PROPERTIES = new Set([
@@ -30,20 +33,26 @@ type BuildingDefLike = {
   category?: string;
   tier?: number;
   requireProperties?: string[];
-  slots?: Array<{ require?: { properties?: string[] } }>;
+  requireRoleMilestone?: string;
+  slots?: Array<{ fillOnly?: boolean; require?: { properties?: string[] } }>;
   effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
+  extra_effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
 };
 
-/** Construction slots only; excludes properties unlocked by the building itself. */
+/** Construction slots only; excludes fill-only slots and self-unlocks. */
 export function collectRequiredProperties(
   buildingDef: BuildingDefLike,
 ): Set<string> {
   const props = new Set<string>();
   for (const p of buildingDef?.requireProperties || []) props.add(p);
   for (const slot of buildingDef?.slots || []) {
+    if (slot.fillOnly) continue;
     for (const p of slot.require?.properties || []) props.add(p);
   }
-  for (const e of buildingDef?.effects || []) {
+  for (const e of [
+    ...(buildingDef?.effects || []),
+    ...(buildingDef?.extra_effects || []),
+  ]) {
     if (e.effect === "unlock_property" && e.args?.property) {
       props.delete(String(e.args.property));
     }
@@ -70,6 +79,25 @@ export function canBuildWithTech(
       return {
         ok: false,
         error: `Нужен tier ${buildingDef.category}≥${need - 1} (сейчас ${factionMaxTier(eco, buildingDef.category)})`,
+      };
+    }
+  }
+
+  const milestoneRole = buildingDef?.requireRoleMilestone;
+  if (typeof milestoneRole === "string" && milestoneRole.trim()) {
+    const roleId = milestoneRole.trim();
+    const content = getCachedContent();
+    const ms = content?.role_milestones?.[roleId];
+    const need =
+      Number(ms?.threshold) ||
+      Number(content?.economy_schema?.role_score_pilot?.thresholds?.[roleId]) ||
+      0;
+    const score = Number(eco?.roleScores?.[roleId]) || 0;
+    if (need > 0 && score < need) {
+      const label = ms?.label || roleId;
+      return {
+        ok: false,
+        error: `Нужен RoleScore «${label}»: ${score}/${need}`,
       };
     }
   }
@@ -116,6 +144,8 @@ export function techHintForBuilding(
     {
       id?: string;
       name?: string;
+      catalogPending?: boolean;
+      alchemyOnly?: boolean;
       effects?: Array<{ effect: string; args?: Record<string, unknown> }>;
     }
   >,
@@ -140,6 +170,7 @@ export function techHintForBuilding(
   );
 
   for (const tech of Object.values(technologies || {})) {
+    if (tech.catalogPending || tech.alchemyOnly) continue;
     for (const e of tech.effects || []) {
       if (e.effect === "unlock_tech_tier") {
         const cat = String(e.args?.category ?? "");

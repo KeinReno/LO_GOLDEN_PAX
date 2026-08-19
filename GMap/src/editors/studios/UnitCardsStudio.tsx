@@ -246,8 +246,7 @@ export function UnitCardsStudio() {
       <aside className="studio-sidebar">
         <div className="studio-sidebar-header">
           <div>
-            <p className="panel-kicker">GM · Forge</p>
-            <h3>Конструктор карт & юнитов</h3>
+            <h3>Карты и юниты</h3>
           </div>
           <button
             type="button"

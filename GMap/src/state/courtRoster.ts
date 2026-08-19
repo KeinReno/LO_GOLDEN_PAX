@@ -1,5 +1,5 @@
 import type { ViewerPayload } from "./types";
-import { playerAuthHeaders, rememberPlayerTokenFromPayload } from "./playerAuth";
+import { playerAuthHeaders, playerJsonBody, rememberPlayerTokenFromPayload } from "./playerAuth";
 
 /**
  * Court roster unique API — POST /api/court/npcs* (v0.5 onto GMap).
@@ -84,7 +84,7 @@ export async function postCourtNpcPosting(body: {
     const res = await fetch("/api/court/npcs/posting", {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body as Record<string, unknown>)),
     });
     const data = await readCourtJson(res);
     if (!res.ok) {
@@ -105,7 +105,7 @@ export async function postCourtNpcRecall(body: {
     const res = await fetch("/api/court/npcs/posting/recall", {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body as Record<string, unknown>)),
     });
     const data = await readCourtJson(res);
     if (!res.ok) {
@@ -205,7 +205,7 @@ async function postCourtMaster(
     const res = await courtMasterFetch(path, masterToken, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body as Record<string, unknown>)),
     });
     const data = await readCourtJson(res);
     if (!res.ok) {
@@ -251,7 +251,7 @@ export async function postCourtNpcSeat(body: {
     const res = await fetch("/api/court/npcs/seat", {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body as Record<string, unknown>)),
     });
     const data = await readCourtJson(res);
     if (!res.ok) {
@@ -272,7 +272,7 @@ export async function postCourtNpcUnseat(body: {
     const res = await fetch("/api/court/npcs/unseat", {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body as Record<string, unknown>)),
     });
     const data = await readCourtJson(res);
     if (!res.ok) {

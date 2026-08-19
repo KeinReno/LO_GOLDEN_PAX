@@ -46,7 +46,7 @@ describe("formatFactionsLoadError", () => {
 });
 
 describe("missingLoginCredsMsg", () => {
-  it("asks for faction and pin", () => {
-    assert.match(missingLoginCredsMsg(), /державу/);
+  it("asks for campaign and key", () => {
+    assert.match(missingLoginCredsMsg(), /ключ/);
   });
 });

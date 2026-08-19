@@ -5,6 +5,7 @@ import {
   ensureRp,
   ensurePlayerChannels,
   filterIndexForViewer,
+  attachHqRails,
   episodeVisibleTo,
   pickHomeEpisode,
   createChapter,
@@ -13,6 +14,8 @@ import {
   reopenEpisode,
   readMessages,
   appendMessage,
+  patchMessageFields,
+  deleteMessage,
   patchMessageIntentId,
   DEFAULT_CAMPAIGN,
 } from "../rpStore.mjs";
@@ -27,6 +30,7 @@ import {
 import { readLiveBoard, writeLiveBoard } from "../tableStore.mjs";
 import { readIntents, writeIntents, submitIntent } from "../intents.mjs";
 import { getContent } from "../contentLoader.mjs";
+import { normalizeRpPersona } from "../rpPersona.mjs";
 
 /**
  * @returns {Promise<boolean>}
@@ -59,7 +63,9 @@ export async function tryHandleRpRoutes(req, res, url, ctx) {
     const factionId = isMaster ? null : auth.faction?.id || null;
     const factions = world?.factions ?? [];
     let index = ensurePlayerChannels(factions, campaignId);
-    index = filterIndexForViewer(index, { isMaster, factionId });
+    const viewer = { isMaster, factionId };
+    index = filterIndexForViewer(index, viewer);
+    index = attachHqRails(index, viewer, campaignId);
     const home =
       !isMaster && factionId
         ? pickHomeEpisode(index, factionId)
@@ -157,6 +163,9 @@ export async function tryHandleRpRoutes(req, res, url, ctx) {
     sendJson(res, 200, {
       messages,
       pin: ep?.pin || null,
+      visibility: ep?.visibility || "all",
+      kind: ep?.kind || null,
+      status: ep?.status || "open",
     });
     return true;
   }
@@ -193,14 +202,17 @@ export async function tryHandleRpRoutes(req, res, url, ctx) {
       authorName = body.authorName || "Мастер";
     }
 
-    // Persona: narrator / NPC / anonymous speak-as
-    const persona = body.persona || "self";
+    // Persona: narrator / NPC / anonymous speak-as. Players cannot narrate.
+    const persona = normalizeRpPersona(body.persona, isMaster);
     if (persona === "narrator") {
       authorName = "Рассказчик";
       authorAvatarUrl = null;
     } else if (persona === "anonymous" && isMaster) {
       authorName = body.authorName || "???";
       authorAvatarUrl = null;
+    } else if (persona === "alias" && isMaster) {
+      authorName = String(body.authorName || "???").slice(0, 80);
+      authorAvatarUrl = body.authorAvatarUrl || null;
     } else if (persona === "npc" || body.authorNpcId) {
       const npcId = body.authorNpcId;
       const facId = isMaster
@@ -278,6 +290,40 @@ export async function tryHandleRpRoutes(req, res, url, ctx) {
       message: result.message,
       intent: intentResult,
     });
+    return true;
+  }
+
+  if (url.pathname === "/api/rp/messages/edit" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = await readBody(req);
+    const fields = {};
+    if (typeof body.body === "string") {
+      fields.body = String(body.body).slice(0, 4000);
+    }
+    if (typeof body.authorName === "string" && body.authorName.trim()) {
+      fields.authorName = String(body.authorName).trim().slice(0, 80);
+    }
+    if (body.authorAvatarUrl === null) {
+      fields.authorAvatarUrl = null;
+    } else if (typeof body.authorAvatarUrl === "string") {
+      fields.authorAvatarUrl = String(body.authorAvatarUrl).slice(0, 500);
+    }
+    if (Object.keys(fields).length === 0) {
+      sendJson(res, 400, { error: "нечего менять" });
+      return true;
+    }
+    fields.editedAt = new Date().toISOString();
+    const result = patchMessageFields(
+      body.chapterId,
+      body.episodeId,
+      body.messageId,
+      fields,
+      body.campaignId || DEFAULT_CAMPAIGN,
+    );
+    sendJson(res, result.ok ? 200 : 400, result);
     return true;
   }
 
@@ -403,6 +449,22 @@ export async function tryHandleRpRoutes(req, res, url, ctx) {
         { factionId, authorName, isMaster, campaignId },
       );
     }
+    sendJson(res, result.ok ? 200 : 400, result);
+    return true;
+  }
+
+  if (url.pathname === "/api/rp/messages/delete" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = await readBody(req);
+    const result = deleteMessage(
+      body.chapterId,
+      body.episodeId,
+      body.messageId,
+      body.campaignId || DEFAULT_CAMPAIGN,
+    );
     sendJson(res, result.ok ? 200 : 400, result);
     return true;
   }

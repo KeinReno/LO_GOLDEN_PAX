@@ -13,6 +13,13 @@ export function engagementPollMs(cardTableOpen: boolean): number {
   return cardTableOpen ? 1600 : 8000;
 }
 
+export function rpSceneIsOpen(
+  viewMode: string | null | undefined,
+  rpFloatOpen: boolean,
+): boolean {
+  return Boolean(rpFloatOpen || viewMode === "rp");
+}
+
 export function countRpUnread(
   messages: { at: string }[],
   seenAt: string | null | undefined,

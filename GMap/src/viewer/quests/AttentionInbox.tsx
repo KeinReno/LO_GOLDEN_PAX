@@ -2,6 +2,15 @@ import { BookOpen, Dices, MapPin, Users } from "lucide-react";
 import { StatefulButton } from "../../ui/StatefulButton";
 import type { NpcTaskView, Quest } from "./types";
 import { QUEST_KIND_META, QUEST_STATUS_LABEL } from "./types";
+import {
+  collectAttention,
+  workingQuests,
+  type AttentionItem,
+  type AttentionReason,
+} from "./questAttention";
+
+export type { AttentionItem, AttentionReason };
+export { collectAttention };
 
 export type AttentionInboxProps = {
   quests: Quest[];
@@ -14,67 +23,9 @@ export type AttentionInboxProps = {
   onOpenCourt: () => void;
   onOpenJournal: (id: string) => void;
   onFocusSystem?: (systemId: string) => void;
+  /** Desktop already has a Court tab in the room header. */
+  showCourtLink?: boolean;
 };
-
-export type AttentionReason =
-  | "choice"
-  | "dice"
-  | "offered"
-  | "expires"
-  | "dropped";
-
-export type AttentionItem = {
-  quest: Quest;
-  reason: AttentionReason;
-  label: string;
-};
-
-function expiresSoon(q: Quest, turn: number): boolean {
-  return q.expiresTurn != null && q.expiresTurn - turn <= 2;
-}
-
-/** Quests that need a player decision this turn. */
-export function collectAttention(
-  quests: Quest[],
-  turn: number,
-): AttentionItem[] {
-  const items: AttentionItem[] = [];
-  for (const q of quests) {
-    if (q.status === "offered") {
-      items.push({ quest: q, reason: "offered", label: "Новое предложение" });
-      continue;
-    }
-    if (q.status !== "active") continue;
-    const choices = q.choices?.length ?? 0;
-    if (choices > 0) {
-      items.push({
-        quest: q,
-        reason: "choice",
-        label: `${choices} выбор${choices === 1 ? "" : choices < 5 ? "а" : "ов"}`,
-      });
-      continue;
-    }
-    if (q.diceCheck) {
-      items.push({ quest: q, reason: "dice", label: "Нужен бросок" });
-      continue;
-    }
-    if (expiresSoon(q, turn)) {
-      items.push({
-        quest: q,
-        reason: "expires",
-        label: `До хода ${q.expiresTurn}`,
-      });
-    }
-  }
-  const rank: Record<AttentionReason, number> = {
-    choice: 0,
-    dice: 1,
-    offered: 2,
-    expires: 3,
-    dropped: 4,
-  };
-  return items.sort((a, b) => rank[a.reason] - rank[b.reason]);
-}
 
 type Beat = {
   questId: string;
@@ -96,8 +47,13 @@ export function AttentionInbox({
   onOpenCourt,
   onOpenJournal,
   onFocusSystem,
+  showCourtLink = true,
 }: AttentionInboxProps) {
   const attention = collectAttention(quests, turn);
+  const working = workingQuests(quests, attention);
+  const done = quests.filter(
+    (q) => q.status === "completed" || q.status === "failed",
+  );
   const courtReady = npcTasks.filter((t) => t.status === "done").length;
   const courtWorking = npcTasks.filter((t) => t.status === "working").length;
 
@@ -143,23 +99,27 @@ export function AttentionInbox({
             {attention.length
               ? `${attention.length} решени${attention.length === 1 ? "е" : attention.length < 5 ? "я" : "й"} на этом ходу`
               : perTurnRolled
-                ? "Нет срочных решений — выберите квест слева"
+                ? working.length
+                  ? "Срочных решений нет — ниже квесты в работе"
+                  : "На этом ходу решать нечего"
                 : "Сначала бросьте ежеходный кубик"}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn ghost sm quest-inbox__court-link"
-          onClick={onOpenCourt}
-        >
-          <Users size={13} aria-hidden />
-          Двор
-          {courtReady + courtWorking > 0 ? (
-            <span className="quest-group-count">
-              {courtReady > 0 ? courtReady : courtWorking}
-            </span>
-          ) : null}
-        </button>
+        {showCourtLink ? (
+          <button
+            type="button"
+            className="btn ghost sm quest-inbox__court-link"
+            onClick={onOpenCourt}
+          >
+            <Users size={13} aria-hidden />
+            Двор
+            {courtReady + courtWorking > 0 ? (
+              <span className="quest-group-count">
+                {courtReady > 0 ? courtReady : courtWorking}
+              </span>
+            ) : null}
+          </button>
+        ) : null}
       </header>
 
       {attention.length > 0 ? (
@@ -199,6 +159,7 @@ export function AttentionInbox({
                     type="button"
                     className="quest-inbox__map"
                     title="На карте"
+                    aria-label={`На карте: ${quest.title}`}
                     onClick={() => onFocusSystem(quest.systemId!)}
                   >
                     <MapPin size={13} aria-hidden />
@@ -208,14 +169,78 @@ export function AttentionInbox({
             );
           })}
         </ul>
-      ) : (
+      ) : attention.length === 0 && working.length === 0 ? (
         <div className="quest-inbox__empty">
           <p className="hint">
-            Очередь пуста. Можно открыть любой квест слева или заглянуть во
-            двор.
+            {perTurnRolled
+              ? "Очередь пуста. Завершённые — ниже, если есть."
+              : "Сначала бросьте ежеходный кубик."}
           </p>
         </div>
-      )}
+      ) : null}
+
+      {working.length > 0 ? (
+        <section className="quest-inbox__working" aria-label="В работе">
+          <h3>В работе</h3>
+          <p className="hint">Без решения в этот ход — открыть карточку слева или здесь.</p>
+          <ul className="quest-inbox__list">
+            {working.map((quest) => {
+              const meta = QUEST_KIND_META[quest.kind];
+              return (
+                <li key={quest.id} className="quest-inbox__item">
+                  <button
+                    type="button"
+                    className="quest-inbox__row"
+                    onClick={() => onSelectQuest(quest.id)}
+                  >
+                    <span
+                      className={`quest-status-dot quest-status-dot--${quest.status}`}
+                      title={QUEST_STATUS_LABEL[quest.status]}
+                      aria-hidden
+                    />
+                    <span className="quest-inbox__row-body">
+                      <span className="quest-inbox__row-title">{quest.title}</span>
+                      <span className="hint">{meta.label}</span>
+                    </span>
+                    <span className="quest-inbox__row-action">открыть</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {done.length > 0 ? (
+        <details className="quest-inbox__journal">
+          <summary>
+            Завершённые
+            <span className="hint">{done.length}</span>
+          </summary>
+          <ul className="quest-inbox__list">
+            {done.map((quest) => (
+              <li key={quest.id} className="quest-inbox__item">
+                <button
+                  type="button"
+                  className="quest-inbox__row"
+                  onClick={() => onSelectQuest(quest.id)}
+                >
+                  <span
+                    className={`quest-status-dot quest-status-dot--${quest.status}`}
+                    aria-hidden
+                  />
+                  <span className="quest-inbox__row-body">
+                    <span className="quest-inbox__row-title">{quest.title}</span>
+                    <span className="hint">
+                      {QUEST_STATUS_LABEL[quest.status]}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
 
       {beats.length > 0 ? (
         <details className="quest-inbox__journal">

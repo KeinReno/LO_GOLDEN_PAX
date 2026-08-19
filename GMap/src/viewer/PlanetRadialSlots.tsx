@@ -5,6 +5,11 @@ import type { BuildingDef, PlanetActionRequest } from "./PlayerPlanetManage";
 import { canFactionBuildDef } from "../state/buildingAccess";
 import { planetAllowsBuildingBiome } from "../state/biomeMatch";
 import { canBuildWithTech, type TechEcoSlice } from "../state/techGate";
+import {
+  MAX_PLANET_GRADE,
+  planetOrbitalGrade,
+  planetSurfaceGrade,
+} from "../state/planetGrade";
 import { intentApCost } from "../state/contentCatalog";
 import { GESTURE } from "../ui/gestureMap";
 import { BuildingKindIcon, buildingKindColor } from "./BuildingKindIcon";
@@ -20,8 +25,9 @@ import { createPortal } from "react-dom";
 
 /**
  * Radial planet building UI.
- * Tap empty slot → build deck (available only).
- * Drag card onto slot to aim; hold card to commit build.
+ * Tap empty slot → build deck.
+ * Drag card onto slot to build; hold card also commits.
+ * Tap + on the ring to buy the next slot grade.
  * Long-press / RMB occupied → hold-to-demolish.
  */
 
@@ -79,7 +85,7 @@ function resolveContentZone(
   return ring;
 }
 
-function buildSlots(
+export function buildPlanetRingSlots(
   planet: Planet,
   zone: RingZone,
   buildings: Record<string, BuildingDef>,
@@ -88,10 +94,12 @@ function buildSlots(
     zone === "surface" ? planet.surfaceBuildings ?? [] : planet.orbitalBuildings ?? [];
   const unlocked =
     zone === "surface" ? planet.surfaceSlots ?? 8 : planet.orbitalSlots ?? 4;
-  const max = zone === "surface" ? surfaceSlotsMax(planet) : orbitalSlotsMax(planet);
-  const total = Math.max(unlocked, max);
+  const grade =
+    zone === "surface" ? planetSurfaceGrade(planet) : planetOrbitalGrade(planet);
+  const canExpand = grade < MAX_PLANET_GRADE;
+  const ringCount = Math.max(unlocked, list.length);
   const slots: Slot[] = [];
-  for (let i = 0; i < total; i++) {
+  for (let i = 0; i < ringCount; i++) {
     const b = list[i];
     if (b) {
       slots.push({
@@ -104,15 +112,22 @@ function buildSlots(
         buildingInstanceId: b.id,
         contentZone: resolveContentZone(b, zone, buildings),
       });
-    } else if (i < unlocked) {
-      slots.push({ zone, index: i, state: "empty-open" });
-    } else if (i < max) {
-      slots.push({ zone, index: i, state: "expandable" });
     } else {
-      slots.push({ zone, index: i, state: "blocked" });
+      slots.push({ zone, index: i, state: "empty-open" });
     }
   }
+  if (canExpand) {
+    slots.push({ zone, index: ringCount, state: "expandable" });
+  }
   return slots;
+}
+
+function buildSlots(
+  planet: Planet,
+  zone: RingZone,
+  buildings: Record<string, BuildingDef>,
+): Slot[] {
+  return buildPlanetRingSlots(planet, zone, buildings);
 }
 
 function slotBuilding(
@@ -207,6 +222,7 @@ export function PlanetRadialSlots({
   onLaborPickBuilding,
   onLaborDragBuilding,
   onLaborTapBuilding,
+  gmFree = false,
 }: {
   planet: Planet;
   systemId: string;
@@ -235,6 +251,8 @@ export function PlanetRadialSlots({
     amount: number,
   ) => void;
   onLaborTapBuilding?: (instanceId: string) => void;
+  /** GM: no tech/AP/biome gate, full live catalog. */
+  gmFree?: boolean;
 }) {
   const surfaceSlots = buildSlots(planet, "surface", buildings);
   const orbitalSlots = buildSlots(planet, "orbital", buildings);
@@ -301,14 +319,18 @@ export function PlanetRadialSlots({
   const catalog = useMemo(() => {
     const fid = factionId ?? "";
     return (zone: PaletteZone) =>
-      Object.values(buildings).filter(
-        (b) =>
-          b.zone === zone &&
+      Object.values(buildings).filter((b) => {
+        if (b.zone !== zone) return false;
+        const row = b as BuildingDef & { catalogPending?: boolean; stub?: boolean };
+        if (row.catalogPending || row.stub) return false;
+        if (gmFree) return true;
+        return (
           canFactionBuildDef(b, fid, { raceIds }) &&
           canBuildWithTech(techEco, b).ok &&
-          planetAllowsBuildingBiome(planet, b.biome_restrictions),
-      );
-  }, [buildings, factionId, raceIds, techEco, planet]);
+          planetAllowsBuildingBiome(planet, b.biome_restrictions)
+        );
+      });
+  }, [buildings, factionId, raceIds, techEco, planet, gmFree]);
 
   const apLeft = Math.max(0, apMax - reservedAp);
 
@@ -341,6 +363,7 @@ export function PlanetRadialSlots({
   }, [openSlot, inspectKey, onInspect]);
 
   const canAfford = (def: BuildingDef) => {
+    if (gmFree) return true;
     const needAp = intentApCost("intent.build");
     const needM = def.cost?.["currency.metal"] ?? 0;
     const needS = def.cost?.["currency.supply"] ?? 0;
@@ -351,10 +374,10 @@ export function PlanetRadialSlots({
     );
   };
 
-  const tryBuild = (defId: string) => {
-    if (busy) return;
+  const tryBuild = (defId: string): boolean => {
+    if (busy && !gmFree) return false;
     const def = buildings[defId];
-    if (!def || !canAfford(def)) return;
+    if (!def || !canAfford(def)) return false;
     onAction({
       action: "build",
       systemId,
@@ -365,6 +388,7 @@ export function PlanetRadialSlots({
     setSelectedBuildId(null);
     setDrag(null);
     setDropHoverKey(null);
+    return true;
   };
 
   const findSlotAtPoint = (clientX: number, clientY: number): Slot | null => {
@@ -402,9 +426,11 @@ export function PlanetRadialSlots({
       setDrag(null);
       setDropHoverKey(null);
       if (slot?.state === "empty-open" && dragActive.current) {
-        setOpenSlot({ zone: slot.zone, index: slot.index });
-        setSelectedBuildId(defId);
-        setPaletteZone(slot.zone === "orbital" ? "orbital" : "surface");
+        if (!tryBuild(defId)) {
+          setOpenSlot({ zone: slot.zone, index: slot.index });
+          setSelectedBuildId(defId);
+          setPaletteZone(slot.zone === "orbital" ? "orbital" : "surface");
+        }
       }
       dragActive.current = false;
     };
@@ -426,7 +452,15 @@ export function PlanetRadialSlots({
       setDemolishSlot(null);
       setInspectKey(null);
       onInspect?.(null);
-      /* Build commits via hold on deck card — tap only arms the slot. */
+      /* Drop commits immediately; tap still opens the deck. */
+    } else if (slot.state === "expandable") {
+      if (busy && !gmFree) return;
+      onAction({
+        action: "upgrade_grade",
+        systemId,
+        planetId,
+        zone: slot.zone,
+      });
     } else if (slot.state === "occupied" && slot.buildingInstanceId) {
       if (laborPickFrom && onLaborTapBuilding) {
         onLaborTapBuilding(slot.buildingInstanceId);
@@ -546,7 +580,9 @@ export function PlanetRadialSlots({
             : {})}
           style={{
             cursor:
-              slot.state === "empty-open" || slot.state === "occupied"
+              slot.state === "empty-open" ||
+              slot.state === "occupied" ||
+              slot.state === "expandable"
                 ? "pointer"
                 : "default",
           }}
@@ -577,12 +613,13 @@ export function PlanetRadialSlots({
             } else if (slot.state === "empty-open") {
               setHoverTip({
                 name: "Свободный слот",
-                meta: selectedBuildId
-                  ? "тап — выбрать слот, затем зажми карту в колоде"
-                  : "тап — открыть колоду",
+                meta: "тап — колода · перетащи карту — построить",
               });
             } else if (slot.state === "expandable") {
-              setHoverTip({ name: "Расширяемый слот", meta: "квота ещё закрыта" });
+              setHoverTip({
+                name: "Расширить кольцо",
+                meta: gmFree ? "тап — грейд слотов" : "тап — купить грейд",
+              });
             } else {
               setHoverTip({ name: "Заблокирован", meta: "нужна разблокировка" });
             }
@@ -744,7 +781,7 @@ export function PlanetRadialSlots({
         defaultGeom={{ x: 20, y: 120, w: 270, h: 420 }}
         minW={220}
         minH={200}
-        zIndex={370}
+        zIndex={gmFree ? 440 : 370}
         className="gmap-float-panel--build-deck"
       >
         <BuildDeck
@@ -776,6 +813,7 @@ export function PlanetRadialSlots({
             setSelectedBuildId(null);
           }}
           onOpenResearch={onOpenResearch}
+          freeBuild={gmFree}
         />
       </FloatingPanel>
 
@@ -978,7 +1016,9 @@ export function PlanetRadialSlots({
 
       {openSlot && (
         <p className="hint planet-radial-pick-hint">
-          Слот выбран — зажми карту в колоде, чтобы построить
+          {gmFree
+            ? "Слот выбран — зажми карту или перетащи её на кольцо"
+            : "Слот выбран — зажми карту или перетащи её на свободный слот"}
         </p>
       )}
 
@@ -990,10 +1030,7 @@ export function PlanetRadialSlots({
           <i className="dot open" /> свободен
         </span>
         <span>
-          <i className="dot expand" /> расширяем
-        </span>
-        <span>
-          <i className="dot blocked" /> заблокирован
+          <i className="dot expand" /> + грейд
         </span>
       </div>
 

@@ -123,6 +123,30 @@ export function verifyFactionPassword(faction, presented) {
   return timingSafeEqualString(password, expected);
 }
 
+const DEAD_FACTION_NAME = /уничтожен|павший|destroyed|fallen/i;
+const GALIVAN_HOUSE_NAME = /·\s*Галиван\b/i;
+const NOMAD_FACTION_ID = /^faction_nomad_/i;
+
+/** Login list: has a PIN/hash and is not a destroyed leftover. */
+export function isPlayerLoginFaction(faction) {
+  if (!faction?.id) return false;
+  const secret = String(faction.passwordHash || faction.password || "");
+  if (!secret) return false;
+  const id = String(faction.id);
+  const name = String(faction.name || "");
+  if (DEAD_FACTION_NAME.test(name)) return false;
+  if (NOMAD_FACTION_ID.test(id) || GALIVAN_HOUSE_NAME.test(name)) return false;
+  return true;
+}
+
+export function publicLoginFactions(world) {
+  return (world?.factions ?? []).filter(isPlayerLoginFaction).map((f) => ({
+    id: f.id,
+    name: f.name,
+    color: f.color,
+  }));
+}
+
 function pruneExpired(store, now) {
   store.sessions = (store.sessions || []).filter(
     (s) => s && s.expiresAt && Date.parse(s.expiresAt) > now,
@@ -222,13 +246,28 @@ export function resolvePlayerAuth(req, world, opts = {}) {
   return authOk(faction, "password");
 }
 
+function matchFactionByPassword(world, password) {
+  const seats = (world?.factions ?? []).filter(isPlayerLoginFaction);
+  let matched = null;
+  let extra = false;
+  for (const faction of seats) {
+    if (!verifyFactionPassword(faction, password)) continue;
+    if (matched) extra = true;
+    else matched = faction;
+  }
+  if (!matched || extra) return null;
+  return matched;
+}
+
 export function loginWithPassword(world, body) {
-  const factionId = body?.factionId != null ? String(body.factionId) : "";
+  const factionId = body?.factionId != null ? String(body.factionId).trim() : "";
   const password = body?.password != null ? String(body.password) : "";
-  if (!password || !factionId) {
+  if (!password) {
     return authFail("Нужен пароль государства");
   }
-  const faction = factionById(world, factionId);
+  const faction = factionId
+    ? factionById(world, factionId)
+    : matchFactionByPassword(world, password);
   if (!faction || !verifyFactionPassword(faction, password)) {
     return authFail("Неверный пароль государства");
   }

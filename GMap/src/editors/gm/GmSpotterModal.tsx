@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorldStore } from "../../state/worldStore";
-import { GM_LIVE_DOMAINS } from "./gmDomains";
+import { GM_LIVE_DOMAINS, domainHotkeyLabel } from "./gmDomains";
 import type { GmLiveDomainId } from "../../state/types";
 
 export type SpotterCategory = "system" | "faction" | "fleet" | "legion" | "command";
@@ -147,13 +147,14 @@ export function GmSpotterModal({
 
     // 5. GM Commands & Domain shortcuts
     for (const domain of GM_LIVE_DOMAINS) {
+      const hk = domainHotkeyLabel(domain.hotkey);
       items.push({
         id: `cmd:domain:${domain.id}`,
         category: "command",
         title: `Открыть домен: ${domain.label}`,
-        subtitle: `${domain.hint} (горячая клавиша F${domain.hotkey})`,
+        subtitle: hk ? `${domain.hint} (${hk})` : domain.hint,
         icon: "⚡",
-        badge: `F${domain.hotkey}`,
+        badge: hk ?? undefined,
         badgeTone: "accent",
         action: () => {
           onOpenDomain?.(domain.id);

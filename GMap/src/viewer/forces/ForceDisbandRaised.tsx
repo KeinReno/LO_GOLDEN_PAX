@@ -54,9 +54,10 @@ export function ForceDisbandRaised({
   };
 
   return (
-    <section className="planet-manage-block" aria-label="Роспуск набранных">
+    <section className="forces-return-pop" aria-label="Вернуть население">
       <p className="hint">
-        Набрано с планеты. Роспуск вернёт население, без возврата металла.
+        Набрано с планеты. Зажмите, чтобы вернуть население домой. Металл не
+        вернётся — это не разбор в лом.
       </p>
       <label className="system-cmd-count">
         Кол-во

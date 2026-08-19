@@ -138,6 +138,64 @@
       }
     }
   },
+  "ship.transport": {
+    "id": "ship.transport",
+    "name": "Транспорт",
+    "faction": "generic",
+    "tier": 1,
+    "roles": [
+      "support"
+    ],
+    "stats": {
+      "damage": 2,
+      "armor": 4,
+      "shields": 2,
+      "hp": 28,
+      "accuracy": 50
+    },
+    "targeting": "screen_first",
+    "theaterMult": {
+      "space": 1,
+      "assault": 0.1,
+      "ground": 0
+    },
+    "slots": [
+      {
+        "role": "hull",
+        "require": { "properties": ["strong"], "tier": ">=1" },
+        "count": 2
+      },
+      {
+        "role": "weapon",
+        "require": { "properties": ["weapon"], "tier": ">=1", "theater": "space" },
+        "count": 1
+      },
+      {
+        "role": "reactor",
+        "require": { "properties": ["energy"], "tier": ">=1" },
+        "count": 1
+      },
+      {
+        "role": "engine",
+        "require": { "properties": ["fuel"], "tier": ">=1", "theater": "space" },
+        "count": 1
+      },
+      {
+        "role": "crew",
+        "require": { "category": "E", "tier": ">=1" },
+        "count": 1
+      }
+    ],
+    "upkeep_slots": [
+      {
+        "require": { "properties": ["fuel"], "tier": ">=1" },
+        "count": 1,
+        "per": "turn"
+      }
+    ],
+    "signature": "Груз / караван",
+    "tradeoff": "почти без оружия"
+  },
   "ship.patrol": {
     "id": "ship.patrol",
     "name": "Патруль",
@@ -1245,7 +1303,7 @@
       }
     },
     "requireProperties": [
-      "cruiser_ribs"
+      "battleship_keel"
     ]
   },
   "ship.carrier": {
@@ -1940,7 +1998,7 @@
       }
     },
     "requireProperties": [
-      "dreadnought_keel"
+      "black_iron_keel"
     ]
   }
 }

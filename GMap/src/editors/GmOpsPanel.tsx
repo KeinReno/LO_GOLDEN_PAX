@@ -135,6 +135,9 @@ export function GmOpsPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
+      if (data.world) {
+        useWorldStore.getState().loadWorld(data.world);
+      }
       setSyncMsg(`Пресет ${id} → ${data.touched ?? ids.length} систем`);
     } catch (e) {
       setSyncMsg(e instanceof Error ? e.message : String(e));

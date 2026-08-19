@@ -1,5 +1,7 @@
 import type { ViewerPayload } from "../../../state/types";
 import type { DiploOffer } from "../../diploTradeTypes";
+import { countCourtAttention } from "../../court/courtAttention.ts";
+import { questAttentionCount } from "../../quests/questAttention.ts";
 
 export function diploIncomingOffers(payload: ViewerPayload): DiploOffer[] {
   return (payload.diploOffers?.incoming ?? []) as DiploOffer[];
@@ -13,9 +15,9 @@ export function warCountForFaction(payload: ViewerPayload): number {
   ).length;
 }
 
+/** Dock / HQ chip: decisions this turn, not every active pin in the world. */
 export function activeQuestCount(payload: ViewerPayload): number {
-  return (payload.world.quests ?? []).filter((q) => q.status === "active")
-    .length;
+  return questAttentionCount(payload);
 }
 
 export function tradePartnerCount(payload: ViewerPayload): number {
@@ -39,5 +41,6 @@ export function viewerPlayHudStats(payload: ViewerPayload) {
     warCount: warCountForFaction(payload),
     diploIncoming: diploIncomingOffers(payload),
     tradePartnerCount: tradePartnerCount(payload),
+    courtAttentionCount: countCourtAttention(payload),
   };
 }

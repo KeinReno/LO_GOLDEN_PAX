@@ -28,8 +28,14 @@ import {
 } from "../gmContent.mjs";
 import { spawnStoryQuestFromCatalog } from "../storyQuestSpawn.mjs";
 import { readLiveBoard, writeLiveBoard, writeJson, PUBLISHED_PATH, bumpTableRevision } from "../tableStore.mjs";
+import { restoreCockpitBackup } from "../opsHealth.mjs";
 import { getContent, loadContent } from "../contentLoader.mjs";
 import { ensureFactionEco, readLedger, writeLedger, getFactionPublicEco } from "../ledger.mjs";
+import {
+  readGateCampaigns,
+  patchGateCampaign,
+  saveGateCampaignArt,
+} from "../gateCampaigns.mjs";
 
 /**
  * @returns {Promise<boolean>}
@@ -101,6 +107,21 @@ export async function tryHandleGmRoutes(req, res, url, ctx) {
       return true;
     }
     sendJson(res, 200, listCockpitBackups());
+    return true;
+  }
+
+  if (
+    url.pathname === "/api/gm/cockpit/backups/restore" &&
+    req.method === "POST"
+  ) {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = (await readBody(req)) || {};
+    const name = String(body.name || body.dir || "");
+    const result = restoreCockpitBackup(name);
+    sendJson(res, result.ok ? 200 : 400, result);
     return true;
   }
 
@@ -289,7 +310,11 @@ export async function tryHandleGmRoutes(req, res, url, ctx) {
       return true;
     }
     const body = (await readBody(req)) || {};
-    const result = patchRulesKnobs(body);
+    const patch =
+      body.patch && typeof body.patch === "object" && !Array.isArray(body.patch)
+        ? body.patch
+        : body;
+    const result = patchRulesKnobs(patch);
     sendJson(res, result.ok ? 200 : 400, result);
     return true;
   }
@@ -324,16 +349,11 @@ export async function tryHandleGmRoutes(req, res, url, ctx) {
       sendJson(res, 400, result);
       return true;
     }
-    const meta = bumpTableRevision();
-    if (result.world?.meta) {
-      result.world.meta.tableRevision = meta.tableRevision;
-      result.world.meta.updatedAt = meta.updatedAt;
-    }
     sendJson(res, 200, {
       ok: true,
       quest: result.quest,
       world: result.world,
-      tableRevision: meta.tableRevision,
+      tableRevision: result.tableRevision ?? result.world?.meta?.tableRevision,
     });
     return true;
   }
@@ -377,5 +397,40 @@ export async function tryHandleGmRoutes(req, res, url, ctx) {
     });
     return true;
   }
+
+  if (url.pathname === "/api/gm/gate-campaigns" && req.method === "GET") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    sendJson(res, 200, { ok: true, ...readGateCampaigns() });
+    return true;
+  }
+
+  if (url.pathname === "/api/gm/gate-campaigns" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = (await readBody(req)) || {};
+    const result = patchGateCampaign(body.id, body);
+    sendJson(res, result.ok ? 200 : 400, result);
+    return true;
+  }
+
+  if (url.pathname === "/api/gm/gate-campaigns/art" && req.method === "POST") {
+    if (!requireMaster(req)) {
+      sendJson(res, 401, { error: "Неверный мастер-токен" });
+      return true;
+    }
+    const body = (await readBody(req)) || {};
+    const result = saveGateCampaignArt(body.id, {
+      mime: body.mime,
+      data: body.data,
+    });
+    sendJson(res, result.ok ? 200 : 400, result);
+    return true;
+  }
+
   return false;
 }

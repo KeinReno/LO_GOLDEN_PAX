@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { ViewerPayload } from "../../state/types";
 import { playStaffCue } from "../../audio/staffSfx";
+import { hasPlayerToken } from "../../state/playerAuth";
 import {
   fetchEngagements,
   getPlayerJson,
@@ -18,6 +19,7 @@ import { useWorldStore } from "../../state/worldStore";
 import { useViewerBattleSessionStore } from "../../state/viewerBattleSessionStore";
 import { useViewerChromeStore } from "../../state/viewerChromeStore";
 import { useViewerOrderSessionStore } from "../../state/viewerOrderSessionStore";
+import { useViewerSessionStore } from "../../state/viewerSessionStore";
 import type { ActionApPayload } from "../features/order-orchestrator/orderApMerge";
 import {
   fieldsFromAction,
@@ -32,6 +34,7 @@ import {
   engagementPollMs,
   mapVersionStamp,
   pickRpHomeEpisode,
+  rpSceneIsOpen,
 } from "./viewerLivePolls";
 
 type Creds = { factionId: string; password: string };
@@ -65,6 +68,7 @@ export function useViewerLivePolls({
 
   const loadWorld = useWorldStore((s) => s.loadWorld);
   const rpFloatOpen = useViewerChromeStore((s) => s.rpFloatOpen);
+  const viewMode = useViewerSessionStore((s) => s.viewMode);
   const setRpUnread = useViewerChromeStore((s) => s.setRpUnread);
   const cardBattleId = useViewerBattleSessionStore((s) => s.cardBattleId);
   const cardBattleMinimized = useViewerBattleSessionStore(
@@ -114,11 +118,11 @@ export function useViewerLivePolls({
         }
         if (stamp === mapStampRef.current) return;
         const { factionId: fid, password: pw } = credsRef.current;
-        if (!fid || !pw) return;
-        const r2 = await postPlayerJson("/api/view-refresh", {
-          factionId: fid,
-          password: pw,
-        });
+        if (!fid || !(pw || hasPlayerToken())) return;
+        const r2 = await postPlayerJson(
+          "/api/view-refresh",
+          pw ? { factionId: fid, password: pw } : { factionId: fid },
+        );
         if (!r2.ok || cancelled || !r2.data.world) return;
         const data = r2.data;
         const world = data.world as ViewerPayload["world"];
@@ -178,14 +182,14 @@ export function useViewerLivePolls({
       setRpUnread(0);
       return;
     }
-    if (rpFloatOpen) return;
+    if (rpSceneIsOpen(viewMode, rpFloatOpen)) return;
     let cancelled = false;
     const poll = async () => {
       try {
         const headers: Record<string, string> = {
           "X-Faction-Id": payload.factionId,
-          "X-Faction-Password": password,
         };
+        if (password) headers["X-Faction-Password"] = password;
         const idxRes = await getPlayerJson("/api/rp", headers);
         if (!idxRes.ok || cancelled) return;
         const idx = idxRes.data as Parameters<typeof pickRpHomeEpisode>[0];
@@ -208,7 +212,7 @@ export function useViewerLivePolls({
             const { notifyNewRpMessage } = await import("../../ui/rpNotify");
             notifyNewRpMessage(msgs, {
               selfFactionId: payload.factionId,
-              quietDesktop: false,
+              quietDesktop: rpSceneIsOpen(viewMode, rpFloatOpen),
             });
           }
         }
@@ -228,11 +232,12 @@ export function useViewerLivePolls({
     payload?.updatedAt,
     password,
     rpFloatOpen,
+    viewMode,
     setRpUnread,
   ]);
 
   useEffect(() => {
-    if (!payload?.factionId || !password) {
+    if (!payload?.factionId || !(password || hasPlayerToken())) {
       useViewerOrderSessionStore.getState().setFlowData(null);
       return;
     }
@@ -243,7 +248,7 @@ export function useViewerLivePolls({
           `/api/economy/flows?factionId=${encodeURIComponent(payload.factionId)}`,
           {
             "X-Faction-Id": payload.factionId,
-            "X-Faction-Password": password,
+            ...(password ? { "X-Faction-Password": password } : {}),
           },
         );
         if (!ok || cancelled) return;

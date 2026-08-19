@@ -71,7 +71,8 @@ export type SystemPoiType =
   | "biocupola"
   | "hydro_lab"
   | "security_post"
-  | "grav_field";
+  | "grav_field"
+  | "star";
 
 /** All stampable space objects (can stack on one system). */
 export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
@@ -109,6 +110,7 @@ export const SPACE_OBJECT_TYPES: SystemPoiType[] = [
   "hydro_lab",
   "security_post",
   "grav_field",
+  "star",
 ];
 
 export type QuestStatus = "active" | "done" | "hidden" | "expired";
@@ -964,6 +966,11 @@ export interface Faction {
   capitalSystemId?: string | null;
   /** Opinion matrix, active treaties, soft history (A8). */
   diplomacy?: FactionDiplomacy;
+  /**
+   * Intel-masked: this polity's opinion of the viewing faction.
+   * Full `diplomacy` is stripped below intel 4.
+   */
+  opinionTowardViewer?: number;
   /** Soft loyalty store (A3/A9) — raceId → 0..100. */
   loyaltyByRace?: Record<string, number>;
   /** Aggregate loyalty fallback when race-specific missing. */
@@ -1274,7 +1281,7 @@ export type GmShellMode =
   | "rules"
   | "atelier";
 
-/** Live table domain workbench (F1–F9). Null = closed. */
+/** Live table domain workbench (F1–F4, F6–F9; F5 is browser refresh). Null = closed. */
 export type GmLiveDomainId =
   | "inbox"
   | "economy"

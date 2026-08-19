@@ -168,16 +168,17 @@ export function CardDetailStrip({
         <>
           <div className="forces-detail-info">
             <h4>
-              <AlertTriangle size={16} aria-hidden /> Списать {name}?
+              <AlertTriangle size={16} aria-hidden /> Разобрать {name} в лом?
             </h4>
             <p className="forces-detail-stats">
-              Безвозвратно уберёт 1 ед. из колоды. Часть металла вернётся на
-              склад. Слоты оснащения освободятся.
+              Уберёт 1 ед. из колоды. Часть металла вернётся на склад. Слоты
+              оснащения освободятся. Население не вернётся — это не роспуск с
+              планеты.
             </p>
           </div>
           <div className="forces-detail-actions">
             <button type="button" className="btn danger" onClick={onConfirmDisband}>
-              <Recycle size={14} aria-hidden /> Подтвердить утиль
+              <Recycle size={14} aria-hidden /> В лом
             </button>
             <button type="button" className="btn ghost" onClick={onCancelDisband}>
               Отмена
@@ -255,7 +256,8 @@ export function CardDetailStrip({
                       <div className="forces-equip-candidates">
                         {candidates.length === 0 ? (
                           <p className="hint">
-                            На складе нет подходящих ресурсов для этого слота.
+                            На складе нет ресурса под {formatRequire(slot.require)}
+                            . Металл сюда не кладётся.
                           </p>
                         ) : (
                           candidates.slice(0, 12).map((r) => {
@@ -295,7 +297,7 @@ export function CardDetailStrip({
             <p className="forces-detail-combat">
               {roleLabel(role)}
               {kw ? ` · ${keywordLabel(kw)}` : ""}
-              {` · energy ${cardEnergyCost(role)}`}
+              {` · энергия ${cardEnergyCost(role)}`}
             </p>
             {matchup ? (
               <p className="hint forces-detail-matchup">{matchup}</p>
@@ -337,7 +339,7 @@ export function CardDetailStrip({
                 type="button"
                 className="btn ghost"
                 onClick={onOpenEquip}
-                title="Модули корабля со склада — влияют на property-matchups в бою"
+                title="Модули со склада — влияют на удар в бою"
               >
                 <Settings2 size={14} aria-hidden /> Оснащение
               </button>
@@ -350,7 +352,7 @@ export function CardDetailStrip({
               className="btn ghost"
               onClick={onRequestDisband}
             >
-              <Recycle size={14} aria-hidden /> Утиль
+              <Recycle size={14} aria-hidden /> В лом
             </button>
           </div>
         </>

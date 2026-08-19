@@ -1,4 +1,5 @@
 import { getCachedContent } from "../state/contentCatalog";
+import { liveBreakthroughTechId } from "../state/techPathLive";
 import type { ViewerPayload } from "../state/types";
 
 export type PathNavigateView = "economy" | "research" | "market" | "court";
@@ -39,14 +40,14 @@ const MATERIAL_SLOTS: Array<{
   pilot: boolean;
   navigate: PathNavigateView;
 }> = [
-  { id: "structural", icon: "🛡", label: "Структурный", pilot: true, navigate: "economy" },
-  { id: "energy", icon: "⚡", label: "Энергетический", pilot: true, navigate: "economy" },
-  { id: "offensive", icon: "🎯", label: "Ударный", pilot: true, navigate: "economy" },
-  { id: "defensive", icon: "🔰", label: "Защитный", pilot: true, navigate: "economy" },
-  { id: "mobility", icon: "🚀", label: "Мобильность", pilot: true, navigate: "economy" },
+  { id: "structural", icon: "🛡", label: "Структурный", pilot: true, navigate: "research" },
+  { id: "energy", icon: "⚡", label: "Энергетический", pilot: true, navigate: "research" },
+  { id: "offensive", icon: "🎯", label: "Ударный", pilot: true, navigate: "research" },
+  { id: "defensive", icon: "🔰", label: "Защитный", pilot: true, navigate: "research" },
+  { id: "mobility", icon: "🚀", label: "Мобильность", pilot: true, navigate: "research" },
   { id: "cognitive", icon: "🧠", label: "Когнитивный", pilot: true, navigate: "research" },
-  { id: "biological", icon: "🌱", label: "Биологический", pilot: true, navigate: "economy" },
-  { id: "exotic", icon: "✨", label: "Экзотический", pilot: true, navigate: "economy" },
+  { id: "biological", icon: "🌱", label: "Биологический", pilot: true, navigate: "research" },
+  { id: "exotic", icon: "✨", label: "Экзотический", pilot: true, navigate: "research" },
 ];
 
 const CIVIC_SLOTS: Array<{
@@ -96,11 +97,16 @@ function materialRow(
   const score = Number(scores[slot.id as keyof typeof scores]) || 0;
   const threshold = roleMilestoneThreshold(slot.id);
   const open = (eco?.openPaths ?? []).includes(slot.id);
-  const ready = !open && threshold > 0 && score >= threshold;
+  const content = getCachedContent();
+  const breakthroughId = liveBreakthroughTechId(
+    content?.tech_paths?.paths?.[slot.id],
+    content?.technologies,
+  );
+  const ready =
+    !open && Boolean(breakthroughId) && threshold > 0 && score >= threshold;
   const pct =
     threshold > 0 ? Math.min(100, Math.round((score / threshold) * 100)) : 0;
 
-  const content = getCachedContent();
   const ms = content?.role_milestones as
     | Record<string, { unlocks?: Array<{ name?: string }> }>
     | undefined;
@@ -110,10 +116,8 @@ function materialRow(
     granted: open,
   }));
 
-  const techPath = content?.tech_paths?.paths?.[slot.id];
-  const breakthroughId = techPath?.breakthroughTechId;
   const breakthroughName = breakthroughId
-    ? content?.technologies?.[breakthroughId]?.name ?? "Прорыв"
+    ? content?.technologies?.[breakthroughId]?.name ?? null
     : null;
 
   return {

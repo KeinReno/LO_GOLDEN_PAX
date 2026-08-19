@@ -253,7 +253,7 @@ function produceViaRaise({
       note,
       turn,
       raised.cost,
-      { apCost: 0, forceApCost: ap },
+      { forceApCost: ap },
     );
   }
 

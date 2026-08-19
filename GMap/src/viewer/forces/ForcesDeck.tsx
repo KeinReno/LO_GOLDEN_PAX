@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, MapPin, Crosshair, Package } from "lucide-react";
 import type { ShipGroup, ViewerPayload } from "../../state/types";
 import { getCachedContent } from "../../state/contentCatalog";
-import type { MapResourceDef } from "../../state/contentCatalog";
+import { outfitResourceBag } from "../../state/resourceIndex";
 import { FleetCover } from "./FleetCover";
 import { LegionCover } from "./LegionCover";
 import { UnitCard, type UnitCardModel } from "./UnitCard";
@@ -49,6 +49,7 @@ import {
 import type { ViewerEngagement } from "../PlayerEngagementPanel";
 import { ForceDisbandRaised } from "./ForceDisbandRaised";
 import type { ForceRecruitSession } from "../../state/forceRaiseClient";
+import { isInputFocused } from "../hooks/isInputFocused";
 
 export type ForcesMutateArgs = {
   kind: "fleet" | "legion";
@@ -187,7 +188,7 @@ export function ForcesDeck({
     return {
       ships: Object.values(c?.ships || {}) as CatalogShip[],
       units: Object.values(c?.units || {}) as CatalogShip[],
-      mapResources: (c?.map_resources || {}) as Record<string, MapResourceDef>,
+      mapResources: outfitResourceBag(c),
     };
   }, []);
 
@@ -228,6 +229,27 @@ export function ForcesDeck({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (mode !== "deck") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || isInputFocused(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const s = useForcesState.getState();
+      if (s.stripMode === "equip" || s.stripMode === "confirm-disband") {
+        s.setStripMode("summary");
+        return;
+      }
+      if (s.selectedCardIndex != null) {
+        s.selectCard(null);
+        return;
+      }
+      s.closeDeck();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [mode]);
 
   const notify = (msg: string) => setToast(msg);
 
@@ -368,7 +390,7 @@ export function ForcesDeck({
       const slot = cat?.slots?.find((s) => s.role === role);
       adjustStock(resId, Math.max(1, slot?.count ?? 1));
     }
-    commitComposition(next, `Утиль · +${refund} мет.`);
+        commitComposition(next, `Лом · +${refund} мет.`);
     selectCard(null);
     setStripMode("summary");
   };
@@ -462,9 +484,7 @@ export function ForcesDeck({
     if (zone === "equip") {
       if (!canOutfitUnit(cat, deckKind)) {
         notify(
-          deckKind === "legion"
-            ? "Пехоте оснащение не нужно"
-            : "Нет модульных слотов",
+          "Нет слотов оснащения",
         );
         return;
       }
@@ -489,7 +509,11 @@ export function ForcesDeck({
         selectCard(null);
         return;
       }
-        commitComposition(
+      if (merged.reason.includes("оснащение")) {
+        notify(merged.reason);
+        return;
+      }
+      commitComposition(
         reorderComposition(comp, index, result.mergeIndex),
         "Порядок развёртывания изменён",
       );
@@ -640,6 +664,11 @@ export function ForcesDeck({
             )}
           </div>
         </header>
+
+        <p className="hint forces-drag-hint">
+          Перетащите карту вниз: ремонт, лом, резерв, оснащение. Или кнопки под
+          выбранной картой.
+        </p>
 
         <ForceReadinessBar
           preview={deckBattlePreview(composition)}
@@ -829,9 +858,9 @@ export function ForcesDeck({
     >
       <header className="forces-list-head">
         <div>
-          <h2>СИЛЫ ИМПЕРИИ</h2>
+          <h2>Колоды</h2>
           <p className="hint forces-list-tagline">
-            Loadout к бою · порядок карт = рука · ранг из боёв · приказы на карте
+            Состав к бою · порядок карт = рука · ранг из боёв · приказы на карте
           </p>
         </div>
         <div className="forces-list-side">
@@ -847,10 +876,12 @@ export function ForcesDeck({
         </div>
       </header>
 
-      <div className="forces-tab-switch" role="tablist">
+      <div className="forces-tab-switch" role="tablist" aria-label="Тип сил">
         <button
           type="button"
           role="tab"
+          id="forces-tab-fleets"
+          aria-controls="forces-panel-fleets"
           aria-selected={tab === "fleets"}
           className={tab === "fleets" ? "on" : ""}
           onClick={() => setTab("fleets")}
@@ -860,6 +891,8 @@ export function ForcesDeck({
         <button
           type="button"
           role="tab"
+          id="forces-tab-legions"
+          aria-controls="forces-panel-legions"
           aria-selected={tab === "legions"}
           className={tab === "legions" ? "on" : ""}
           onClick={() => setTab("legions")}
@@ -868,7 +901,14 @@ export function ForcesDeck({
         </button>
       </div>
 
-      <div className="forces-covers-grid">
+      <div
+        className="forces-covers-grid"
+        id={tab === "fleets" ? "forces-panel-fleets" : "forces-panel-legions"}
+        role="tabpanel"
+        aria-labelledby={
+          tab === "fleets" ? "forces-tab-fleets" : "forces-tab-legions"
+        }
+      >
         {tab === "fleets" && fleets.length === 0 && (
           <div className="hq-empty">
             <span className="hq-empty-reveal" aria-hidden />

@@ -12,6 +12,8 @@ import {
   validateAssets,
   publicOffer,
   newId,
+  affordResources,
+  duplicateAssetError,
 } from "./helpers.mjs";
 
 /**
@@ -41,6 +43,10 @@ export function createDiploOffer({
   const treatyItems = [...giveItems, ...wantItems].filter(
     (i) => i.kind === "treaty",
   );
+  const treatyTypes = new Set(treatyItems.map((t) => t.treaty));
+  if (treatyTypes.size > 1) {
+    return { ok: false, error: "в сделке только один вид договора" };
+  }
   for (const t of treatyItems) {
     if (!MUTUAL_TREATIES.has(t.treaty)) {
       return {
@@ -53,6 +59,11 @@ export function createDiploOffer({
     }
   }
 
+  const giveDup = duplicateAssetError(giveItems);
+  if (!giveDup.ok) return giveDup;
+  const wantDup = duplicateAssetError(wantItems);
+  if (!wantDup.ok) return wantDup;
+
   // Escrow giver resources immediately so they can't double-spend.
   const ledger = readLedger();
   ensureFactionEco(ledger, fromFactionId);
@@ -61,16 +72,11 @@ export function createDiploOffer({
     const assetCheck = validateAssets(world, fromFactionId, giveItems, ledger);
     if (!assetCheck.ok) return assetCheck;
   }
-  for (const item of giveItems) {
-    if (item.kind !== "resource") continue;
-    const have = ledger.factions[fromFactionId].stocks[item.currencyId] ?? 0;
-    if (have < item.amount) {
-      return {
-        ok: false,
-        error: `недостаточно ${item.currencyId} (есть ${have})`,
-      };
-    }
-  }
+  const afford = affordResources(
+    ledger.factions[fromFactionId]?.stocks,
+    giveItems,
+  );
+  if (!afford.ok) return afford;
   for (const item of giveItems) {
     if (item.kind !== "resource") continue;
     adjustStock(ledger, fromFactionId, item.currencyId, -item.amount, {

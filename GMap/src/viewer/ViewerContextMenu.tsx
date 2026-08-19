@@ -63,7 +63,7 @@ export function ViewerContextMenu({
   onScoutReveal,
   scoutApCost = 1,
   reservedAp = 0,
-  apMax = 15,
+  apMax,
   onBoard,
 }: Props) {
   if (!menu) return null;
@@ -265,16 +265,21 @@ export function ViewerContextMenu({
     items.push({
       type: "action",
       label: "Провалиться в систему",
-      run: () => onOpenSystem(system.id),
+      disabled: !visibleSet.has(system.id),
+      run: () => {
+        if (visibleSet.has(system.id)) onOpenSystem(system.id);
+      },
     });
     items.push({
       type: "action",
       label: "Выбрать на карте",
       run: () => onSelectSystem(system.id),
     });
-    if (onScoutReveal) {
+    if (onScoutReveal && !visibleSet.has(system.id)) {
       const scoutBlocked =
-        scoutApCost > 0 && reservedAp + scoutApCost > apMax;
+        scoutApCost > 0 &&
+        Number.isFinite(apMax) &&
+        reservedAp + scoutApCost > (apMax as number);
       items.push({
         type: "action",
         label: scoutBlocked

@@ -354,8 +354,7 @@ export function BattleSimulator() {
       <aside className="studio-sidebar">
         <div className="studio-sidebar-header">
           <div>
-            <p className="panel-kicker">GM · Simulator</p>
-            <h3>Боевой полигон & Тир</h3>
+            <h3>Полигон</h3>
           </div>
         </div>
 

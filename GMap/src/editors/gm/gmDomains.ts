@@ -1,6 +1,6 @@
 /**
- * Live GM domain registry — F1–F9 workbench slots.
- * Inbox (F1) focuses the right dock; other domains open one workbench.
+ * Live GM domain registry — F1–F4 and F6–F9 workbench slots.
+ * Bare F5 is left to the browser (refresh). Inbox focuses the right dock.
  */
 import type { GmLiveDomainId } from "../../state/types";
 
@@ -10,11 +10,17 @@ export type GmDomainDef = {
   id: GmLiveDomainId;
   label: string;
   hint: string;
-  /** Keyboard digit after F, 1–9 */
-  hotkey: number;
+  /** Keyboard digit after F. Null = no F-key (never steal browser F5). */
+  hotkey: number | null;
   /** Opens FloatingPanel workbench (false = dock/overlay only). */
   workbench: boolean;
 };
+
+export function domainHotkeyLabel(
+  hotkey: number | null | undefined,
+): string | null {
+  return hotkey == null ? null : `F${hotkey}`;
+}
 
 export const GM_LIVE_DOMAINS: GmDomainDef[] = [
   {
@@ -33,8 +39,8 @@ export const GM_LIVE_DOMAINS: GmDomainDef[] = [
   },
   {
     id: "science",
-    label: "Наука",
-    hint: "Технологии, очередь, алхимия",
+    label: "Выдача техов",
+    hint: "Выдать технологии и рецепты активной державе",
     hotkey: 3,
     workbench: true,
   },
@@ -47,9 +53,9 @@ export const GM_LIVE_DOMAINS: GmDomainDef[] = [
   },
   {
     id: "diplo",
-    label: "Дипло · бой",
-    hint: "Отношения, офферы, engagements",
-    hotkey: 5,
+    label: "Бои",
+    hint: "Столкновения на столе. Дипломатия — меню «Стол…»",
+    hotkey: null,
     workbench: true,
   },
   {
@@ -61,8 +67,8 @@ export const GM_LIVE_DOMAINS: GmDomainDef[] = [
   },
   {
     id: "quests",
-    label: "Квесты",
-    hint: "Yearly, статусы, Attention",
+    label: "Сессия",
+    hint: "Квесты, NPC, дипло, кубики",
     hotkey: 7,
     workbench: true,
   },
@@ -83,7 +89,7 @@ export const GM_LIVE_DOMAINS: GmDomainDef[] = [
 ];
 
 export function domainByHotkey(n: number): GmDomainDef | undefined {
-  return GM_LIVE_DOMAINS.find((d) => d.hotkey === n);
+  return GM_LIVE_DOMAINS.find((d) => d.hotkey != null && d.hotkey === n);
 }
 
 export function domainById(id: GmLiveDomainId): GmDomainDef | undefined {

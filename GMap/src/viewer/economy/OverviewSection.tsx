@@ -212,6 +212,7 @@ export function OverviewSection({
     if (c.status === "deficit") {
       const metalStock = eco.stocks?.[BUILD_METAL.id] ?? 0;
       const canBuy = metalStock >= 5;
+      const buyLabel = `Обменять 5 ${BUILD_METAL.label}`;
       const sig =
         systemSignals.find(
           (s) => s.category === c.letter && s.systemId,
@@ -249,7 +250,7 @@ export function OverviewSection({
           canBuy && onConvert
             ? () => onConvert(BUILD_METAL.id, c.id, 5)
             : undefined,
-        actionSecondaryLabel: canBuy ? "Купить на бирже (5M)" : undefined,
+            actionSecondaryLabel: canBuy ? buyLabel : undefined,
       });
     }
   }
@@ -442,7 +443,7 @@ export function OverviewSection({
 
       <details className="eco-command__analytics">
         <summary>Аналитика · RoleScore · гражданские пути</summary>
-        <div className="eco-rolescore" aria-label="RoleScore пилот">
+        <div className="eco-rolescore" aria-label="RoleScore">
           <header className="eco-chart-block__head">
             <h4>Специализация (RoleScore)</h4>
             <span className="hint">накоплено за игру · не тратится</span>

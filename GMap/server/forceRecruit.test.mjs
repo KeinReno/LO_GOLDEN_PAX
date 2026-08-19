@@ -16,6 +16,7 @@ import {
   applyForceDisband,
 } from "./forceRecruit.mjs";
 import { applySystemAction } from "./systemActions.mjs";
+import { getContent } from "./contentLoader.mjs";
 
 const content = {
   economy_balance: { forces: { mobilizationRate: 0.3 } },
@@ -106,6 +107,168 @@ describe("canRaiseUnit", () => {
     assert.equal(
       canRaiseUnit(barracks, planet, gated, "unit", "fA", { unlockedProperties: ["line_infantry"] })
         .ok,
+      true,
+    );
+  });
+
+  it("rejects another faction unique hull even with a yard", () => {
+    const unique = { id: "ship.belator_dread", name: "Громоносец", faction: "belator" };
+    const yardFor = (factionId) => ({
+      ownerFactionId: factionId,
+      planets: [
+        {
+          ownerFactionId: factionId,
+          surfaceBuildings: [],
+          orbitalBuildings: [{ kind: "shipyard" }],
+        },
+      ],
+    });
+    assert.equal(
+      canRaiseUnit(yardFor("fA"), { ownerFactionId: "fA" }, unique, "ship", "fA").ok,
+      false,
+    );
+    assert.equal(
+      canRaiseUnit(
+        yardFor("belator"),
+        { ownerFactionId: "belator" },
+        unique,
+        "ship",
+        "belator",
+      ).ok,
+      true,
+    );
+    assert.equal(
+      canRaiseUnit(
+        yardFor("faction_belator"),
+        { ownerFactionId: "faction_belator" },
+        unique,
+        "ship",
+        "faction_belator",
+      ).ok,
+      true,
+    );
+  });
+
+  it("Black Iron needs the forges keel, not a generic dreadnought keel", () => {
+    const hull = getContent().ships["ship.black_iron"];
+    assert.deepEqual(hull.requireProperties, ["black_iron_keel"]);
+    const forges = getContent().technologies["tech.black_iron_forges"];
+    assert.ok(
+      forges.effects?.some(
+        (e) => e.effect === "unlock_property" && e.args?.property === "black_iron_keel",
+      ),
+    );
+    const yard = {
+      ownerFactionId: "fA",
+      planets: [
+        {
+          ownerFactionId: "fA",
+          surfaceBuildings: [],
+          orbitalBuildings: [{ kind: "shipyard" }],
+        },
+      ],
+    };
+    const planet = { ownerFactionId: "fA" };
+    assert.equal(canRaiseUnit(yard, planet, hull, "ship", "fA").ok, false);
+    assert.equal(
+      canRaiseUnit(yard, planet, hull, "ship", "fA", {
+        unlockedProperties: ["dreadnought_keel"],
+      }).ok,
+      false,
+    );
+    assert.equal(
+      canRaiseUnit(yard, planet, hull, "ship", "fA", {
+        unlockedProperties: ["black_iron_keel"],
+      }).ok,
+      true,
+    );
+  });
+
+  it("battleship is not opened by cruiser ribs", () => {
+    const c = getContent();
+    const cruiser = c.ships["ship.cruiser"];
+    const battleship = c.ships["ship.battleship"];
+    assert.deepEqual(cruiser.requireProperties, ["cruiser_ribs"]);
+    assert.deepEqual(battleship.requireProperties, ["battleship_keel"]);
+    const keel = c.technologies["tech.military.battleship_keel"];
+    assert.ok(
+      keel.effects?.some(
+        (e) => e.effect === "unlock_property" && e.args?.property === "battleship_keel",
+      ),
+    );
+    assert.deepEqual(c.technologies["tech.military.dreadnought_keel"]?.prerequisites, [
+      "tech.military.battleship_keel",
+    ]);
+    const yard = {
+      ownerFactionId: "fA",
+      planets: [
+        {
+          ownerFactionId: "fA",
+          surfaceBuildings: [],
+          orbitalBuildings: [{ kind: "shipyard" }],
+        },
+      ],
+    };
+    const planet = { ownerFactionId: "fA" };
+    assert.equal(
+      canRaiseUnit(yard, planet, battleship, "ship", "fA", {
+        unlockedProperties: ["cruiser_ribs"],
+      }).ok,
+      false,
+    );
+    assert.equal(
+      canRaiseUnit(yard, planet, cruiser, "ship", "fA", {
+        unlockedProperties: ["cruiser_ribs"],
+      }).ok,
+      true,
+    );
+    assert.equal(
+      canRaiseUnit(yard, planet, battleship, "ship", "fA", {
+        unlockedProperties: ["battleship_keel"],
+      }).ok,
+      true,
+    );
+  });
+
+  it("heavy legion is not opened by line infantry", () => {
+    const c = getContent();
+    const lineDef = c.units["unit.generic_line"];
+    const heavy = c.units["unit.heavy_legion"];
+    assert.deepEqual(lineDef.requireProperties, ["line_infantry"]);
+    assert.deepEqual(heavy.requireProperties, ["heavy_legion"]);
+    const tech = c.technologies["tech.military.heavy_legion"];
+    assert.ok(
+      tech.effects?.some(
+        (e) => e.effect === "unlock_property" && e.args?.property === "heavy_legion",
+      ),
+    );
+    const barracks = {
+      ownerFactionId: "fA",
+      planets: [
+        {
+          ownerFactionId: "fA",
+          surfaceBuildings: [{ kind: "barracks" }],
+          orbitalBuildings: [],
+        },
+      ],
+    };
+    const planet = { ownerFactionId: "fA" };
+    assert.equal(
+      canRaiseUnit(barracks, planet, heavy, "unit", "fA", {
+        unlockedProperties: ["line_infantry"],
+      }).ok,
+      false,
+    );
+    assert.equal(
+      canRaiseUnit(barracks, planet, lineDef, "unit", "fA", {
+        unlockedProperties: ["line_infantry"],
+      }).ok,
+      true,
+    );
+    assert.equal(
+      canRaiseUnit(barracks, planet, heavy, "unit", "fA", {
+        unlockedProperties: ["heavy_legion"],
+      }).ok,
       true,
     );
   });

@@ -73,14 +73,7 @@ export function GmAttentionStrip({
     onOpenDomain(item.domain);
   };
 
-  if (items.length === 0) {
-    return (
-      <div className="gm-attention gm-attention--empty" role="status">
-        <span className="gm-attention-kicker">Attention</span>
-        <span className="gm-attention-idle">Стол спокоен</span>
-      </div>
-    );
-  }
+  if (items.length === 0) return null;
 
   return (
     <div

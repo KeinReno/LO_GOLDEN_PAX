@@ -19,6 +19,7 @@ import {
   blocKindLabel,
 } from "../state/courtGovernance";
 import { DragCard } from "../ui/DragCard";
+import { npcPostingLabel } from "../state/displayLabels";
 
 const STATUS_LABEL: Record<string, string> = {
   active: "на месте",
@@ -26,13 +27,6 @@ const STATUS_LABEL: Record<string, string> = {
   busy: "занят",
   hidden: "скрыт",
   dead: "погиб",
-};
-
-const POSTING_LABEL: Record<string, string> = {
-  court: "при дворе",
-  governor: "наместник",
-  commander: "командующий",
-  admiral: "флотоводец",
 };
 
 function questsForNpc(quests: Quest[] | undefined, npcId: string): Quest[] {
@@ -292,7 +286,7 @@ export function NpcCard({
       subtitle={[
         raceName,
         seatPortfolio ? `Советник · ${seatPortfolio}` : npc.title,
-        POSTING_LABEL[postingKind] || postingKind,
+        npcPostingLabel(postingKind),
         STATUS_LABEL[status] || status,
       ]
         .filter(Boolean)
@@ -373,7 +367,7 @@ export function NpcCard({
 
       {!atCourt && (
         <p className="npc-posting-line">
-          <strong>{POSTING_LABEL[postingKind]}</strong>
+          <strong>{npcPostingLabel(postingKind)}</strong>
           {postingTargetLabel ? (
             <span className="hint"> · {postingTargetLabel}</span>
           ) : null}

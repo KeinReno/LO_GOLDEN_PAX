@@ -52,6 +52,19 @@ export function isCivicUnlockGranted(eco, unlock) {
   return false;
 }
 
+/** Skip HUD/tick for unlocks that have no real building or law effects. */
+export function isPlayableCivicUnlock(unlock, content) {
+  if (!unlock?.id || !unlock.kind) return false;
+  const c = content || getContent();
+  if (unlock.kind === "law") {
+    return Array.isArray(unlock.effects) && unlock.effects.length > 0;
+  }
+  if (unlock.kind === "building") {
+    return Boolean(c.buildings?.[unlock.id]);
+  }
+  return false;
+}
+
 /** Apply threshold unlocks for one civic path (idempotent). Returns journal entries. */
 export function applyCivicPathUnlocks(eco, pathKey, content) {
   const c = content || getContent();
@@ -63,6 +76,7 @@ export function applyCivicPathUnlocks(eco, pathKey, content) {
   if (!Array.isArray(eco.unlockedProperties)) eco.unlockedProperties = [];
 
   for (const unlock of pathDef.unlocks || []) {
+    if (!isPlayableCivicUnlock(unlock, c)) continue;
     const need = civicThresholdForUnlock(pathKey, unlock.id, c);
     if (need > 0 && score < need) continue;
     if (isCivicUnlockGranted(eco, unlock)) continue;
@@ -133,20 +147,22 @@ export function civicStatusPayload(eco, content) {
   ensureCivicScores(eco);
   return listCivicPathDefs(c).map((p) => {
     const score = civicScoreForPath(eco, p.id);
-    const unlocks = (p.unlocks || []).map((u) => {
-      const threshold = civicThresholdForUnlock(p.id, u.id, c);
-      const granted = isCivicUnlockGranted(eco, u);
-      return {
-        id: u.id,
-        kind: u.kind,
-        name: u.name,
-        threshold,
-        granted,
-        ready: !granted && threshold > 0 && score >= threshold,
-        progress:
-          threshold > 0 ? Math.min(1, score / threshold) : granted ? 1 : 0,
-      };
-    });
+    const unlocks = (p.unlocks || [])
+      .filter((u) => isPlayableCivicUnlock(u, c))
+      .map((u) => {
+        const threshold = civicThresholdForUnlock(p.id, u.id, c);
+        const granted = isCivicUnlockGranted(eco, u);
+        return {
+          id: u.id,
+          kind: u.kind,
+          name: u.name,
+          threshold,
+          granted,
+          ready: !granted && threshold > 0 && score >= threshold,
+          progress:
+            threshold > 0 ? Math.min(1, score / threshold) : granted ? 1 : 0,
+        };
+      });
     const nextThreshold = unlocks
       .filter((u) => !u.granted && u.threshold > 0)
       .map((u) => u.threshold)

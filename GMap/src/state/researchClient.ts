@@ -1,4 +1,8 @@
-import { playerAuthHeaders, rememberPlayerTokenFromPayload } from "./playerAuth";
+import {
+  playerAuthHeaders,
+  playerJsonBody,
+  rememberPlayerTokenFromPayload,
+} from "./playerAuth";
 import type { ViewerPayload } from "./types";
 
 type JsonErr = { error?: string };
@@ -18,7 +22,7 @@ async function postJson<T>(
     const res = await fetch(url, {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body)),
     });
     const data = (await res.json()) as T & JsonErr;
     rememberPlayerTokenFromPayload(data as { playerToken?: string | null });

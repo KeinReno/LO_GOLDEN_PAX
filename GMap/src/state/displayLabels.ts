@@ -144,6 +144,13 @@ export const NPC_ROLE_LABELS: Record<string, string> = {
   other: "Советник",
 };
 
+export const NPC_POSTING_LABELS: Record<string, string> = {
+  court: "при дворе",
+  governor: "наместник",
+  commander: "командующий",
+  admiral: "флотоводец",
+};
+
 /** Fallback if content portfolios aren't loaded yet. */
 export const COUNCIL_PORTFOLIO_LABELS: Record<string, string> = {
   military: "Военное дело",
@@ -186,6 +193,11 @@ export function systemKindLabel(kind: string | undefined): string {
 export function npcRoleLabel(role: string | undefined): string {
   if (!role) return "—";
   return NPC_ROLE_LABELS[role] ?? role;
+}
+
+export function npcPostingLabel(kind: string | undefined): string {
+  if (!kind) return NPC_POSTING_LABELS.court;
+  return NPC_POSTING_LABELS[kind] ?? kind;
 }
 
 export function councilPortfolioLabel(id: string | undefined): string {

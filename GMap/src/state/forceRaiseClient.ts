@@ -1,6 +1,12 @@
 import { getCachedContent } from "./contentCatalog";
 import { produceForceCostClient } from "./forceEconomy";
-import { playerAuthHeaders, rememberPlayerTokenFromPayload } from "./playerAuth";
+import { factionContentTag } from "./buildingAccess";
+import { factionHasProperty, type TechEcoSlice } from "./techGate";
+import {
+  playerAuthHeaders,
+  playerJsonBody,
+  rememberPlayerTokenFromPayload,
+} from "./playerAuth";
 import type { ViewerPayload } from "./types";
 
 export type ForceRecruitSession = {
@@ -19,8 +25,30 @@ export type RaiseDef = {
   tier?: number;
   faction?: string;
   raisableWithoutBuilding?: boolean;
+  requireProperties?: string[];
   cost?: Record<string, number>;
 };
+
+export function factionMayRaiseDef(
+  def: { faction?: string },
+  factionId: string,
+): boolean {
+  const tag = factionContentTag(factionId);
+  const fac = def.faction;
+  return !fac || fac === "generic" || fac === tag || fac === factionId;
+}
+
+export function raisePropertyGate(
+  def: { requireProperties?: string[] },
+  eco?: TechEcoSlice,
+): { ok: boolean; error?: string } {
+  for (const prop of def.requireProperties || []) {
+    if (!factionHasProperty(eco, prop)) {
+      return { ok: false, error: `Нужно свойство: ${prop}` };
+    }
+  }
+  return { ok: true };
+}
 
 type JsonErr = { error?: string };
 
@@ -58,18 +86,16 @@ export function listRaiseDefs(
   gates: { barracks: boolean; shipyard: boolean },
 ): RaiseDef[] {
   const c = getCachedContent();
-  const factionOk = (d: { faction?: string }) =>
-    !d.faction || d.faction === "generic" || d.faction === factionId;
   const out: RaiseDef[] = [];
   for (const u of Object.values(c?.units ?? {})) {
-    if (!factionOk(u)) continue;
+    if (!factionMayRaiseDef(u, factionId)) continue;
     if (u.raisableWithoutBuilding || gates.barracks) {
       out.push({ ...u, kind: "unit" });
     }
   }
   if (gates.shipyard) {
     for (const s of Object.values(c?.ships ?? {})) {
-      if (!factionOk(s)) continue;
+      if (!factionMayRaiseDef(s, factionId)) continue;
       out.push({ ...s, kind: "ship" });
     }
   }
@@ -142,7 +168,7 @@ async function postJson<T>(
     const res = await fetch(url, {
       method: "POST",
       headers: playerAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
+      body: JSON.stringify(playerJsonBody(body)),
     });
     const data = (await res.json()) as T & JsonErr;
     rememberPlayerTokenFromPayload(data as { playerToken?: string | null });

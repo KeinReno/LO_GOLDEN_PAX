@@ -10,6 +10,7 @@ import {
   levelFromXp,
 } from "./combatResolve.mjs";
 import { getContent } from "./contentLoader.mjs";
+import { lookupMapResource } from "./flowEngine.mjs";
 import { readLedger, writeLedger, adjustStock, ensureFactionEco } from "./ledger.mjs";
 import { bumpSystemIntel } from "./intel.mjs";
 import {
@@ -2635,7 +2636,7 @@ export function buildSalvageOffer(world, eng, winnerId, loserId, content = getCo
     return { status: "none", options: [] };
   }
 
-  const resources = content.map_resources || {};
+  const resources = { ...(content.map_resources || {}), ...(content.modules || {}) };
   const options = [];
   const seen = new Set();
   const pushOpt = (resourceId, role, source) => {
@@ -2748,7 +2749,7 @@ export function claimCardBattleSalvage(world, eng, factionId, pick = {}, content
   if ((group.filledSlots || {})[option.role]) {
     return { ok: false, error: "слот уже занят" };
   }
-  const res = content.map_resources?.[option.resourceId];
+  const res = lookupMapResource(content, option.resourceId);
   if (!res || !resourceMatchesRequire(res, slot.require)) {
     return { ok: false, error: "модуль не подходит" };
   }

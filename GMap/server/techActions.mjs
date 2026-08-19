@@ -8,6 +8,8 @@
 export {
   DEFAULT_TECH_TIERS,
   resolveTechDef,
+  isLiveResearchDef,
+  pruneNonLiveUnlockedTechs,
   factionHasProperty,
   factionRaceSharePercent,
   collectTechModifierEffects,
@@ -16,6 +18,8 @@ export {
   recomputeUnlocksFromTechs,
   factionMaxTier,
   canBuildWithTech,
+  collectRequiredProperties,
+  collectBuildingUnlockEffects,
 } from "./techActions/helpers.mjs";
 export {
   RESEARCH_QUEUE_MAX,

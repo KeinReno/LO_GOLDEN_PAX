@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Crown, UserRound } from "lucide-react";
 import type {
   FactionNpc,
@@ -15,16 +15,13 @@ import {
   resolveSeatTitle,
   systemHasGovernor,
 } from "../state/courtGovernance";
+import { npcPostingLabel, npcRoleLabel } from "../state/displayLabels";
 import { DropZone } from "../ui/DropZone";
 import { DragCard } from "../ui/DragCard";
-import {
-  useMagnetic,
-  usePointerParallax,
-  useRipple,
-  useSpotlight,
-  useTilt,
-} from "../ui/aceternityFx";
+import { useRipple, useSpotlight } from "../ui/aceternityFx";
 import { NpcCard } from "./NpcCard";
+import { ConfirmModal } from "./shared/ConfirmModal";
+import { isInputFocused } from "./hooks/isInputFocused";
 import {
   CourtAttentionStrip,
   CourtFieldView,
@@ -35,6 +32,7 @@ import {
   courtTabById,
   type CourtTabId,
 } from "./court";
+import { courtSeatOffset } from "./court/courtSeatLayout";
 
 export type CourtPanelProps = {
   payload: ViewerPayload;
@@ -147,17 +145,9 @@ const FALLBACK_SEATS: SeatDef[] = [
   },
 ];
 
-const ROLE_LABEL: Record<string, string> = {
-  ruler: "правитель",
-  priest: "жрец",
-  strategist: "стратег",
-  architect: "архитектор",
-  agent: "агент",
-  other: "советник",
-};
-
 function seatStyle(angleDeg: number): CSSProperties {
-  return { ["--seat-angle" as string]: `${angleDeg}deg` };
+  const { left, top } = courtSeatOffset(angleDeg);
+  return { left: `${left}%`, top: `${top}%` };
 }
 
 function isRulerSeat(
@@ -283,9 +273,9 @@ function NpcToken({
     <DragCard
       cardId={npc.id}
       title={npc.name}
-      subtitle={npc.currentTask ? "в работе" : npc.title}
+      subtitle={npc.currentTask ? "в работе" : undefined}
       accent={bloc?.color || accent}
-      tilt
+      tilt={false}
       className={`court-seat-drag${selected ? " is-selected" : ""}${
         dimmed ? " is-dimmed" : ""
       }`}
@@ -341,15 +331,13 @@ function EmptySeatButton({
   disabled?: boolean;
   onClick: () => void;
 }) {
-  const mag = useMagnetic(0.35, 100);
   const rip = useRipple();
   return (
     <button
       type="button"
-      className="court-seat__empty fx-magnetic fx-moving-border"
+      className="court-seat__empty fx-moving-border"
       onClick={onClick}
       disabled={disabled}
-      {...mag.bind}
       {...rip.bind}
     >
       <UserRound size={18} aria-hidden />
@@ -376,6 +364,22 @@ export function CourtPanel({
   const [taskBusy, setTaskBusy] = useState(false);
   const [selectedNpcId, setSelectedNpcId] = useState<string | null>(null);
   const [targetSeatId, setTargetSeatId] = useState<string | null>(null);
+  const [fieldTarget, setFieldTarget] = useState<{
+    kind: "governor" | "commander" | "admiral";
+    id: string;
+  } | null>(null);
+  const [nationTarget, setNationTarget] = useState<string | null>(null);
+  const [houseTarget, setHouseTarget] = useState<string | null>(null);
+  const [pendingPost, setPendingPost] = useState<{
+    npcId: string;
+    opts: {
+      kind: "governor" | "commander" | "admiral";
+      systemId?: string;
+      legionId?: string;
+      fleetId?: string;
+      forceId?: string;
+    };
+  } | null>(null);
   const [hoverSeatId, setHoverSeatId] = useState<string | null>(null);
   const [courtTab, setCourtTab] = useState<CourtTabId>("council");
   const activeTab = courtTabById(courtTab);
@@ -386,8 +390,6 @@ export function CourtPanel({
   const accent = factionColor ?? fac?.color;
 
   const tableSpot = useSpotlight();
-  const tableTilt = useTilt(5);
-  const parallax = usePointerParallax(8);
   const dossierSpot = useSpotlight();
 
   const portfolios = useMemo(
@@ -528,25 +530,21 @@ export function CourtPanel({
   );
 
   const ungovernedAlerts = useMemo(() => {
-    return ownedSystems
-      .filter(
-        (s) =>
-          (s.planets ?? []).some((p) => (p.population || 0) > 0) &&
-          !systemHasGovernor(npcs, s.id),
-      )
-      .slice(0, 6);
+    return ownedSystems.filter(
+      (s) =>
+        (s.planets ?? []).some((p) => (p.population || 0) > 0) &&
+        !systemHasGovernor(npcs, s.id),
+    );
   }, [ownedSystems, npcs]);
 
   const vacantHouseAlerts = useMemo(() => {
-    return (fac?.internalBlocs ?? [])
-      .filter((b) => {
-        const needs =
-          b.kind === "house" ||
-          b.kind === "church" ||
-          b.kind === "race_caucus";
-        return needs && !b.leaderNpcId;
-      })
-      .slice(0, 6);
+    return (fac?.internalBlocs ?? []).filter((b) => {
+      const needs =
+        b.kind === "house" ||
+        b.kind === "church" ||
+        b.kind === "race_caucus";
+      return needs && !b.leaderNpcId;
+    });
   }, [fac?.internalBlocs]);
 
   const attentionItems = useMemo(
@@ -595,19 +593,43 @@ export function CourtPanel({
 
   const focusPoolSeat = (seatId: string | null) => {
     setCourtTab("council");
+    setFieldTarget(null);
+    setNationTarget(null);
+    setHouseTarget(null);
     setTargetSeatId(seatId);
   };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key !== "Escape") return;
+      if (isInputFocused(e.target)) return;
+      if (pendingPost) return;
+      if (
+        targetSeatId ||
+        fieldTarget ||
+        nationTarget ||
+        houseTarget ||
+        selectedNpcId
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
         setTargetSeatId(null);
+        setFieldTarget(null);
+        setNationTarget(null);
+        setHouseTarget(null);
         setSelectedNpcId(null);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [
+    pendingPost,
+    targetSeatId,
+    fieldTarget,
+    nationTarget,
+    houseTarget,
+    selectedNpcId,
+  ]);
 
   const withBusy = async (fn: () => Promise<boolean | void>) => {
     if (taskBusy) return false;
@@ -665,6 +687,29 @@ export function CourtPanel({
       return ok;
     });
 
+  const requestPosting = (
+    npcId: string,
+    opts: {
+      kind: "governor" | "commander" | "admiral";
+      systemId?: string;
+      legionId?: string;
+      fleetId?: string;
+      forceId?: string;
+    },
+  ) => {
+    const npc = npcs.find((n) => n.id === npcId);
+    if (
+      npc?.councilSeat &&
+      !isRulerSeat(npc.councilSeat) &&
+      !npc.isPlayerRuler &&
+      npcId !== fac?.rulerNpcId
+    ) {
+      setPendingPost({ npcId, opts });
+      return;
+    }
+    void withBusy(async () => onAssignPosting?.(npcId, opts));
+  };
+
   const onTokenDrop = (npcId: string, zoneId: string) => {
     if (zoneId === "council:pool") {
       void unseatNpc(npcId);
@@ -678,31 +723,25 @@ export function CourtPanel({
     }
     if (zoneId.startsWith("field:governor:")) {
       const systemId = zoneId.slice("field:governor:".length);
-      void withBusy(async () =>
-        onAssignPosting?.(npcId, { kind: "governor", systemId }),
-      );
+      requestPosting(npcId, { kind: "governor", systemId });
       return;
     }
     if (zoneId.startsWith("field:commander:")) {
       const legionId = zoneId.slice("field:commander:".length);
-      void withBusy(async () =>
-        onAssignPosting?.(npcId, {
-          kind: "commander",
-          legionId,
-          forceId: legionId,
-        }),
-      );
+      requestPosting(npcId, {
+        kind: "commander",
+        legionId,
+        forceId: legionId,
+      });
       return;
     }
     if (zoneId.startsWith("field:admiral:")) {
       const fleetId = zoneId.slice("field:admiral:".length);
-      void withBusy(async () =>
-        onAssignPosting?.(npcId, {
-          kind: "admiral",
-          fleetId,
-          forceId: fleetId,
-        }),
-      );
+      requestPosting(npcId, {
+        kind: "admiral",
+        fleetId,
+        forceId: fleetId,
+      });
       return;
     }
     if (zoneId.startsWith("house:")) {
@@ -722,8 +761,8 @@ export function CourtPanel({
     <div
       className={`court-panel court-panel--table court-panel--workspace court-panel--${layout} court-panel--tab-${courtTab}${
         compact ? " court-panel--compact" : ""
-      }`}
-      aria-label="Двор"
+      }${layout === "fill" ? " court-panel--hosted" : ""}`}
+      aria-label="Рабочее место двора"
       style={
         accent
           ? ({
@@ -737,19 +776,26 @@ export function CourtPanel({
 
       <header className="court-panel-head">
         <div className="court-panel-head__main">
-          <p className="dossier-kicker">Держава · персонал</p>
-          <h2>
-            Двор <FlipHint word={activeTab.echo} />
-          </h2>
+          {layout === "fill" || compact ? null : (
+            <>
+              <p className="dossier-kicker">Держава · персонал</p>
+              <h2>
+                Двор <FlipHint word={activeTab.echo} />
+              </h2>
+            </>
+          )}
           <p className="hint">
-            ход {payload.world.meta.turn} · {activeTab.hint}
+            {activeTab.hint}
             {rulerNpc ? ` · трон: ${rulerNpc.name}` : ""}
           </p>
           <CourtNavTabs
             value={courtTab}
             onChange={(id) => {
               setCourtTab(id);
-              if (id !== "council") setTargetSeatId(null);
+              setTargetSeatId(null);
+              setFieldTarget(null);
+              setNationTarget(null);
+              setHouseTarget(null);
             }}
             badges={tabBadges}
           />
@@ -766,8 +812,7 @@ export function CourtPanel({
       </header>
 
       <>
-        <LayoutGroup>
-          <div className="court-workspace">
+        <div className="court-workspace">
             <div className="court-workspace__stage">
               <AnimatePresence mode="wait">
                 {courtTab === "council" ? (
@@ -776,31 +821,24 @@ export function CourtPanel({
                     className="court-table-stage court-table-stage--solo"
                     aria-label="Круглый стол"
                     role="tabpanel"
+                    id="court-panel-council"
                     aria-labelledby="court-tab-council"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.22 }}
                   >
-                    <div
-                      ref={parallax.ref}
-                      className="court-round-wrap"
-                      {...parallax.bind}
-                      style={parallax.style}
-                    >
+                    <div className="court-round-wrap">
                       <div
-                        className={`court-round-table fx-spotlight fx-tilt${
+                        className={`court-round-table fx-spotlight${
                           bySeat.size > 0 ? " fx-glow" : ""
                         }`}
                         {...tableSpot.bind}
-                        {...tableTilt.bind}
                         style={
                           {
                             ["--fx-spot-color" as string]:
                               accent || "var(--accent)",
                             ["--fx-spot-size" as string]: "280px",
-                            transform:
-                              "translate(var(--par-x), var(--par-y)) perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))",
                           } as CSSProperties
                         }
                       >
@@ -912,12 +950,12 @@ export function CourtPanel({
                                   contentLayout="stack"
                                 >
                                   <p className="court-seat__role">
-                                    {seat.label}
+                                    {portfolioLabel || seat.label}
                                   </p>
                                   {onSetSeatPortfolio && (
                                     <label className="court-seat__portfolio-field">
                                       <span className="sr-only">
-                                        Роль советника
+                                        Ведомство слота
                                       </span>
                                       <select
                                         className="court-seat__portfolio-select"
@@ -953,7 +991,7 @@ export function CourtPanel({
                                       </select>
                                     </label>
                                   )}
-                                  <AnimatePresence mode="popLayout">
+                                  <AnimatePresence>
                                     {occupant ? (
                                       <motion.div
                                         key={occupant.id}
@@ -1011,8 +1049,8 @@ export function CourtPanel({
                       (s) => lockedSeatIds.has(s.id) || bySeat.has(s.id),
                     ) ? null : (
                       <p className="hint court-table-hint">
-                        Пустые места — drop из пула справа · Esc сбрасывает
-                        цель
+                        Пустое место — кнопка «Посадить» или перетащить из
+                        пула · Esc снимает цель
                       </p>
                     )}
                   </motion.section>
@@ -1021,6 +1059,7 @@ export function CourtPanel({
                     key="field"
                     className="court-tab-pane"
                     role="tabpanel"
+                    id="court-panel-field"
                     aria-labelledby="court-tab-field"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1032,12 +1071,23 @@ export function CourtPanel({
                       payload={payload}
                       accent={accent}
                       selectedId={selectedNpcId}
+                      targetKey={
+                        fieldTarget
+                          ? `${fieldTarget.kind}:${fieldTarget.id}`
+                          : null
+                      }
                       onSelect={setSelectedNpcId}
+                      onVacantPick={(opts) => {
+                        const id =
+                          opts.systemId || opts.legionId || opts.fleetId || "";
+                        setFieldTarget({ kind: opts.kind, id });
+                        setTargetSeatId(null);
+                        setNationTarget(null);
+                        setHouseTarget(null);
+                      }}
                       busy={taskBusy}
                       onDropAssign={(npcId, opts) => {
-                        void withBusy(async () =>
-                          onAssignPosting?.(npcId, opts),
-                        );
+                        requestPosting(npcId, opts);
                       }}
                     />
                   </motion.div>
@@ -1046,6 +1096,7 @@ export function CourtPanel({
                     key="nations"
                     className="court-tab-pane"
                     role="tabpanel"
+                    id="court-panel-nations"
                     aria-labelledby="court-tab-nations"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1058,7 +1109,14 @@ export function CourtPanel({
                       payload={payload}
                       accent={accent}
                       selectedId={selectedNpcId}
+                      targetRaceId={nationTarget}
                       onSelect={setSelectedNpcId}
+                      onVacantPick={(raceId) => {
+                        setNationTarget(raceId);
+                        setTargetSeatId(null);
+                        setFieldTarget(null);
+                        setHouseTarget(null);
+                      }}
                       busy={taskBusy}
                       onDropLeader={(npcId, raceId) => {
                         void withBusy(async () =>
@@ -1072,6 +1130,7 @@ export function CourtPanel({
                     key="houses"
                     className="court-tab-pane"
                     role="tabpanel"
+                    id="court-panel-houses"
                     aria-labelledby="court-tab-houses"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1083,7 +1142,14 @@ export function CourtPanel({
                       npcs={npcs}
                       accent={accent}
                       selectedId={selectedNpcId}
+                      targetBlocId={houseTarget}
                       onSelectNpc={setSelectedNpcId}
+                      onVacantPick={(blocId) => {
+                        setHouseTarget(blocId);
+                        setTargetSeatId(null);
+                        setFieldTarget(null);
+                        setNationTarget(null);
+                      }}
                       busy={taskBusy}
                       onDropLeader={(npcId, blocId) => {
                         void withBusy(async () =>
@@ -1129,8 +1195,7 @@ export function CourtPanel({
                         onAssignPosting &&
                         !selectedNpc.isPlayerRuler &&
                         selectedNpc.id !== fac?.rulerNpcId
-                          ? (id, opts) =>
-                              withBusy(async () => onAssignPosting(id, opts))
+                          ? (id, opts) => requestPosting(id, opts)
                           : undefined
                       }
                       onRecallPosting={
@@ -1169,12 +1234,18 @@ export function CourtPanel({
                   </h3>
                   <p className="hint">
                     {courtTab === "council"
-                      ? "Drag на слот · сюда — снять · Esc"
+                      ? "На слот — посадить · сюда — снять · Esc"
                       : courtTab === "field"
-                        ? "Drag на систему / легион / флот"
+                        ? fieldTarget
+                          ? "Назначить выбранным на пост"
+                          : "Выберите вакансию или перетащите на пост"
                         : courtTab === "nations"
-                          ? "Drag на народ — лидер"
-                          : "Drag на дом — глава"}
+                          ? nationTarget
+                            ? "Назначить лидером народа"
+                            : "Выберите народ или перетащите"
+                          : houseTarget
+                            ? "Назначить главой дома"
+                            : "Выберите дом или перетащите"}
                   </p>
                 </div>
               </header>
@@ -1224,13 +1295,15 @@ export function CourtPanel({
                             title={n.name}
                             subtitle={[
                               n.title,
-                              n.role ? ROLE_LABEL[n.role] || n.role : null,
-                              postingKind !== "court" ? postingKind : null,
+                              n.role ? npcRoleLabel(n.role) : null,
+                              postingKind !== "court"
+                                ? npcPostingLabel(postingKind)
+                                : null,
                             ]
                               .filter(Boolean)
                               .join(" · ")}
                             accent={accent}
-                            tilt
+                            tilt={false}
                             className={`court-pool-drag fx-spotlight${
                               preferred ? " is-preferred fx-glow" : ""
                             }`}
@@ -1268,16 +1341,54 @@ export function CourtPanel({
                                   !isRulerSeat({ id: targetSeatId })
                                 ) {
                                   void seatNpc(n.id, targetSeatId);
-                                } else {
-                                  setSelectedNpcId(n.id);
+                                  return;
                                 }
+                                if (courtTab === "field" && fieldTarget) {
+                                  const t = fieldTarget;
+                                  requestPosting(
+                                    n.id,
+                                    t.kind === "governor"
+                                      ? { kind: "governor", systemId: t.id }
+                                      : t.kind === "commander"
+                                        ? {
+                                            kind: "commander",
+                                            legionId: t.id,
+                                            forceId: t.id,
+                                          }
+                                        : {
+                                            kind: "admiral",
+                                            fleetId: t.id,
+                                            forceId: t.id,
+                                          },
+                                  );
+                                  return;
+                                }
+                                if (courtTab === "nations" && nationTarget) {
+                                  void withBusy(async () =>
+                                    onAssignRaceLeader?.(n.id, nationTarget),
+                                  );
+                                  return;
+                                }
+                                if (courtTab === "houses" && houseTarget) {
+                                  void withBusy(async () =>
+                                    onAssignBlocLeader?.(n.id, houseTarget),
+                                  );
+                                  return;
+                                }
+                                setSelectedNpcId(n.id);
                               }}
                             >
                               {courtTab === "council" && targetSeatId
                                 ? preferred
                                   ? "Посадить сюда"
                                   : "Посадить"
-                                : "Карточка"}
+                                : courtTab === "field" && fieldTarget
+                                  ? "Назначить"
+                                  : courtTab === "nations" && nationTarget
+                                    ? "Лидер"
+                                    : courtTab === "houses" && houseTarget
+                                      ? "Глава"
+                                      : "Открыть"}
                             </button>
                           </DragCard>
                         </motion.li>
@@ -1288,8 +1399,29 @@ export function CourtPanel({
               </DropZone>
             </aside>
           </div>
-        </LayoutGroup>
       </>
+      <ConfirmModal
+        open={!!pendingPost}
+        title="Снять со стола?"
+        confirmLabel="Отправить на пост"
+        cancelLabel="Отмена"
+        busy={taskBusy}
+        onClose={() => setPendingPost(null)}
+        onConfirm={() => {
+          const next = pendingPost;
+          setPendingPost(null);
+          if (!next) return;
+          void withBusy(async () => onAssignPosting?.(next.npcId, next.opts));
+        }}
+      >
+        <p>
+          Этот человек сидит в Совете. Назначение
+          {pendingPost
+            ? ` (${npcPostingLabel(pendingPost.opts.kind)})`
+            : " на пост"}{" "}
+          снимет его со стола.
+        </p>
+      </ConfirmModal>
     </div>
   );
 }

@@ -7,7 +7,7 @@
 
 1. **Один язык трат.** Постройки / колонии / флот / легионы / станции списывают `metal` + `supply` (legacy bridge). Цепочка A–F (`extracta`…`cognitio`) — производство, потоки, наука, налоги.
 2. **Ровный рост тира.** `metalByTier` ≈ +40–50% за шаг; силы = `metalByTier × shipCostMult|unitCostMult`, supply = metal × `supplyRatio`.
-3. **Свободный порог.** `freeBuildTier = 3`: здания T1–T3 без tech-gate; выше — `techTiers[category] + 1`.
+3. **Свободный порог.** `freeBuildTier = 3`: здания T1–T3 без tech-gate; выше — `techTiers[category] + 1`. Добыча: тот же порог T1–T3; T4+ ждёт науку; **свой `treasuryPeg` извлекается при наличии экстрактора**.
 4. **Ранний force-gate.** Казарма ≤ T2, космопорт ≤ T3, верфь ≤ T3 — старт «1 корвет / милиция» укладывается в free tier + стартовые склады.
 5. **Два пула ОД.** Империя — политика/колонии; силы — приказы и производство юнитов (`rules.ap` / `forceAp`).
 6. **Роли, не спам id.** Базовый набор = одна generic-единица на роль×тир; расовые `raceVariants` и pack flavor поверх.

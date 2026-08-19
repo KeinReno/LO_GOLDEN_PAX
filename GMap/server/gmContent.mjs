@@ -52,7 +52,7 @@ export const ATELIER_CATALOGS = {
   yearly_quests: {
     file: "core/yearly_quests.json",
     mode: "flat",
-    label: "Ежходные квесты",
+    label: "Ежеходные квесты",
   },
   story_quests: {
     file: "core/story_quests.json",
@@ -143,8 +143,22 @@ export const ATELIER_CATALOGS = {
   },
 };
 
+const CATALOG_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+
+/** Resolve rel under content/ or null if it would leave the tree. */
+export function resolvedContentFile(rel) {
+  const root = path.resolve(CONTENT_ROOT);
+  const fp = path.resolve(root, String(rel || ""));
+  const relToRoot = path.relative(root, fp);
+  if (!relToRoot || relToRoot.startsWith("..") || path.isAbsolute(relToRoot)) {
+    return null;
+  }
+  return fp;
+}
+
 function catalogDef(catalogId) {
   const cleanId = String(catalogId || "").trim().toLowerCase();
+  if (!CATALOG_ID_RE.test(cleanId)) return null;
   const def = ATELIER_CATALOGS[cleanId];
   if (def) return { id: cleanId, ...def };
 
@@ -155,8 +169,8 @@ function catalogDef(catalogId) {
     `${cleanId.replace(/-/g, "_")}.json`,
   ];
   for (const rel of candidates) {
-    const fp = path.join(CONTENT_ROOT, rel);
-    if (fs.existsSync(fp)) {
+    const fp = resolvedContentFile(rel);
+    if (fp && fs.existsSync(fp)) {
       return { id: cleanId, file: rel, mode: "flat", label: cleanId };
     }
   }
@@ -164,7 +178,9 @@ function catalogDef(catalogId) {
 }
 
 function filePath(def) {
-  return path.join(CONTENT_ROOT, def.file);
+  const fp = resolvedContentFile(def.file);
+  if (!fp) throw new Error("Неверный путь каталога");
+  return fp;
 }
 
 function readCatalogFile(def) {
