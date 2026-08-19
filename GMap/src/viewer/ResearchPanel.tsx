@@ -311,18 +311,6 @@ export function ResearchPanel({
     () => new Set(eco?.unlockedTechs || []),
     [eco?.unlockedTechs],
   );
-  const openBranch = (c: string, era?: number) => {
-    setFocusBranch(c);
-    const techs = byDir.get(c) ?? [];
-    const pool =
-      era != null ? techs.filter((t) => (t.era || 1) === era) : techs;
-    const next = pool.find(
-      (t) =>
-        !unlocked.has(t.id) &&
-        (t.prerequisites || []).every((p) => unlocked.has(p)),
-    );
-    if (next) setSelectedId(next.id);
-  };
   const unlockedUpgrades = useMemo(
     () => new Set(eco?.unlockedUpgrades || []),
     [eco?.unlockedUpgrades],

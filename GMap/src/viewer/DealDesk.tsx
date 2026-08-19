@@ -558,7 +558,7 @@ export function DealDesk({
                 return (
                   <li key={f.id}>
                     <AnimatedTooltip
-                      side="left"
+                      side="top"
                       content={
                         <span>
                           {DIPLOMACY_LABELS[rel]} · они о вас:{" "}

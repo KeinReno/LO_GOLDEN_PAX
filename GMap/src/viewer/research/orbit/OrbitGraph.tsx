@@ -20,6 +20,11 @@ import { computeDirectionProgress, type DirectionProgress } from "./computeDirec
 import { computeHorizon, type HorizonNodeState } from "./computeHorizon";
 import { SILHOUETTE_SHAPES } from "./silhouetteShapes";
 import { techGlyph } from "../techGlyph";
+import {
+  clearTechDragIdDeferred,
+  isCognitioDragging,
+  setTechDragId,
+} from "../researchDragBus";
 
 /**
  * Tier 2 of the science screen (§1a-§1e of SCIENCE_ORBIT_REDESIGN_SPEC.md) —

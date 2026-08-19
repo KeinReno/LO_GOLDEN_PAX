@@ -39,7 +39,7 @@ function listFor(
 }
 
 function patchList(
-  planet: Planet,
+  _planet: Planet,
   orbital: boolean,
   list: PlanetBuilding[],
 ): Partial<Planet> {
