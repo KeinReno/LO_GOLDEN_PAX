@@ -28,7 +28,7 @@ function writeViewportVars(): void {
     document.documentElement.style.setProperty(
       "--phone-dock-clearance",
       phone
-        ? "calc(56px + env(safe-area-inset-bottom, 0px))"
+        ? "calc(64px + env(safe-area-inset-bottom, 0px))"
         : "0px",
     );
     if (vv) {
